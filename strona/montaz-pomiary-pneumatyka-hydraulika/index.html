@@ -179,6 +179,17 @@ details.oq .ans ul{margin:0;padding-left:20px}
 @media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
 .fieldpic{display:flex;justify-content:center;margin:8px 0}
 .fieldpic svg{max-width:100%;height:auto}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
 </style>
 </head>
 <body>
@@ -188,7 +199,8 @@ details.oq .ans ul{margin:0;padding-left:20px}
   <p>Montaż urządzeń i systemów mechatronicznych, kartkówka 26 października. Technik robotyk</p>
 </div></header>
 <nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
-  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="notatka">Notatka</button>
   <button role="tab" aria-selected="false" data-tab="wzory">Wzory</button>
   <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
   <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
@@ -197,8 +209,19 @@ details.oq .ans ul{margin:0;padding-left:20px}
 
 <main><div class="wrap">
 
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Wyciąg z całej kartkówki: przeczytaj tuż przed lekcją. Przykłady liczbowe są w Notatce i Zadaniach.</p>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol><li><b>F = p·A</b> (siła siłownika), <b>Q = v·A</b> (prędkość z przepływu), <b>P = p·Q</b> (moc hydrauliczna). Zawsze jednostki SI!</li><li><b>1 bar = 10⁵ Pa = 100 kPa = 0,1 MPa ≈ 14,5 psi</b>; manometr pokazuje <b>nadciśnienie</b>.</li><li>Błąd przyrządu z klasy: <b>Δ = klasa · zakres / 100</b>. BHP: przed rozłączaniem <b>zrzuć ciśnienie</b>.</li></ol></div>
+  <div class="key" style="--c:var(--t1)"><h2>1. Wielkości i wzory</h2><ol><li>Ciśnienie [Pa, bar, MPa], siła [N], przepływ [l/min, m³/s]; 1 l/min = 1/60 000 m³/s.</li><li>Pole tłoka <b>A = π·D²/4</b>; przy wsuwaniu pole <b>pierścieniowe</b> A = π(D² − d²)/4, więc siła mniejsza.</li><li>Ciśnienie <b>absolutne</b> = nadciśnienie + ciśnienie atmosferyczne (ok. 1 bar).</li><li>O <b>sile</b> decyduje ciśnienie, o <b>prędkości</b> przepływ.</li><li>Średnicę zamieniaj na metry i podnoś do <b>kwadratu</b>.</li></ol></div>
+  <div class="key" style="--c:var(--t6)"><h2>2. Pomiar ciśnienia</h2><ol><li>Manometr <b>Bourdona</b> (rurka się prostuje) i <b>membranowy</b>; wypełnienie <b>gliceryną</b> tłumi pulsacje.</li><li>Dobór zakresu: ciśnienie pracy ok. <b>2/3–3/4 zakresu</b>, nigdy „na styk”.</li><li><b>Klasa dokładności</b> to procent <b>zakresu</b>, a nie odczytu.</li><li><b>Przetwornik</b> ciśnienia daje sygnał elektryczny (np. <b>4–20 mA</b>, 0–10 V); <b>presostat</b> tylko przełącza przy progu.</li><li>W hydraulice mierzysz w <b>punktach pomiarowych</b> (szybkozłącza pomiarowe), a podciśnienie <b>wakuometrem</b>.</li></ol></div>
+  <div class="key" style="--c:var(--t5)"><h2>3. Pomiar przepływu</h2><ol><li><b>Rotametr</b> (pływak w stożkowej rurce, montaż pionowy), przepływomierze <b>turbinowe</b>, <b>zębate</b>, <b>termiczne</b>, ultradźwiękowe.</li><li>Montaż zgodnie ze <b>strzałką</b> na korpusie i z prostym odcinkiem rury przed i za przyrządem.</li><li>Prędkość tłoka <b>v = Q/A</b>.</li><li>Czujniki przepływu mają wyjście <b>analogowe</b> albo <b>progowe</b> (przełączające).</li></ol></div>
+  <div class="key" style="--c:var(--t4)"><h2>4. Pomiar siły</h2><ol><li><b>Tensometr</b> mierzy odkształcenie (zmianę rezystancji), łączony w <b>mostek Wheatstone'a</b>.</li><li>Czujnik <b>piezoelektryczny</b> do sił zmiennych i szybkich, nie do stałego ważenia.</li><li>Pośrednio: <b>F = p·A</b>, ale wynik jest <b>zawyżony</b> (tarcie, sprawność siłownika).</li><li>Siła rzeczywista ≈ F_teoretyczna · <b>sprawność η</b>.</li></ol></div>
+  <div class="key" style="--c:var(--t3)"><h2>5. Pomiary i BHP</h2><ol><li>Kolejność: schemat → dobór przyrządu (zakres, klasa) → podłączenie → odczyt → <b>protokół</b> z jednostkami.</li><li>Błąd <b>bezwzględny</b> Δ = |x_zmierzone − x_rzeczywiste|, <b>względny</b> δ = Δ/x · 100%.</li><li>Multimetr: napięcie <b>równolegle</b>, prąd <b>szeregowo</b>; cewki elektrozaworów zwykle <b>24 V DC</b>.</li><li>Przed rozłączeniem: odciąć zasilanie, <b>zrzucić ciśnienie</b> (także z akumulatora hydraulicznego).</li><li>Okulary ochronne; <b>nigdy</b> nie szukaj wycieku oleju ręką (wtrysk pod skórę).</li></ol></div>
+</section>
+
 <!-- ============ NOTATKA ============ -->
-<section class="tab" id="notatka">
+<section class="tab" id="notatka" hidden>
 
   <!-- T1 -->
   <article class="topic" id="t1" style="--c:var(--t1)">

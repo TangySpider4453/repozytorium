@@ -179,6 +179,17 @@ details.oq .ans ul{margin:0;padding-left:20px}
 @media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
 .fieldpic{display:flex;justify-content:center;margin:8px 0}
 .fieldpic svg{max-width:100%;height:auto}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
 </style>
 </head>
 <body>
@@ -188,7 +199,8 @@ details.oq .ans ul{margin:0;padding-left:20px}
   <p>Fizyka, kartkówka 23 października. Poziom szkoły średniej</p>
 </div></header>
 <nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
-  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="notatka">Notatka</button>
   <button role="tab" aria-selected="false" data-tab="wzory">Wzory</button>
   <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
   <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
@@ -197,8 +209,17 @@ details.oq .ans ul{margin:0;padding-left:20px}
 
 <main><div class="wrap">
 
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Wyciąg z całej kartkówki: przeczytaj tuż przed lekcją. Szczegóły i przykłady są w Notatce, wzory w zakładce Wzory.</p>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol><li><b>Prawo Coulomba:</b> F = k·q₁·q₂ / r², k = 9·10⁹ N·m²/C². Odległość 2× większa → siła 4× mniejsza.</li><li><b>Natężenie pola:</b> E = F/q [N/C = V/m]; dla ładunku punktowego E = kQ/r²; w polu jednorodnym E = U/d.</li><li><b>Napięcie:</b> U = W/q [V = J/C], praca W = q·U, 1 eV = 1,6·10⁻¹⁹ J.</li></ol></div>
+  <div class="key" style="--c:var(--t4)"><h2>1. Siły elektryczne</h2><ol><li>Jednoimienne ładunki się <b>odpychają</b>, różnoimienne <b>przyciągają</b>.</li><li>Ładunek elementarny <b>e = 1,6·10⁻¹⁹ C</b>; każdy ładunek to q = n·e.</li><li>Zasada <b>zachowania ładunku</b>: ładunki się tylko przemieszczają (głównie elektrony).</li><li>Elektryzowanie: <b>tarcie</b> (ładunki przeciwne), <b>dotyk</b> (ten sam znak), <b>indukcja</b> (bez dotyku).</li><li>Siły między ładunkami są <b>wzajemne i równe</b> co do wartości (III zasada dynamiki).</li></ol></div>
+  <div class="key" style="--c:var(--t6)"><h2>2. Pole elektryczne</h2><ol><li>Natężenie to wektor; zwrot jak siła na <b>dodatni</b> ładunek próbny. Na elektron siła działa <b>przeciwnie</b> do E.</li><li>E <b>nie zależy</b> od ładunku próbnego; F = q·E.</li><li>Linie pola: od <b>+ do −</b>, nigdy się nie przecinają, gęstsze = silniejsze pole.</li><li>Pole <b>centralne</b> (ładunek punktowy, E = kQ/r²) i <b>jednorodne</b> (między płytami, E takie samo wszędzie).</li><li>Wewnątrz przewodnika <b>E = 0</b>, ładunek jest na powierzchni (<b>klatka Faradaya</b>).</li></ol></div>
+  <div class="key" style="--c:var(--t3)"><h2>3. Napięcie elektryczne</h2><ol><li>Napięcie to <b>różnica potencjałów</b> między dwoma punktami: U = V_A − V_B.</li><li>Potencjał ładunku punktowego <b>V = kQ/r</b> (bez kwadratu!), natężenie E = kQ/r².</li><li>Praca w polu <b>nie zależy od toru</b> (pole zachowawcze); po powierzchni ekwipotencjalnej W = 0.</li><li>Pole jednorodne: <b>U = E·d</b>. Ładunek przyspieszony napięciem U zyskuje <b>Eₖ = q·U</b>.</li><li><b>Elektronowolt</b> to jednostka energii, nie napięcia. Woltomierz włączamy <b>równolegle</b>.</li></ol></div>
+</section>
+
 <!-- ============ NOTATKA ============ -->
-<section class="tab" id="notatka">
+<section class="tab" id="notatka" hidden>
 
   <!-- T1 -->
   <article class="topic" id="t1" style="--c:var(--t4)">

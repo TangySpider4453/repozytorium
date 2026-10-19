@@ -1,0 +1,159 @@
+{
+"historia-3-dzial-1": {
+ "intro": "Wyciąg z całego działu: przeczytaj tuż przed sprawdzianem. Na sprawdzianie 20 X są tematy 1, 2, 3, 5 i 6 (bez tematu 4).",
+ "top": [
+  "<b>Kongres wiedeński 1814–1815</b> (Metternich): zasady <b>równowagi sił, restauracji i legitymizmu</b>; strażnikiem ładu <b>Święte Przymierze</b>.",
+  "<b>Rewolucja przemysłowa</b> zaczyna się w <b>Wielkiej Brytanii</b>: Watt (maszyna parowa 1769), Stephenson (kolej 1825), Fulton (statek parowy 1807), Morse (telegraf 1837).",
+  "<b>Wiosna Ludów 1848–1849</b>: wygrali liberałowie (konstytucje) i chłopi (uwłaszczenie), przegrali demokraci; Węgry stłumione z pomocą <b>Rosji</b>."
+ ],
+ "topics": [
+  [1, "Kongres wiedeński", [
+   "Obrady IX 1814 – VI 1815 w Wiedniu; decydował <b>koncert mocarstw</b>: Wielka Brytania, Rosja, Austria, Prusy, Francja.",
+   "Ludzie: <b>Metternich</b> (Austria, architekt kongresu), car <b>Aleksander I</b>, <b>Talleyrand</b> (Francja), <b>Castlereagh</b> (Wielka Brytania).",
+   "Zasady: <b>równowaga sił</b> (nikt nie dominuje), <b>restauracja</b> (powrót dynastii, np. Burbonów), <b>legitymizm</b> (władza od Boga).",
+   "<b>Sto dni Napoleona</b> 1815, klęska pod <b>Waterloo</b>; Francja ukarana granicami z <b>1789 r.</b>",
+   "Ziemie polskie: Królestwo Polskie dla Rosji, Wielkie Księstwo Poznańskie dla Prus, <b>Rzeczpospolita Krakowska</b>; Księstwo Warszawskie zlikwidowane."
+  ]],
+  [2, "Cywilizacja przemysłowa", [
+   "Przejście od manufaktur do <b>fabryk</b> i maszyn; start w Wielkiej Brytanii (kapitał z kolonii, wolny rynek, stabilność).",
+   "Wynalazki: <b>1769 Watt</b> maszyna parowa, <b>1785 Cartwright</b> krosno, <b>1807 Fulton</b> statek, <b>1825 Stephenson</b> kolej, <b>1837 Morse</b> telegraf.",
+   "<b>Rewolucja agrarna</b>: płodozmian zamiast trójpolówki, rośliny motylkowe, ziemniaki i buraki cukrowe.",
+   "<b>Urbanizacja</b> i nowe społeczeństwo: burżuazja, klasa średnia i inteligencja, drobnomieszczaństwo, <b>proletariat</b>.",
+   "O pozycji decyduje <b>wykształcenie i majątek</b>, a nie urodzenie; upada system stanowy."
+  ]],
+  [3, "Idee i kultura", [
+   "<b>Konserwatyzm</b> (Burke): tradycja, religia, silna monarchia, zmiany tylko ewolucyjne.",
+   "<b>Liberalizm</b> (Adam Smith, Constant, Tocqueville, Mill): wolność jednostki, monarchia konstytucyjna, trójpodział władzy.",
+   "<b>Socjalizm</b> (Saint-Simon, Fourier, Owen) i <b>komunizm</b> (Marks, Engels, <b>Manifest komunistyczny 1848</b>): los robotników; <b>anarchizm</b> (Proudhon): likwidacja państwa.",
+   "Konserwatyści i liberałowie chcieli prawa wyborczego <b>tylko dla elit</b>.",
+   "<b>Romantyzm</b>: uczucia, ludowość, idea narodowa (Mickiewicz, Byron, Chopin, Delacroix) kontra <b>klasycyzm</b>: antyk, ład, harmonia."
+  ]],
+  [5, "Wiosna Ludów", [
+   "Francja: <b>rewolucja lutowa 1848</b>, abdykacja Ludwika Filipa, <b>II Republika</b>; prezydent <b>Ludwik Napoleon</b>, od 1852 cesarz Napoleon III.",
+   "Austria: <b>dymisja Metternicha</b>, konstytucja i <b>uwłaszczenie chłopów</b>.",
+   "Niemcy: <b>parlament frankfurcki</b> chciał zjednoczyć Niemcy, ale bez skutku.",
+   "Węgry: <b>Lajos Kossuth</b>, gen. <b>Józef Bem</b>; powstanie stłumione w 1849 z pomocą <b>Rosji</b>.",
+   "Ominęła: Wielką Brytanię, Szwajcarię, Rosję i Imperium Osmańskie. Polacy walczyli „za wolność naszą i waszą”."
+  ]],
+  [6, "Ameryki", [
+   "<b>Haiti 1804</b>: pierwsze niepodległe państwo Ameryki Łacińskiej (byli niewolnicy).",
+   "<b>Simón Bolivar</b> „El Libertador” (północ, Wielka Kolumbia), <b>San Martín</b> (Argentyna, Chile, Peru).",
+   "Meksyk niepodległy w 1821, <b>Brazylia 1822</b> pokojowo jako cesarstwo.",
+   "<b>Kreole</b>: potomkowie Europejczyków urodzeni w Ameryce; to oni prowadzili walkę o niepodległość.",
+   "<b>Doktryna Monroego 1823</b>: „Ameryka dla Amerykanów”, Europa ma się nie wtrącać."
+  ]]
+ ]
+},
+"fizyka-pole-elektryczne": {
+ "intro": "Wyciąg z całej kartkówki: przeczytaj tuż przed lekcją. Szczegóły i przykłady są w Notatce, wzory w zakładce Wzory.",
+ "top": [
+  "<b>Prawo Coulomba:</b> F = k·q₁·q₂ / r², k = 9·10⁹ N·m²/C². Odległość 2× większa → siła 4× mniejsza.",
+  "<b>Natężenie pola:</b> E = F/q [N/C = V/m]; dla ładunku punktowego E = kQ/r²; w polu jednorodnym E = U/d.",
+  "<b>Napięcie:</b> U = W/q [V = J/C], praca W = q·U, 1 eV = 1,6·10⁻¹⁹ J."
+ ],
+ "topics": [
+  [1, "Siły elektryczne", [
+   "Jednoimienne ładunki się <b>odpychają</b>, różnoimienne <b>przyciągają</b>.",
+   "Ładunek elementarny <b>e = 1,6·10⁻¹⁹ C</b>; każdy ładunek to q = n·e.",
+   "Zasada <b>zachowania ładunku</b>: ładunki się tylko przemieszczają (głównie elektrony).",
+   "Elektryzowanie: <b>tarcie</b> (ładunki przeciwne), <b>dotyk</b> (ten sam znak), <b>indukcja</b> (bez dotyku).",
+   "Siły między ładunkami są <b>wzajemne i równe</b> co do wartości (III zasada dynamiki)."
+  ]],
+  [2, "Pole elektryczne", [
+   "Natężenie to wektor; zwrot jak siła na <b>dodatni</b> ładunek próbny. Na elektron siła działa <b>przeciwnie</b> do E.",
+   "E <b>nie zależy</b> od ładunku próbnego; F = q·E.",
+   "Linie pola: od <b>+ do −</b>, nigdy się nie przecinają, gęstsze = silniejsze pole.",
+   "Pole <b>centralne</b> (ładunek punktowy, E = kQ/r²) i <b>jednorodne</b> (między płytami, E takie samo wszędzie).",
+   "Wewnątrz przewodnika <b>E = 0</b>, ładunek jest na powierzchni (<b>klatka Faradaya</b>)."
+  ]],
+  [3, "Napięcie elektryczne", [
+   "Napięcie to <b>różnica potencjałów</b> między dwoma punktami: U = V_A − V_B.",
+   "Potencjał ładunku punktowego <b>V = kQ/r</b> (bez kwadratu!), natężenie E = kQ/r².",
+   "Praca w polu <b>nie zależy od toru</b> (pole zachowawcze); po powierzchni ekwipotencjalnej W = 0.",
+   "Pole jednorodne: <b>U = E·d</b>. Ładunek przyspieszony napięciem U zyskuje <b>Eₖ = q·U</b>.",
+   "<b>Elektronowolt</b> to jednostka energii, nie napięcia. Woltomierz włączamy <b>równolegle</b>."
+  ]]
+ ]
+},
+"matematyka-wielomiany": {
+ "intro": "Wyciąg z całego działu: przeczytaj tuż przed sprawdzianem. Przykłady krok po kroku są w Notatce i Zadaniach.",
+ "top": [
+  "<b>Twierdzenie o reszcie:</b> reszta z dzielenia W(x) przez (x − a) to <b>W(a)</b>.",
+  "<b>Bézout:</b> W(a) = 0 ⇔ W(x) dzieli się przez (x − a); a jest pierwiastkiem.",
+  "<b>Pierwiastki całkowite</b> szukasz wśród dzielników wyrazu wolnego, wymierne p/q: p | a₀, q | aₙ. Potem <b>Horner</b> i rozkład."
+ ],
+ "topics": [
+  [1, "Wielomian i działania", [
+   "Stopień = <b>najwyższa potęga x</b> ze współczynnikiem ≠ 0; wyraz wolny a₀ = W(0).",
+   "1/x i √x to <b>nie</b> wielomiany; √2·x + 1 już tak.",
+   "Wielomiany są równe, gdy mają ten sam stopień i <b>równe współczynniki przy tych samych potęgach</b>.",
+   "Przy odejmowaniu zmień znak <b>każdego</b> wyrazu odejmowanego wielomianu.",
+   "Stopień iloczynu = <b>suma</b> stopni."
+  ]],
+  [2, "Dzielenie wielomianów", [
+   "W(x) = P(x)·Q(x) + R(x), stopień reszty <b>mniejszy</b> od stopnia dzielnika.",
+   "Brakujące potęgi wpisuj z <b>zerem</b> (x³ + 0x² − 2x + 5).",
+   "<b>Horner</b> tylko dla dzielnika x − a; dla (x + 4) bierzesz <b>a = −4</b>.",
+   "Ostatnia liczba w schemacie Hornera to <b>reszta</b>, pozostałe to współczynniki ilorazu (stopień o 1 niższy).",
+   "Szukanie parametru: z Bézouta ułóż równanie <b>W(a) = 0</b> i rozwiąż."
+  ]],
+  [3, "Rozkład i pierwiastki", [
+   "Kolejność: <b>wyłącz przed nawias</b> → <b>grupuj</b> → <b>wzory skróconego mnożenia</b> → pierwiastki wymierne + Horner.",
+   "a³ − b³ = (a − b)(a² + ab + b²), a³ + b³ = (a + b)(a² − ab + b²).",
+   "Twierdzenie o pierwiastkach daje tylko <b>kandydatów</b>, każdego sprawdź.",
+   "<b>Krotność</b> pierwiastka = ile razy (x − a) występuje w rozkładzie.",
+   "x² + 4 <b>nie</b> rozkłada się na czynniki liniowe (Δ &lt; 0)."
+  ]],
+  [4, "Równania i nierówności", [
+   "Przenieś wszystko na jedną stronę (<b>= 0</b>), rozłóż na czynniki, każdy czynnik przyrównaj do zera.",
+   "<b>Nie dziel</b> przez x ani przez nawias z x, bo gubisz rozwiązania.",
+   "Nierówności: miejsca zerowe na osi, <b>wężyk</b> od prawej z góry (gdy aₙ &gt; 0).",
+   "Przy pierwiastku <b>parzystej</b> krotności wężyk się odbija, przy nieparzystej przechodzi przez oś.",
+   "Odpowiedź do nierówności zapisz jako <b>przedziały</b>; sprawdź, czy końce są domknięte."
+  ]]
+ ]
+},
+"montaz-pomiary-pneumatyka-hydraulika": {
+ "intro": "Wyciąg z całej kartkówki: przeczytaj tuż przed lekcją. Przykłady liczbowe są w Notatce i Zadaniach.",
+ "top": [
+  "<b>F = p·A</b> (siła siłownika), <b>Q = v·A</b> (prędkość z przepływu), <b>P = p·Q</b> (moc hydrauliczna). Zawsze jednostki SI!",
+  "<b>1 bar = 10⁵ Pa = 100 kPa = 0,1 MPa ≈ 14,5 psi</b>; manometr pokazuje <b>nadciśnienie</b>.",
+  "Błąd przyrządu z klasy: <b>Δ = klasa · zakres / 100</b>. BHP: przed rozłączaniem <b>zrzuć ciśnienie</b>."
+ ],
+ "topics": [
+  [1, "Wielkości i wzory", [
+   "Ciśnienie [Pa, bar, MPa], siła [N], przepływ [l/min, m³/s]; 1 l/min = 1/60 000 m³/s.",
+   "Pole tłoka <b>A = π·D²/4</b>; przy wsuwaniu pole <b>pierścieniowe</b> A = π(D² − d²)/4, więc siła mniejsza.",
+   "Ciśnienie <b>absolutne</b> = nadciśnienie + ciśnienie atmosferyczne (ok. 1 bar).",
+   "O <b>sile</b> decyduje ciśnienie, o <b>prędkości</b> przepływ.",
+   "Średnicę zamieniaj na metry i podnoś do <b>kwadratu</b>."
+  ]],
+  [2, "Pomiar ciśnienia", [
+   "Manometr <b>Bourdona</b> (rurka się prostuje) i <b>membranowy</b>; wypełnienie <b>gliceryną</b> tłumi pulsacje.",
+   "Dobór zakresu: ciśnienie pracy ok. <b>2/3–3/4 zakresu</b>, nigdy „na styk”.",
+   "<b>Klasa dokładności</b> to procent <b>zakresu</b>, a nie odczytu.",
+   "<b>Przetwornik</b> ciśnienia daje sygnał elektryczny (np. <b>4–20 mA</b>, 0–10 V); <b>presostat</b> tylko przełącza przy progu.",
+   "W hydraulice mierzysz w <b>punktach pomiarowych</b> (szybkozłącza pomiarowe), a podciśnienie <b>wakuometrem</b>."
+  ]],
+  [3, "Pomiar przepływu", [
+   "<b>Rotametr</b> (pływak w stożkowej rurce, montaż pionowy), przepływomierze <b>turbinowe</b>, <b>zębate</b>, <b>termiczne</b>, ultradźwiękowe.",
+   "Montaż zgodnie ze <b>strzałką</b> na korpusie i z prostym odcinkiem rury przed i za przyrządem.",
+   "Prędkość tłoka <b>v = Q/A</b>.",
+   "Czujniki przepływu mają wyjście <b>analogowe</b> albo <b>progowe</b> (przełączające)."
+  ]],
+  [4, "Pomiar siły", [
+   "<b>Tensometr</b> mierzy odkształcenie (zmianę rezystancji), łączony w <b>mostek Wheatstone'a</b>.",
+   "Czujnik <b>piezoelektryczny</b> do sił zmiennych i szybkich, nie do stałego ważenia.",
+   "Pośrednio: <b>F = p·A</b>, ale wynik jest <b>zawyżony</b> (tarcie, sprawność siłownika).",
+   "Siła rzeczywista ≈ F_teoretyczna · <b>sprawność η</b>."
+  ]],
+  [5, "Pomiary i BHP", [
+   "Kolejność: schemat → dobór przyrządu (zakres, klasa) → podłączenie → odczyt → <b>protokół</b> z jednostkami.",
+   "Błąd <b>bezwzględny</b> Δ = |x_zmierzone − x_rzeczywiste|, <b>względny</b> δ = Δ/x · 100%.",
+   "Multimetr: napięcie <b>równolegle</b>, prąd <b>szeregowo</b>; cewki elektrozaworów zwykle <b>24 V DC</b>.",
+   "Przed rozłączeniem: odciąć zasilanie, <b>zrzucić ciśnienie</b> (także z akumulatora hydraulicznego).",
+   "Okulary ochronne; <b>nigdy</b> nie szukaj wycieku oleju ręką (wtrysk pod skórę)."
+  ]]
+ ]
+}
+}

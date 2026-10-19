@@ -36,6 +36,7 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+body{font-variant-numeric:lining-nums}
 h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
 a{color:inherit}
 button{font:inherit;color:inherit}
@@ -168,6 +169,17 @@ details.oq .ans ul{margin:0;padding-left:20px}
 .intro{color:var(--muted);margin:0 0 14px}
 @media (prefers-reduced-motion: reduce){.fc{transition:none}}
 @media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
 </style>
 </head>
 <body>
@@ -177,7 +189,8 @@ details.oq .ans ul{margin:0;padding-left:20px}
   <p>Ślady czasu 3, dział 1. Sprawdzian wt. 20 października: tematy 1, 2, 3, 5 i 6</p>
 </div></header>
 <nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
-  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="notatka">Notatka</button>
   <button role="tab" aria-selected="false" data-tab="daty">Oś czasu</button>
   <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
   <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
@@ -186,8 +199,19 @@ details.oq .ans ul{margin:0;padding-left:20px}
 
 <main><div class="wrap">
 
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Wyciąg z całego działu: przeczytaj tuż przed sprawdzianem. Na sprawdzianie 20 X są tematy 1, 2, 3, 5 i 6 (bez tematu 4).</p>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol><li><b>Kongres wiedeński 1814–1815</b> (Metternich): zasady <b>równowagi sił, restauracji i legitymizmu</b>; strażnikiem ładu <b>Święte Przymierze</b>.</li><li><b>Rewolucja przemysłowa</b> zaczyna się w <b>Wielkiej Brytanii</b>: Watt (maszyna parowa 1769), Stephenson (kolej 1825), Fulton (statek parowy 1807), Morse (telegraf 1837).</li><li><b>Wiosna Ludów 1848–1849</b>: wygrali liberałowie (konstytucje) i chłopi (uwłaszczenie), przegrali demokraci; Węgry stłumione z pomocą <b>Rosji</b>.</li></ol></div>
+  <div class="key" style="--c:var(--t1)"><h2>1. Kongres wiedeński</h2><ol><li>Obrady IX 1814 – VI 1815 w Wiedniu; decydował <b>koncert mocarstw</b>: Wielka Brytania, Rosja, Austria, Prusy, Francja.</li><li>Ludzie: <b>Metternich</b> (Austria, architekt kongresu), car <b>Aleksander I</b>, <b>Talleyrand</b> (Francja), <b>Castlereagh</b> (Wielka Brytania).</li><li>Zasady: <b>równowaga sił</b> (nikt nie dominuje), <b>restauracja</b> (powrót dynastii, np. Burbonów), <b>legitymizm</b> (władza od Boga).</li><li><b>Sto dni Napoleona</b> 1815, klęska pod <b>Waterloo</b>; Francja ukarana granicami z <b>1789 r.</b></li><li>Ziemie polskie: Królestwo Polskie dla Rosji, Wielkie Księstwo Poznańskie dla Prus, <b>Rzeczpospolita Krakowska</b>; Księstwo Warszawskie zlikwidowane.</li></ol></div>
+  <div class="key" style="--c:var(--t2)"><h2>2. Cywilizacja przemysłowa</h2><ol><li>Przejście od manufaktur do <b>fabryk</b> i maszyn; start w Wielkiej Brytanii (kapitał z kolonii, wolny rynek, stabilność).</li><li>Wynalazki: <b>1769 Watt</b> maszyna parowa, <b>1785 Cartwright</b> krosno, <b>1807 Fulton</b> statek, <b>1825 Stephenson</b> kolej, <b>1837 Morse</b> telegraf.</li><li><b>Rewolucja agrarna</b>: płodozmian zamiast trójpolówki, rośliny motylkowe, ziemniaki i buraki cukrowe.</li><li><b>Urbanizacja</b> i nowe społeczeństwo: burżuazja, klasa średnia i inteligencja, drobnomieszczaństwo, <b>proletariat</b>.</li><li>O pozycji decyduje <b>wykształcenie i majątek</b>, a nie urodzenie; upada system stanowy.</li></ol></div>
+  <div class="key" style="--c:var(--t3)"><h2>3. Idee i kultura</h2><ol><li><b>Konserwatyzm</b> (Burke): tradycja, religia, silna monarchia, zmiany tylko ewolucyjne.</li><li><b>Liberalizm</b> (Adam Smith, Constant, Tocqueville, Mill): wolność jednostki, monarchia konstytucyjna, trójpodział władzy.</li><li><b>Socjalizm</b> (Saint-Simon, Fourier, Owen) i <b>komunizm</b> (Marks, Engels, <b>Manifest komunistyczny 1848</b>): los robotników; <b>anarchizm</b> (Proudhon): likwidacja państwa.</li><li>Konserwatyści i liberałowie chcieli prawa wyborczego <b>tylko dla elit</b>.</li><li><b>Romantyzm</b>: uczucia, ludowość, idea narodowa (Mickiewicz, Byron, Chopin, Delacroix) kontra <b>klasycyzm</b>: antyk, ład, harmonia.</li></ol></div>
+  <div class="key" style="--c:var(--t5)"><h2>5. Wiosna Ludów</h2><ol><li>Francja: <b>rewolucja lutowa 1848</b>, abdykacja Ludwika Filipa, <b>II Republika</b>; prezydent <b>Ludwik Napoleon</b>, od 1852 cesarz Napoleon III.</li><li>Austria: <b>dymisja Metternicha</b>, konstytucja i <b>uwłaszczenie chłopów</b>.</li><li>Niemcy: <b>parlament frankfurcki</b> chciał zjednoczyć Niemcy, ale bez skutku.</li><li>Węgry: <b>Lajos Kossuth</b>, gen. <b>Józef Bem</b>; powstanie stłumione w 1849 z pomocą <b>Rosji</b>.</li><li>Ominęła: Wielką Brytanię, Szwajcarię, Rosję i Imperium Osmańskie. Polacy walczyli „za wolność naszą i waszą”.</li></ol></div>
+  <div class="key" style="--c:var(--t6)"><h2>6. Ameryki</h2><ol><li><b>Haiti 1804</b>: pierwsze niepodległe państwo Ameryki Łacińskiej (byli niewolnicy).</li><li><b>Simón Bolivar</b> „El Libertador” (północ, Wielka Kolumbia), <b>San Martín</b> (Argentyna, Chile, Peru).</li><li>Meksyk niepodległy w 1821, <b>Brazylia 1822</b> pokojowo jako cesarstwo.</li><li><b>Kreole</b>: potomkowie Europejczyków urodzeni w Ameryce; to oni prowadzili walkę o niepodległość.</li><li><b>Doktryna Monroego 1823</b>: „Ameryka dla Amerykanów”, Europa ma się nie wtrącać.</li></ol></div>
+</section>
+
 <!-- ============ NOTATKA ============ -->
-<section class="tab" id="notatka">
+<section class="tab" id="notatka" hidden>
   <div class="scope"><b>Zakres sprawdzianu (20 X):</b> tematy <b>1, 2, 3, 5 i 6</b>. Temat 4 „Kontestacja ładu” <b>nie obowiązuje</b>. W fiszkach, quizie i na osi czasu wybierz filtr „Na sprawdzian”.</div>
   <div class="ribbon">
     <h2>Cały dział na jednej osi</h2>

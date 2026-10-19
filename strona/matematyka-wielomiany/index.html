@@ -179,6 +179,17 @@ details.oq .ans ul{margin:0;padding-left:20px}
 @media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
 .fieldpic{display:flex;justify-content:center;margin:8px 0}
 .fieldpic svg{max-width:100%;height:auto}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
 </style>
 </head>
 <body>
@@ -188,7 +199,8 @@ details.oq .ans ul{margin:0;padding-left:20px}
   <p>Matematyka, sprawdzian 23 października. Poziom technikum</p>
 </div></header>
 <nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
-  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="notatka">Notatka</button>
   <button role="tab" aria-selected="false" data-tab="wzory">Wzory</button>
   <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
   <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
@@ -197,8 +209,18 @@ details.oq .ans ul{margin:0;padding-left:20px}
 
 <main><div class="wrap">
 
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Wyciąg z całego działu: przeczytaj tuż przed sprawdzianem. Przykłady krok po kroku są w Notatce i Zadaniach.</p>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol><li><b>Twierdzenie o reszcie:</b> reszta z dzielenia W(x) przez (x − a) to <b>W(a)</b>.</li><li><b>Bézout:</b> W(a) = 0 ⇔ W(x) dzieli się przez (x − a); a jest pierwiastkiem.</li><li><b>Pierwiastki całkowite</b> szukasz wśród dzielników wyrazu wolnego, wymierne p/q: p | a₀, q | aₙ. Potem <b>Horner</b> i rozkład.</li></ol></div>
+  <div class="key" style="--c:var(--t6)"><h2>1. Wielomian i działania</h2><ol><li>Stopień = <b>najwyższa potęga x</b> ze współczynnikiem ≠ 0; wyraz wolny a₀ = W(0).</li><li>1/x i √x to <b>nie</b> wielomiany; √2·x + 1 już tak.</li><li>Wielomiany są równe, gdy mają ten sam stopień i <b>równe współczynniki przy tych samych potęgach</b>.</li><li>Przy odejmowaniu zmień znak <b>każdego</b> wyrazu odejmowanego wielomianu.</li><li>Stopień iloczynu = <b>suma</b> stopni.</li></ol></div>
+  <div class="key" style="--c:var(--t3)"><h2>2. Dzielenie wielomianów</h2><ol><li>W(x) = P(x)·Q(x) + R(x), stopień reszty <b>mniejszy</b> od stopnia dzielnika.</li><li>Brakujące potęgi wpisuj z <b>zerem</b> (x³ + 0x² − 2x + 5).</li><li><b>Horner</b> tylko dla dzielnika x − a; dla (x + 4) bierzesz <b>a = −4</b>.</li><li>Ostatnia liczba w schemacie Hornera to <b>reszta</b>, pozostałe to współczynniki ilorazu (stopień o 1 niższy).</li><li>Szukanie parametru: z Bézouta ułóż równanie <b>W(a) = 0</b> i rozwiąż.</li></ol></div>
+  <div class="key" style="--c:var(--t4)"><h2>3. Rozkład i pierwiastki</h2><ol><li>Kolejność: <b>wyłącz przed nawias</b> → <b>grupuj</b> → <b>wzory skróconego mnożenia</b> → pierwiastki wymierne + Horner.</li><li>a³ − b³ = (a − b)(a² + ab + b²), a³ + b³ = (a + b)(a² − ab + b²).</li><li>Twierdzenie o pierwiastkach daje tylko <b>kandydatów</b>, każdego sprawdź.</li><li><b>Krotność</b> pierwiastka = ile razy (x − a) występuje w rozkładzie.</li><li>x² + 4 <b>nie</b> rozkłada się na czynniki liniowe (Δ &lt; 0).</li></ol></div>
+  <div class="key" style="--c:var(--t5)"><h2>4. Równania i nierówności</h2><ol><li>Przenieś wszystko na jedną stronę (<b>= 0</b>), rozłóż na czynniki, każdy czynnik przyrównaj do zera.</li><li><b>Nie dziel</b> przez x ani przez nawias z x, bo gubisz rozwiązania.</li><li>Nierówności: miejsca zerowe na osi, <b>wężyk</b> od prawej z góry (gdy aₙ &gt; 0).</li><li>Przy pierwiastku <b>parzystej</b> krotności wężyk się odbija, przy nieparzystej przechodzi przez oś.</li><li>Odpowiedź do nierówności zapisz jako <b>przedziały</b>; sprawdź, czy końce są domknięte.</li></ol></div>
+</section>
+
 <!-- ============ NOTATKA ============ -->
-<section class="tab" id="notatka">
+<section class="tab" id="notatka" hidden>
 
   <!-- T1 -->
   <article class="topic" id="t1" style="--c:var(--t6)">

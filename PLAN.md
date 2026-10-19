@@ -29,6 +29,7 @@ Zasady od użytkownika:
 | Link „Nauka” w menu portalu (obok „Łazik”) | ✅ działa |
 | Kafelek „Nauka: notatki i quizy” na stronie startowej portalu | ✅ pojawia się automatycznie |
 | Historia: *Od kongresu wiedeńskiego do Wiosny Ludów* (Ślady czasu 3, dział 1, tematy 1–6) | ✅ na Pi, 58 fiszek, 58 pytań quizu, 14 pytań otwartych |
+| Zakładka „Najważniejsze” | ✅ na wszystkich 4 stronach, pierwsza i domyślnie otwarta |
 | Data sprawdzianu z historii | ✅ **2026-10-20**, zakres tematy 1, 2, 3, 5, 6 (bez 4). Na stronie ramka z zakresem i filtr „Na sprawdzian (bez 4)” |
 | Fizyka: *Siły, pole i napięcie elektryczne* (kartkówka **2026-10-23**) | ✅ na Pi, 34 fiszki, 35 pytań quizu, 11 zadań, zakładka „Wzory” zamiast osi czasu. Treść z typowego programu liceum (bez zdjęć od użytkownika) |
 | Matematyka: *Wielomiany* (sprawdzian **2026-10-23**) | ✅ na Pi, `matematyka-wielomiany`, 33 fiszki, 40 pytań, 13 zadań, rachunki sprawdzone w sympy |
@@ -149,7 +150,7 @@ Sprawdź JSON przed wgraniem: `python -c "import json;json.load(open('sprawdzian
 
 ## 6. Jak przygotować stronę sprawdzianu
 
-**Szablon:** `strona/historia-3-dzial-1/index.html`. Skopiuj go i podmień treść. Jeden plik HTML, bez zewnętrznych
+**Szablon:** najlepiej `strona/fizyka-pole-elektryczne/index.html` (ma już zakładkę „Najważniejsze”, wzory, `COL`, `lining-nums`; historia też działa). Skopiuj go i podmień treść. Jeden plik HTML, bez zewnętrznych
 skryptów, jedynie fonty z Google Fonts. Działa na telefonie, ma tryb jasny i ciemny.
 
 Zakładki i dane w skrypcie:
@@ -164,7 +165,13 @@ Zakładki i dane w skrypcie:
 - `T` = nazwy tematów (maks. 6, kolory `--t1`…`--t6`). Przy innej liczbie tematów popraw też pętlę w `makeFilters`
   (`for(let i=1;i<=6;i++)`) i paski w „ribbon” (sekcja na górze notatki).
 
-**Dwie rzeczy obowiązkowe w każdej nowej stronie:**
+**⭐ Zakładka „Najważniejsze” — OBOWIĄZKOWA w każdej stronie (prośba użytkownika, „to najważniejsze”).**
+Pierwsza w `nav.tabs`, otwarta domyślnie (`notatka` ma wtedy `hidden`). Zawiera: ramkę „Jeśli zapamiętasz tylko tyle”
+(3 najważniejsze rzeczy z całego zagadnienia) i po jednej karcie `.key` na temat z 4–5 kluczowymi punktami.
+Wszystko musi się zgadzać z notatką. Gotowe narzędzie: `narzedzia/dodaj_najwazniejsze.py <tresc.json> <id>...`
+(wzór treści: `narzedzia/najwazniejsze_tresc.json`); jeśli kopiujesz stronę, która ma już tę zakładkę, tylko podmień treść.
+
+**Pozostałe rzeczy obowiązkowe w każdej nowej stronie:**
 1. Link powrotu zaraz po `<header class="top"><div class="wrap">`:
    `<a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>`
 2. Klucz wyniku quizu: `"nauka:<id>:best_"+qFilter` (w `getItem` i `setItem`). Lista czyta `nauka:<id>:best_all`.
@@ -220,3 +227,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-19 (chmura, 2)**: Z kalendarza: historia ma datę 2026-10-20 i zakres bez tematu 4 (ramka + filtr „spr”).
   Dodano matematykę (wielomiany) i montaż (pomiary pneumatyka/hydraulika). W nowych stronach `font-variant-numeric:
   lining-nums`, bo Alegreya ma cyfry nautyczne (0 wyglądało jak „o”). Wszystko na Pi, HTTP 200, usługi Minecraft bez zmian.
+- **2026-10-19 (chmura, 3)**: Na prośbę użytkownika dodano zakładkę „Najważniejsze” (pierwsza, domyślna) do wszystkich
+  stron i wpisano ją jako obowiązkową w sekcji 6. Narzędzie w `narzedzia/`. Backup na Pi: `*/index.html.bak_przed_najwazniejsze`.
+  Uwaga techniczna: `tailscaled` w kontenerze potrafi się wyłączyć; restart z tym samym `--state` przywraca połączenie bez klucza.
