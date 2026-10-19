@@ -34,9 +34,9 @@ Zasady od użytkownika:
 | Fizyka: *Siły, pole i napięcie elektryczne* (kartkówka **2026-10-23**) | ✅ na Pi, 34 fiszki, 35 pytań quizu, 11 zadań, zakładka „Wzory” zamiast osi czasu. Treść z typowego programu liceum (bez zdjęć od użytkownika) |
 | Matematyka: *Wielomiany* (sprawdzian **2026-10-23**) | ✅ na Pi, `matematyka-wielomiany`, 33 fiszki, 40 pytań, 13 zadań, rachunki sprawdzone w sympy |
 | Montaż urządzeń mechatronicznych: *Pomiary w układach elektropneumatycznych i elektrohydraulicznych* (kartkówka **2026-10-26**, grupa 3 KL-1/2) | ✅ na Pi, `montaz-pomiary-pneumatyka-hydraulika`, 38 fiszek, 38 pytań, 14 zadań. Wiedza podręcznikowa, bez notatek nauczyciela |
-| Angielski: *Impulse 3 Unit 3* (sprawdzian **2026-10-22**) | ⏳ czeka na zdjęcia unitu (słownictwo, gramatyka) |
-| Polski: wiersz na pamięć, *Kowal* (Staff, str. 90) albo *Erotyk* (**2026-10-27**) | ⏳ czeka na wybór wiersza i zdjęcie tekstu. Nie przepisywać z pamięci |
-| Edukacja obywatelska: dział V, tematy 1–5 (sprawdzian **2026-11-12**) | ⏳ czeka na nazwę podręcznika i spis treści działu V |
+| Angielski: *Impulse 3 Unit 3 „Mysteries”* (sprawdzian **2026-10-22**) | ✅ na Pi, `angielski-impulse3-unit3`, z PDF podręcznika (s. 39–53, wordlist z tłumaczeniami): 142 fiszki z przełącznikiem EN↔PL, 66 pytań, 22 ćwiczenia |
+| Polski: wiersz na pamięć, Tetmajer *„Lubię, kiedy kobieta…”* (**2026-10-27**) | ✅ na Pi, `polski-tetmajer-lubie-kiedy-kobieta`: nauka na pamięć (5 poziomów), wpisywanie wersów, quiz 28. ⚠️ Tekst z pamięci Claude, **niesprawdzony z podręcznikiem (str. 90)** — poproś o zdjęcie i porównaj |
+| Edukacja obywatelska: *Masz wpływ 1*, dział 5 „Prawo i prawa człowieka”, tematy 1–5 (sprawdzian **2026-11-12**) | ✅ na Pi, `edukacja-obywatelska-dzial-5`, z PDF podręcznika (s. 187–218): 45 fiszek, 57 pytań, 20 pytań otwartych. Temat 4 oznaczony w podręczniku „F” (fakultatywny) — uwzględniony, do potwierdzenia u nauczyciela |
 
 Kalendarz sprawdzianów użytkownik wkleja jako zrzut z dziennika (Librus: „najbliższe sprawdziany”). Klasa 3 KL, technikum, zawód technik robotyk.
 
@@ -230,3 +230,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-19 (chmura, 3)**: Na prośbę użytkownika dodano zakładkę „Najważniejsze” (pierwsza, domyślna) do wszystkich
   stron i wpisano ją jako obowiązkową w sekcji 6. Narzędzie w `narzedzia/`. Backup na Pi: `*/index.html.bak_przed_najwazniejsze`.
   Uwaga techniczna: `tailscaled` w kontenerze potrafi się wyłączyć; restart z tym samym `--state` przywraca połączenie bez klucza.
+- **2026-10-19 (chmura, 4)**: Z PDF-ów od użytkownika dodano angielski (Impulse 3 Unit 3) i edukację obywatelską
+  (Masz wpływ 1, dział 5), plus polski: wiersz Tetmajera do nauki na pamięć (tekst z pamięci, do weryfikacji).
+  Wszystkie 7 stron na Pi z zakładką „Najważniejsze”, HTTP 200, usługi Minecraft bez zmian.
+  Backup: `sprawdziany.json.bak_2026-10-19_ang-pol-edo`. PDF-y podręczników nie są w repo (tylko w uploadach sesji).

@@ -1,5 +1,58 @@
 [
   {
+    "id": "angielski-impulse3-unit3",
+    "folder": "angielski-impulse3-unit3",
+    "przedmiot": "Angielski",
+    "typ": "sprawdzian",
+    "tytul": "Impulse 3 · Unit 3: Mysteries",
+    "opis": "Unit 3 Mysteries: mocne i opisowe przymiotniki, książki i media, modal verbs of deduction, wyrażanie pewności i wątpliwości, past simple / continuous / perfect, łączniki w opowiadaniu.",
+    "data": "2026-10-22",
+    "dodano": "2026-10-19",
+    "zawiera": [
+      "najważniejsze",
+      "słówka",
+      "gramatyka",
+      "142 fiszki",
+      "66 pytań quizu",
+      "22 ćwiczenia"
+    ]
+  },
+  {
+    "id": "polski-tetmajer-lubie-kiedy-kobieta",
+    "folder": "polski-tetmajer-lubie-kiedy-kobieta",
+    "przedmiot": "Polski",
+    "typ": "sprawdzian",
+    "tytul": "Wiersz na pamięć: „Lubię, kiedy kobieta…” (Tetmajer)",
+    "opis": "Erotyk Kazimierza Przerwy-Tetmajera (Młoda Polska) do nauki na pamięć: tekst z czytaniem na głos, stopniowe ukrywanie słów, wpisywanie wersów z podświetleniem błędów i quiz o budowie i interpretacji.",
+    "data": "2026-10-27",
+    "dodano": "2026-10-19",
+    "zawiera": [
+      "najważniejsze",
+      "tekst wiersza",
+      "nauka na pamięć (5 poziomów)",
+      "sprawdzanie wersów",
+      "28 pytań quizu"
+    ]
+  },
+  {
+    "id": "edukacja-obywatelska-dzial-5",
+    "folder": "edukacja-obywatelska-dzial-5",
+    "przedmiot": "Edukacja obywatelska",
+    "typ": "sprawdzian",
+    "tytul": "Prawo i prawa człowieka",
+    "opis": "Masz wpływ 1, dział 5: rodzaje i cechy prawa, zdolność do czynności prawnych, generacje praw człowieka, RPO, RPD i ETPC, dane osobowe i dobra osobiste, umowa o pracę, zlecenie i dzieło, staż i praktyki.",
+    "data": "2026-11-12",
+    "dodano": "2026-10-19",
+    "zawiera": [
+      "najważniejsze",
+      "notatka",
+      "pojęcia",
+      "45 fiszek",
+      "57 pytań quizu",
+      "20 pytań otwartych"
+    ]
+  },
+  {
     "id": "matematyka-wielomiany",
     "folder": "matematyka-wielomiany",
     "przedmiot": "Matematyka",
