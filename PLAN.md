@@ -29,9 +29,15 @@ Zasady od użytkownika:
 | Link „Nauka” w menu portalu (obok „Łazik”) | ✅ działa |
 | Kafelek „Nauka: notatki i quizy” na stronie startowej portalu | ✅ pojawia się automatycznie |
 | Historia: *Od kongresu wiedeńskiego do Wiosny Ludów* (Ślady czasu 3, dział 1, tematy 1–6) | ✅ na Pi, 58 fiszek, 58 pytań quizu, 14 pytań otwartych |
-| Data sprawdzianu z historii | ❌ **nieznana**, w JSON jest `"data": null`. Zapytaj użytkownika |
+| Data sprawdzianu z historii | ✅ **2026-10-20**, zakres tematy 1, 2, 3, 5, 6 (bez 4). Na stronie ramka z zakresem i filtr „Na sprawdzian (bez 4)” |
 | Fizyka: *Siły, pole i napięcie elektryczne* (kartkówka **2026-10-23**) | ✅ na Pi, 34 fiszki, 35 pytań quizu, 11 zadań, zakładka „Wzory” zamiast osi czasu. Treść z typowego programu liceum (bez zdjęć od użytkownika) |
-| Lista nadchodzących kartkówek | Kolejne podaje użytkownik na bieżąco (przedmiot, zagadnienia, data, ewentualnie zdjęcia) |
+| Matematyka: *Wielomiany* (sprawdzian **2026-10-23**) | ✅ na Pi, `matematyka-wielomiany`, 33 fiszki, 40 pytań, 13 zadań, rachunki sprawdzone w sympy |
+| Montaż urządzeń mechatronicznych: *Pomiary w układach elektropneumatycznych i elektrohydraulicznych* (kartkówka **2026-10-26**, grupa 3 KL-1/2) | ✅ na Pi, `montaz-pomiary-pneumatyka-hydraulika`, 38 fiszek, 38 pytań, 14 zadań. Wiedza podręcznikowa, bez notatek nauczyciela |
+| Angielski: *Impulse 3 Unit 3* (sprawdzian **2026-10-22**) | ⏳ czeka na zdjęcia unitu (słownictwo, gramatyka) |
+| Polski: wiersz na pamięć, *Kowal* (Staff, str. 90) albo *Erotyk* (**2026-10-27**) | ⏳ czeka na wybór wiersza i zdjęcie tekstu. Nie przepisywać z pamięci |
+| Edukacja obywatelska: dział V, tematy 1–5 (sprawdzian **2026-11-12**) | ⏳ czeka na nazwę podręcznika i spis treści działu V |
+
+Kalendarz sprawdzianów użytkownik wkleja jako zrzut z dziennika (Librus: „najbliższe sprawdziany”). Klasa 3 KL, technikum, zawód technik robotyk.
 
 Oryginał strony z historii to artefakt claude.ai (własność użytkownika):
 https://claude.ai/artifact/MsSRDaCEaYUd7QgTyvJuqA
@@ -211,3 +217,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   notatka (3 tematy), wzory, 34 fiszki, 35 pytań quizu, 11 zadań. Przetestowano w przeglądarce (quiz, zapis wyniku,
   lista), wgrano na Pi, HTTP 200 dla listy i strony. Backup: `sprawdziany.json.bak_2026-10-19_fizyka` na Pi.
   Usługi Minecraft bez zmian.
+- **2026-10-19 (chmura, 2)**: Z kalendarza: historia ma datę 2026-10-20 i zakres bez tematu 4 (ramka + filtr „spr”).
+  Dodano matematykę (wielomiany) i montaż (pomiary pneumatyka/hydraulika). W nowych stronach `font-variant-numeric:
+  lining-nums`, bo Alegreya ma cyfry nautyczne (0 wyglądało jak „o”). Wszystko na Pi, HTTP 200, usługi Minecraft bez zmian.

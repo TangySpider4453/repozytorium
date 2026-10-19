@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Matematyka – wielomiany: powtórka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+body{font-variant-numeric:lining-nums}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+/* wzory */
+.f{font-family:var(--serif);font-size:20px;font-weight:700;text-align:center;padding:10px 12px;margin:8px 0;border-radius:10px;background:color-mix(in srgb,var(--c) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 35%,var(--line))}
+.f small{display:block;font-family:var(--sans);font-weight:400;font-size:14px;color:var(--muted);margin-top:2px}
+.ex{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15.5px}
+.ex b:first-child{color:var(--c)}
+.fl{display:grid;gap:10px}
+.fl .row2{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px}
+.fl .row2 .f{margin:0;font-size:19px}
+.fl .row2 p{margin:0;font-size:15.5px}
+@media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
+.fieldpic{display:flex;justify-content:center;margin:8px 0}
+.fieldpic svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>Wielomiany</h1>
+  <p>Matematyka, sprawdzian 23 października. Poziom technikum</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="false" data-tab="wzory">Wzory</button>
+  <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+  <button role="tab" aria-selected="false" data-tab="otwarte">Zadania</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NOTATKA ============ -->
+<section class="tab" id="notatka">
+
+  <!-- T1 -->
+  <article class="topic" id="t1" style="--c:var(--t6)">
+    <header><div class="num">Temat 1</div><h2>Wielomian i działania</h2><div class="span">stopień, współczynniki, wartość, równość, dodawanie i mnożenie</div></header>
+    <div class="tbody">
+      <h3>Co to jest wielomian</h3>
+      <p><span class="k">Wielomian</span> jednej zmiennej x to suma jednomianów postaci a·xⁿ, gdzie n jest liczbą naturalną (0, 1, 2, …):</p>
+      <div class="f">W(x) = aₙxⁿ + aₙ₋₁xⁿ⁻¹ + … + a₁x + a₀, &nbsp; aₙ ≠ 0<small>aₙ, …, a₀ to współczynniki</small></div>
+      <dl class="terms">
+        <div><dt>stopień</dt><dd>najwyższa potęga x z niezerowym współczynnikiem; W(x) = 2x³ − 3x² + x − 5 ma stopień 3</dd></div>
+        <div><dt>współczynnik przy najwyższej potędze</dt><dd>aₙ, tutaj 2</dd></div>
+        <div><dt>wyraz wolny</dt><dd>a₀, tutaj −5; zawsze W(0) = a₀</dd></div>
+        <div><dt>wielomian stały</dt><dd>np. W(x) = 7, stopień 0; wielomian zerowy W(x) = 0 nie ma stopnia</dd></div>
+      </dl>
+      <div class="warn"><b>Uważaj:</b> wyrażenia z x w mianowniku (np. 1/x) albo pod pierwiastkiem (√x) <b>nie są</b> wielomianami. Za to √2·x + 1 jest wielomianem, bo pierwiastek dotyczy liczby, a nie x.</div>
+
+      <h3>Wartość wielomianu</h3>
+      <p>Żeby obliczyć W(a), wstawiamy a w miejsce x.</p>
+      <div class="ex"><b>Przykład.</b> W(x) = 2x³ − 3x² + x − 5. W(2) = 2·8 − 3·4 + 2 − 5 = 16 − 12 + 2 − 5 = <b>1</b>. W(−1) = 2·(−1) − 3·1 + (−1) − 5 = <b>−11</b>.</div>
+      <p style="margin-top:8px">Przydatne skróty: <b>W(1) = suma wszystkich współczynników</b>, <b>W(0) = wyraz wolny</b>.</p>
+      <div class="warn"><b>Uważaj na znaki</b> przy liczbach ujemnych: (−1)³ = −1, ale (−1)² = +1. Zawsze bierz liczbę ujemną w nawias.</div>
+
+      <h3>Równość wielomianów</h3>
+      <p>Dwa wielomiany są <b>równe</b>, gdy mają ten sam stopień i <b>równe współczynniki przy tych samych potęgach</b>.</p>
+      <div class="ex"><b>Przykład.</b> W(x) = (a + 1)x² + 3x + b i V(x) = 4x² + 3x − 2. Porównujemy: a + 1 = 4 i b = −2, więc <b>a = 3, b = −2</b>.</div>
+
+      <h3>Dodawanie, odejmowanie, mnożenie</h3>
+      <ul class="dots">
+        <li><b>Dodawanie i odejmowanie:</b> dodajemy wyrazy podobne (te same potęgi). Stopień sumy jest <b>co najwyżej</b> równy większemu ze stopni (może spaść, gdy najwyższe wyrazy się skrócą).</li>
+        <li><b>Mnożenie:</b> każdy wyraz przez każdy, potem redukcja wyrazów podobnych. <b>Stopień iloczynu = suma stopni.</b></li>
+      </ul>
+      <div class="ex"><b>Przykład.</b> P(x) = x³ + 2x² − 1, Q(x) = −x³ + x + 4.<br>P + Q = 2x² + x + 3 (stopień 2, bo x³ się skróciło).<br>P − Q = x³ + 2x² − 1 + x³ − x − 4 = 2x³ + 2x² − x − 5.<br>(x² − 3)(2x + 1) = 2x³ + x² − 6x − 3.</div>
+      <div class="warn"><b>Uważaj:</b> przy odejmowaniu weź cały odejmowany wielomian w nawias i zmień znak <b>każdego</b> wyrazu. Najczęstszy błąd: zmiana znaku tylko pierwszego wyrazu.</div>
+    </div>
+  </article>
+
+  <!-- T2 -->
+  <article class="topic" id="t2" style="--c:var(--t3)">
+    <header><div class="num">Temat 2</div><h2>Dzielenie wielomianów</h2><div class="span">dzielenie pisemne, schemat Hornera, twierdzenie o reszcie, twierdzenie Bézouta</div></header>
+    <div class="tbody">
+      <h3>Dzielenie z resztą</h3>
+      <div class="f">W(x) = P(x) · Q(x) + R(x)<small>W – dzielna, P – dzielnik, Q – iloraz, R – reszta; stopień R &lt; stopień P</small></div>
+      <ul class="dots">
+        <li>Stopień ilorazu = stopień dzielnej − stopień dzielnika (np. 5 − 2 = 3).</li>
+        <li>Przy dzieleniu przez dwumian (x − a) reszta jest <b>liczbą</b>; przez wielomian stopnia 2 reszta ma stopień co najwyżej 1 (postać ax + b).</li>
+        <li>Gdy R(x) = 0, mówimy, że W jest <b>podzielny</b> przez P.</li>
+      </ul>
+
+      <h3>Dzielenie pisemne</h3>
+      <p>Jak dzielenie liczb „pod kreską”: dzielimy najwyższy wyraz dzielnej przez najwyższy wyraz dzielnika, mnożymy, <b>odejmujemy</b>, powtarzamy.</p>
+      <div class="ex"><b>Przykład.</b> (x³ + 2x² − x + 3) : (x² + 1)<br>
+        1) x³ : x² = <b>x</b>; x·(x² + 1) = x³ + x; odejmujemy: 2x² − 2x + 3<br>
+        2) 2x² : x² = <b>2</b>; 2·(x² + 1) = 2x² + 2; odejmujemy: −2x + 1<br>
+        Stopień −2x + 1 jest mniejszy niż dzielnika, koniec. Iloraz <b>x + 2</b>, reszta <b>−2x + 1</b>.</div>
+      <div class="warn"><b>Uważaj:</b> jeśli w dzielnej brakuje jakiejś potęgi, wpisz ją z zerem (np. x³ + 0x² − 2x + 5). Inaczej kolumny się rozjadą.</div>
+
+      <h3>Schemat Hornera (dzielenie przez x − a)</h3>
+      <p>Szybki sposób dzielenia przez dwumian <b>x − a</b>. W pierwszym wierszu wpisujemy współczynniki dzielnej (wszystkie, także zera), z lewej liczbę <b>a</b>. Pierwszy współczynnik przepisujemy, a każdy następny: <b>poprzedni wynik · a + współczynnik z góry</b>.</p>
+      <div class="ex"><b>Przykład.</b> (2x³ − 3x² + 4x − 5) : (x − 2), więc a = 2.</div>
+      <div class="tablewrap" style="margin-top:8px"><table style="min-width:0;text-align:center">
+        <tr><th></th><th>2</th><th>−3</th><th>4</th><th>−5</th></tr>
+        <tr><td><b>a = 2</b></td><td>2</td><td>2·2 − 3 = 1</td><td>1·2 + 4 = 6</td><td>6·2 − 5 = <b>7</b></td></tr>
+      </table></div>
+      <p style="margin-top:8px">Ostatnia liczba to <b>reszta = 7</b>, pozostałe to współczynniki ilorazu (o stopień niższego): <b>2x² + x + 6</b>.</p>
+      <div class="warn"><b>Uważaj:</b> przy dzieleniu przez (x + 4) wpisujesz <b>a = −4</b>, bo x + 4 = x − (−4). Horner działa tylko dla dzielnika postaci x − a.</div>
+
+      <h3>Twierdzenie o reszcie</h3>
+      <div class="f">reszta z dzielenia W(x) przez (x − a) = W(a)<small>nie trzeba dzielić, wystarczy obliczyć wartość</small></div>
+      <div class="ex"><b>Przykład.</b> Reszta z dzielenia 2x³ − 3x² + 4x − 5 przez (x − 2) to W(2) = 16 − 12 + 8 − 5 = 7. Zgadza się z Hornerem.</div>
+
+      <h3>Twierdzenie Bézouta</h3>
+      <div class="f">W(a) = 0 &nbsp;⇔&nbsp; W(x) jest podzielny przez (x − a)<small>a jest pierwiastkiem wtedy i tylko wtedy, gdy (x − a) dzieli wielomian</small></div>
+      <div class="ex"><b>Przykład.</b> Dla jakiego m wielomian x³ + mx² + 5x − 6 jest podzielny przez (x − 2)? Z Bézouta W(2) = 0: 8 + 4m + 10 − 6 = 0, czyli 4m + 12 = 0, <b>m = −3</b>.</div>
+    </div>
+  </article>
+
+  <!-- T3 -->
+  <article class="topic" id="t3" style="--c:var(--t4)">
+    <header><div class="num">Temat 3</div><h2>Rozkład na czynniki i pierwiastki</h2><div class="span">wyłączanie, grupowanie, wzory skróconego mnożenia, pierwiastki wymierne, krotność</div></header>
+    <div class="tbody">
+      <h3>Pierwiastek wielomianu</h3>
+      <p>Liczba a jest <span class="k">pierwiastkiem</span> wielomianu W, gdy <b>W(a) = 0</b>. Wielomian stopnia n ma <b>co najwyżej n</b> pierwiastków rzeczywistych.</p>
+
+      <h3>Metody rozkładu</h3>
+      <div class="grid2">
+        <div class="box"><h4>1. Wyłączanie przed nawias</h4><p>x³ − 4x = x(x² − 4) = <b>x(x − 2)(x + 2)</b></p></div>
+        <div class="box"><h4>2. Grupowanie</h4><p>x³ + 2x² − 9x − 18 = x²(x + 2) − 9(x + 2) = (x + 2)(x² − 9) = <b>(x + 2)(x − 3)(x + 3)</b></p></div>
+        <div class="box"><h4>3. Wzory skróconego mnożenia</h4><p>x³ − 8 = (x − 2)(x² + 2x + 4)<br>8x³ − 1 = (2x − 1)(4x² + 2x + 1)</p></div>
+        <div class="box"><h4>4. Podstawienie t = x²</h4><p>x⁴ − 5x² + 4 = (x² − 1)(x² − 4) = (x − 1)(x + 1)(x − 2)(x + 2)</p></div>
+      </div>
+
+      <h3>Wzory skróconego mnożenia (trzeci stopień)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Wzór</th><th>Przykład</th></tr>
+        <tr><td>a³ − b³ = (a − b)(a² + ab + b²)</td><td>x³ − 8 = (x − 2)(x² + 2x + 4)</td></tr>
+        <tr><td>a³ + b³ = (a + b)(a² − ab + b²)</td><td>x³ + 27 = (x + 3)(x² − 3x + 9)</td></tr>
+        <tr><td>(a + b)³ = a³ + 3a²b + 3ab² + b³</td><td>(x + 1)³ = x³ + 3x² + 3x + 1</td></tr>
+        <tr><td>(a − b)³ = a³ − 3a²b + 3ab² − b³</td><td>(x − 2)³ = x³ − 6x² + 12x − 8</td></tr>
+      </table></div>
+      <p style="margin-top:8px">Trójmiany z wzorów na sumę i różnicę sześcianów (np. x² + 2x + 4) mają <b>Δ &lt; 0</b>, więc dalej się nie rozkładają.</p>
+
+      <h3>Szukanie pierwiastków wymiernych</h3>
+      <p>Gdy wielomian ma <b>współczynniki całkowite</b>:</p>
+      <ul class="dots">
+        <li><b>Pierwiastki całkowite</b> są dzielnikami wyrazu wolnego a₀.</li>
+        <li><b>Pierwiastki wymierne</b> p/q (ułamek nieskracalny): p dzieli wyraz wolny, q dzieli współczynnik przy najwyższej potędze.</li>
+      </ul>
+      <div class="ex"><b>Przykład.</b> W(x) = 2x³ − x² − 7x + 6. Kandydaci: p ∈ {±1, ±2, ±3, ±6}, q ∈ {1, 2}, czyli ±1, ±2, ±3, ±6, ±1/2, ±3/2.<br>
+        Sprawdzamy: W(1) = 2 − 1 − 7 + 6 = 0, więc 1 jest pierwiastkiem.<br>
+        Horner przez (x − 1): współczynniki 2, 1, −6, reszta 0 → W(x) = (x − 1)(2x² + x − 6).<br>
+        Δ = 1 + 48 = 49, x = (−1 ± 7)/4, czyli 3/2 i −2. <b>W(x) = (x − 1)(2x − 3)(x + 2)</b>.</div>
+
+      <h3>Krotność pierwiastka</h3>
+      <p>Jeśli W(x) = (x − a)ᵏ · Q(x) i Q(a) ≠ 0, to a jest pierwiastkiem <b>k-krotnym</b>.</p>
+      <div class="ex"><b>Przykład.</b> W(x) = (x − 1)²(x + 3)³: 1 jest pierwiastkiem <b>dwukrotnym</b>, −3 <b>trzykrotnym</b>. Stopień W to 2 + 3 = 5.</div>
+      <div class="warn"><b>Uważaj:</b> twierdzenie o pierwiastkach wymiernych daje tylko <b>kandydatów</b>, każdego trzeba sprawdzić. x² + 4 nie rozkłada się na czynniki liniowe (to nie jest wzór skróconego mnożenia!). x³ − 8 ma tylko <b>jeden</b> pierwiastek rzeczywisty, 2.</div>
+    </div>
+  </article>
+
+  <!-- T4 -->
+  <article class="topic" id="t4" style="--c:var(--t5)">
+    <header><div class="num">Temat 4</div><h2>Równania i nierówności wielomianowe</h2><div class="span">rozkład na czynniki, iloczyn równy zero, „wężyk”</div></header>
+    <div class="tbody">
+      <h3>Równania: schemat</h3>
+      <ol style="padding-left:20px;margin:6px 0">
+        <li>Przenieś wszystko na jedną stronę: W(x) = 0.</li>
+        <li>Rozłóż W na czynniki (wyłączanie, grupowanie, wzory, Horner z pierwiastkiem wymiernym).</li>
+        <li>Iloczyn jest zerem, gdy <b>któryś czynnik</b> jest zerem. Przyrównaj każdy czynnik do 0.</li>
+        <li>Zapisz wszystkie rozwiązania.</li>
+      </ol>
+      <div class="ex"><b>Przykład 1.</b> x³ − 2x² − 5x + 6 = 0. W(1) = 1 − 2 − 5 + 6 = 0. Horner: (x − 1)(x² − x − 6) = (x − 1)(x − 3)(x + 2). <b>x ∈ {−2, 1, 3}</b>.</div>
+      <div class="ex"><b>Przykład 2 (dwukwadratowe).</b> x⁴ − 5x² + 4 = 0. t = x² ≥ 0: t² − 5t + 4 = 0, t = 1 lub t = 4. x² = 1 lub x² = 4. <b>x ∈ {−2, −1, 1, 2}</b>.</div>
+      <div class="ex"><b>Przykład 3.</b> x³ + x² − x − 1 = 0. x²(x + 1) − (x + 1) = (x + 1)(x² − 1) = (x + 1)²(x − 1). <b>x ∈ {−1, 1}</b>, −1 jest pierwiastkiem dwukrotnym.</div>
+      <div class="warn"><b>Uważaj:</b> <b>nie dziel</b> obu stron przez x ani przez nawias z x. Z x³ = 4x po podzieleniu przez x gubisz rozwiązanie x = 0. Zamiast tego: x³ − 4x = 0, x(x − 2)(x + 2) = 0, x ∈ {−2, 0, 2}.</div>
+
+      <h3>Nierówności: metoda „wężyka”</h3>
+      <p class="intro" style="margin:4px 0 8px">Ta część może wykraczać poza zakres sprawdzianu. Zapytaj nauczyciela, czy będzie.</p>
+      <ol style="padding-left:20px;margin:6px 0">
+        <li>Rozłóż wielomian na czynniki i znajdź pierwiastki.</li>
+        <li>Zaznacz pierwiastki na osi liczbowej.</li>
+        <li>Rysuj wykres od <b>prawej strony</b>: z góry, gdy współczynnik przy najwyższej potędze jest dodatni, z dołu, gdy ujemny.</li>
+        <li>Przy pierwiastku <b>nieparzystej krotności</b> linia przecina oś, przy <b>parzystej</b> (np. dwukrotnym) się od niej odbija.</li>
+        <li>Odczytaj przedziały nad osią (W &gt; 0) albo pod osią (W &lt; 0). Przy ≥ i ≤ dołącz pierwiastki.</li>
+      </ol>
+      <div class="ex"><b>Przykład.</b> (x − 1)(x + 2)(x − 3) &gt; 0. Pierwiastki −2, 1, 3, współczynnik przy x³ dodatni, więc start z góry po prawej. Znaki od prawej: +, −, +, −. <b>x ∈ (−2; 1) ∪ (3; +∞)</b>.</div>
+      <div class="ex"><b>Przykład z pierwiastkiem podwójnym.</b> (x − 2)²(x + 1) ≤ 0. Przy 2 wykres się odbija (zostaje nad osią), przy −1 przecina oś. <b>x ∈ (−∞; −1] ∪ {2}</b>. Nie zapomnij o samym punkcie 2, bo tam W = 0.</div>
+    </div>
+  </article>
+</section>
+
+<!-- ============ WZORY ============ -->
+<section class="tab" id="wzory" hidden>
+  <p class="intro">Najważniejsze wzory i twierdzenia w jednym miejscu. Zasłoń prawą kolumnę i sprawdź, czy pamiętasz, co oznaczają.</p>
+  <div class="fl">
+    <div class="row2" style="--c:var(--t6)"><div class="f">st(P·Q) = st P + st Q</div><p><b>Stopień iloczynu</b> to suma stopni.</p></div>
+    <div class="row2" style="--c:var(--t6)"><div class="f">W(0) = a₀, &nbsp;W(1) = suma wsp.</div><p>Wyraz wolny i suma współczynników.</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">W = P·Q + R</div><p><b>Dzielenie z resztą</b>, stopień R &lt; stopień P.</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">R = W(a)</div><p><b>Twierdzenie o reszcie:</b> reszta z dzielenia przez (x − a).</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">W(a) = 0 ⇔ (x − a) | W</div><p><b>Twierdzenie Bézouta.</b></p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">a³ − b³ = (a − b)(a² + ab + b²)</div><p>Różnica sześcianów.</p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">a³ + b³ = (a + b)(a² − ab + b²)</div><p>Suma sześcianów.</p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">(a ± b)³ = a³ ± 3a²b + 3ab² ± b³</div><p>Sześcian sumy i różnicy.</p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">a² − b² = (a − b)(a + b)</div><p>Różnica kwadratów (przyda się na koniec rozkładu).</p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">p | a₀, &nbsp;q | aₙ</div><p><b>Pierwiastek wymierny p/q</b> wielomianu o współczynnikach całkowitych.</p></div>
+    <div class="row2" style="--c:var(--t5)"><div class="f">Δ = b² − 4ac</div><p>Trójmian ax² + bx + c: x = (−b ± √Δ)/(2a). Δ &lt; 0, brak pierwiastków.</p></div>
+    <div class="row2" style="--c:var(--t5)"><div class="f">A·B = 0 ⇔ A = 0 lub B = 0</div><p>Podstawa rozwiązywania równań po rozkładzie.</p></div>
+  </div>
+</section>
+
+<!-- ============ FISZKI ============ -->
+<section class="tab" id="fiszki" hidden>
+  <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
+  <div class="filters" id="fcFilters"></div>
+  <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
+  <div class="row">
+    <button class="btn badb" id="fcNo">Jeszcze nie</button>
+    <button class="btn good" id="fcYes">Umiem</button>
+    <button class="btn" id="fcShuffle">Przetasuj</button>
+    <span class="counter" id="fcCount"></span>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie. Licz na kartce!</p>
+  <div class="filters" id="qFilters"></div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ ZADANIA ============ -->
+<section class="tab" id="otwarte" hidden>
+  <p class="intro">Zadania w stylu sprawdzianu. Najpierw rozwiąż sam(a) na kartce, potem rozwiń rozwiązanie.</p>
+  <div id="oqList"></div>
+</section>
+
+</div></main>
+
+<script>
+const T = {1:"Wielomian i działania",2:"Dzielenie wielomianów",3:"Rozkład i pierwiastki",4:"Równania i nierówności"};
+const COL = {1:6,2:3,3:4,4:5};
+const C = n => "var(--t"+COL[n]+")";
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(const i of Object.keys(T)) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- flashcards ---------- */
+const FC=[
+ [1,"Wielomian","Suma jednomianów a·xⁿ, gdzie n to liczba naturalna, np. 2x³ − 3x² + x − 5."],
+ [1,"Stopień wielomianu","Najwyższa potęga x z niezerowym współczynnikiem."],
+ [1,"Wyraz wolny","Współczynnik bez x (a₀). Zawsze W(0) = a₀."],
+ [1,"W(1)","Suma wszystkich współczynników wielomianu."],
+ [1,"Równość wielomianów","Ten sam stopień i równe współczynniki przy tych samych potęgach."],
+ [1,"Stopień iloczynu","Suma stopni czynników: st(P·Q) = st P + st Q."],
+ [1,"Stopień sumy","Co najwyżej równy większemu ze stopni (może spaść, gdy najwyższe wyrazy się skrócą)."],
+ [1,"Wartość W(a)","Liczba, którą dostajemy po wstawieniu a w miejsce x."],
+ [2,"Dzielenie z resztą","W(x) = P(x)·Q(x) + R(x), stopień reszty mniejszy od stopnia dzielnika."],
+ [2,"Stopień ilorazu","Stopień dzielnej minus stopień dzielnika."],
+ [2,"Twierdzenie o reszcie","Reszta z dzielenia W(x) przez (x − a) jest równa W(a)."],
+ [2,"Twierdzenie Bézouta","W(a) = 0 wtedy i tylko wtedy, gdy W(x) jest podzielny przez (x − a)."],
+ [2,"Schemat Hornera","Sposób dzielenia przez (x − a): przepisz pierwszy współczynnik, potem wynik·a + kolejny współczynnik."],
+ [2,"Horner: dzielnik x + 3","Wpisujemy a = −3, bo x + 3 = x − (−3)."],
+ [2,"Ostatnia liczba w Hornerze","Reszta z dzielenia; pozostałe liczby to współczynniki ilorazu."],
+ [2,"Brakująca potęga w dzielnej","Wpisz ją ze współczynnikiem 0, np. x³ + 0x² − 2x + 5."],
+ [2,"Reszta z dzielenia przez wielomian stopnia 2","Ma stopień co najwyżej 1, czyli postać ax + b."],
+ [3,"Pierwiastek wielomianu","Liczba a, dla której W(a) = 0."],
+ [3,"Ile pierwiastków ma wielomian stopnia n?","Co najwyżej n pierwiastków rzeczywistych."],
+ [3,"a³ − b³","(a − b)(a² + ab + b²)"],
+ [3,"a³ + b³","(a + b)(a² − ab + b²)"],
+ [3,"(a + b)³","a³ + 3a²b + 3ab² + b³"],
+ [3,"(a − b)³","a³ − 3a²b + 3ab² − b³"],
+ [3,"Pierwiastki całkowite","Szukamy wśród dzielników wyrazu wolnego (gdy współczynniki są całkowite)."],
+ [3,"Pierwiastki wymierne p/q","p dzieli wyraz wolny, q dzieli współczynnik przy najwyższej potędze."],
+ [3,"Pierwiastek k-krotny","W(x) = (x − a)ᵏ·Q(x) i Q(a) ≠ 0."],
+ [3,"Grupowanie","Łączymy wyrazy w pary i wyłączamy wspólny czynnik, np. x²(x + 2) − 9(x + 2) = (x + 2)(x² − 9)."],
+ [3,"x² + 4","Nie rozkłada się na czynniki liniowe, bo Δ < 0."],
+ [4,"Iloczyn równy zero","A·B = 0 wtedy i tylko wtedy, gdy A = 0 lub B = 0."],
+ [4,"Równanie dwukwadratowe","ax⁴ + bx² + c = 0; podstawiamy t = x², t ≥ 0."],
+ [4,"Dlaczego nie dzielimy przez x?","Bo gubimy rozwiązanie x = 0."],
+ [4,"Wężyk: skąd zaczynamy?","Od prawej: z góry, gdy współczynnik przy najwyższej potędze > 0; z dołu, gdy < 0."],
+ [4,"Wężyk: pierwiastek parzystej krotności","Wykres odbija się od osi, nie zmienia znaku."]
+];
+/* ---------- quiz ---------- */
+const Q=[
+ [1,"Stopień wielomianu W(x) = 3x⁴ − x² + 7 to:",["4","3","2","7"],0,"Najwyższa potęga x to x⁴."],
+ [1,"Wyraz wolny wielomianu W(x) = 2x³ − 3x² + x − 5 to:",["−5","2","5","1"],0,"Wyraz wolny to współczynnik bez x, razem ze znakiem."],
+ [1,"Dla W(x) = 2x³ − 3x² + x − 5 wartość W(2) wynosi:",["1","−1","3","9"],0,"16 − 12 + 2 − 5 = 1."],
+ [1,"Dla W(x) = x³ + 2x² − 3 wartość W(−1) wynosi:",["−2","0","−6","2"],0,"(−1)³ + 2·1 − 3 = −1 + 2 − 3 = −2."],
+ [1,"P(x) = x³ + 2x² − 1, Q(x) = −x³ + x + 4. Stopień P + Q to:",["2","3","6","0"],0,"P + Q = 2x² + x + 3, bo x³ się skróciło."],
+ [1,"P ma stopień 3, Q ma stopień 4. Stopień P·Q to:",["7","12","4","1"],0,"Przy mnożeniu stopnie się dodają."],
+ [1,"(x² − 3)(2x + 1) jest równe:",["2x³ + x² − 6x − 3","2x³ − 6x − 3","2x³ + x² − 3","2x³ + x² + 6x − 3"],0,"Każdy wyraz przez każdy: 2x³ + x² − 6x − 3."],
+ [1,"Wielomiany (a + 1)x² + 3x + b oraz 4x² + 3x − 2 są równe dla:",["a = 3, b = −2","a = 4, b = −2","a = 3, b = 2","a = 5, b = −2"],0,"a + 1 = 4 i b = −2."],
+ [1,"Wartość W(1) dowolnego wielomianu to:",["suma jego współczynników","jego wyraz wolny","współczynnik przy najwyższej potędze","zawsze 1"],0,"Każda potęga jedynki to 1, zostają same współczynniki."],
+ [1,"Które wyrażenie NIE jest wielomianem?",["x² + 1/x","3x⁵ − 2","√2·x + 1","7"],0,"1/x to x do potęgi −1, a w wielomianie potęgi są naturalne."],
+ [2,"Reszta z dzielenia W(x) przez (x − a) jest równa:",["W(a)","W(−a)","0","a"],0,"To twierdzenie o reszcie."],
+ [2,"Reszta z dzielenia W(x) = x³ − 2x + 5 przez (x − 2) to:",["9","5","1","−1"],0,"W(2) = 8 − 4 + 5 = 9."],
+ [2,"Reszta z dzielenia W(x) = x³ + x² − 4 przez (x + 1) to:",["−4","−2","−6","0"],0,"x + 1 = x − (−1), więc W(−1) = −1 + 1 − 4 = −4."],
+ [2,"Liczba 3 jest pierwiastkiem W wtedy i tylko wtedy, gdy W jest podzielny przez:",["(x − 3)","(x + 3)","3x","(x² − 3)"],0,"Twierdzenie Bézouta."],
+ [2,"Dzielimy 2x³ − 3x² + 4x − 5 przez (x − 2) schematem Hornera. Iloraz to:",["2x² + x + 6","2x² − 7x + 18","x² + x + 6","2x² − x + 2"],0,"Wiersz Hornera: 2, 1, 6, a ostatnia liczba 7 to reszta. 2x² − 7x + 18 wyszłoby przy dzieleniu przez (x + 2)."],
+ [2,"Reszta z dzielenia 2x³ − 3x² + 4x − 5 przez (x − 2) wynosi:",["7","−7","0","3"],0,"W(2) = 16 − 12 + 8 − 5 = 7."],
+ [2,"Reszta z dzielenia przez wielomian stopnia 2 ma stopień:",["co najwyżej 1","dokładnie 2","dokładnie 1","co najwyżej 2"],0,"Stopień reszty jest mniejszy niż stopień dzielnika (może być też stałą)."],
+ [2,"Dzielimy wielomian stopnia 5 przez wielomian stopnia 2. Iloraz ma stopień:",["3","2","7","10"],0,"5 − 2 = 3."],
+ [2,"Wielomian x³ + mx² + 5x − 6 jest podzielny przez (x − 2) dla:",["m = −3","m = 3","m = −2","m = 0"],0,"W(2) = 8 + 4m + 10 − 6 = 4m + 12 = 0, więc m = −3."],
+ [2,"(x³ − 2x² − 5x + 6) : (x − 1) daje:",["x² − x − 6","x² − 3x − 2","x² + x − 6","x² − x + 6"],0,"Horner z a = 1: 1, −1, −6, reszta 0."],
+ [2,"Dzielimy przez (x + 4) schematem Hornera. Jaką liczbę wpisujemy z lewej?",["−4","4","1/4","−1/4"],0,"x + 4 = x − (−4)."],
+ [3,"Rozkład x³ − 4x na czynniki to:",["x(x − 2)(x + 2)","x(x − 4)(x + 4)","x(x² + 4)","(x − 2)³"],0,"x(x² − 4), a x² − 4 to różnica kwadratów."],
+ [3,"x³ − 8 jest równe:",["(x − 2)(x² + 2x + 4)","(x − 2)(x² − 2x + 4)","(x − 2)³","(x + 2)(x² − 2x + 4)"],0,"Różnica sześcianów: a³ − b³ = (a − b)(a² + ab + b²)."],
+ [3,"x³ + 27 jest równe:",["(x + 3)(x² − 3x + 9)","(x + 3)(x² + 3x + 9)","(x + 3)³","(x − 3)(x² + 3x + 9)"],0,"Suma sześcianów: (a + b)(a² − ab + b²)."],
+ [3,"(a − b)³ jest równe:",["a³ − 3a²b + 3ab² − b³","a³ − b³","a³ − 3a²b − 3ab² − b³","a³ + 3a²b − 3ab² − b³"],0,"Znaki na przemian: +, −, +, −."],
+ [3,"Rozkład x³ + 2x² − 9x − 18 przez grupowanie to:",["(x + 2)(x − 3)(x + 3)","(x − 2)(x − 3)(x + 3)","(x + 2)(x² + 9)","(x + 2)(x − 9)"],0,"x²(x + 2) − 9(x + 2) = (x + 2)(x² − 9)."],
+ [3,"Pierwiastków całkowitych wielomianu o współczynnikach całkowitych szukamy wśród:",["dzielników wyrazu wolnego","dzielników współczynnika przy najwyższej potędze","liczb od −10 do 10","pierwiastków kwadratowych wyrazu wolnego"],0,"Twierdzenie o pierwiastkach całkowitych."],
+ [3,"Która liczba NIE może być pierwiastkiem wymiernym 2x³ − x² − 7x + 6?",["2/3","3/2","−2","1/2"],0,"Mianownik musi dzielić 2, a 3 nie dzieli 2."],
+ [3,"W(x) = (x − 1)²(x + 3)³. Krotność pierwiastka −3 to:",["3","2","1","5"],0,"Wykładnik przy (x + 3) to 3."],
+ [3,"Ile pierwiastków rzeczywistych ma wielomian x³ − 8?",["1","3","2","0"],0,"(x − 2)(x² + 2x + 4), a trójmian ma Δ = 4 − 16 = −12 < 0."],
+ [3,"Wielomian x² + 4:",["nie rozkłada się na czynniki liniowe","= (x − 2)(x + 2)","= (x + 2)²","= (x − 2)²"],0,"Δ = −16 < 0. Suma kwadratów to nie wzór skróconego mnożenia."],
+ [3,"Wielomian stopnia 4 ma co najwyżej:",["4 pierwiastki","3 pierwiastki","8 pierwiastków","2 pierwiastki"],0,"Wielomian stopnia n ma co najwyżej n pierwiastków."],
+ [4,"Rozwiązania równania x³ − 2x² − 5x + 6 = 0 to:",["−2, 1, 3","2, −1, −3","1, 2, 3","−2, −1, 3"],0,"(x − 1)(x − 3)(x + 2) = 0."],
+ [4,"Rozwiązania równania x⁴ − 5x² + 4 = 0 to:",["−2, −1, 1, 2","1, 4","−4, −1, 1, 4","1, 2"],0,"t = x²: t = 1 lub t = 4, więc x = ±1 lub x = ±2."],
+ [4,"Rozwiązania równania x(x − 5)(2x + 1) = 0 to:",["0, 5, −1/2","5, −1/2","0, −5, 1/2","0, 5, −2"],0,"Każdy czynnik przyrównujemy do zera; 2x + 1 = 0 daje x = −1/2."],
+ [4,"Uczeń podzielił x³ = 4x przez x i dostał x = ±2. Które rozwiązanie zgubił?",["x = 0","x = 4","x = −4","żadne"],0,"x³ − 4x = x(x − 2)(x + 2) = 0, więc też x = 0."],
+ [4,"Rozwiązania równania x³ + x² − x − 1 = 0 to:",["−1, 1","1","−1, 0, 1","−1"],0,"(x + 1)²(x − 1) = 0; −1 jest pierwiastkiem dwukrotnym."],
+ [4,"Rozwiązaniem nierówności (x − 1)(x + 2)(x − 3) > 0 jest:",["(−2; 1) ∪ (3; +∞)","(−∞; −2) ∪ (1; 3)","(1; 3)","(−2; 3)"],0,"Wężyk od prawej z góry: +, −, +, −."],
+ [4,"Rozwiązaniem nierówności (x − 2)²(x + 1) ≤ 0 jest:",["(−∞; −1] ∪ {2}","(−∞; −1]","[−1; 2]","(−∞; 2]"],0,"Przy 2 wykres się odbija, ale W(2) = 0 spełnia ≤."],
+ [4,"Przy pierwiastku dwukrotnym wykres w metodzie wężyka:",["odbija się od osi","przecina oś","przecina oś dwa razy","nie dotyka osi"],0,"Pierwiastek parzystej krotności: znak się nie zmienia."]
+];
+let deck=[],fcIdx=0,known=0;
+const fcEl=document.getElementById("fc");
+function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function drawFC(){
+  fcEl.classList.remove("flip");
+  const cnt=document.getElementById("fcCount");
+  if(!deck.length){
+    fcEl.style.setProperty("--c","var(--ok)");
+    document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;
+    document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
+  }
+  const [n,f,b]=deck[0];
+  fcEl.style.setProperty("--c",C(n));
+  setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;
+  document.querySelector("#fcFront b").textContent=f;
+  cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
+}
+fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;deck.shift();known++;drawFC();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;deck.push(deck.shift());drawFC();});
+let fcFilter="all";
+document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); buildDeck("all");
+
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    const pct=Math.round(score/qs.length*100);
+    let best=0;try{best=+localStorage.getItem("nauka:matematyka-wielomiany:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:matematyka-wielomiany:best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na sprawdzian.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    return;
+  }
+  const q=qs[qi];
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+startQuiz(filtered());
+
+/* ---------- open questions ---------- */
+const OQ=[
+ [1,"Dane są P(x) = x² − 3 i Q(x) = 2x + 1. Oblicz P + Q, P − Q oraz P·Q.",["P + Q = x² − 3 + 2x + 1 = <b>x² + 2x − 2</b>.","P − Q = x² − 3 − (2x + 1) = x² − 3 − 2x − 1 = <b>x² − 2x − 4</b> (minus przed całym nawiasem!).","P·Q = (x² − 3)(2x + 1) = 2x³ + x² − 6x − 3. Stopień 3 = 2 + 1."]],
+ [1,"Wyznacz a i b, dla których wielomiany W(x) = (x − 2)(x + a) i V(x) = x² + bx − 6 są równe.",["Wymnażamy: W(x) = x² + ax − 2x − 2a = x² + (a − 2)x − 2a.","Porównujemy wyrazy wolne: −2a = −6, więc <b>a = 3</b>.","Porównujemy współczynniki przy x: b = a − 2 = <b>1</b>.","Sprawdzenie: (x − 2)(x + 3) = x² + x − 6. ✓"]],
+ [1,"Wielomian W(x) = x³ − 2x² + ax + 4 spełnia W(2) = 6. Oblicz a.",["W(2) = 8 − 8 + 2a + 4 = 2a + 4.","2a + 4 = 6, więc <b>a = 1</b>."]],
+ [2,"Podziel pisemnie (x³ + 2x² − x + 3) przez (x² + 1). Podaj iloraz i resztę.",["x³ : x² = x; x·(x² + 1) = x³ + x; odejmujemy: (x³ + 2x² − x + 3) − (x³ + x) = 2x² − 2x + 3.","2x² : x² = 2; 2·(x² + 1) = 2x² + 2; odejmujemy: −2x + 1.","Iloraz <b>x + 2</b>, reszta <b>−2x + 1</b>.","Sprawdzenie: (x² + 1)(x + 2) + (−2x + 1) = x³ + 2x² + x + 2 − 2x + 1 = x³ + 2x² − x + 3. ✓"]],
+ [2,"Schematem Hornera podziel W(x) = 2x³ − 3x² + 4x − 5 przez (x − 2).",["a = 2, współczynniki: 2, −3, 4, −5.","2 → 2·2 − 3 = 1 → 1·2 + 4 = 6 → 6·2 − 5 = 7.","Iloraz <b>2x² + x + 6</b>, reszta <b>7</b>.","Sprawdzenie twierdzeniem o reszcie: W(2) = 16 − 12 + 8 − 5 = 7. ✓"]],
+ [2,"Nie wykonując dzielenia, oblicz resztę z dzielenia W(x) = x⁴ − 3x³ + 2x − 1 przez (x + 1).",["Twierdzenie o reszcie: x + 1 = x − (−1), więc reszta = W(−1).","W(−1) = 1 − 3·(−1) + 2·(−1) − 1 = 1 + 3 − 2 − 1 = <b>1</b>."]],
+ [2,"Wyznacz m, dla którego W(x) = x³ + mx² + 5x − 6 jest podzielny przez (x − 2). Rozłóż potem W na czynniki.",["Z twierdzenia Bézouta W(2) = 0: 8 + 4m + 10 − 6 = 0, 4m + 12 = 0, <b>m = −3</b>.","W(x) = x³ − 3x² + 5x − 6. Horner przez (x − 2): 1, −1, 3, reszta 0.","W(x) = (x − 2)(x² − x + 3). Dla x² − x + 3: Δ = 1 − 12 = −11 < 0, więc to koniec rozkładu."]],
+ [2,"(Trudniejsze) Przy dzieleniu W(x) przez (x − 1) reszta wynosi 3, a przez (x + 2) reszta wynosi −3. Wyznacz resztę z dzielenia W(x) przez (x − 1)(x + 2).",["Dzielnik ma stopień 2, więc reszta ma postać R(x) = ax + b.","W(x) = (x − 1)(x + 2)·Q(x) + ax + b. Z twierdzenia o reszcie: W(1) = 3 i W(−2) = −3.","W(1) = a + b = 3, W(−2) = −2a + b = −3.","Odejmujemy: 3a = 6, <b>a = 2</b>, <b>b = 1</b>. Reszta: <b>R(x) = 2x + 1</b>."]],
+ [3,"Rozłóż na czynniki: a) x³ − 4x, b) x³ + 2x² − 9x − 18, c) 8x³ − 1, d) x⁴ − 5x² + 4.",["a) x(x² − 4) = <b>x(x − 2)(x + 2)</b>.","b) x²(x + 2) − 9(x + 2) = (x + 2)(x² − 9) = <b>(x + 2)(x − 3)(x + 3)</b>.","c) (2x)³ − 1³ = <b>(2x − 1)(4x² + 2x + 1)</b>; trójmian ma Δ = 4 − 16 &lt; 0.","d) t = x²: t² − 5t + 4 = (t − 1)(t − 4), więc (x² − 1)(x² − 4) = <b>(x − 1)(x + 1)(x − 2)(x + 2)</b>."]],
+ [3,"Znajdź pierwiastki wymierne wielomianu W(x) = 2x³ − x² − 7x + 6 i rozłóż go na czynniki.",["Kandydaci p/q: p | 6, q | 2, czyli ±1, ±2, ±3, ±6, ±1/2, ±3/2.","W(1) = 2 − 1 − 7 + 6 = 0, więc 1 jest pierwiastkiem.","Horner przez (x − 1): 2, 1, −6, reszta 0, czyli W(x) = (x − 1)(2x² + x − 6).","Δ = 1 + 48 = 49, √Δ = 7, x = (−1 − 7)/4 = −2 lub x = (−1 + 7)/4 = 3/2.","<b>W(x) = (x − 1)(2x − 3)(x + 2)</b>, pierwiastki: −2, 1, 3/2."]],
+ [4,"Rozwiąż równanie x³ − 3x² − 4x + 12 = 0.",["Grupowanie: x²(x − 3) − 4(x − 3) = (x − 3)(x² − 4) = (x − 3)(x − 2)(x + 2).","Iloczyn = 0, gdy któryś czynnik = 0.","<b>x ∈ {−2, 2, 3}</b>."]],
+ [4,"Rozwiąż równanie x³ + x² − x − 1 = 0 i podaj krotność pierwiastków.",["x²(x + 1) − (x + 1) = (x + 1)(x² − 1) = (x + 1)(x − 1)(x + 1) = (x + 1)²(x − 1).","<b>x = −1</b> (pierwiastek dwukrotny) lub <b>x = 1</b> (jednokrotny)."]],
+ [4,"(Jeśli nierówności są w zakresie) Rozwiąż nierówność x³ − 4x ≥ 0.",["Rozkład: x(x − 2)(x + 2) ≥ 0. Pierwiastki: −2, 0, 2 (wszystkie jednokrotne).","Współczynnik przy x³ dodatni, więc wężyk zaczyna od prawej z góry: + na (2; ∞), − na (0; 2), + na (−2; 0), − na (−∞; −2).","Nierówność nieostra, więc dołączamy pierwiastki: <b>x ∈ [−2; 0] ∪ [2; +∞)</b>."]]
+];
+document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+</script>
+</body>
+</html>

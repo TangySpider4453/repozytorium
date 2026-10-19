@@ -1,5 +1,39 @@
 [
   {
+    "id": "matematyka-wielomiany",
+    "folder": "matematyka-wielomiany",
+    "przedmiot": "Matematyka",
+    "typ": "sprawdzian",
+    "tytul": "Wielomiany",
+    "opis": "Stopień i działania na wielomianach, dzielenie pisemne i schemat Hornera, twierdzenia o reszcie i Bézouta, rozkład na czynniki, pierwiastki wymierne, równania i nierówności wielomianowe.",
+    "data": "2026-10-23",
+    "dodano": "2026-10-19",
+    "zawiera": [
+      "notatka",
+      "wzory",
+      "33 fiszki",
+      "40 pytań quizu",
+      "13 zadań"
+    ]
+  },
+  {
+    "id": "montaz-pomiary-pneumatyka-hydraulika",
+    "folder": "montaz-pomiary-pneumatyka-hydraulika",
+    "przedmiot": "Montaż urządzeń mechatronicznych",
+    "typ": "kartkówka",
+    "tytul": "Pomiary w układach elektropneumatycznych i elektrohydraulicznych",
+    "opis": "Jednostki i wzory (F = p·A, Q = v·A, P = p·Q), pomiar ciśnienia (manometry, przetworniki 4–20 mA, presostaty), przepływu i siły (tensometry), błędy pomiaru, protokół i BHP.",
+    "data": "2026-10-26",
+    "dodano": "2026-10-19",
+    "zawiera": [
+      "notatka",
+      "wzory",
+      "38 fiszek",
+      "38 pytań quizu",
+      "14 zadań"
+    ]
+  },
+  {
     "id": "fizyka-pole-elektryczne",
     "folder": "fizyka-pole-elektryczne",
     "przedmiot": "Fizyka",
