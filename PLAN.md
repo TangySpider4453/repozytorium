@@ -95,6 +95,10 @@ i nie rób rebootu. Po zmianie sprawdź: `systemctl is-active home-portal powern
 Projekt mieszka w repozytorium GitHub `TangySpider4453/repozytorium` (`PLAN.md` + `strona/`), żeby można było pracować
 z iPada przez Claude Code w chmurze. Kopia w `strona/` ma być zawsze taka sama jak na Pi.
 
+**Automatycznie:** hook `.claude/hooks/session-start.sh` (zgoda użytkownika 2026-10-19) na starcie sesji instaluje
+Tailscale + SSH, ustawia alias `ssh pi` i łączy kluczem z sekretu środowiska `TS_AUTHKEY`. Sprawdź: `tailscale status`,
+`ssh pi hostname`. Jeśli nie ma klucza albo SSH wypisze link „check”, zrób to ręcznie jak niżej.
+
 Sesja w chmurze **może** dosięgnąć Pi, jeśli dołączy do tailnetu (sprawdzone 2026-10-19):
 1. Pobierz statyczne binarki `https://pkgs.tailscale.com/stable/tailscale_latest_amd64.tgz`, uruchom
    `tailscaled --tun=userspace-networking --state=mem:` i `tailscale up --authkey=… --hostname=claude-cloud`.
