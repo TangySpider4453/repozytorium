@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Montaż – pomiary w pneumatyce i hydraulice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+/* wzory */
+.f{font-family:var(--serif);font-size:20px;font-weight:700;text-align:center;padding:10px 12px;margin:8px 0;border-radius:10px;background:color-mix(in srgb,var(--c) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 35%,var(--line))}
+.f small{display:block;font-family:var(--sans);font-weight:400;font-size:14px;color:var(--muted);margin-top:2px}
+.ex{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15.5px}
+.ex b:first-child{color:var(--c)}
+.fl{display:grid;gap:10px}
+.fl .row2{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px}
+.fl .row2 .f{margin:0;font-size:19px}
+.fl .row2 p{margin:0;font-size:15.5px}
+@media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
+.fieldpic{display:flex;justify-content:center;margin:8px 0}
+.fieldpic svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>Pomiary w elektropneumatyce i elektrohydraulice</h1>
+  <p>Montaż urządzeń i systemów mechatronicznych, kartkówka 26 października. Technik robotyk</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="false" data-tab="wzory">Wzory</button>
+  <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+  <button role="tab" aria-selected="false" data-tab="otwarte">Zadania</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NOTATKA ============ -->
+<section class="tab" id="notatka">
+
+  <!-- T1 -->
+  <article class="topic" id="t1" style="--c:var(--t1)">
+    <header><div class="num">Temat 1</div><h2>Wielkości, jednostki i podstawowe wzory</h2><div class="span">ciśnienie, siła, przepływ, moc</div></header>
+    <div class="tbody">
+      <h3>Ciśnienie</h3>
+      <p>Ciśnienie to siła działająca prostopadle na jednostkę powierzchni: <span class="k">p = F / A</span>. Jednostka układu SI to <b>paskal</b>: 1 Pa = 1 N/m². To bardzo mała wartość, dlatego w praktyce używa się barów i megapaskali.</p>
+      <div class="tablewrap"><table>
+        <tr><th>Jednostka</th><th>Ile to jest</th><th>Gdzie spotkasz</th></tr>
+        <tr><td><b>1 bar</b></td><td>= 100 000 Pa = 100 kPa = 0,1 MPa</td><td>pneumatyka (sieć zwykle ok. 6 bar), manometry</td></tr>
+        <tr><td><b>1 MPa</b></td><td>= 10 bar = 1 000 000 Pa</td><td>hydraulika (np. 10 MPa = 100 bar)</td></tr>
+        <tr><td><b>1 psi</b></td><td>≈ 0,069 bar (1 bar ≈ 14,5 psi)</td><td>druga skala na wielu manometrach (jednostka amerykańska)</td></tr>
+      </table></div>
+
+      <h3>Rodzaje ciśnienia</h3>
+      <div class="pill-row">
+        <div class="pr"><b>Absolutne (bezwzględne)</b><span>mierzone od próżni doskonałej (zera absolutnego)</span></div>
+        <div class="pr"><b>Względne (nadciśnienie)</b><span>nadwyżka ponad ciśnienie atmosferyczne; to pokazuje <b>zwykły manometr</b></span></div>
+        <div class="pr"><b>Podciśnienie</b><span>ciśnienie niższe od atmosferycznego (np. przyssawki, eżektory); mierzy je <b>wakuometr</b></span></div>
+      </div>
+      <p style="margin-top:10px"><b>p<sub>abs</sub> = p<sub>wzgl</sub> + p<sub>atm</sub></b>, a p<sub>atm</sub> ≈ 1 bar (dokładniej 1,013 bar). Manometr na sieci pokazuje 6 bar, czyli ciśnienie absolutne to ok. 7 bar.</p>
+
+      <h3>Siła siłownika: F = p · A</h3>
+      <div class="f">F = p · A, &nbsp; A = π·D²/4<small>p w Pa (N/m²), A w m², F w N</small></div>
+      <ul class="dots">
+        <li><b>Wysuw:</b> ciśnienie działa na całą powierzchnię tłoka o średnicy D.</li>
+        <li><b>Wsuw:</b> ciśnienie działa na <b>powierzchnię pierścieniową</b> (tłok minus tłoczysko o średnicy d): A = π·(D² − d²)/4. Dlatego <b>siła przy wsuwie jest mniejsza</b>.</li>
+        <li>To siła <b>teoretyczna</b>. Rzeczywista jest mniejsza przez tarcie uszczelnień (sprawność).</li>
+      </ul>
+      <div class="ex"><b>Przykład.</b> Siłownik ⌀50 mm, tłoczysko ⌀20 mm, 6 bar. A = π·0,05²/4 = 1,963·10⁻³ m². p = 6 bar = 6·10⁵ Pa. Wysuw: F = 6·10⁵ · 1,963·10⁻³ ≈ <b>1178 N ≈ 1,18 kN</b>. Wsuw: A = π·(0,05² − 0,02²)/4 = 1,649·10⁻³ m², F ≈ <b>990 N</b>.</div>
+
+      <h3>Przepływ i prędkość: Q = v · A</h3>
+      <div class="f">Q = v · A &nbsp; ⇔ &nbsp; v = Q / A<small>Q – przepływ objętościowy [m³/s], v – prędkość tłoka [m/s]</small></div>
+      <p>Przepływ objętościowy to objętość cieczy lub powietrza, która przepływa w jednostce czasu. Jednostki: m³/s, <b>l/min</b> (najczęściej), m³/h, dm³/s. 1 l = 1 dm³ = 10⁻³ m³. <b>Większy przepływ = szybszy siłownik</b>, a ciśnienie decyduje o sile.</p>
+      <div class="ex"><b>Przykład.</b> Pompa daje 10 l/min, siłownik ⌀40 mm. Q = 10 · 10⁻³ / 60 = 1,667·10⁻⁴ m³/s. A = π·0,04²/4 = 1,257·10⁻³ m². v = Q/A ≈ <b>0,13 m/s</b>. Skok 200 mm zajmie ok. 1,5 s.</div>
+
+      <h3>Moc hydrauliczna: P = p · Q</h3>
+      <div class="f">P = p · Q<small>p w Pa, Q w m³/s, P w W</small></div>
+      <div class="ex"><b>Przykład.</b> 100 bar i 20 l/min: P = 10⁷ Pa · (20·10⁻³/60) m³/s ≈ <b>3333 W ≈ 3,3 kW</b>.</div>
+      <div class="warn"><b>Uważaj:</b> zawsze zamieniaj na jednostki SI: bar → Pa (×10⁵), mm → m (÷1000), l/min → m³/s (÷60 000). Średnicę we wzorze na pole <b>podnosisz do kwadratu</b> i dzielisz przez 4 (albo promień do kwadratu bez dzielenia). Manometr pokazuje nadciśnienie, a nie ciśnienie absolutne.</div>
+    </div>
+  </article>
+
+  <!-- T2 -->
+  <article class="topic" id="t2" style="--c:var(--t6)">
+    <header><div class="num">Temat 2</div><h2>Pomiar ciśnienia</h2><div class="span">manometry, przetworniki, presostaty, punkty pomiarowe</div></header>
+    <div class="tbody">
+      <h3>Manometry mechaniczne (wskazówkowe)</h3>
+      <div class="grid2">
+        <div class="box"><h4>Manometr z rurką Bourdona</h4><p>Najpopularniejszy. Zakrzywiona, spłaszczona rurka pod ciśnieniem <b>prostuje się</b>, a mechanizm zębaty przenosi ten ruch na wskazówkę.</p></div>
+        <div class="box"><h4>Manometr membranowy</h4><p>Ciśnienie ugina <b>membranę</b>. Dobry do małych ciśnień i do mediów agresywnych lub zanieczyszczonych.</p></div>
+        <div class="box"><h4>Manometr glicerynowy</h4><p>Obudowa wypełniona gliceryną (lub olejem silikonowym) <b>tłumi drgania i pulsacje</b> wskazówki. Typowy w hydraulice, przy pompach.</p></div>
+        <div class="box"><h4>Wakuometr / manowakuometr</h4><p>Wakuometr mierzy <b>podciśnienie</b> (skala poniżej zera). Manowakuometr mierzy i podciśnienie, i nadciśnienie.</p></div>
+      </div>
+
+      <h3>Dobór manometru</h3>
+      <ul class="dots">
+        <li><b>Zakres:</b> ciśnienie robocze nie powinno przekraczać ok. <b>3/4 zakresu</b> przy ciśnieniu stałym i ok. <b>2/3 zakresu</b> przy ciśnieniu zmiennym (pulsującym). Nie powinno też być za nisko na skali, bo rośnie błąd względny. Przykład: przy 6 bar wybieramy manometr 0–10 bar.</li>
+        <li><b>Klasa dokładności</b> (np. 1,0; 1,6; 2,5): procent zakresu, o który wskazanie może się pomylić. Mniejsza liczba = dokładniejszy przyrząd.</li>
+        <li><b>Medium</b> (powietrze, olej, woda), <b>temperatura</b>, <b>przyłącze</b> (gwint), średnica tarczy, czy potrzebne tłumienie (gliceryna).</li>
+      </ul>
+      <div class="f">Δp = klasa · zakres / 100<small>największy dopuszczalny błąd bezwzględny manometru, taki sam w całej skali</small></div>
+      <div class="ex"><b>Przykład.</b> Manometr klasy 1,6, zakres 0–10 bar: Δp = 1,6 · 10 / 100 = <b>0,16 bar</b>. Przy odczycie 8 bar błąd względny to 0,16/8 = 2%, a przy odczycie 2 bar już 8%. Dlatego mierzymy w górnej części skali.</div>
+
+      <h3>Przetworniki i czujniki ciśnienia (elektryczne)</h3>
+      <div class="grid2">
+        <div class="box"><h4>Przetwornik ciśnienia</h4><p>Zamienia ciśnienie na <b>sygnał elektryczny</b>, zwykle <b>4–20 mA</b> albo <b>0–10 V</b>. W środku element piezorezystancyjny lub tensometryczny na membranie. Sygnał idzie do sterownika PLC lub miernika.</p></div>
+        <div class="box"><h4>Presostat (czujnik progowy)</h4><p>Ma <b>styk lub wyjście dwustanowe</b>: przełącza, gdy ciśnienie przekroczy nastawioną wartość. Nie mierzy wartości, tylko daje sygnał „jest / nie ma”. Ma <b>histerezę</b> (różnicę między punktem włączenia i wyłączenia).</p></div>
+        <div class="box"><h4>Sygnał 4–20 mA</h4><p>4 mA = początek zakresu, 20 mA = koniec. <b>0 mA oznacza awarię</b> (przerwę w przewodzie), a nie zero ciśnienia. Prąd nie słabnie na długich przewodach i jest odporny na zakłócenia.</p></div>
+        <div class="box"><h4>Przeliczanie sygnału</h4><p>p = (I − 4) / 16 · zakres. Dla 0–10 bar: 12 mA → 5 bar. Dla 0–10 V: p = U/10 · zakres.</p></div>
+      </div>
+
+      <h3>Punkty pomiarowe w hydraulice</h3>
+      <p>W układach hydraulicznych montuje się <b>złącza (punkty) pomiarowe</b>, potocznie nazywane „minimess”. Mają zawór zwrotny, więc manometr lub przetwornik na wężyku pomiarowym podłączamy <b>pod ciśnieniem, bez wycieku oleju</b> i bez rozszczelniania układu. Typowe miejsca pomiaru: za pompą, przed i za zaworem, w obu komorach siłownika.</p>
+      <div class="warn"><b>Uważaj:</b> manometru nie dobiera się „na styk” (6 bar na manometr 0–6 bar to błąd). Klasa dokładności to procent <b>zakresu</b>, a nie odczytu. Presostat to nie manometr: on tylko przełącza przy nastawionym progu.</div>
+    </div>
+  </article>
+
+  <!-- T3 -->
+  <article class="topic" id="t3" style="--c:var(--t5)">
+    <header><div class="num">Temat 3</div><h2>Pomiar przepływu</h2><div class="span">przepływomierze i czujniki przepływu</div></header>
+    <div class="tbody">
+      <p>Przepływ mierzymy, żeby sprawdzić <b>wydajność pompy</b> lub sprężarki, <b>zużycie powietrza</b>, nieszczelności i prędkość siłowników (v = Q/A).</p>
+      <div class="tablewrap"><table>
+        <tr><th>Przyrząd</th><th>Zasada działania</th><th>Zastosowanie</th></tr>
+        <tr><td><b>Rotametr</b></td><td>pływak w <b>pionowej stożkowej rurce</b> unosi się tym wyżej, im większy przepływ; odczyt na skali</td><td>powietrze, gazy, ciecze; prosty, wymaga montażu w pionie</td></tr>
+        <tr><td><b>Turbinowy</b></td><td>strumień obraca <b>wirnik</b>; prędkość obrotów (impulsy z czujnika) jest proporcjonalna do przepływu</td><td>hydraulika, czyste ciecze</td></tr>
+        <tr><td><b>Zębaty (wyporowy)</b></td><td>ciecz obraca <b>koła zębate</b>, każdy obrót to stała objętość</td><td>hydraulika, oleje o dużej lepkości, dokładny pomiar</td></tr>
+        <tr><td><b>Termiczny (kalorymetryczny)</b></td><td>przepływ <b>chłodzi podgrzewany element</b>; z ilości odebranego ciepła liczy się przepływ</td><td>pneumatyka: zużycie sprężonego powietrza, wykrywanie wycieków</td></tr>
+        <tr><td><b>Ultradźwiękowy</b></td><td>mierzy różnicę czasu przejścia fali dźwiękowej <b>z prądem i pod prąd</b></td><td>bez części ruchomych, często nakładany na rurę z zewnątrz</td></tr>
+      </table></div>
+      <h3>Czujniki przepływu w automatyce</h3>
+      <p>Mają wyjście <b>analogowe</b> (np. 4–20 mA, wartość przepływu) albo <b>progowe/przełączające</b> (sygnał, gdy przepływ jest za mały lub za duży, np. kontrola chłodzenia). W pneumatyce przepływ podaje się często w <b>Nl/min</b> (litry normalne, czyli przeliczone na warunki normalne), bo objętość powietrza zależy od ciśnienia.</p>
+      <div class="warn"><b>Uważaj:</b> o <b>prędkości</b> siłownika decyduje przepływ, a o <b>sile</b> ciśnienie. Przepływomierz montujemy zgodnie ze <b>strzałką kierunku</b> na korpusie, a rotametr pionowo. Przed i za przepływomierzem zostawia się prosty odcinek rury, żeby przepływ był spokojny.</div>
+    </div>
+  </article>
+
+  <!-- T4 -->
+  <article class="topic" id="t4" style="--c:var(--t4)">
+    <header><div class="num">Temat 4</div><h2>Pomiar siły</h2><div class="span">tensometry, czujniki siły, pomiar pośredni</div></header>
+    <div class="tbody">
+      <h3>Pomiar bezpośredni: czujniki siły</h3>
+      <div class="grid2">
+        <div class="box"><h4>Tensometr</h4><p>Cienka ścieżka oporowa naklejona na element sprężysty. Gdy element się odkształca, tensometr się wydłuża lub skraca i <b>zmienia się jego rezystancja</b>: ΔR/R = k·ε (k ≈ 2 dla tensometrów metalowych, ε – odkształcenie względne).</p></div>
+        <div class="box"><h4>Mostek Wheatstone'a</h4><p>Zmiany rezystancji tensometru są bardzo małe, więc łączy się je w <b>mostek</b> (4 rezystory). Bez obciążenia mostek jest zrównoważony (napięcie wyjściowe 0), a siła go rozstraja i powstaje małe napięcie (mV), które wzmacnia się we wzmacniaczu.</p></div>
+        <div class="box"><h4>Czujnik tensometryczny (belka, „waga”)</h4><p>Element sprężysty z naklejonymi tensometrami w mostku; mierzy siłę ściskającą lub rozciągającą. Często z gotowym wyjściem 4–20 mA / 0–10 V przez przetwornik.</p></div>
+        <div class="box"><h4>Czujnik piezoelektryczny</h4><p>Kryształ pod naciskiem <b>wytwarza ładunek elektryczny</b>. Bardzo dobry do <b>szybkozmiennych</b> sił (uderzenia, drgania), słaby do pomiaru siły stałej (ładunek „ucieka”).</p></div>
+      </div>
+      <div class="ex"><b>Przykład.</b> Tensometr 120 Ω, k = 2, odkształcenie ε = 0,001. ΔR = R·k·ε = 120 · 2 · 0,001 = <b>0,24 Ω</b>. Tak mała zmiana wymaga mostka i wzmacniacza.</div>
+
+      <h3>Pomiar pośredni: siła z ciśnienia</h3>
+      <p>Mierzymy ciśnienie manometrem lub przetwornikiem i liczymy <b>F = p·A</b>. To proste, ale daje siłę <b>teoretyczną</b>. Rzeczywista jest mniejsza przez <b>tarcie uszczelnień</b> (sprawność η) i przez ciśnienie po drugiej stronie tłoka (przeciwciśnienie). Dokładniej: F = (p₁·A₁ − p₂·A₂)·η.</p>
+      <div class="ex"><b>Przykład.</b> Siłownik hydrauliczny ⌀50 mm, 50 bar. F<sub>teor</sub> = 5·10⁶ · 1,963·10⁻³ ≈ 9817 N. Przy sprawności 0,9: F ≈ <b>8836 N ≈ 8,8 kN</b>.</div>
+      <div class="warn"><b>Uważaj:</b> tensometr nie mierzy siły wprost, tylko <b>odkształcenie</b> (zmianę rezystancji). Czujnik piezoelektryczny nie nadaje się do długiego ważenia stałej siły. Siła liczona z ciśnienia jest zawsze trochę zawyżona.</div>
+    </div>
+  </article>
+
+  <!-- T5 -->
+  <article class="topic" id="t5" style="--c:var(--t3)">
+    <header><div class="num">Temat 5</div><h2>Wykonywanie pomiarów i BHP</h2><div class="span">przygotowanie, błędy, protokół, multimetr, bezpieczeństwo</div></header>
+    <div class="tbody">
+      <h3>Kolejność pracy</h3>
+      <ol style="margin:6px 0;padding-left:22px">
+        <li>Zapoznaj się ze <b>schematem</b> układu, ustal, co i gdzie mierzysz.</li>
+        <li>Dobierz przyrząd: <b>wielkość, zakres, klasa dokładności</b>, medium, przyłącze.</li>
+        <li>Przy podłączaniu do przewodów: <b>wyłącz zasilanie, odetnij i rozładuj ciśnienie</b> (zawór odcinający, spuszczenie powietrza, rozładowanie akumulatora hydraulicznego). Wyjątek: złącza pomiarowe z zaworem zwrotnym.</li>
+        <li>Podłącz przyrząd, sprawdź szczelność, uruchom układ.</li>
+        <li><b>Odczytaj</b> wynik patrząc prostopadle na skalę (unikasz błędu paralaksy), kilka razy, w ustalonym stanie pracy.</li>
+        <li>Zapisz wyniki w <b>protokole pomiarowym</b>, oceń je, rozłącz przyrząd (znów bez ciśnienia).</li>
+      </ol>
+
+      <h3>Błędy pomiaru</h3>
+      <dl class="terms">
+        <div><dt>Błąd bezwzględny</dt><dd>Δx = |x<sub>zmierzone</sub> − x<sub>rzeczywiste</sub>|, w jednostkach wielkości (np. bar)</dd></div>
+        <div><dt>Błąd względny</dt><dd>δ = Δx / x · 100%, pokazuje, jak duży jest błąd w porównaniu z wynikiem</dd></div>
+        <div><dt>Błąd z klasy</dt><dd>Δ = klasa · zakres / 100</dd></div>
+        <div><dt>Błąd paralaksy</dt><dd>zły odczyt przy patrzeniu na wskazówkę z ukosa</dd></div>
+        <div><dt>Błąd gruby</dt><dd>pomyłka (zły odczyt, zła jednostka); taki wynik się odrzuca</dd></div>
+      </dl>
+
+      <h3>Protokół pomiarowy</h3>
+      <p>Zawiera: <b>cel i datę</b> pomiaru, <b>skład zespołu</b>, <b>schemat</b> z punktami pomiarowymi, <b>wykaz przyrządów</b> (typ, zakres, klasa, numer), <b>tabelę wyników</b> z jednostkami, obliczenia, <b>wnioski</b> i podpisy.</p>
+
+      <h3>Strona elektryczna: multimetr</h3>
+      <ul class="dots">
+        <li>Cewki elektrozaworów i czujniki zasila się zwykle <b>24 V DC</b>. Napięcie mierzymy multimetrem <b>równolegle</b> (zakres V DC).</li>
+        <li>Prąd (np. pętla 4–20 mA czujnika) mierzymy <b>szeregowo</b>, czyli przerywając obwód, na zakresie mA.</li>
+        <li>Rezystancję (np. ciągłość cewki) mierzymy <b>bez zasilania</b>.</li>
+        <li>Sprawdzamy też, czy czujnik daje sygnał (dioda LED, napięcie na wyjściu) w odpowiednim momencie.</li>
+      </ul>
+
+      <h3>BHP</h3>
+      <div class="pill-row">
+        <div class="pr"><b>Bez ciśnienia</b><span>nie rozłączaj przewodów pod ciśnieniem; najpierw odetnij zasilanie i rozładuj układ</span></div>
+        <div class="pr"><b>Nie sprawdzaj wycieku ręką</b><span>cienki strumień oleju pod wysokim ciśnieniem może <b>przebić skórę</b> (wtrysk oleju pod skórę to stan zagrożenia życia); użyj kawałka kartonu</span></div>
+        <div class="pr"><b>Ochrona</b><span>okulary ochronne, zabezpieczone węże, nie stój na linii ruchu siłownika; nie przekraczaj zakresu przyrządu</span></div>
+      </div>
+      <div class="warn"><b>Uważaj:</b> amperomierz (lub multimetr na zakresie prądu) podłączony <b>równolegle</b> to zwarcie. Przed rozłączeniem układu hydraulicznego pamiętaj o <b>akumulatorze hydraulicznym</b>, bo trzyma ciśnienie po wyłączeniu pompy. Wynik pomiaru zawsze zapisuj <b>z jednostką</b>.</div>
+    </div>
+  </article>
+</section>
+
+<!-- ============ WZORY ============ -->
+<section class="tab" id="wzory" hidden>
+  <p class="intro">Wszystkie wzory i przeliczenia w jednym miejscu. Zasłoń prawą kolumnę i sprawdź, czy pamiętasz, co oznaczają.</p>
+  <div class="fl">
+    <div class="row2" style="--c:var(--t1)"><div class="f">p = F / A</div><p><b>Ciśnienie.</b> 1 Pa = 1 N/m².</p></div>
+    <div class="row2" style="--c:var(--t1)"><div class="f">A = π·D² / 4</div><p><b>Pole tłoka</b> o średnicy D (w metrach).</p></div>
+    <div class="row2" style="--c:var(--t1)"><div class="f">A = π·(D² − d²) / 4</div><p><b>Pole pierścieniowe</b> przy wsuwie (d – średnica tłoczyska).</p></div>
+    <div class="row2" style="--c:var(--t1)"><div class="f">F = p · A</div><p><b>Siła siłownika</b> (teoretyczna). Rzeczywista: F = p·A·η.</p></div>
+    <div class="row2" style="--c:var(--t1)"><div class="f">Q = v · A</div><p><b>Przepływ</b> a prędkość tłoka: v = Q/A.</p></div>
+    <div class="row2" style="--c:var(--t1)"><div class="f">P = p · Q</div><p><b>Moc hydrauliczna</b> [W], p w Pa, Q w m³/s.</p></div>
+    <div class="row2" style="--c:var(--t1)"><div class="f">p<sub>abs</sub> = p<sub>wzgl</sub> + p<sub>atm</sub></div><p>p<sub>atm</sub> ≈ 1 bar (1,013 bar).</p></div>
+    <div class="row2" style="--c:var(--t6)"><div class="f">Δ = klasa · zakres / 100</div><p><b>Błąd dopuszczalny</b> przyrządu z klasy dokładności.</p></div>
+    <div class="row2" style="--c:var(--t6)"><div class="f">p = (I − 4) / 16 · zakres</div><p>Przeliczenie sygnału <b>4–20 mA</b> na ciśnienie (gdy zakres zaczyna się od 0).</p></div>
+    <div class="row2" style="--c:var(--t6)"><div class="f">p = U / 10 · zakres</div><p>Przeliczenie sygnału <b>0–10 V</b>.</p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">ΔR / R = k · ε</div><p><b>Tensometr:</b> względna zmiana rezystancji, k ≈ 2.</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">δ = Δx / x · 100%</div><p><b>Błąd względny</b>; Δx = |x<sub>zm</sub> − x<sub>rz</sub>| to błąd bezwzględny.</p></div>
+  </div>
+  <h3 style="margin:22px 0 8px">Przeliczenia jednostek</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Wielkość</th><th>Przeliczenie</th></tr>
+    <tr><td>Ciśnienie</td><td>1 bar = 10⁵ Pa = 100 kPa = 0,1 MPa ≈ 14,5 psi; 1 MPa = 10 bar</td></tr>
+    <tr><td>Przepływ</td><td>1 l/min = 10⁻³ m³ / 60 s ≈ 1,667·10⁻⁵ m³/s; 1 m³/h ≈ 16,67 l/min; 60 l/min = 1 dm³/s = 3,6 m³/h</td></tr>
+    <tr><td>Objętość</td><td>1 l = 1 dm³ = 10⁻³ m³</td></tr>
+    <tr><td>Długość</td><td>1 mm = 10⁻³ m; ⌀50 mm = 0,05 m</td></tr>
+    <tr><td>Siła</td><td>1 kN = 1000 N</td></tr>
+    <tr><td>Pole</td><td>1 cm² = 10⁻⁴ m²; 1 mm² = 10⁻⁶ m²</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ FISZKI ============ -->
+<section class="tab" id="fiszki" hidden>
+  <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
+  <div class="filters" id="fcFilters"></div>
+  <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
+  <div class="row">
+    <button class="btn badb" id="fcNo">Jeszcze nie</button>
+    <button class="btn good" id="fcYes">Umiem</button>
+    <button class="btn" id="fcShuffle">Przetasuj</button>
+    <span class="counter" id="fcCount"></span>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie.</p>
+  <div class="filters" id="qFilters"></div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ ZADANIA ============ -->
+<section class="tab" id="otwarte" hidden>
+  <p class="intro">Pytania teoretyczne i zadania rachunkowe w stylu kartkówki. Najpierw rozwiąż sam(a), potem rozwiń rozwiązanie.</p>
+  <div id="oqList"></div>
+</section>
+
+</div></main>
+
+<script>
+const T = {1:"Wielkości i wzory",2:"Pomiar ciśnienia",3:"Pomiar przepływu",4:"Pomiar siły",5:"Pomiary i BHP"};
+const COL = {1:1,2:6,3:5,4:4,5:3};
+const C = n => "var(--t"+COL[n]+")";
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(const i of Object.keys(T)) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- flashcards ---------- */
+const FC=[
+ [1,"1 bar","= 100 000 Pa = 100 kPa = 0,1 MPa ≈ 14,5 psi."],
+ [1,"1 MPa","= 10 bar."],
+ [1,"Ciśnienie absolutne","Mierzone od próżni doskonałej: p_abs = p_wzgl + p_atm (≈ 1 bar)."],
+ [1,"Nadciśnienie (ciśnienie względne)","Nadwyżka ponad ciśnienie atmosferyczne; to pokazuje zwykły manometr."],
+ [1,"Podciśnienie","Ciśnienie niższe od atmosferycznego; mierzy je wakuometr."],
+ [1,"Siła siłownika","F = p·A, A = π·D²/4 (teoretycznie, bez tarcia)."],
+ [1,"Siła przy wsuwie","Mniejsza niż przy wysuwie, bo działa na pole pierścieniowe A = π·(D² − d²)/4."],
+ [1,"Przepływ objętościowy Q","Objętość w jednostce czasu; najczęściej l/min. Q = v·A."],
+ [1,"Co decyduje o prędkości, a co o sile siłownika?","Prędkość – przepływ Q; siła – ciśnienie p."],
+ [1,"Moc hydrauliczna","P = p·Q (Pa · m³/s = W)."],
+ [2,"Rurka Bourdona","Zakrzywiona, spłaszczona rurka, która pod ciśnieniem się prostuje i porusza wskazówką manometru."],
+ [2,"Manometr glicerynowy","Wypełniony gliceryną, tłumi drgania i pulsacje wskazówki (hydraulika)."],
+ [2,"Manometr membranowy","Ciśnienie ugina membranę; do małych ciśnień i mediów agresywnych."],
+ [2,"Wakuometr","Przyrząd do pomiaru podciśnienia."],
+ [2,"Klasa dokładności","Dopuszczalny błąd w % zakresu: Δ = klasa·zakres/100."],
+ [2,"Dobór zakresu manometru","Ciśnienie robocze do ok. 3/4 zakresu (stałe) lub ok. 2/3 (pulsujące)."],
+ [2,"Przetwornik ciśnienia","Zamienia ciśnienie na sygnał elektryczny, np. 4–20 mA lub 0–10 V."],
+ [2,"Sygnał 4–20 mA","4 mA = początek zakresu, 20 mA = koniec, 0 mA = przerwa w obwodzie."],
+ [2,"Presostat","Czujnik progowy: przełącza styk przy nastawionym ciśnieniu; nie podaje wartości."],
+ [2,"Złącze pomiarowe (punkt pomiarowy)","Złączka z zaworem zwrotnym w hydraulice; podłączasz manometr pod ciśnieniem bez wycieku."],
+ [3,"Rotametr","Pływak w pionowej stożkowej rurce; im większy przepływ, tym wyżej pływak."],
+ [3,"Przepływomierz turbinowy","Strumień obraca wirnik; obroty proporcjonalne do przepływu."],
+ [3,"Przepływomierz zębaty","Wyporowy: ciecz obraca koła zębate, każdy obrót to stała objętość; dobry do olejów."],
+ [3,"Przepływomierz termiczny","Przepływ chłodzi podgrzewany element; typowy do sprężonego powietrza."],
+ [3,"Przepływomierz ultradźwiękowy","Różnica czasu przejścia fali z prądem i pod prąd; bez części ruchomych."],
+ [3,"Nl/min","Litry normalne na minutę: przepływ powietrza przeliczony na warunki normalne."],
+ [4,"Tensometr","Element, którego rezystancja zmienia się przy odkształceniu: ΔR/R = k·ε."],
+ [4,"Mostek Wheatstone'a","Układ 4 rezystorów (tensometrów); przy obciążeniu daje małe napięcie proporcjonalne do siły."],
+ [4,"Czujnik piezoelektryczny","Kryształ pod naciskiem wytwarza ładunek; dobry do sił szybkozmiennych."],
+ [4,"Pośredni pomiar siły","Z ciśnienia: F = p·A; wynik zawyżony, bo pomija tarcie (sprawność)."],
+ [5,"Błąd bezwzględny","Δx = |x_zmierzone − x_rzeczywiste|, w jednostkach wielkości."],
+ [5,"Błąd względny","δ = Δx/x · 100%."],
+ [5,"Błąd paralaksy","Błąd odczytu przy patrzeniu na wskazówkę z ukosa; patrz prostopadle."],
+ [5,"Protokół pomiarowy","Cel, data, zespół, schemat, wykaz przyrządów, tabela wyników z jednostkami, obliczenia, wnioski."],
+ [5,"Pomiar napięcia multimetrem","Równolegle; cewki elektrozaworów zwykle 24 V DC."],
+ [5,"Pomiar prądu multimetrem","Szeregowo, z przerwaniem obwodu (np. pętla 4–20 mA)."],
+ [5,"Wyciek w hydraulice","Nigdy nie sprawdzaj ręką – olej może przebić skórę. Użyj kartonu."],
+ [5,"Przed rozłączeniem przewodów","Wyłącz zasilanie, odetnij i rozładuj ciśnienie (także akumulator hydrauliczny)."]
+];
+let deck=[],fcIdx=0,known=0;
+const fcEl=document.getElementById("fc");
+function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function drawFC(){
+  fcEl.classList.remove("flip");
+  const cnt=document.getElementById("fcCount");
+  if(!deck.length){
+    fcEl.style.setProperty("--c","var(--ok)");
+    document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;
+    document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
+  }
+  const [n,f,b]=deck[0];
+  fcEl.style.setProperty("--c",C(n));
+  setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;
+  document.querySelector("#fcFront b").textContent=f;
+  cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
+}
+fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;deck.shift();known++;drawFC();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;deck.push(deck.shift());drawFC();});
+let fcFilter="all";
+document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); buildDeck("all");
+
+/* ---------- quiz ---------- */
+const Q=[
+ [1,"Ile paskali to 1 bar?",["100 000 Pa","1000 Pa","1 000 000 Pa","10 000 Pa"],0,"1 bar = 10⁵ Pa = 100 kPa = 0,1 MPa."],
+ [1,"Ile barów to 10 MPa?",["100 bar","10 bar","1000 bar","1 bar"],0,"1 MPa = 10 bar, więc 10 MPa = 100 bar."],
+ [1,"Ile w przybliżeniu psi to 6 bar?",["87 psi","41 psi","600 psi","14,5 psi"],0,"1 bar ≈ 14,5 psi, więc 6 · 14,5 ≈ 87 psi."],
+ [1,"Zwykły manometr na sieci pneumatycznej pokazuje:",["nadciśnienie (ciśnienie względne)","ciśnienie absolutne","podciśnienie","ciśnienie atmosferyczne"],0,"Manometr mierzy nadwyżkę ponad ciśnienie atmosferyczne."],
+ [1,"Manometr pokazuje 6 bar. Ciśnienie absolutne wynosi około:",["7 bar","6 bar","5 bar","0,6 bar"],0,"p_abs = p_wzgl + p_atm ≈ 6 + 1 = 7 bar."],
+ [1,"Siłę siłownika (teoretyczną) obliczamy ze wzoru:",["F = p·A","F = Q·A","F = p/A","F = p·Q"],0,"p·Q to moc, a Q = v·A to przepływ."],
+ [1,"Dlaczego siła siłownika przy wsuwie jest mniejsza niż przy wysuwie?",["ciśnienie działa na mniejsze pole pierścieniowe","przy wsuwie ciśnienie jest mniejsze","tłoczysko zwiększa tarcie tylko przy wsuwie","przy wsuwie działa podciśnienie"],0,"A = π·(D² − d²)/4, pole tłoczyska jest odjęte."],
+ [1,"Jak zmieni się siła siłownika, gdy średnicę tłoka zwiększymy 2 razy (ciśnienie bez zmian)?",["wzrośnie 4 razy","wzrośnie 2 razy","nie zmieni się","wzrośnie 8 razy"],0,"A ~ D², więc 2² = 4."],
+ [1,"Siłownik ⌀50 mm, 6 bar. Siła teoretyczna przy wysuwie to około:",["1,18 kN","11,8 kN","118 N","300 N"],0,"A = π·0,05²/4 ≈ 1,963·10⁻³ m²; F = 6·10⁵ · 1,963·10⁻³ ≈ 1178 N."],
+ [1,"O prędkości wysuwu siłownika decyduje głównie:",["przepływ","ciśnienie","temperatura","długość skoku"],0,"v = Q/A; ciśnienie decyduje o sile."],
+ [1,"Moc hydrauliczną liczymy ze wzoru:",["P = p·Q","P = F·A","P = p/Q","P = Q·A"],0,"P [W] = p [Pa] · Q [m³/s]."],
+ [2,"Element pomiarowy najpopularniejszego manometru wskazówkowego to:",["rurka Bourdona","tensometr","pływak","wirnik"],0,"Rurka pod ciśnieniem się prostuje i porusza wskazówką."],
+ [2,"Po co manometr wypełnia się gliceryną?",["żeby tłumić drgania i pulsacje wskazówki","żeby zwiększyć zakres","żeby mierzyć podciśnienie","żeby smarować układ hydrauliczny"],0,"Gliceryna tłumi drgania; wskazanie jest stabilne przy pompie."],
+ [2,"Ciśnienie robocze wynosi 6 bar (stałe). Który manometr wybierzesz?",["0–10 bar","0–6 bar","0–100 bar","0–4 bar"],0,"6 bar na 0–6 to praca na końcu skali; 0–100 da duży błąd względny."],
+ [2,"Manometr klasy 1,6 o zakresie 0–10 bar może się pomylić maksymalnie o:",["0,16 bar","1,6 bar","0,016 bar","16 bar"],0,"Δ = 1,6 · 10 / 100 = 0,16 bar."],
+ [2,"Klasa dokładności manometru oznacza błąd wyrażony w procentach:",["zakresu pomiarowego","aktualnego odczytu","ciśnienia atmosferycznego","średnicy tarczy"],0,"Dlatego błąd względny rośnie przy małych odczytach."],
+ [2,"Przetwornik ciśnienia 0–10 bar z wyjściem 4–20 mA daje 12 mA. Ciśnienie wynosi:",["5 bar","6 bar","1,2 bar","8 bar"],0,"(12 − 4)/16 · 10 = 5 bar."],
+ [2,"Przetwornik 4–20 mA pokazuje 0 mA. Najbardziej prawdopodobna przyczyna to:",["przerwa w obwodzie lub awaria","ciśnienie równe zero","maksymalne ciśnienie","podciśnienie"],0,"Zero ciśnienia to 4 mA; 0 mA oznacza brak sygnału."],
+ [2,"Presostat to:",["czujnik, który przełącza styk przy nastawionym ciśnieniu","manometr z gliceryną","przetwornik 4–20 mA","zawór bezpieczeństwa"],0,"Daje sygnał dwustanowy, nie wartość ciśnienia."],
+ [2,"Do pomiaru podciśnienia używa się:",["wakuometru","rotametru","tensometru","manometru glicerynowego"],0,"Wakuometr ma skalę poniżej zera."],
+ [2,"Złącze pomiarowe w hydraulice pozwala:",["podłączyć manometr pod ciśnieniem bez wycieku oleju","zmierzyć przepływ","odpowietrzyć siłownik","zmniejszyć ciśnienie w układzie"],0,"Ma zawór zwrotny, który otwiera się po podłączeniu wężyka pomiarowego."],
+ [3,"Rotametr działa dzięki:",["pływakowi w stożkowej rurce","wirnikowi","kołom zębatym","fali ultradźwiękowej"],0,"Im większy przepływ, tym wyżej unosi się pływak."],
+ [3,"Jak trzeba zamontować rotametr?",["pionowo","poziomo","pod kątem 45°","dowolnie"],0,"Pływak działa dzięki równowadze sił z grawitacją."],
+ [3,"Do pomiaru zużycia sprężonego powietrza najczęściej używa się przepływomierza:",["termicznego (kalorymetrycznego)","zębatego","wyporowego tłokowego","rurki Bourdona"],0,"Przepływ powietrza chłodzi podgrzany element."],
+ [3,"Przepływomierz z kołami zębatymi to przepływomierz:",["wyporowy","termiczny","ultradźwiękowy","pływakowy"],0,"Każdy obrót kół przepuszcza stałą objętość."],
+ [3,"Który przepływomierz nie ma części ruchomych?",["ultradźwiękowy","turbinowy","zębaty","rotametr"],0,"Mierzy czas przejścia fali dźwiękowej."],
+ [3,"Pompa daje 10 l/min, siłownik ⌀40 mm. Prędkość tłoka to około:",["0,13 m/s","1,3 m/s","0,013 m/s","13 m/s"],0,"Q = 1,667·10⁻⁴ m³/s, A = 1,257·10⁻³ m², v = Q/A ≈ 0,13 m/s."],
+ [3,"Ile l/min to 1 m³/h?",["ok. 16,7 l/min","60 l/min","1000 l/min","3,6 l/min"],0,"1000 l / 60 min ≈ 16,7 l/min."],
+ [4,"Tensometr zamienia odkształcenie na zmianę:",["rezystancji","pojemności","ciśnienia","temperatury"],0,"ΔR/R = k·ε."],
+ [4,"Tensometry do pomiaru siły łączy się w:",["mostek Wheatstone'a","dzielnik napięcia z kondensatorem","obwód szeregowy z amperomierzem","układ gwiazda–trójkąt"],0,"Mostek wykrywa bardzo małe zmiany rezystancji."],
+ [4,"Czujnik piezoelektryczny najlepiej nadaje się do pomiaru:",["sił szybkozmiennych i uderzeń","stałej siły przez wiele godzin","ciśnienia atmosferycznego","przepływu powietrza"],0,"Ładunek z kryształu powoli zanika, więc siła stała jest trudna do pomiaru."],
+ [4,"Siła rzeczywista siłownika jest mniejsza od obliczonej F = p·A głównie z powodu:",["tarcia uszczelnień","za dużej średnicy","ciśnienia atmosferycznego","klasy manometru"],0,"Uwzględnia to sprawność η."],
+ [5,"Błąd względny to:",["błąd bezwzględny podzielony przez wartość mierzoną","różnica dwóch odczytów","klasa przyrządu","błąd z paralaksy"],0,"δ = Δx/x · 100%."],
+ [5,"Napięcie na cewce elektrozaworu mierzymy multimetrem:",["równolegle do cewki","szeregowo z cewką","po odłączeniu zasilania","na zakresie mA"],0,"Woltomierz zawsze równolegle; typowo 24 V DC."],
+ [5,"Prąd w pętli 4–20 mA mierzymy multimetrem:",["szeregowo, przerywając obwód","równolegle do czujnika","na zakresie V AC","na zakresie Ω"],0,"Amperomierz włączamy szeregowo."],
+ [5,"Jak bezpiecznie szukać nieszczelności w układzie hydraulicznym?",["kawałkiem kartonu lub papieru, nie ręką","dłonią w rękawicy","przykładając palec do złączki","zwiększając ciśnienie do maksimum"],0,"Strumień oleju pod wysokim ciśnieniem może przebić skórę, nawet przez rękawicę."],
+ [5,"Przed odłączeniem manometru od przewodu (bez złącza pomiarowego) trzeba:",["odciąć i rozładować ciśnienie","zwiększyć ciśnienie","tylko wyłączyć zasilanie elektryczne","odczytać wynik jeszcze raz"],0,"Rozłączanie pod ciśnieniem grozi wyrzutem oleju lub węża."],
+ [5,"Żeby uniknąć błędu paralaksy, na skalę manometru patrzymy:",["prostopadle","z lewej strony","z dużej odległości","pod kątem 45°"],0,"Patrzenie z ukosa przesuwa pozorne położenie wskazówki."]
+];
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    const pct=Math.round(score/qs.length*100);
+    let best=0;try{best=+localStorage.getItem("nauka:montaz-pomiary-pneumatyka-hydraulika:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:montaz-pomiary-pneumatyka-hydraulika:best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na kartkówkę.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    return;
+  }
+  const q=qs[qi];
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+startQuiz(filtered());
+
+/* ---------- open questions ---------- */
+const OQ=[
+ [1,"Zamień jednostki: 6 bar na kPa, MPa i psi; 2,5 MPa na bar; 80 bar na psi.",["6 bar = 600 kPa = 0,6 MPa ≈ 87 psi (6 · 14,5).","2,5 MPa = 25 bar (1 MPa = 10 bar).","80 bar ≈ 1160 psi (80 · 14,5)."]],
+ [1,"Siłownik pneumatyczny ⌀50 mm, tłoczysko ⌀20 mm, ciśnienie 6 bar. Oblicz siłę teoretyczną przy wysuwie i wsuwie.",["p = 6 bar = 6·10⁵ Pa.","Wysuw: A = π·0,05²/4 ≈ 1,963·10⁻³ m², F = p·A ≈ <b>1178 N ≈ 1,18 kN</b>.","Wsuw: A = π·(0,05² − 0,02²)/4 ≈ 1,649·10⁻³ m², F ≈ <b>990 N</b>.","Przy wsuwie siła jest mniejsza, bo pole jest pomniejszone o tłoczysko."]],
+ [1,"Siłownik hydrauliczny ⌀63 mm pracuje przy 100 bar. Oblicz siłę teoretyczną.",["p = 100 bar = 10⁷ Pa.","A = π·0,063²/4 ≈ 3,117·10⁻³ m².","F = p·A ≈ <b>31 172 N ≈ 31,2 kN</b>."]],
+ [1,"Jaką minimalną średnicę musi mieć siłownik pneumatyczny, żeby przy 6 bar dać siłę 2000 N (bez strat)?",["A = F/p = 2000 / 6·10⁵ ≈ 3,33·10⁻³ m².","D = √(4A/π) ≈ 0,065 m = <b>65 mm</b>.","Wybieramy najbliższą większą średnicę z typoszeregu, np. 80 mm (z zapasem na tarcie)."]],
+ [1,"Pompa daje 10 l/min, siłownik ma ⌀40 mm i skok 200 mm. Oblicz prędkość tłoka i czas wysuwu.",["Q = 10 l/min = 10·10⁻³ / 60 ≈ 1,667·10⁻⁴ m³/s.","A = π·0,04²/4 ≈ 1,257·10⁻³ m².","v = Q/A ≈ <b>0,13 m/s</b>.","t = s/v = 0,2 / 0,1326 ≈ <b>1,5 s</b>."]],
+ [1,"Oblicz moc hydrauliczną przy ciśnieniu 100 bar i przepływie 20 l/min.",["p = 10⁷ Pa, Q = 20·10⁻³/60 ≈ 3,333·10⁻⁴ m³/s.","P = p·Q ≈ <b>3333 W ≈ 3,3 kW</b>."]],
+ [2,"Manometr klasy 1,6 ma zakres 0–10 bar. Oblicz błąd dopuszczalny oraz błąd względny przy odczycie 8 bar i 2 bar. Jaki wniosek?",["Δp = 1,6 · 10 / 100 = <b>0,16 bar</b> (w całej skali).","Przy 8 bar: 0,16/8 = <b>2%</b>. Przy 2 bar: 0,16/2 = <b>8%</b>.","<b>Wniosek:</b> manometr dobieramy tak, żeby mierzyć w górnej części skali (ale do ok. 3/4 zakresu)."]],
+ [2,"Przetwornik ciśnienia 0–25 bar ma wyjście 4–20 mA. Jakie ciśnienie odpowiada 8 mA? Ile mA będzie przy 0 bar? Co oznacza 0 mA?",["p = (I − 4)/16 · zakres = (8 − 4)/16 · 25 = <b>6,25 bar</b>.","Przy 0 bar przetwornik daje <b>4 mA</b>.","0 mA oznacza <b>przerwę w obwodzie lub awarię</b> – to zaleta sygnału 4–20 mA (tzw. żywe zero)."]],
+ [2,"Porównaj manometr, przetwornik ciśnienia i presostat.",["<b>Manometr:</b> pokazuje wartość ciśnienia na tarczy, odczyt na miejscu, bez zasilania.","<b>Przetwornik:</b> zamienia ciśnienie na sygnał analogowy (4–20 mA, 0–10 V) dla PLC lub miernika.","<b>Presostat:</b> przełącza styk przy nastawionym progu, daje tylko sygnał „jest / nie ma”."]],
+ [3,"Opisz zasadę działania rotametru i przepływomierza termicznego. Gdzie się ich używa?",["<b>Rotametr:</b> pływak w pionowej, stożkowej rurce unosi się tym wyżej, im większy przepływ; odczyt na skali; musi stać pionowo.","<b>Termiczny:</b> przepływ chłodzi podgrzewany element, z odebranego ciepła liczy się przepływ; używany w pneumatyce do pomiaru zużycia powietrza i wykrywania wycieków."]],
+ [4,"Wyjaśnij, jak tensometr mierzy siłę. Oblicz zmianę rezystancji tensometru 120 Ω (k = 2) przy odkształceniu 0,001.",["Tensometr naklejony na element sprężysty wydłuża się razem z nim, co zmienia jego rezystancję: ΔR/R = k·ε.","ΔR = 120 · 2 · 0,001 = <b>0,24 Ω</b>.","Zmiana jest bardzo mała, więc tensometry łączy się w <b>mostek Wheatstone'a</b>, a napięcie z mostka wzmacnia się."]],
+ [4,"Siłownik hydrauliczny ⌀50 mm, manometr pokazuje 50 bar, sprawność 0,9. Oblicz siłę teoretyczną i rzeczywistą. Dlaczego się różnią?",["F_teor = 5·10⁶ · π·0,05²/4 ≈ <b>9817 N</b>.","F_rz = F_teor · η ≈ <b>8836 N ≈ 8,8 kN</b>.","Różnica wynika z <b>tarcia uszczelnień</b> (i ewentualnego ciśnienia po drugiej stronie tłoka)."]],
+ [5,"Opisz kolejne kroki wykonania pomiaru ciśnienia w układzie hydraulicznym i zasady BHP.",["Zapoznaj się ze schematem, wybierz punkt pomiarowy.","Dobierz manometr (zakres, klasa, gliceryna przy pulsacjach).","Jeśli nie ma złącza pomiarowego: wyłącz pompę, odetnij i rozładuj ciśnienie (też akumulator), dopiero wtedy podłącz.","Uruchom układ, sprawdź szczelność (kartonem, nie ręką), odczytaj prostopadle do skali.","Zapisz wynik z jednostką w protokole, rozłącz bez ciśnienia.","Okulary ochronne, nie stawaj na linii ruchu siłownika."]],
+ [5,"Manometr wskazał 5,2 bar, a ciśnienie rzeczywiste (wzorcowe) wynosiło 5,0 bar. Oblicz błąd bezwzględny i względny.",["Δp = |5,2 − 5,0| = <b>0,2 bar</b>.","δ = 0,2 / 5,0 · 100% = <b>4%</b>."]]
+];
+document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+</script>
+</body>
+</html>
