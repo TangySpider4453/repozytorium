@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angielski – Impulse 3 Unit 3: powtórka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+body{font-variant-numeric:lining-nums}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+.ex{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15.5px}
+.ex b:first-child{color:var(--c)}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
+.voc table{min-width:0}
+.voc td:first-child{font-weight:700;white-space:nowrap}
+.voc td:nth-child(2){color:var(--muted);font-size:14px;white-space:nowrap}
+.voc h3{margin-top:22px}
+.pairs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}
+.pairs div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);text-align:center}
+.pairs b{display:block;font-size:18px;color:var(--c)}
+.pairs span{color:var(--muted);font-size:14px}
+.en{font-style:italic}
+.dirbtn{margin-left:0}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>Impulse 3 · Unit 3: Mysteries</h1>
+  <p>Angielski, sprawdzian czw. 22 października. Słówka, modal verbs of deduction, czasy przeszłe</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="slowka">Słówka</button>
+  <button role="tab" aria-selected="false" data-tab="gramatyka">Gramatyka</button>
+  <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+  <button role="tab" aria-selected="false" data-tab="otwarte">Ćwiczenia</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Wyciąg z całego unitu: przeczytaj tuż przed sprawdzianem. Pełne listy są w Słówkach i Gramatyce.</p>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol><li><b>Modal verbs of deduction:</b> must (na pewno tak), might/could (możliwe), can't (na pewno nie). O przeszłości: <b>modal + have + III forma</b> (must have been, can't have left).</li><li><b>Czasy przeszłe:</b> past simple (zakończone), past continuous <b>was/were + -ing</b> (w trakcie, tło), past perfect <b>had + III forma</b> (wcześniej niż inne zdarzenie).</li><li><b>news</b> jest niepoliczalne: the news <b>is</b>, a lot of news (nigdy many news). <b>Extreme adjectives</b>: ancient, freezing, exhausted, thrilling, huge, tiny, delighted.</li></ol></div>
+  <div class="key" style="--c:var(--t1)"><h2>1. Przymiotniki</h2><ol><li>Mocne przymiotniki: old → <b>ancient</b>, cold → <b>freezing</b>, tired → <b>exhausted</b>, exciting → <b>thrilling</b>, strange → <b>puzzling</b>, bad → <b>horrible/awful</b>.</li><li>Też: big → <b>huge</b>, small → <b>tiny</b>, happy → <b>delighted</b>.</li><li>Opisowe: intriguing, mysterious, thought-provoking, unbelievable, unforgettable, true to life, terrifying.</li><li>Końcówki: <b>-ful</b> (awful, wonderful), <b>-ous</b> (curious, mysterious), <b>-ing</b> (puzzling, thrilling), <b>-able/-ible</b> (unbelievable, horrible).</li><li>Coś <b>disappointing</b> (rozczarowujące), ktoś <b>disappointed</b> (rozczarowany).</li></ol></div>
+  <div class="key" style="--c:var(--t6)"><h2>2. Książki i media</h2><ol><li>Książki: novel (powieść), plot (fabuła), character (postać), chapter, genre, review, best-seller, storyteller.</li><li>Kolokacje z news: <b>breaking</b> news, <b>fake</b> news, news <b>item</b>, news <b>bulletin</b>; news <b>spreads</b>.</li><li>Media: <b>make the headlines</b>, front page, cover/report a story, check your <b>sources</b>, viewer, network, channel, documentary.</li><li><b>news</b> + czasownik w liczbie pojedynczej; <b>the media</b> + liczba pojedyncza lub mnoga.</li></ol></div>
+  <div class="key" style="--c:var(--t4)"><h2>3. Modal verbs</h2><ol><li>Teraźniejszość: <b>modal + bezokolicznik</b>: She must live here. It might be a costume.</li><li>Przeszłość: <b>modal + have + III forma</b>: It must have rained. She might have had a lot of work.</li><li><b>must</b> = jestem prawie pewien, że tak; <b>might/could</b> = możliwe; <b>can't</b> = na pewno nie.</li><li>W przeszłości zamiast can't have można <b>couldn't have</b>.</li></ol></div>
+  <div class="key" style="--c:var(--t3)"><h2>4. Pewność i wątpliwość</h2><ol><li>Pewność: There's no doubt that / No doubt, It's definitely, I'm sure/certain/<b>positive</b>, It's <b>sure to</b> …, It's clear that, Clearly/Obviously.</li><li>Wątpliwość: I'm not (absolutely) sure, It's <b>unlikely</b> that, I <b>doubt</b> that, It isn't likely that, Maybe/Perhaps, … might (not), I <b>wonder if/whether</b> …</li></ol></div>
+  <div class="key" style="--c:var(--t5)"><h2>5. Czasy przeszłe</h2><ol><li><b>Past simple</b>: zakończona czynność albo ta, która przerwała inną (yesterday, ago, last, in 2020).</li><li><b>Past continuous</b> (was/were + -ing): trwała w danym momencie, była tłem, została przerwana (while, as, at that time).</li><li><b>Past perfect</b> (had + III forma): czynność wcześniejsza od innej w przeszłości (by the time, by then, already, before, after, never).</li><li>Wzór: <i>While I was reading, the phone rang. I realised I had seen it before.</i></li></ol></div>
+  <div class="key" style="--c:var(--t2)"><h2>6. Opowiadanie: łączniki i przysłówki</h2><ol><li><b>afterwards</b> = później (przysłówek, sam); <b>after</b> + rzeczownik/zdanie (after sunset, after she left).</li><li>Kolejność: as, when, while, (soon) afterwards, after. Logika: so, though, as a result, <b>in order to</b>, however.</li><li>Przysłówki: <b>manner</b> (quickly, noisily, slowly), <b>place</b> (downstairs, everywhere), <b>time</b> (eventually, tomorrow).</li><li>Wpis na blogu (100–150 słów): gdzie i kiedy, kto, co się stało, Twoja opinia/teoria.</li></ol></div>
+</section>
+
+<!-- ============ SŁÓWKA ============ -->
+<section class="tab voc" id="slowka" hidden>
+  <p class="intro">Całe słownictwo z Wordlist unitu 3 (s. 53), w kolejności lekcji. Najpierw zasłoń polską kolumnę, potem angielską.</p>
+  <article class="topic" style="--c:var(--t1)"><header><div class="num">3.1 · 3.9 · 3.10</div><h2>Extreme adjectives</h2><div class="span">„mocne” przymiotniki = very + zwykły przymiotnik</div></header><div class="tbody">
+    <div class="pairs"><div><span>very old</span><b lang="en">ancient</b></div><div><span>very cold</span><b lang="en">freezing</b></div><div><span>very tired</span><b lang="en">exhausted</b></div><div><span>very exciting</span><b lang="en">thrilling</b></div><div><span>very strange</span><b lang="en">puzzling</b></div><div><span>very bad</span><b lang="en">horrible / awful</b></div><div><span>very big</span><b lang="en">huge</b></div><div><span>very small</span><b lang="en">tiny</b></div><div><span>very happy</span><b lang="en">delighted</b></div></div>
+    <h3>Końcówki przymiotników (3.8)</h3>
+    <div class="grid2"><div class="box"><h4>-ful</h4><p lang="en">awful, wonderful</p></div><div class="box"><h4>-ous</h4><p lang="en">curious, mysterious</p></div><div class="box"><h4>-ing</h4><p lang="en">puzzling, thrilling, disappointing</p></div><div class="box"><h4>-able / -ible</h4><p lang="en">unbelievable, horrible</p></div></div>
+    <div class="warn"><b>Uważaj:</b> -ing opisuje rzecz, która wywołuje uczucie (a <i>disappointing</i> film), -ed opisuje człowieka, który je czuje (I was <i>disappointed</i>). Od rzeczowników: <i>document → documentary, journal → journalism</i>; przysłówek od <i>careful</i> to <i>carefully</i>.</div>
+  </div></article>
+  <h3 style="color:var(--t1)">Vocabulary 1: przymiotniki opisowe i „mocne”</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">alien</td><td style="color:var(--ink);white-space:normal;font-size:15px">obcy</td></tr><tr><td lang="en">amazing</td><td style="color:var(--ink);white-space:normal;font-size:15px">niesamowity, wspaniały</td></tr><tr><td lang="en">amusing</td><td style="color:var(--ink);white-space:normal;font-size:15px">zabawny</td></tr><tr><td lang="en">ancient</td><td style="color:var(--ink);white-space:normal;font-size:15px">starożytny</td></tr><tr><td lang="en">commit</td><td style="color:var(--ink);white-space:normal;font-size:15px">popełnić</td></tr><tr><td lang="en">curious</td><td style="color:var(--ink);white-space:normal;font-size:15px">osobliwy; ciekawy (świata)</td></tr><tr><td lang="en">delighted</td><td style="color:var(--ink);white-space:normal;font-size:15px">zachwycony</td></tr><tr><td lang="en">disappointing</td><td style="color:var(--ink);white-space:normal;font-size:15px">rozczarowujący</td></tr><tr><td lang="en">dramatic</td><td style="color:var(--ink);white-space:normal;font-size:15px">dramatyczny</td></tr><tr><td lang="en">enjoyable</td><td style="color:var(--ink);white-space:normal;font-size:15px">przyjemny</td></tr><tr><td lang="en">frightening</td><td style="color:var(--ink);white-space:normal;font-size:15px">straszny</td></tr><tr><td lang="en">huge</td><td style="color:var(--ink);white-space:normal;font-size:15px">ogromny</td></tr><tr><td lang="en">inspiring</td><td style="color:var(--ink);white-space:normal;font-size:15px">inspirujący, porywający</td></tr><tr><td lang="en">intriguing</td><td style="color:var(--ink);white-space:normal;font-size:15px">intrygujący</td></tr><tr><td lang="en">investigate</td><td style="color:var(--ink);white-space:normal;font-size:15px">badać, dociekać</td></tr><tr><td lang="en">maze</td><td style="color:var(--ink);white-space:normal;font-size:15px">labirynt</td></tr><tr><td lang="en">mysterious</td><td style="color:var(--ink);white-space:normal;font-size:15px">tajemniczy</td></tr><tr><td lang="en">original</td><td style="color:var(--ink);white-space:normal;font-size:15px">oryginalny, niezwykły</td></tr><tr><td lang="en">puzzling</td><td style="color:var(--ink);white-space:normal;font-size:15px">zagadkowy</td></tr><tr><td lang="en">suicide</td><td style="color:var(--ink);white-space:normal;font-size:15px">samobójstwo</td></tr><tr><td lang="en">tape</td><td style="color:var(--ink);white-space:normal;font-size:15px">taśma</td></tr><tr><td lang="en">terrifying</td><td style="color:var(--ink);white-space:normal;font-size:15px">przerażający</td></tr><tr><td lang="en">thought-provoking</td><td style="color:var(--ink);white-space:normal;font-size:15px">skłaniający do przemyśleń</td></tr><tr><td lang="en">thrilling</td><td style="color:var(--ink);white-space:normal;font-size:15px">porywający, ekscytujący</td></tr><tr><td lang="en">tiny</td><td style="color:var(--ink);white-space:normal;font-size:15px">malutki</td></tr><tr><td lang="en">true to life</td><td style="color:var(--ink);white-space:normal;font-size:15px">realistyczny</td></tr><tr><td lang="en">unbelievable</td><td style="color:var(--ink);white-space:normal;font-size:15px">niewiarygodny</td></tr><tr><td lang="en">unforgettable</td><td style="color:var(--ink);white-space:normal;font-size:15px">niezapomniany</td></tr></table></div>
+  <h3 style="color:var(--t4)">Grammar 1</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">man-made</td><td style="color:var(--ink);white-space:normal;font-size:15px">stworzony przez człowieka</td></tr><tr><td lang="en">mermaid</td><td style="color:var(--ink);white-space:normal;font-size:15px">syrena</td></tr><tr><td lang="en">sculpture</td><td style="color:var(--ink);white-space:normal;font-size:15px">rzeźba</td></tr><tr><td lang="en">temple</td><td style="color:var(--ink);white-space:normal;font-size:15px">świątynia</td></tr></table></div>
+  <h3 style="color:var(--t3)">Speaking</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">doubt</td><td style="color:var(--ink);white-space:normal;font-size:15px">wątpić; wątpliwość</td></tr><tr><td lang="en">locker</td><td style="color:var(--ink);white-space:normal;font-size:15px">szafka</td></tr></table></div>
+  <h3 style="color:var(--t6)">Reading: książki i pisarze</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">best-seller</td><td style="color:var(--ink);white-space:normal;font-size:15px">bestseller</td></tr><tr><td lang="en">book critic</td><td style="color:var(--ink);white-space:normal;font-size:15px">krytyk literacki</td></tr><tr><td lang="en">chapter</td><td style="color:var(--ink);white-space:normal;font-size:15px">rozdział</td></tr><tr><td lang="en">character</td><td style="color:var(--ink);white-space:normal;font-size:15px">postać</td></tr><tr><td lang="en">classic</td><td style="color:var(--ink);white-space:normal;font-size:15px">klasyk</td></tr><tr><td lang="en">column</td><td style="color:var(--ink);white-space:normal;font-size:15px">kolumna</td></tr><tr><td lang="en">episode</td><td style="color:var(--ink);white-space:normal;font-size:15px">odcinek</td></tr><tr><td lang="en">essay</td><td style="color:var(--ink);white-space:normal;font-size:15px">esej</td></tr><tr><td lang="en">fast-paced</td><td style="color:var(--ink);white-space:normal;font-size:15px">szybki, dziejący się w szybkim tempie</td></tr><tr><td lang="en">genre</td><td style="color:var(--ink);white-space:normal;font-size:15px">gatunek (np. filmowy, literacki)</td></tr><tr><td lang="en">gift</td><td style="color:var(--ink);white-space:normal;font-size:15px">dar, talent</td></tr><tr><td lang="en">imagination</td><td style="color:var(--ink);white-space:normal;font-size:15px">wyobraźnia</td></tr><tr><td lang="en">impress</td><td style="color:var(--ink);white-space:normal;font-size:15px">wzbudzić podziw</td></tr><tr><td lang="en">investigation</td><td style="color:var(--ink);white-space:normal;font-size:15px">dochodzenie</td></tr><tr><td lang="en">magazine</td><td style="color:var(--ink);white-space:normal;font-size:15px">magazyn, czasopismo</td></tr><tr><td lang="en">novel</td><td style="color:var(--ink);white-space:normal;font-size:15px">powieść</td></tr><tr><td lang="en">occupation</td><td style="color:var(--ink);white-space:normal;font-size:15px">zawód</td></tr><tr><td lang="en">pharmacy</td><td style="color:var(--ink);white-space:normal;font-size:15px">apteka</td></tr><tr><td lang="en">plot</td><td style="color:var(--ink);white-space:normal;font-size:15px">fabuła</td></tr><tr><td lang="en">poison</td><td style="color:var(--ink);white-space:normal;font-size:15px">trucizna</td></tr><tr><td lang="en">print</td><td style="color:var(--ink);white-space:normal;font-size:15px">drukować; druk</td></tr><tr><td lang="en">publish</td><td style="color:var(--ink);white-space:normal;font-size:15px">wydawać, publikować</td></tr><tr><td lang="en">review</td><td style="color:var(--ink);white-space:normal;font-size:15px">recenzja</td></tr><tr><td lang="en">storyteller</td><td style="color:var(--ink);white-space:normal;font-size:15px">opowiadacz, gawędziarz</td></tr><tr><td lang="en">tale</td><td style="color:var(--ink);white-space:normal;font-size:15px">opowieść</td></tr><tr><td lang="en">thriller</td><td style="color:var(--ink);white-space:normal;font-size:15px">thriller, dreszczowiec</td></tr><tr><td lang="en">tough</td><td style="color:var(--ink);white-space:normal;font-size:15px">nieustępliwy, hardy</td></tr><tr><td lang="en">violence</td><td style="color:var(--ink);white-space:normal;font-size:15px">przemoc</td></tr></table></div>
+  <h3 style="color:var(--t6)">Vocabulary 2: media</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">breakfast television</td><td style="color:var(--ink);white-space:normal;font-size:15px">telewizja śniadaniowa</td></tr><tr><td lang="en">breaking news</td><td style="color:var(--ink);white-space:normal;font-size:15px">wiadomości z ostatniej chwili</td></tr><tr><td lang="en">channel</td><td style="color:var(--ink);white-space:normal;font-size:15px">kanał</td></tr><tr><td lang="en">cover</td><td style="color:var(--ink);white-space:normal;font-size:15px">relacjonować</td></tr><tr><td lang="en">daily newspaper</td><td style="color:var(--ink);white-space:normal;font-size:15px">gazeta codzienna, dziennik</td></tr><tr><td lang="en">documentary</td><td style="color:var(--ink);white-space:normal;font-size:15px">film dokumentalny</td></tr><tr><td lang="en">fake news</td><td style="color:var(--ink);white-space:normal;font-size:15px">fałszywe wiadomości</td></tr><tr><td lang="en">front page</td><td style="color:var(--ink);white-space:normal;font-size:15px">pierwsza strona (gazety)</td></tr><tr><td lang="en">headline</td><td style="color:var(--ink);white-space:normal;font-size:15px">nagłówek</td></tr><tr><td lang="en">interview</td><td style="color:var(--ink);white-space:normal;font-size:15px">wywiad</td></tr><tr><td lang="en">journalism</td><td style="color:var(--ink);white-space:normal;font-size:15px">dziennikarstwo</td></tr><tr><td lang="en">journalist</td><td style="color:var(--ink);white-space:normal;font-size:15px">dziennikarz</td></tr><tr><td lang="en">make the headlines</td><td style="color:var(--ink);white-space:normal;font-size:15px">trafić na pierwsze strony gazet</td></tr><tr><td lang="en">network</td><td style="color:var(--ink);white-space:normal;font-size:15px">sieć telewizyjna</td></tr><tr><td lang="en">news bulletin</td><td style="color:var(--ink);white-space:normal;font-size:15px">serwis informacyjny</td></tr><tr><td lang="en">news item</td><td style="color:var(--ink);white-space:normal;font-size:15px">wiadomość, temat (w wiadomościach)</td></tr><tr><td lang="en">present</td><td style="color:var(--ink);white-space:normal;font-size:15px">przedstawiać (informacje)</td></tr><tr><td lang="en">publisher</td><td style="color:var(--ink);white-space:normal;font-size:15px">wydawca</td></tr><tr><td lang="en">report</td><td style="color:var(--ink);white-space:normal;font-size:15px">relacjonować</td></tr><tr><td lang="en">source</td><td style="color:var(--ink);white-space:normal;font-size:15px">źródło</td></tr><tr><td lang="en">spread</td><td style="color:var(--ink);white-space:normal;font-size:15px">rozprzestrzeniać (się)</td></tr><tr><td lang="en">viewer</td><td style="color:var(--ink);white-space:normal;font-size:15px">widz</td></tr></table></div>
+  <h3 style="color:var(--t2)">Listening</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">adverb</td><td style="color:var(--ink);white-space:normal;font-size:15px">przysłówek</td></tr><tr><td lang="en">decode</td><td style="color:var(--ink);white-space:normal;font-size:15px">odszyfrować</td></tr><tr><td lang="en">downstairs</td><td style="color:var(--ink);white-space:normal;font-size:15px">na dole, piętro niżej</td></tr><tr><td lang="en">encrypt</td><td style="color:var(--ink);white-space:normal;font-size:15px">zakodować, zaszyfrować</td></tr><tr><td lang="en">eventually</td><td style="color:var(--ink);white-space:normal;font-size:15px">ostatecznie, w końcu</td></tr><tr><td lang="en">fluent</td><td style="color:var(--ink);white-space:normal;font-size:15px">biegły, płynny</td></tr><tr><td lang="en">inside</td><td style="color:var(--ink);white-space:normal;font-size:15px">wewnątrz</td></tr><tr><td lang="en">Latin</td><td style="color:var(--ink);white-space:normal;font-size:15px">język łaciński</td></tr><tr><td lang="en">manner</td><td style="color:var(--ink);white-space:normal;font-size:15px">sposób</td></tr><tr><td lang="en">manuscript</td><td style="color:var(--ink);white-space:normal;font-size:15px">manuskrypt, rękopis</td></tr><tr><td lang="en">noisily</td><td style="color:var(--ink);white-space:normal;font-size:15px">hałaśliwie</td></tr><tr><td lang="en">partially</td><td style="color:var(--ink);white-space:normal;font-size:15px">częściowo</td></tr></table></div>
+  <h3 style="color:var(--t5)">Grammar 2</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">carve</td><td style="color:var(--ink);white-space:normal;font-size:15px">rzeźbić</td></tr><tr><td lang="en">clue</td><td style="color:var(--ink);white-space:normal;font-size:15px">wskazówka, trop</td></tr><tr><td lang="en">colonist</td><td style="color:var(--ink);white-space:normal;font-size:15px">osadnik, kolonista</td></tr><tr><td lang="en">establish</td><td style="color:var(--ink);white-space:normal;font-size:15px">założyć, utworzyć</td></tr><tr><td lang="en">fence</td><td style="color:var(--ink);white-space:normal;font-size:15px">ogrodzenie</td></tr><tr><td lang="en">rock</td><td style="color:var(--ink);white-space:normal;font-size:15px">kołysać, bujać</td></tr><tr><td lang="en">rope</td><td style="color:var(--ink);white-space:normal;font-size:15px">lina, sznur</td></tr></table></div>
+  <h3 style="color:var(--t1)">Use of English</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">coincidence</td><td style="color:var(--ink);white-space:normal;font-size:15px">zbieg okoliczności</td></tr><tr><td lang="en">curse</td><td style="color:var(--ink);white-space:normal;font-size:15px">klątwa</td></tr><tr><td lang="en">pharaoh</td><td style="color:var(--ink);white-space:normal;font-size:15px">faraon</td></tr><tr><td lang="en">tomb</td><td style="color:var(--ink);white-space:normal;font-size:15px">grobowiec</td></tr></table></div>
+  <h3 style="color:var(--t2)">Writing</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">curiosity</td><td style="color:var(--ink);white-space:normal;font-size:15px">ciekawość</td></tr><tr><td lang="en">exhausted</td><td style="color:var(--ink);white-space:normal;font-size:15px">wyczerpany</td></tr><tr><td lang="en">Flemish</td><td style="color:var(--ink);white-space:normal;font-size:15px">Flamand, flamandzki</td></tr><tr><td lang="en">freezing</td><td style="color:var(--ink);white-space:normal;font-size:15px">mroźny, lodowaty</td></tr></table></div>
+  <h3 style="color:var(--t1)">Revision</h3>
+  <div class="tablewrap"><table><tr><th>English</th><th>Polski</th></tr><tr><td lang="en">be fond of</td><td style="color:var(--ink);white-space:normal;font-size:15px">lubić (coś/kogoś), darzyć sympatią</td></tr><tr><td lang="en">reign</td><td style="color:var(--ink);white-space:normal;font-size:15px">panowanie</td></tr><tr><td lang="en">silent</td><td style="color:var(--ink);white-space:normal;font-size:15px">milczący</td></tr><tr><td lang="en">unravel</td><td style="color:var(--ink);white-space:normal;font-size:15px">rozwiązywać, rozwikłać</td></tr></table></div>
+  <h3 style="color:var(--t6)">Kolokacje ze słowem news (3.5)</h3>
+  <div class="grid2"><div class="box"><h4 lang="en">breaking news</h4><p>wiadomości z ostatniej chwili</p></div><div class="box"><h4 lang="en">fake news</h4><p>fałszywe wiadomości</p></div><div class="box"><h4 lang="en">news item</h4><p>wiadomość, temat</p></div><div class="box"><h4 lang="en">news bulletin</h4><p>serwis informacyjny</p></div><div class="box"><h4 lang="en">the news spread</h4><p>wiadomość się rozeszła</p></div><div class="box"><h4 lang="en">make the headlines</h4><p>trafić na pierwsze strony</p></div></div>
+</section>
+
+<!-- ============ GRAMATYKA ============ -->
+<section class="tab" id="gramatyka" hidden>
+  <article class="topic" id="t3" style="--c:var(--t4)">
+    <header><div class="num">3.2 · Grammar 1</div><h2>Modal verbs of deduction and speculation</h2><div class="span">przypuszczenia i domysły na podstawie tego, co widzimy</div></header>
+    <div class="tbody">
+      <p>Wybór czasownika zależy od tego, <b>jak bardzo jesteśmy pewni</b>.</p>
+      <div class="tablewrap"><table>
+        <tr><th>Pewność</th><th>Teraźniejszość: modal + bezokolicznik</th><th>Przeszłość: modal + have + III forma</th></tr>
+        <tr><td><b>must</b><br><small>na pewno tak</small></td><td lang="en">You must know Mike – he's your neighbour!</td><td lang="en">It must have rained all night. There are puddles everywhere.</td></tr>
+        <tr><td><b>might / could</b><br><small>możliwe</small></td><td lang="en">They could be brothers – they both have curly hair.</td><td lang="en">She might have had a lot of work.</td></tr>
+        <tr><td><b>can't</b><br><small>na pewno nie</small></td><td lang="en">You can't be serious!</td><td lang="en">He can't have left his glasses at home. (= couldn't have)</td></tr>
+      </table></div>
+      <div class="ex"><b>Przykład.</b> <span lang="en">They might be right.</span> = Możliwe, że mają rację. · <span lang="en">They might have been right.</span> = Możliwe, że mieli rację.</div>
+      <div class="warn"><b>Uważaj:</b> po modalu nie ma <i>to</i> (<i>must be</i>, nie <i>must to be</i>). W przeszłości zawsze <b>have</b> (nie <i>had</i>) + III forma: <i>must have gone</i>, nie <i>must had gone</i>. „Na pewno nie” to <b>can't</b>, a nie <i>mustn't</i> (mustn't = nie wolno).</div>
+    </div>
+  </article>
+
+  <article class="topic" id="t4" style="--c:var(--t3)">
+    <header><div class="num">3.3 · Speaking</div><h2>Expressing certainty and doubt</h2><div class="span">jak mówić, że jesteśmy pewni albo mamy wątpliwości</div></header>
+    <div class="tbody">
+      <div class="grid2">
+        <div class="box"><h4>Pewność</h4><ul lang="en"><li>There's no doubt that … / No doubt …</li><li>It's definitely … / You definitely didn't …</li><li>I'm sure / certain / positive (that) …</li><li>It's / They're sure to (come).</li><li>It's clear that …</li><li>Clearly / Obviously …</li></ul></div>
+        <div class="box"><h4>Wątpliwość</h4><ul lang="en"><li>I'm not (absolutely/really) certain/sure (that) …</li><li>It's unlikely that … / I doubt that …</li><li>It isn't likely that …</li><li>Maybe / Perhaps …</li><li>… might (not) …</li><li>I wonder if / whether …</li></ul></div>
+      </div>
+      <div class="warn"><b>Uważaj:</b> <i>It's sure to rain</i> = na pewno będzie padać (pewność), a <i>I wonder if…</i> = zastanawiam się, czy… (wątpliwość). <i>I doubt that</i> = wątpię, że.</div>
+    </div>
+  </article>
+
+  <article class="topic" id="t5" style="--c:var(--t5)">
+    <header><div class="num">3.7 · Grammar 2</div><h2>Past simple, past continuous, past perfect</h2><div class="span">opowiadanie o przeszłości</div></header>
+    <div class="tbody">
+      <div class="tablewrap"><table>
+        <tr><th>Czas</th><th>Budowa</th><th>Kiedy</th><th>Określenia czasu</th></tr>
+        <tr><td><b>past simple</b></td><td lang="en">played, went; didn't; Did …?</td><td>czynność zakończona w przeszłości albo ta, która <b>przerwała</b> inną</td><td lang="en">yesterday, ago, last summer, in 2020, then, when, afterwards</td></tr>
+        <tr><td><b>past continuous</b></td><td lang="en">was/were + -ing; wasn't/weren't; Was/Were …?</td><td>czynność <b>w trakcie</b> w danym momencie, <b>tło</b>, czynność <b>przerwana</b></td><td lang="en">in the morning, at 10 am, at that time, then, when, while, as</td></tr>
+        <tr><td><b>past perfect</b></td><td lang="en">had + III forma; hadn't; Had …?</td><td>czynność <b>wcześniejsza</b> od innej w przeszłości</td><td lang="en">by the time, by then, ever, never, already, before, after</td></tr>
+      </table></div>
+      <h3>Jak to działa razem</h3>
+      <p lang="en"><i>While the colonists <b>were setting up</b> their homes, John White <b>sailed</b> back to England. When he returned, the colony <b>had vanished</b>.</i></p>
+      <p>Tło (continuous) → zdarzenie (simple) → coś, co stało się jeszcze wcześniej (perfect).</p>
+      <div class="ex"><b>Pytania o podmiot.</b> <span lang="en">Who was cooking dinner? How many people had come?</span> – bez <i>did/was</i> przed podmiotem pytamy „kto/co”.</div>
+      <div class="warn"><b>Uważaj:</b> po <i>while</i> zwykle past continuous (czynność trwająca). „Już wcześniej” = <b>had already</b> + III forma.</div>
+    </div>
+  </article>
+
+  <article class="topic" id="t2" style="--c:var(--t6)">
+    <header><div class="num">3.8 · Watch out</div><h2>News &amp; the media</h2><div class="span">liczba pojedyncza czy mnoga</div></header>
+    <div class="tbody">
+      <ul class="dots">
+        <li><b>news</b> jest <b>niepoliczalne</b> → czasownik w liczbie pojedynczej: <i lang="en">All the news we've received so far was frightening.</i></li>
+        <li>Nie mówimy <i>many news</i>, <i>a news</i> ani <i>the news are</i>. Mówimy <b>a lot of news</b>, <b>any news</b>, <b>a news item</b>.</li>
+        <li><b>the media</b> może mieć czasownik w liczbie pojedynczej <b>albo</b> mnogiej (tradycyjnie mnogiej): <i lang="en">The media are covering the story. / The media has been following this story.</i></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="topic" id="t6" style="--c:var(--t2)">
+    <header><div class="num">3.6 · 3.9 Writing</div><h2>Łączniki i przysłówki w opowiadaniu</h2><div class="span">blog post with a narrative</div></header>
+    <div class="tbody">
+      <div class="grid2">
+        <div class="box"><h4>Kolejność zdarzeń</h4><p lang="en">As we entered the castle, we heard a noise. When she saw the man, … (Soon) afterwards, … I found it while I was cleaning. After we had bought it, …</p></div>
+        <div class="box"><h4>Związki logiczne</h4><p lang="en">It was freezing, so … I needed to see it, though. … and, as a result, … We walked slowly in order to … They failed. However, …</p></div>
+      </div>
+      <h3>afterwards czy after?</h3>
+      <p><b>afterwards</b> to przysłówek = <i>później</i> (stoi sam: <i lang="en">We'll have dinner afterwards.</i>). <b>after</b> to przyimek/spójnik i musi mieć dalszy ciąg: rzeczownik (<i lang="en">after sunset</i>) albo zdanie (<i lang="en">after she left</i>).</p>
+      <h3>Rodzaje przysłówków</h3>
+      <div class="grid2">
+        <div class="box"><h4>manner (jak?)</h4><p lang="en">quickly, noisily, slowly, carefully, calmly, suddenly</p></div>
+        <div class="box"><h4>place (gdzie?)</h4><p lang="en">downstairs, everywhere, inside</p></div>
+        <div class="box"><h4>time (kiedy?)</h4><p lang="en">eventually, tomorrow, yesterday</p></div>
+      </div>
+      <h3>Wpis na blogu (100–150 słów)</h3>
+      <ul class="dots"><li>gdzie i kiedy wydarzyła się historia,</li><li>kto brał w niej udział,</li><li>co się wydarzyło (różne czasy przeszłe, łączniki),</li><li>Twoja opinia lub teoria (modal verbs: <i lang="en">they might have been…</i>).</li></ul>
+      <div class="warn"><b>Uważaj:</b> czasownik opisujemy <b>przysłówkiem</b>: <i>speak quietly</i>, nie <i>speak quiet</i>. Ciekawszy tekst = mocne przymiotniki, różne czasy, przysłówki i modal verbs.</div>
+    </div>
+  </article>
+</section>
+
+<!-- ============ FISZKI ============ -->
+<section class="tab" id="fiszki" hidden>
+  <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
+  <div class="row" style="margin-bottom:10px"><button class="btn dirbtn" id="fcDir">Kierunek: EN → PL</button></div>
+  <div class="filters" id="fcFilters"></div>
+  <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
+  <div class="row">
+    <button class="btn badb" id="fcNo">Jeszcze nie</button>
+    <button class="btn good" id="fcYes">Umiem</button>
+    <button class="btn" id="fcShuffle">Przetasuj</button>
+    <span class="counter" id="fcCount"></span>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie.</p>
+  <div class="filters" id="qFilters"></div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ ĆWICZENIA ============ -->
+<section class="tab" id="otwarte" hidden>
+  <p class="intro">Przekształcenia, tłumaczenia i łączenie zdań jak na sprawdzianie. Najpierw napisz sam(a), potem rozwiń odpowiedź.</p>
+  <div id="oqList"></div>
+</section>
+
+</div></main>
+
+<script>
+const T = {"1": "Przymiotniki", "2": "Książki i media", "3": "Modal verbs", "4": "Pewność i wątpliwość", "5": "Czasy przeszłe", "6": "Opowiadanie: łączniki i przysłówki"};
+const COL = {"1": 1, "2": 6, "3": 4, "4": 3, "5": 5, "6": 2};
+const C = n => "var(--t"+COL[n]+")";
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(const i of Object.keys(T)) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- flashcards ---------- */
+const FC=[[1, "alien", "obcy"], [1, "amazing", "niesamowity, wspaniały"], [1, "amusing", "zabawny"], [1, "ancient", "starożytny"], [1, "commit", "popełnić"], [1, "curious", "osobliwy; ciekawy (świata)"], [1, "delighted", "zachwycony"], [1, "disappointing", "rozczarowujący"], [1, "dramatic", "dramatyczny"], [1, "enjoyable", "przyjemny"], [1, "frightening", "straszny"], [1, "huge", "ogromny"], [1, "inspiring", "inspirujący, porywający"], [1, "intriguing", "intrygujący"], [1, "investigate", "badać, dociekać"], [1, "maze", "labirynt"], [1, "mysterious", "tajemniczy"], [1, "original", "oryginalny, niezwykły"], [1, "puzzling", "zagadkowy"], [1, "suicide", "samobójstwo"], [1, "tape", "taśma"], [1, "terrifying", "przerażający"], [1, "thought-provoking", "skłaniający do przemyśleń"], [1, "thrilling", "porywający, ekscytujący"], [1, "tiny", "malutki"], [1, "true to life", "realistyczny"], [1, "unbelievable", "niewiarygodny"], [1, "unforgettable", "niezapomniany"], [3, "man-made", "stworzony przez człowieka"], [3, "mermaid", "syrena"], [3, "sculpture", "rzeźba"], [3, "temple", "świątynia"], [4, "doubt", "wątpić; wątpliwość"], [4, "locker", "szafka"], [2, "best-seller", "bestseller"], [2, "book critic", "krytyk literacki"], [2, "chapter", "rozdział"], [2, "character", "postać"], [2, "classic", "klasyk"], [2, "column", "kolumna"], [2, "episode", "odcinek"], [2, "essay", "esej"], [2, "fast-paced", "szybki, dziejący się w szybkim tempie"], [2, "genre", "gatunek (np. filmowy, literacki)"], [2, "gift", "dar, talent"], [2, "imagination", "wyobraźnia"], [2, "impress", "wzbudzić podziw"], [2, "investigation", "dochodzenie"], [2, "magazine", "magazyn, czasopismo"], [2, "novel", "powieść"], [2, "occupation", "zawód"], [2, "pharmacy", "apteka"], [2, "plot", "fabuła"], [2, "poison", "trucizna"], [2, "print", "drukować; druk"], [2, "publish", "wydawać, publikować"], [2, "review", "recenzja"], [2, "storyteller", "opowiadacz, gawędziarz"], [2, "tale", "opowieść"], [2, "thriller", "thriller, dreszczowiec"], [2, "tough", "nieustępliwy, hardy"], [2, "violence", "przemoc"], [2, "breakfast television", "telewizja śniadaniowa"], [2, "breaking news", "wiadomości z ostatniej chwili"], [2, "channel", "kanał"], [2, "cover", "relacjonować"], [2, "daily newspaper", "gazeta codzienna, dziennik"], [2, "documentary", "film dokumentalny"], [2, "fake news", "fałszywe wiadomości"], [2, "front page", "pierwsza strona (gazety)"], [2, "headline", "nagłówek"], [2, "interview", "wywiad"], [2, "journalism", "dziennikarstwo"], [2, "journalist", "dziennikarz"], [2, "make the headlines", "trafić na pierwsze strony gazet"], [2, "network", "sieć telewizyjna"], [2, "news bulletin", "serwis informacyjny"], [2, "news item", "wiadomość, temat (w wiadomościach)"], [2, "present", "przedstawiać (informacje)"], [2, "publisher", "wydawca"], [2, "report", "relacjonować"], [2, "source", "źródło"], [2, "spread", "rozprzestrzeniać (się)"], [2, "viewer", "widz"], [6, "adverb", "przysłówek"], [6, "decode", "odszyfrować"], [6, "downstairs", "na dole, piętro niżej"], [6, "encrypt", "zakodować, zaszyfrować"], [6, "eventually", "ostatecznie, w końcu"], [6, "fluent", "biegły, płynny"], [6, "inside", "wewnątrz"], [6, "Latin", "język łaciński"], [6, "manner", "sposób"], [6, "manuscript", "manuskrypt, rękopis"], [6, "noisily", "hałaśliwie"], [6, "partially", "częściowo"], [5, "carve", "rzeźbić"], [5, "clue", "wskazówka, trop"], [5, "colonist", "osadnik, kolonista"], [5, "establish", "założyć, utworzyć"], [5, "fence", "ogrodzenie"], [5, "rock", "kołysać, bujać"], [5, "rope", "lina, sznur"], [1, "coincidence", "zbieg okoliczności"], [1, "curse", "klątwa"], [1, "pharaoh", "faraon"], [1, "tomb", "grobowiec"], [6, "curiosity", "ciekawość"], [6, "exhausted", "wyczerpany"], [6, "Flemish", "Flamand, flamandzki"], [6, "freezing", "mroźny, lodowaty"], [1, "be fond of", "lubić (coś/kogoś), darzyć sympatią"], [1, "reign", "panowanie"], [1, "silent", "milczący"], [1, "unravel", "rozwiązywać, rozwikłać"], [1, "very old → (extreme)", "ancient"], [1, "very cold → (extreme)", "freezing"], [1, "very exciting → (extreme)", "thrilling"], [1, "very tired → (extreme)", "exhausted"], [1, "very bad → (extreme)", "horrible / awful"], [1, "very strange → (extreme)", "puzzling"], [1, "very big → (extreme)", "huge"], [1, "very small → (extreme)", "tiny"], [1, "very happy → (extreme)", "delighted"], [3, "must + bezokolicznik", "na pewno tak jest (teraz): She must be at home."], [3, "must have + III forma", "na pewno tak było: It must have rained."], [3, "might / could + bezokolicznik", "możliwe, że tak jest: It might be a costume."], [3, "might / could have + III forma", "możliwe, że tak było: She might have had a lot of work."], [3, "can't + bezokolicznik", "na pewno tak nie jest: You can't be serious!"], [3, "can't / couldn't have + III forma", "na pewno tak nie było: He can't have left his glasses at home."], [4, "There's no doubt that …", "Nie ma wątpliwości, że …"], [4, "It's sure to …", "Na pewno … (np. It's sure to rain.)"], [4, "It's unlikely that …", "To mało prawdopodobne, że …"], [4, "I wonder if/whether …", "Zastanawiam się, czy …"], [4, "I'm positive (that) …", "Jestem pewien/pewna, że …"], [5, "past perfect", "had + III forma; czynność wcześniejsza od innej w przeszłości"], [5, "past continuous", "was/were + -ing; czynność w trakcie, tło, przerwana czynność"], [5, "past simple", "zakończona czynność w przeszłości albo ta, która przerwała inną"], [6, "afterwards", "przysłówek: później, potem (bez dopełnienia)"], [6, "after", "przyimek/spójnik: po (czymś) + rzeczownik lub zdanie"], [6, "in order to", "(po to) żeby, aby"], [6, "as a result", "w rezultacie"]];
+let deck=[],fcIdx=0,known=0;
+let fcRev=false;
+document.getElementById("fcDir").addEventListener("click",e=>{fcRev=!fcRev;e.target.textContent="Kierunek: "+(fcRev?"PL → EN":"EN → PL");drawFC();});
+const fcEl=document.getElementById("fc");
+function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function drawFC(){
+  fcEl.classList.remove("flip");
+  const cnt=document.getElementById("fcCount");
+  if(!deck.length){
+    fcEl.style.setProperty("--c","var(--ok)");
+    document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;
+    document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
+  }
+  const [n,f0,b0]=deck[0];const f=fcRev?b0:f0,b=fcRev?f0:b0;
+  fcEl.style.setProperty("--c",C(n));
+  setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;
+  document.querySelector("#fcFront b").textContent=f;
+  cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
+}
+fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;deck.shift();known++;drawFC();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;deck.push(deck.shift());drawFC();});
+let fcFilter="all";
+document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); buildDeck("all");
+
+/* ---------- quiz ---------- */
+const Q=[[1, "Extreme adjective for „very old”:", ["ancient", "huge", "tiny", "curious"], 0, "ancient = starożytny, bardzo stary."], [1, "Extreme adjective for „very cold”:", ["freezing", "frightening", "exhausted", "thrilling"], 0, "freezing = mroźny, lodowaty."], [1, "Extreme adjective for „very tired”:", ["exhausted", "freezing", "delighted", "puzzling"], 0, "exhausted = wyczerpany."], [1, "Extreme adjective for „very exciting”:", ["thrilling", "amusing", "enjoyable", "original"], 0, "thrilling = porywający, ekscytujący."], [1, "Extreme adjective for „very strange”:", ["puzzling", "tiny", "ancient", "inspiring"], 0, "puzzling = zagadkowy (confusing or difficult to understand)."], [1, "„delighted” znaczy:", ["zachwycony", "rozczarowany", "przerażony", "zdziwiony"], 0, "delighted = very happy."], [1, "„thought-provoking” znaczy:", ["skłaniający do przemyśleń", "przerażający", "zabawny", "realistyczny"], 0, "making you think about something important."], [1, "„too unlikely to be true” to:", ["unbelievable", "unforgettable", "true to life", "intriguing"], 0, "unbelievable = niewiarygodny."], [1, "„true to life” znaczy:", ["realistyczny", "prawdziwy przyjaciel", "niewiarygodny", "dramatyczny"], 0, "Np. bohaterowie zbyt realistyczni dla wrażliwych nastolatków."], [1, "Który przymiotnik ma końcówkę -ous?", ["mysterious", "puzzling", "wonderful", "unbelievable"], 0, "-ous: mysterious, curious; -ful: awful, wonderful; -ing: puzzling, thrilling; -able: unbelievable."], [1, "Uzupełnij: aw___ (okropny)", ["awful", "awous", "awing", "awable"], 0, "awful = okropny."], [1, "Uzupełnij: horr___ (straszny)", ["horrible", "horrous", "horrful", "horring"], 0, "horrible: końcówka -ible."], [1, "The explanation was rather ___ (disappoint).", ["disappointing", "disappointed", "disappointment", "disappointful"], 0, "Coś rozczarowującego = -ing; ktoś rozczarowany = -ed."], [1, "„curse” znaczy:", ["klątwa", "kurs", "wskazówka", "grobowiec"], 0, "curse = klątwa (np. klątwa faraonów)."], [1, "„coincidence” znaczy:", ["zbieg okoliczności", "dochodzenie", "ciekawość", "wątpliwość"], 0, "coincidence = zbieg okoliczności."], [1, "„unravel a mystery” znaczy:", ["rozwikłać zagadkę", "wymyślić zagadkę", "ukryć tajemnicę", "opowiedzieć legendę"], 0, "unravel = rozwiązywać, rozwikłać."], [2, "Wiadomości z ostatniej chwili to:", ["breaking news", "fake news", "front news", "daily news"], 0, "breaking news."], [2, "„trafić na pierwsze strony gazet” to:", ["make the headlines", "do the headlines", "take the front page", "cover the news"], 0, "make the headlines."], [2, "„documentary” to:", ["film dokumentalny", "dokument tożsamości", "dziennikarz", "serwis informacyjny"], 0, "documentary = film dokumentalny."], [2, "Widz programu telewizyjnego to:", ["viewer", "reader", "publisher", "network"], 0, "viewer = widz."], [2, "Sieć telewizyjna, np. BBC, to:", ["network", "channel", "column", "source"], 0, "network = sieć; BBC One, BBC News to channels (kanały)."], [2, "„cover a story” znaczy:", ["relacjonować wydarzenie", "ukrywać historię", "napisać okładkę", "wymyślić historię"], 0, "cover / report = relacjonować."], [2, "„source” znaczy:", ["źródło", "sos", "kurs", "nagłówek"], 0, "Zawsze sprawdzaj źródła: check your sources."], [2, "The news ___ so depressing that we turned off the TV.", ["was", "were", "are", "have been"], 0, "news jest niepoliczalne → czasownik w liczbie pojedynczej."], [2, "Wybierz poprawne:", ["a lot of news", "many news", "a news", "two news"], 0, "Nie mówimy many news ani a news."], [2, "Is there ___ news about the lost children?", ["any", "many", "a", "few"], 0, "news niepoliczalne: any news."], [2, "„plot” to:", ["fabuła", "postać", "rozdział", "gatunek"], 0, "plot = fabuła; character = postać; chapter = rozdział; genre = gatunek."], [2, "„novel” to:", ["powieść", "nowela", "nowość", "esej"], 0, "Fałszywy przyjaciel: novel = powieść."], [2, "„genre” to:", ["gatunek", "geniusz", "pokolenie", "fabuła"], 0, "genre = gatunek (literacki, filmowy, muzyczny)."], [2, "„publisher” to:", ["wydawca", "czytelnik", "dziennikarz", "krytyk"], 0, "publish = wydawać, publisher = wydawca."], [2, "„fake news” to:", ["fałszywe wiadomości", "nudne wiadomości", "stare wiadomości", "wiadomości sportowe"], 0, "fake = fałszywy."], [2, "„spread” (news) znaczy:", ["rozprzestrzeniać się", "kłamać", "drukować", "zniknąć"], 0, "The news spread around the world within hours."], [3, "It's the only brick house here. She ___ live here. (na pewno)", ["must", "can't", "might not", "could have"], 0, "must = prawie pewność, że tak."], [3, "He was wearing his glasses on the bus. He ___ left them at home.", ["can't have", "must have", "might have", "must"], 0, "Na pewno nie (przeszłość): can't/couldn't have + III forma."], [3, "There are puddles everywhere. It ___ all night.", ["must have rained", "must rain", "can't have rained", "might rain"], 0, "Pewny wniosek o przeszłości: must have + III forma."], [3, "I don't know why she didn't come. She ___ a lot of work.", ["might have had", "must had", "can't have had", "might have"], 0, "Możliwość w przeszłości: might/could have + III forma."], [3, "You ___ be serious! (na pewno nie)", ["can't", "must", "might", "could"], 0, "can't = na pewno nie (teraźniejszość)."], [3, "They might ___ right. (Możliwe, że mają rację.)", ["be", "to be", "been", "being"], 0, "Po modalu: bezokolicznik bez to."], [3, "They might ___ right. (Możliwe, że mieli rację.)", ["have been", "be", "had been", "were"], 0, "Przeszłość: modal + have + III forma."], [3, "Który modal NIE wyraża możliwości (że coś jest prawdą)?", ["can't", "might", "could", "may"], 0, "can't = przekonanie, że coś nie jest prawdą."], [3, "Zamiast can't have w przeszłości można użyć:", ["couldn't have", "mustn't have", "might not", "don't have"], 0, "They couldn't have met Dan at the party."], [4, "„Jestem pewien, że…” to:", ["I'm positive that …", "I wonder if …", "It's unlikely that …", "I doubt that …"], 0, "Pewność: I'm sure/certain/positive (that) …"], [4, "Które wyrażenie oznacza wątpliwość?", ["It's unlikely that …", "There's no doubt that …", "Clearly …", "It's sure to …"], 0, "Wątpliwość: It's unlikely that, I doubt that, Maybe/Perhaps, I wonder if."], [4, "___ he'll have a good explanation. (Bez wątpienia)", ["No doubt", "Unlikely", "Not doubting", "I wonder"], 0, "No doubt = There's no doubt that."], [4, "We're ___ that the series will be a success. (pewni)", ["positive", "wonder", "doubt", "unlikely"], 0, "We're positive = Jesteśmy pewni."], [4, "„I wonder if they're in your locker.” znaczy:", ["Zastanawiam się, czy są w twojej szafce.", "Jestem pewien, że są w szafce.", "Wątpię, że są w szafce.", "Na pewno nie ma ich w szafce."], 0, "I wonder if/whether … = zastanawiam się, czy …"], [4, "You'll definitely enjoy the tour. → The tour ___ enjoyable.", ["is sure to be", "is unlikely to be", "might not be", "is doubt to be"], 0, "be sure to = na pewno."], [5, "While they ___ their homes, John White sailed back to England.", ["were setting up", "set up", "had set up", "have set up"], 0, "Czynność w trakcie (tło): past continuous."], [5, "He was amazed to see that the colony ___.", ["had vanished", "vanished", "was vanishing", "has vanished"], 0, "Wcześniejsza czynność: past perfect."], [5, "By the time the detectives arrived, someone ___ all traces.", ["had removed", "removed", "was removing", "has removed"], 0, "by the time + past perfect."], [5, "In 1722 Roggeveen ___ the Pacific because he was looking for a new continent.", ["was sailing", "had sailed", "sailed already", "has sailed"], 0, "Czynność w toku w danym momencie: past continuous."], [5, "He saw something he ___ before.", ["had never seen", "never saw", "has never seen", "was never seeing"], 0, "Przed innym zdarzeniem w przeszłości: past perfect."], [5, "By the time the archaeologists returned, the mummy ___ from the tomb.", ["had disappeared", "has disappeared", "was disappearing", "disappears"], 0, "zniknęła wcześniej → had disappeared."], [5, "Typowe określenie czasu dla past perfect:", ["by the time", "yesterday", "at 10 am", "ago"], 0, "past perfect: by the time, by then, already, before, after, never, ever."], [5, "Typowe określenie dla past continuous:", ["while", "ago", "last summer", "by then"], 0, "past continuous: while, as, at that time, at (10 am)."], [5, "Past continuous tworzymy:", ["was/were + -ing", "had + III forma", "did + bezokolicznik", "have + III forma"], 0, "I was waiting, they were listening."], [5, "___ she riding her bike? – Yes, she was.", ["Was", "Did", "Had", "Were"], 0, "Pytanie w past continuous: Was/Were + podmiot + -ing."], [6, "We'll go to the museum and have dinner ___.", ["afterwards", "after", "while", "as"], 0, "afterwards = później (przysłówek, na końcu)."], [6, "___ the princess had disappeared, the guards heard strange noises.", ["After", "Afterwards", "While", "So"], 0, "After + zdanie/rzeczownik."], [6, "We walked slowly ___ make as little noise as possible.", ["in order to", "as a result", "though", "however"], 0, "in order to = żeby (cel)."], [6, "Most bulletins covered the story and, ___, everyone was talking about it.", ["as a result", "in order to", "while", "though"], 0, "as a result = w rezultacie."], [6, "„noisily” to przysłówek:", ["sposobu (manner)", "miejsca (place)", "czasu (time)", "częstotliwości"], 0, "Manner = jak coś się dzieje (quickly, noisily, slowly)."], [6, "„downstairs” to przysłówek:", ["miejsca (place)", "sposobu (manner)", "czasu (time)", "stopnia"], 0, "Place = gdzie (downstairs, everywhere, inside)."], [6, "„eventually” to przysłówek:", ["czasu (time)", "miejsca (place)", "sposobu (manner)", "przyczyny"], 0, "Time = kiedy / jak długo (eventually, yesterday, tomorrow)."], [6, "He was speaking ___ in order not to frighten the animal.", ["quietly", "quiet", "quieter", "quietness"], 0, "Czasownik opisujemy przysłówkiem: quietly."], [6, "They searched the jungle and ___ found the ruins.", ["eventually", "when", "while", "after"], 0, "eventually = w końcu."]];
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    const pct=Math.round(score/qs.length*100);
+    let best=0;try{best=+localStorage.getItem("nauka:angielski-impulse3-unit3:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:angielski-impulse3-unit3:best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na sprawdzian.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    return;
+  }
+  const q=qs[qi];
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+startQuiz(filtered());
+
+/* ---------- open questions ---------- */
+const OQ=[[3, "Przekształć: They left all their things, so I'm sure they left in a hurry. (MUST)", ["They left all their things, so they <b>must have left</b> in a hurry."]], [3, "Przekształć: He wrote the story without checking any facts. (NOT)", ["When he wrote the story, he <b>did not check</b> any facts."]], [3, "Przetłumacz: Ona musi być zmęczona – pracowała cały dzień.", ["She <b>must be</b> tired – she has been working / she worked all day."]], [3, "Przetłumacz: Możliwe, że zostawił klucze w szafce.", ["He <b>might/could have left</b> his keys in the locker."]], [3, "Przetłumacz: To na pewno nie jest prawdziwa syrena.", ["She <b>can't be</b> a real mermaid. / It <b>can't be</b> a real mermaid."]], [3, "Przetłumacz: Oni nie mogli się spotkać na imprezie – nie było ich w mieście.", ["They <b>can't/couldn't have met</b> at the party – they weren't in town."]], [4, "Przekształć: You'll definitely enjoy the tour of the old temples. (BE)", ["The tour of the old temples <b>is sure to be</b> enjoyable."]], [4, "Przekształć: We didn't get any news from him last week. (NO)", ["There <b>was no news</b> from him last week."]], [4, "Ułóż zdanie: It / not be / likely / they / be / home / now.", ["It <b>isn't likely that they are</b> at home now."]], [4, "Ułóż zdanie: I / be / positive / she / hide / huge / secret.", ["I'm positive (that) she <b>is hiding</b> a huge secret. (albo: has been hiding)"]], [2, "Popraw błąd: The news are very frightening.", ["The news <b>is</b> very frightening. (news = liczba pojedyncza)"]], [2, "Popraw błąd: I heard many news about the UFO.", ["I heard <b>a lot of news</b> about the UFO. (nie: many news)"]], [5, "Uzupełnij: While I ___ (read) my great-grandmother's diary, I ___ (come across) a name I ___ (never / hear) of before.", ["While I <b>was reading</b> …, I <b>came across</b> a name I <b>had never heard</b> of before."]], [5, "Uzupełnij: Agatha Christie ___ (come up with) the idea while she ___ (listen) to strangers in a tea shop.", ["Agatha Christie <b>came up with</b> the idea while she <b>was listening</b> to strangers …"]], [5, "Uzupełnij: As soon as I ___ (enter) the room, I ___ (know) someone ___ (be) there.", ["As soon as I <b>entered</b> the room, I <b>knew</b> someone <b>had been</b> there."]], [5, "Przetłumacz: Kiedy przyjechała policja, złodziej już uciekł.", ["When the police arrived, the thief <b>had already escaped/run away</b>."]], [6, "Połącz (while): We were looking at the letter. We heard a strange sound.", ["<b>While</b> we were looking at the letter, we heard a strange sound."]], [6, "Połącz (order): I opened the box. I wanted to see what was in it.", ["I opened the box <b>in order to</b> see what was in it."]], [6, "Połącz (result): The lights had suddenly gone out. We were sitting in the darkness.", ["The lights had suddenly gone out and, <b>as a result</b>, we were sitting in the darkness."]], [6, "Połącz (as): Alex touched the gift. His heart was beating fast.", ["<b>As</b> Alex touched the gift, his heart was beating fast."]], [1, "Zamień na mocne przymiotniki: The box, which was very small, looked very old.", ["The box, which was <b>tiny</b>, looked <b>ancient</b>."]], [1, "Zamień na mocne przymiotniki: After these events we were very tired and very happy.", ["After these events we were <b>exhausted</b> and <b>delighted</b>."]]];
+document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+</script>
+</body>
+</html>

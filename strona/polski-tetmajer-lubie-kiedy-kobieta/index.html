@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Polski – „Lubię, kiedy kobieta…”: na pamięć</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+body{font-variant-numeric:lining-nums}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+/* wzory */
+.f{font-family:var(--serif);font-size:20px;font-weight:700;text-align:center;padding:10px 12px;margin:8px 0;border-radius:10px;background:color-mix(in srgb,var(--c) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 35%,var(--line))}
+.f small{display:block;font-family:var(--sans);font-weight:400;font-size:14px;color:var(--muted);margin-top:2px}
+.ex{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15.5px}
+.ex b:first-child{color:var(--c)}
+.fl{display:grid;gap:10px}
+.fl .row2{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px}
+.fl .row2 .f{margin:0;font-size:19px}
+.fl .row2 p{margin:0;font-size:15.5px}
+@media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
+.fieldpic{display:flex;justify-content:center;margin:8px 0}
+.fieldpic svg{max-width:100%;height:auto}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
+/* wiersz */
+.note{border-left:4px solid var(--t1);background:color-mix(in srgb,var(--t1) 12%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:0 0 14px;font-size:15.5px}
+.poem{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 14px;margin:0 0 14px}
+.stanza{margin:0 0 18px}
+.stanza:last-child{margin-bottom:0}
+.stanza h3{font-family:var(--sans);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.ln{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:baseline;padding:3px 0;font-family:var(--serif);font-size:clamp(19px,4.8vw,22px);line-height:1.45}
+.ln .no{font-family:var(--sans);font-size:13px;color:var(--muted);text-align:right}
+.ln .tx{min-width:0}
+.ln .lnbtn{font-size:12.5px;padding:3px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-family:var(--sans)}
+.hid{font:inherit;border:0;border-bottom:2px dashed var(--t3);background:color-mix(in srgb,var(--t3) 12%,transparent);color:var(--t3);border-radius:4px;padding:0 3px;margin:0 1px;cursor:pointer;line-height:1.2}
+.rev{color:var(--t3);font-weight:700}
+.rhymes{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.rhymes span{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:14.5px}
+.lvl{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.lvl button{border:2px solid var(--nav);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.lvl button[aria-pressed="true"]{background:var(--nav);color:#fff}
+.lbl{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 4px;font-weight:700}
+.prompt{font-family:var(--serif);font-size:clamp(19px,4.8vw,22px);line-height:1.4;margin:6px 0 12px}
+.answer{font-family:var(--serif);font-size:clamp(19px,4.8vw,22px);line-height:1.4;padding:10px 12px;border-radius:10px;background:var(--soft);margin:0 0 12px;min-height:48px}
+textarea.inp{width:100%;font:inherit;font-family:var(--serif);font-size:19px;padding:10px 12px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);min-height:70px;resize:vertical}
+.w-ok{color:var(--ok);font-weight:700}
+.w-miss{color:var(--bad);text-decoration:underline wavy;font-weight:700}
+.w-extra{color:var(--bad);text-decoration:line-through}
+.plan{margin:4px 0;padding-left:0;list-style:none}
+.plan li{display:grid;grid-template-columns:96px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.plan li:last-child{border-bottom:0}
+.plan b{color:var(--c)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>„Lubię, kiedy kobieta…”</h1>
+  <p>Kazimierz Przerwa-Tetmajer. Polski: wiersz na pamięć, wt. 27 października</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="wiersz">Wiersz</button>
+  <button role="tab" aria-selected="false" data-tab="pamiec">Na pamięć</button>
+  <button role="tab" aria-selected="false" data-tab="sprawdz">Sprawdź się</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Wszystko, co trzeba wiedzieć o wierszu, plus plan nauki do wtorku. Sam tekst jest w zakładce „Wiersz”.</p>
+  <div class="note"><b>Porównaj z tekstem w podręczniku (str. 90)</b>: jeśli coś się różni, ucz się wersji z podręcznika i daj znać, poprawię.</div>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol>
+    <li><b>Kazimierz Przerwa-Tetmajer</b>, epoka <b>Młoda Polska</b> (ok. 1890–1918), erotyk pisany przez dekadenta.</li>
+    <li><b>4 strofy po 4 wersy</b>, rymy parzyste (aabb). Strofy zaczynają się: <b>„Lubię, kiedy kobieta…” → „Lubię, kiedy ją rozkosz…” → „I lubię ten wstyd…” → „Lubię to —…”</b></li>
+    <li>Oś wiersza: od <b>zmysłowej rozkoszy</b> (strofy 1–3) do <b>ucieczki myśli</b> „w nieskończone przestrzenie nieziemskiego świata” (koniec).</li>
+  </ol></div>
+
+  <div class="key" style="--c:var(--t1)"><h2>Autor i epoka</h2><ol>
+    <li><b>Kazimierz Przerwa-Tetmajer</b>: ur. 1865 w Ludźmierzu na Podhalu, zm. 1940 w Warszawie; jeden z najważniejszych poetów Młodej Polski.</li>
+    <li>Inne znane wiersze: <b>„Koniec wieku XIX”</b> i <b>„Hymn do Nirwany”</b>.</li>
+    <li><b>Młoda Polska</b> (ok. 1890–1918): nastrój schyłku wieku, <b>dekadentyzm</b> (pesymizm, zniechęcenie, poczucie kryzysu).</li>
+    <li>Dekadent szuka ucieczki od złego świata: w <b>miłość i rozkosz</b>, w <b>sztukę</b>, w <b>nirwanę</b> (stan wyzbycia się pragnień).</li>
+    <li>Erotyki Tetmajera były jak na tamte czasy bardzo <b>śmiałe</b>.</li>
+  </ol></div>
+
+  <div class="key" style="--c:var(--t6)"><h2>Budowa wiersza</h2><ol>
+    <li><b>Liryka bezpośrednia</b>: podmiot liryczny (mężczyzna) mówi o sobie: „lubię”, „koło mnie”, „myśl moja”.</li>
+    <li><b>Anafora</b>: powtórzenie „Lubię” na początku strof (i „kiedy… gdy…” na początku wersów) — wyliczenie tego, co podmiot lubi.</li>
+    <li><b>Rymy parzyste</b> (aabb), wiersz <b>sylabiczny</b>: każdy wers ma <b>13 sylab</b> (trzynastozgłoskowiec, policzone), zwykle ze średniówką po 7. sylabie.</li>
+    <li><b>Epitety</b>: „lubieżnym przegięciu”, „mdlejącym uśmiechem”, „zwierzęcym szale”, „myśl skrzydlata”; <b>metafora</b>: myśl „wybiega skrzydlata”.</li>
+    <li>Dawne formy językowe: „drżącemi”, „oniemi” (dziś mówimy „drżącymi”).</li>
+  </ol>
+  <p style="margin:6px 0 2px;font-size:15px;color:var(--muted)">Pary rymów, które pomagają zapamiętać kolejne wersy:</p>
+  <div class="rhymes"><span>objęciu – przegięciu</span><span>blednie – bezwiednie</span><span>oniemi – drżącemi</span><span>oddechem – uśmiechem</span><span>zabrania – pożądania</span><span>fala – obala</span><span>koło mnie – nieprzytomnie</span><span>skrzydlata – świata</span></div>
+  </div>
+
+  <div class="key" style="--c:var(--t3)"><h2>Interpretacja w 5 punktach</h2><ol>
+    <li>Podmiot <b>wylicza, co lubi</b> w chwili miłosnego zbliżenia; skupia się na wrażeniach zmysłowych i reakcjach kobiety.</li>
+    <li>Kobieta jest pokazana oczami mężczyzny i <b>bierna</b>: „omdlewa”, „oddaje się”, „leży nieprzytomnie”. To wiersz o <b>rozkoszy</b>, nie o uczuciu.</li>
+    <li>Rozkosz to dla dekadenta <b>sposób na chwilowe zapomnienie</b> o pustce i zniechęceniu.</li>
+    <li><b>Puenta</b>: gdy jest po wszystkim, myśl podmiotu „wybiega” <b>od kobiety</b> w „nieskończone przestrzenie nieziemskiego świata”. Ciało nie daje pełnego spełnienia, zostaje tęsknota za czymś więcej.</li>
+    <li>Kontrast: <b>cielesne, ziemskie</b> (strofy 1–3) i <b>duchowe, nieziemskie</b> (koniec strofy 4).</li>
+  </ol></div>
+
+  <div class="key" style="--c:var(--t5)"><h2>Plan nauki do 27.10</h2><ul class="plan">
+    <li><b>wt 20.10</b><span>Przeczytaj cały wiersz 3–5 razy na głos. Naucz się <b>strofy 1</b> (zakładka „Na pamięć”: poziomy od pełnego tekstu do „nic”).</span></li>
+    <li><b>śr 21.10</b><span>Powtórz strofę 1, naucz się <b>strofy 2</b>.</span></li>
+    <li><b>czw 22.10</b><span>Powtórz 1–2, naucz się <b>strofy 3</b>.</span></li>
+    <li><b>pt 23.10</b><span>Powtórz 1–3, naucz się <b>strofy 4</b>.</span></li>
+    <li><b>sob 24.10</b><span>Cały wiersz na poziomie „pierwsze litery”, potem „nic”. Zwróć uwagę na przejścia między strofami.</span></li>
+    <li><b>nd 25.10</b><span>„Sprawdź się” → „Wpisz wers” dla całego wiersza. Popraw słowa, które się mylą.</span></li>
+    <li><b>pon 26.10</b><span>Powiedz wiersz komuś albo nagraj się i odsłuchaj. Rano 27.10 powtórz raz przed lekcją.</span></li>
+  </ul></div>
+</section>
+
+<!-- ============ WIERSZ ============ -->
+<section class="tab" id="wiersz" hidden>
+  <div class="note"><b>Porównaj z tekstem w podręczniku (str. 90)</b>: jeśli coś się różni, ucz się wersji z podręcznika i daj znać, poprawię.</div>
+  <div class="row" id="ttsRow" style="margin-bottom:12px">
+    <button class="btn primary" id="ttsPlay">▶ Czytaj na głos</button>
+    <button class="btn" id="ttsStop">■ Stop</button>
+  </div>
+  <div class="poem" id="poemFull"></div>
+</section>
+
+<!-- ============ NA PAMIĘĆ ============ -->
+<section class="tab" id="pamiec" hidden>
+  <p class="intro">Wybierz strofę i poziom trudności. Ukryte słowa odsłaniasz dotknięciem, cały wers przyciskiem „pokaż”. Zaczynaj od pełnego tekstu i schodź coraz niżej.</p>
+  <p class="lbl">Strofa</p>
+  <div class="filters" id="memStanza"></div>
+  <p class="lbl">Poziom</p>
+  <div class="lvl" id="memLevel">
+    <button data-l="a" aria-pressed="true">Pełny tekst</button>
+    <button data-l="b" aria-pressed="false">Pierwsze litery</button>
+    <button data-l="c" aria-pressed="false">Co drugie słowo</button>
+    <button data-l="d" aria-pressed="false">Tylko 1. słowo</button>
+    <button data-l="e" aria-pressed="false">Nic</button>
+  </div>
+  <div class="row" style="margin-bottom:12px">
+    <button class="btn" id="memShowAll">Pokaż wszystko</button>
+    <button class="btn" id="memReset">Ukryj ponownie</button>
+  </div>
+  <div class="poem" id="memPoem"></div>
+</section>
+
+<!-- ============ SPRAWDŹ SIĘ ============ -->
+<section class="tab" id="sprawdz" hidden>
+  <p class="intro">„Następny wers”: widzisz wers i mówisz z pamięci kolejny, potem sprawdzasz. „Wpisz wers”: wpisujesz kolejny wers, a strona pokazuje błędy (wielkie litery i interpunkcja się nie liczą).</p>
+  <p class="lbl">Tryb</p>
+  <div class="lvl" id="chkMode">
+    <button data-m="next" aria-pressed="true">Następny wers</button>
+    <button data-m="type" aria-pressed="false">Wpisz wers</button>
+  </div>
+  <p class="lbl">Strofa</p>
+  <div class="filters" id="chkStanza"></div>
+  <div id="chkArea"></div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Pytania o tekst (kolejność wersów, brakujące słowa), autora, epokę i budowę wiersza.</p>
+  <div class="filters" id="qFilters"></div>
+  <div id="qArea"></div>
+</section>
+
+</div></main>
+
+<script>
+const ID = "polski-tetmajer-lubie-kiedy-kobieta";
+const POEM = [
+ ["Lubię, kiedy kobieta omdlewa w objęciu,",
+  "kiedy w lubieżnym zwisa przez ramię przegięciu,",
+  "gdy jej oczy zachodzą mgłą, twarz cała blednie",
+  "i wargi się wilgotne rozchylą bezwiednie."],
+ ["Lubię, kiedy ją rozkosz i żądza oniemi,",
+  "gdy wpija się w ramiona palcami drżącemi,",
+  "gdy krótkim, urywanym oddycha oddechem",
+  "i oddaje się cała z mdlejącym uśmiechem."],
+ ["I lubię ten wstyd, co się kobiecie zabrania",
+  "przyznać, że czuje rozkosz, że moc pożądania",
+  "zwalcza ją, a sycąca rozkoszy się fala",
+  "w ekstatycznym, zwierzęcym szale ją obala."],
+ ["Lubię to — i tę chwilę lubię, gdy koło mnie",
+  "wyczerpana, zmęczona, leży nieprzytomnie,",
+  "a myśl moja już od niej wybiega skrzydlata",
+  "w nieskończone przestrzenie nieziemskiego świata."]
+];
+const L = POEM.flat();                       // 16 wersów
+const stanzaOf = i => Math.floor(i/4)+1;
+const store = {
+  get(k){try{return localStorage.getItem("nauka:"+ID+":"+k)}catch(e){return null}},
+  set(k,v){try{localStorage.setItem("nauka:"+ID+":"+k,v)}catch(e){}}
+};
+function saveBest(pct){ const b=+store.get("best_all")||0; if(pct>b) store.set("best_all",pct); return b; }
+const el = (tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* filtr strof: "all" albo 1..4 */
+function stanzaFilter(box,onPick,initial){
+  box.innerHTML="";
+  const opts=[["all","Cały wiersz"],["1","Strofa 1"],["2","Strofa 2"],["3","Strofa 3"],["4","Strofa 4"]];
+  opts.forEach(([v,t])=>{const b=el("button",null,t);b.dataset.t=v;b.setAttribute("aria-pressed",v===initial);
+    if(v!=="all")b.style.setProperty("--c","var(--t3)");
+    b.addEventListener("click",()=>{box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));onPick(v)});box.appendChild(b)});
+}
+const linesFor = s => L.map((t,i)=>i).filter(i=>s==="all"||stanzaOf(i)==s);
+
+/* ---------- wiersz ---------- */
+(function(){
+  const box=document.getElementById("poemFull");
+  POEM.forEach((st,si)=>{
+    const d=el("div","stanza"); d.appendChild(el("h3",null,"Strofa "+(si+1)));
+    st.forEach((t,li)=>{const r=el("div","ln");r.appendChild(el("span","no",String(si*4+li+1)));r.appendChild(el("span","tx",t));r.appendChild(el("span"));d.appendChild(r)});
+    box.appendChild(d);
+  });
+  const ok=("speechSynthesis" in window)&&("SpeechSynthesisUtterance" in window);
+  if(!ok){document.getElementById("ttsRow").hidden=true;return}
+  document.getElementById("ttsPlay").addEventListener("click",()=>{
+    speechSynthesis.cancel();
+    POEM.forEach(st=>{const u=new SpeechSynthesisUtterance(st.join(" "));u.lang="pl-PL";u.rate=.9;
+      const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith("pl"));if(v)u.voice=v;speechSynthesis.speak(u)});
+  });
+  document.getElementById("ttsStop").addEventListener("click",()=>speechSynthesis.cancel());
+})();
+
+/* ---------- na pamięć ---------- */
+const splitTok = w => { const m=w.match(/^(.*?[\p{L}])([^\p{L}]*)$/u); return m?[m[1],m[2]]:["",w]; };  // [słowo, interpunkcja]
+let memS=store.get("mem_stanza")||"1", memL=store.get("mem_level")||"a";
+if(!["all","1","2","3","4"].includes(memS))memS="1";
+if(!"abcde".includes(memL)||memL.length!==1)memL="a";
+function hiddenBtn(word,shown){
+  const b=el("button","hid",shown); b.type="button"; b.title="Dotknij, żeby odsłonić";
+  b.addEventListener("click",()=>{const s=el("span","rev",word);b.replaceWith(s)});
+  return b;
+}
+function renderLine(t,i){
+  const r=el("div","ln"); r.appendChild(el("span","no",String(i+1)));
+  const tx=el("span","tx");
+  const words=t.split(" ");
+  if(memL==="e"){
+    tx.appendChild(hiddenBtn(t,"· · ·"));
+  } else words.forEach((w,wi)=>{
+    if(wi)tx.appendChild(document.createTextNode(" "));
+    const [word,punct]=splitTok(w);
+    let hide=false, shown="";
+    if(!word){tx.appendChild(document.createTextNode(w));return}       // samodzielny znak, np. „—”
+    if(memL==="b"){hide=true;shown=word[0]}
+    else if(memL==="c"){hide=wi%2===1;shown="_".repeat(Math.min(word.length,8))}
+    else if(memL==="d"){hide=wi>0;shown="_".repeat(Math.min(word.length,8))}
+    if(hide)tx.appendChild(hiddenBtn(word,shown)); else tx.appendChild(document.createTextNode(word));
+    if(punct)tx.appendChild(document.createTextNode(punct));
+  });
+  r.appendChild(tx);
+  if(memL!=="a"){
+    const b=el("button","lnbtn","pokaż"); b.type="button";
+    b.addEventListener("click",()=>{tx.textContent=t;b.remove()});
+    r.appendChild(b);
+  } else r.appendChild(el("span"));
+  return r;
+}
+function drawMem(){
+  const box=document.getElementById("memPoem"); box.innerHTML="";
+  POEM.forEach((st,si)=>{
+    if(memS!=="all"&&+memS!==si+1)return;
+    const d=el("div","stanza"); d.appendChild(el("h3",null,"Strofa "+(si+1)));
+    st.forEach((t,li)=>d.appendChild(renderLine(t,si*4+li)));
+    box.appendChild(d);
+  });
+}
+stanzaFilter(document.getElementById("memStanza"),v=>{memS=v;store.set("mem_stanza",v);drawMem()},memS);
+document.querySelectorAll("#memLevel button").forEach(b=>{
+  b.setAttribute("aria-pressed",b.dataset.l===memL);
+  b.addEventListener("click",()=>{memL=b.dataset.l;store.set("mem_level",memL);
+    document.querySelectorAll("#memLevel button").forEach(x=>x.setAttribute("aria-pressed",x===b));drawMem()});
+});
+document.getElementById("memShowAll").addEventListener("click",()=>document.querySelectorAll("#memPoem .lnbtn").forEach(b=>b.click()));
+document.getElementById("memReset").addEventListener("click",drawMem);
+drawMem();
+
+/* ---------- sprawdź się ---------- */
+const norm = t => t.toLowerCase().replace(/[^\p{L}\s]/gu," ").split(/\s+/).filter(Boolean);
+function diffWords(exp,got){                 // LCS: które słowa wzorca trafione, które wpisane nadmiarowo
+  const n=exp.length,m=got.length,D=[...Array(n+1)].map(()=>Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)D[i][j]=exp[i]===got[j]?D[i+1][j+1]+1:Math.max(D[i+1][j],D[i][j+1]);
+  const okE=Array(n).fill(false),okG=Array(m).fill(false);let i=0,j=0;
+  while(i<n&&j<m){if(exp[i]===got[j]){okE[i]=okG[j]=true;i++;j++}else if(D[i+1][j]>=D[i][j+1])i++;else j++}
+  return {okE,extra:got.filter((w,k)=>!okG[k])};
+}
+let chkM="next",chkS="1",items=[],ci=0,good=0;
+function promptFor(i){
+  const first=chkS==="all"?i===0:i%4===0;
+  return first?null:L[i-1];
+}
+function startChk(){items=linesFor(chkS);ci=0;good=0;drawChk()}
+function drawChk(){
+  const A=document.getElementById("chkArea"); A.innerHTML="";
+  const card=el("div","qcard"); card.style.setProperty("--c","var(--t3)"); A.appendChild(card);
+  if(ci>=items.length){
+    const pct=Math.round(good/items.length*100), best=saveBest(pct);
+    card.classList.add("result");
+    card.appendChild(el("div","big",good+"/"+items.length));
+    const h=el("h3",null,pct+"%");h.style.marginTop="10px";card.appendChild(h);
+    card.appendChild(el("p",null,(pct===100?"Brawo, umiesz to na pamięć!":pct>=75?"Blisko! Powtórz wersy, które się nie udały.":"Wróć do zakładki „Na pamięć” i przećwicz tę część jeszcze raz.")+(best?" Poprzedni najlepszy wynik: "+best+"%.":"")));
+    const row=el("div","row");row.style.justifyContent="center";const b=el("button","btn primary","Jeszcze raz");b.onclick=startChk;row.appendChild(b);card.appendChild(row);
+    return;
+  }
+  const i=items[ci];
+  const meta=el("div","qmeta");meta.appendChild(el("span",null,"Strofa "+stanzaOf(i)+", wers "+(i+1)));meta.appendChild(el("span",null,(ci+1)+" / "+items.length));card.appendChild(meta);
+  const pr=el("div","progress");const bar=el("i");bar.style.width=(ci/items.length*100)+"%";pr.appendChild(bar);card.appendChild(pr);
+  const p=promptFor(i);
+  card.appendChild(el("p","lbl",p?"Poprzedni wers":"Początek"));
+  card.appendChild(el("div","prompt",p||("Pierwszy wers strofy "+stanzaOf(i)+". Jak się zaczyna?")));
+  card.appendChild(el("p","lbl",chkM==="next"?"Następny wers (powiedz z pamięci)":"Wpisz następny wers"));
+  if(chkM==="next"){
+    const ans=el("div","answer","?");card.appendChild(ans);
+    const row=el("div","row");card.appendChild(row);
+    const show=el("button","btn primary","Pokaż");row.appendChild(show);
+    show.onclick=()=>{ans.textContent=L[i];row.innerHTML="";
+      const no=el("button","btn badb","Jeszcze nie"),yes=el("button","btn good","Umiem");
+      no.onclick=()=>{ci++;drawChk()};yes.onclick=()=>{good++;ci++;drawChk()};row.appendChild(no);row.appendChild(yes);yes.focus()};
+  } else {
+    const ta=el("textarea","inp");ta.id="chkInput";ta.setAttribute("aria-label","Wpisz wers");ta.autocomplete="off";ta.spellcheck=false;card.appendChild(ta);
+    const res=el("div");card.appendChild(res);
+    const row=el("div","row");row.style.marginTop="10px";card.appendChild(row);
+    const check=el("button","btn primary","Sprawdź");check.id="chkCheck";row.appendChild(check);
+    check.onclick=()=>{
+      const exp=norm(L[i]),got=norm(ta.value),{okE,extra}=diffWords(exp,got);
+      const ok=okE.every(Boolean)&&!extra.length; if(ok)good++;
+      ta.disabled=true;
+      const box=el("div","expl");const head=el("b",null,ok?"Dobrze! ":"Prawie. ");box.appendChild(head);
+      const orig=L[i].split(" ");let k=0;
+      orig.forEach((w,wi)=>{if(wi)box.appendChild(document.createTextNode(" "));
+        const has=norm(w).length>0;const s=el("span",has?(okE[k]?"w-ok":"w-miss"):null,w);if(has)k++;box.appendChild(s)});
+      if(extra.length){box.appendChild(el("br"));box.appendChild(document.createTextNode("Nadmiarowe lub błędne słowa: "));box.appendChild(el("span","w-extra",extra.join(" ")))}
+      res.appendChild(box);row.innerHTML="";
+      const nx=el("button","btn primary",ci+1<items.length?"Dalej":"Zobacz wynik");nx.id="chkNext";nx.onclick=()=>{ci++;drawChk()};row.appendChild(nx);nx.focus();
+    };
+    ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!ta.disabled)check.click()}});
+  }
+}
+stanzaFilter(document.getElementById("chkStanza"),v=>{chkS=v;startChk()},chkS);
+document.querySelectorAll("#chkMode button").forEach(b=>b.addEventListener("click",()=>{chkM=b.dataset.m;
+  document.querySelectorAll("#chkMode button").forEach(x=>x.setAttribute("aria-pressed",x===b));startChk()}));
+startChk();
+
+/* ---------- quiz ---------- */
+const T = {1:"Tekst wiersza",2:"Autor i epoka",3:"Budowa i środki"};
+const COL = {1:3,2:1,3:6};
+const C = n => "var(--t"+COL[n]+")";
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(const i of Object.keys(T)) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const Q=[
+ [1,"Który wers jest po: „Lubię, kiedy kobieta omdlewa w objęciu,”?",[L[1],L[2],L[5],L[3]],0,"Strofa 1, wers 2. Rym: objęciu – przegięciu."],
+ [1,"Który wers jest po: „gdy jej oczy zachodzą mgłą, twarz cała blednie”?",[L[3],L[1],L[7],L[13]],0,"Rym: blednie – bezwiednie."],
+ [1,"Który wers jest po: „Lubię, kiedy ją rozkosz i żądza oniemi,”?",[L[5],L[6],L[1],L[9]],0,"Rym: oniemi – drżącemi."],
+ [1,"Który wers jest po: „gdy krótkim, urywanym oddycha oddechem”?",[L[7],L[3],L[5],L[11]],0,"Rym: oddechem – uśmiechem."],
+ [1,"Który wers jest po: „I lubię ten wstyd, co się kobiecie zabrania”?",[L[9],L[10],L[13],L[5]],0,"Zdanie płynie dalej: „…zabrania / przyznać, że czuje rozkosz…”."],
+ [1,"Który wers jest po: „zwalcza ją, a sycąca rozkoszy się fala”?",[L[11],L[15],L[9],L[3]],0,"Rym: fala – obala."],
+ [1,"Który wers jest po: „Lubię to — i tę chwilę lubię, gdy koło mnie”?",[L[13],L[14],L[1],L[10]],0,"Rym: koło mnie – nieprzytomnie."],
+ [1,"Jak kończy się wiersz?",[L[15],L[14],L[11],L[7]],0,"Ostatni wers: ucieczka myśli w nieziemski świat."],
+ [1,"Uzupełnij: „gdy jej oczy zachodzą ___, twarz cała blednie”",["mgłą","łzą","cieniem","mgłami"],0,"„zachodzą mgłą”."],
+ [1,"Uzupełnij: „gdy wpija się w ramiona palcami ___,”",["drżącemi","drżącymi","gorącemi","drobnemi"],0,"W wierszu jest dawna forma „drżącemi” (rym z „oniemi”)."],
+ [1,"Uzupełnij: „i oddaje się cała z ___ uśmiechem.”",["mdlejącym","gasnącym","bladym","drżącym"],0,"„z mdlejącym uśmiechem”."],
+ [1,"Uzupełnij: „w ekstatycznym, ___ szale ją obala.”",["zwierzęcym","szalonym","namiętnym","dzikim"],0,"„w ekstatycznym, zwierzęcym szale”."],
+ [1,"Uzupełnij: „a myśl moja już od niej wybiega ___”",["skrzydlata","daleka","lotna","bezwiednie"],0,"„myśl… skrzydlata” (rym ze „świata”)."],
+ [1,"Uzupełnij: „w nieskończone przestrzenie ___ świata.”",["nieziemskiego","niebieskiego","nieznanego","dalekiego"],0,"„nieziemskiego świata”."],
+ [1,"Jak zaczyna się 3. strofa?",["I lubię ten wstyd…","Lubię, kiedy ją rozkosz…","Lubię to — i tę chwilę…","Gdy krótkim, urywanym…"],0,"Kolejność: „Lubię, kiedy kobieta…”, „Lubię, kiedy ją rozkosz…”, „I lubię ten wstyd…”, „Lubię to —…”."],
+ [2,"Kto jest autorem wiersza?",["Kazimierz Przerwa-Tetmajer","Leopold Staff","Jan Kasprowicz","Bolesław Leśmian"],0,"Staff jest autorem drugiego wiersza do wyboru, „Kowala”."],
+ [2,"Z jakiej epoki pochodzi wiersz?",["Młoda Polska","romantyzm","pozytywizm","dwudziestolecie międzywojenne"],0,"Przełom XIX i XX wieku."],
+ [2,"Młoda Polska to mniej więcej lata:",["1890–1918","1822–1863","1864–1890","1918–1939"],0,"Kończy się wraz z odzyskaniem niepodległości."],
+ [2,"Dekadentyzm to:",["poczucie schyłku, zniechęcenia i pesymizmu","wiara w naukę i postęp","hasło pracy u podstaw","zachwyt nad przyrodą i wsią"],0,"Dekadent szuka ucieczki: w rozkosz, sztukę albo nirwanę."],
+ [2,"Gdzie urodził się Tetmajer?",["w Ludźmierzu","w Zakopanem","w Krakowie","w Warszawie"],0,"Ludźmierz na Podhalu, 1865 r.; zmarł w Warszawie w 1940 r."],
+ [2,"Który wiersz też napisał Tetmajer?",["„Hymn do Nirwany”","„Kowal”","„Dies irae”","„Oda do młodości”"],0,"„Kowal” to Staff, „Dies irae” Kasprowicz, „Oda do młodości” Mickiewicz."],
+ [3,"Jaki to rodzaj liryki?",["liryka bezpośrednia","liryka pośrednia (opisowa)","liryka apelu (zwrot do adresata)","liryka maski"],0,"Podmiot mówi o sobie: „lubię”, „koło mnie”, „myśl moja”."],
+ [3,"Jakie rymy są w wierszu?",["parzyste (aabb)","krzyżowe (abab)","okalające (abba)","nie ma rymów"],0,"Np. objęciu – przegięciu, blednie – bezwiednie."],
+ [3,"Ile sylab ma każdy wers?",["13","11","8","10"],0,"To trzynastozgłoskowiec."],
+ [3,"Powtórzenie „Lubię” na początku strof to:",["anafora","epifora","apostrofa","oksymoron"],0,"Anafora to powtórzenie na początku wersów lub strof."],
+ [3,"Co dzieje się w ostatniej strofie?",["myśl podmiotu odrywa się od kobiety i ucieka w „nieziemski świat”","podmiot wyznaje kobiecie miłość","kobieta odchodzi od podmiotu","podmiot żałuje swoich słów"],0,"To puenta: rozkosz nie daje pełnego spełnienia."],
+ [3,"Która część wiersza jest metaforą?",["myśl „wybiega skrzydlata”","„Lubię to”","„koło mnie”","„przyznać, że czuje rozkosz”"],0,"Myśl nie ma skrzydeł ani nóg; to obraz ucieczki myśli."],
+ [3,"Kim jest podmiot liryczny?",["mężczyzną, który mówi, co lubi","kobietą","narratorem, który opisuje obcych ludzi","samym poetą jako dzieckiem"],0,"Mówi w 1. osobie: „lubię”, „koło mnie”."]
+];
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    const pct=Math.round(score/qs.length*100);
+    let best=0;try{best=+localStorage.getItem("nauka:"+ID+":best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:"+ID+":best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie!":pct>=70?"Dobrze! Powtórz błędne pytania.":"Wróć do zakładek „Wiersz” i „Najważniejsze”, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    return;
+  }
+  const q=qs[qi];
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+startQuiz(filtered());
+</script>
+</body>
+</html>
