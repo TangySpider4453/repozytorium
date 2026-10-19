@@ -120,7 +120,9 @@ dl.terms dd::before{content:" – "}
 .filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
 .filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
 .filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
-.filters button[data-t="all"]{--c:var(--nav)}
+.filters button[data-t="all"],.filters button[data-t="spr"]{--c:var(--nav)}
+.scope{background:color-mix(in srgb,var(--ok) 12%,var(--surface));border:1px solid var(--ok);border-radius:12px;padding:10px 14px;margin-bottom:18px;font-size:16px}
+.skip{opacity:.55}
 
 /* flashcards */
 .fc-stage{perspective:1200px;margin:6px 0 12px}
@@ -172,7 +174,7 @@ details.oq .ans ul{margin:0;padding-left:20px}
 <header class="top"><div class="wrap">
   <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
   <h1>Od kongresu wiedeńskiego do Wiosny Ludów</h1>
-  <p>Ślady czasu 3, dział 1, tematy 1–6. Powtórka przed sprawdzianem</p>
+  <p>Ślady czasu 3, dział 1. Sprawdzian wt. 20 października: tematy 1, 2, 3, 5 i 6</p>
 </div></header>
 <nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
   <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
@@ -186,6 +188,7 @@ details.oq .ans ul{margin:0;padding-left:20px}
 
 <!-- ============ NOTATKA ============ -->
 <section class="tab" id="notatka">
+  <div class="scope"><b>Zakres sprawdzianu (20 X):</b> tematy <b>1, 2, 3, 5 i 6</b>. Temat 4 „Kontestacja ładu” <b>nie obowiązuje</b>. W fiszkach, quizie i na osi czasu wybierz filtr „Na sprawdzian”.</div>
   <div class="ribbon">
     <h2>Cały dział na jednej osi</h2>
     <p class="hint">Każdy pasek to jeden temat i lata, których dotyczy. Dotknij nazwy, żeby przejść do notatki.</p>
@@ -327,8 +330,8 @@ details.oq .ans ul{margin:0;padding-left:20px}
   </article>
 
   <!-- T4 -->
-  <article class="topic" id="t4" style="--c:var(--t4)">
-    <header><div class="num">Temat 4</div><h2>Kontestacja ładu wiedeńskiego</h2><div class="span">1815 – lata 40. XIX w.</div></header>
+  <article class="topic skip" id="t4" style="--c:var(--t4)">
+    <header><div class="num">Temat 4 · nie ma go na sprawdzianie</div><h2>Kontestacja ładu wiedeńskiego</h2><div class="span">1815 – lata 40. XIX w.</div></header>
     <div class="tbody">
       <h3>Kto się buntował</h3>
       <ul class="dots">
@@ -496,8 +499,9 @@ function showTab(id){
 tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 document.querySelectorAll(".rb-row").forEach(a=>a.addEventListener("click",()=>showTab("notatka")));
 
+const inF=(n,f)=>f==="all"||(f==="spr"?n!=4:n==f);
 function makeFilters(el,onPick){
-  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button><button data-t="spr" aria-pressed="false">Na sprawdzian (bez 4)</button>`;
   for(let i=1;i<=6;i++) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
   el.innerHTML=h;
   el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
@@ -562,7 +566,7 @@ const TL=[
  [5,"1851–52","Zamach stanu, II Cesarstwo, Napoleon III"]
 ];
 function drawTL(f){
-  document.getElementById("timeline").innerHTML=TL.filter(e=>f==="all"||e[0]==f)
+  document.getElementById("timeline").innerHTML=TL.filter(e=>inF(e[0],f))
    .map(([n,y,t,s])=>`<li style="--c:${C(n)}"><span class="y">${y}</span><div class="e">${t}${s?`<small>${s}</small>`:""}<small>${n}. ${T[n]}</small></div></li>`).join("");
 }
 makeFilters(document.getElementById("tlFilters"),drawTL); drawTL("all");
@@ -630,7 +634,7 @@ const FC=[
 ];
 let deck=[],fcIdx=0,known=0;
 const fcEl=document.getElementById("fc");
-function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function buildDeck(f){deck=shuffle(FC.filter(c=>inF(c[0],f)));fcIdx=0;known=0;drawFC();}
 function drawFC(){
   fcEl.classList.remove("flip");
   const cnt=document.getElementById("fcCount");
@@ -744,7 +748,7 @@ function answer(i){
   document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
   document.getElementById("qNext").focus();
 }
-const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+const filtered=()=>Q.filter(q=>inF(q[0],qFilter));
 makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
 startQuiz(filtered());
 
