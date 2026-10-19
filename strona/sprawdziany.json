@@ -1,5 +1,22 @@
 [
   {
+    "id": "fizyka-pole-elektryczne",
+    "folder": "fizyka-pole-elektryczne",
+    "przedmiot": "Fizyka",
+    "typ": "kartkówka",
+    "tytul": "Siły, pole i napięcie elektryczne",
+    "opis": "Ładunek i prawo Coulomba, natężenie i linie pola, pole centralne i jednorodne, napięcie, potencjał, elektronowolt.",
+    "data": "2026-10-23",
+    "dodano": "2026-10-19",
+    "zawiera": [
+      "notatka",
+      "wzory",
+      "34 fiszki",
+      "35 pytań quizu",
+      "11 zadań"
+    ]
+  },
+  {
     "id": "historia-3-dzial-1",
     "folder": "historia-3-dzial-1",
     "przedmiot": "Historia",
@@ -8,6 +25,12 @@
     "opis": "Ślady czasu 3, dział 1, tematy 1–6: kongres wiedeński, rewolucja przemysłowa, ideologie, kontestacja ładu, Wiosna Ludów, obie Ameryki.",
     "data": null,
     "dodano": "2026-10-19",
-    "zawiera": ["notatka", "oś czasu", "58 fiszek", "58 pytań quizu", "14 pytań otwartych"]
+    "zawiera": [
+      "notatka",
+      "oś czasu",
+      "58 fiszek",
+      "58 pytań quizu",
+      "14 pytań otwartych"
+    ]
   }
 ]

@@ -30,7 +30,8 @@ Zasady od użytkownika:
 | Kafelek „Nauka: notatki i quizy” na stronie startowej portalu | ✅ pojawia się automatycznie |
 | Historia: *Od kongresu wiedeńskiego do Wiosny Ludów* (Ślady czasu 3, dział 1, tematy 1–6) | ✅ na Pi, 58 fiszek, 58 pytań quizu, 14 pytań otwartych |
 | Data sprawdzianu z historii | ❌ **nieznana**, w JSON jest `"data": null`. Zapytaj użytkownika |
-| Lista nadchodzących kartkówek | ❌ **nieznana**. Zapytaj użytkownika: przedmiot, temat, data, materiały |
+| Fizyka: *Siły, pole i napięcie elektryczne* (kartkówka **2026-10-23**) | ✅ na Pi, 34 fiszki, 35 pytań quizu, 11 zadań, zakładka „Wzory” zamiast osi czasu. Treść z typowego programu liceum (bez zdjęć od użytkownika) |
+| Lista nadchodzących kartkówek | Kolejne podaje użytkownik na bieżąco (przedmiot, zagadnienia, data, ewentualnie zdjęcia) |
 
 Oryginał strony z historii to artefakt claude.ai (własność użytkownika):
 https://claude.ai/artifact/MsSRDaCEaYUd7QgTyvJuqA
@@ -83,9 +84,19 @@ Na tym Pi działa **serwer Minecraft, na którym grają znajomi** (`powernukkitx
 Ten projekt dotyczy **tylko** `~/portal/sites/nauka/` i ewentualnie `app.py` portalu. Nie restartuj innych usług
 i nie rób rebootu. Po zmianie sprawdź: `systemctl is-active home-portal powernukkitx playit pi-dashboard`.
 
-### ⚠️ Sesja w chmurze a Pi
-Sesja w chmurze **nie ma Tailscale**, więc **nie dosięgnie Pi** (`100.x.x.x` to adres w prywatnej sieci Tailscale).
-W chmurze możesz przygotować i poprawić pliki (w tym folderze, w `strona/`). Wrzucenie na Pi zrobi:
+### Sesja w chmurze a Pi
+Projekt mieszka w repozytorium GitHub `TangySpider4453/repozytorium` (`PLAN.md` + `strona/`), żeby można było pracować
+z iPada przez Claude Code w chmurze. Kopia w `strona/` ma być zawsze taka sama jak na Pi.
+
+Sesja w chmurze **może** dosięgnąć Pi, jeśli dołączy do tailnetu (sprawdzone 2026-10-19):
+1. Pobierz statyczne binarki `https://pkgs.tailscale.com/stable/tailscale_latest_amd64.tgz`, uruchom
+   `tailscaled --tun=userspace-networking --state=mem:` i `tailscale up --authkey=… --hostname=claude-cloud`.
+   Klucz podaje użytkownik (najlepiej jako sekret środowiska `TS_AUTHKEY`). **Nigdy nie zapisuj klucza w repo.**
+2. SSH przez `ProxyCommand tailscale nc %h %p` jako `tonyg@raspberrypi`, z `ControlMaster`/`ControlPersist`.
+3. Jeśli ACL ma tryb „check”, SSH wypisze link `login.tailscale.com/a/...`; podaj go użytkownikowi (wygasa po kilku
+   minutach). Po zatwierdzeniu połączenie z ControlPersist trzyma się godzinami.
+
+Gdy nie ma klucza albo Tailscale nie działa, w chmurze przygotuj i popraw pliki w `strona/`. Wrzucenie na Pi zrobi:
 - sesja Claude na komputerze użytkownika (ma SSH przez Tailscale), poleceniami z sekcji 7, albo
 - sam użytkownik: skopiuje folder przez udział Samba `\\100.108.241.58\tonyg` do `portal\sites\nauka\`.
 
@@ -195,3 +206,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   i wynikami quizu. Dodano pierwszy materiał: Historia, dział 1 (kopia artefaktu). W portalu: linki Łazik/Nauka
   w menu i obsługa `index.html` w podfolderach. Wszystko sprawdzone (HTTP 200, przeglądarka). Usługi Minecraft
   działały bez przerwy. Utworzono ten plik i kopię strony w `nauka-z-claude/strona/`.
+- **2026-10-19 (chmura)**: Projekt przeniesiony do repozytorium GitHub; sesja w chmurze połączona z Pi przez Tailscale
+  (userspace + SSH z zatwierdzeniem „check”). Dodano kartkówkę z fizyki `fizyka-pole-elektryczne` (data 2026-10-23):
+  notatka (3 tematy), wzory, 34 fiszki, 35 pytań quizu, 11 zadań. Przetestowano w przeglądarce (quiz, zapis wyniku,
+  lista), wgrano na Pi, HTTP 200 dla listy i strony. Backup: `sprawdziany.json.bak_2026-10-19_fizyka` na Pi.
+  Usługi Minecraft bez zmian.

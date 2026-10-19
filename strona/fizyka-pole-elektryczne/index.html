@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fizyka – pole elektryczne: powtórka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+/* wzory */
+.f{font-family:var(--serif);font-size:20px;font-weight:700;text-align:center;padding:10px 12px;margin:8px 0;border-radius:10px;background:color-mix(in srgb,var(--c) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 35%,var(--line))}
+.f small{display:block;font-family:var(--sans);font-weight:400;font-size:14px;color:var(--muted);margin-top:2px}
+.ex{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15.5px}
+.ex b:first-child{color:var(--c)}
+.fl{display:grid;gap:10px}
+.fl .row2{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px}
+.fl .row2 .f{margin:0;font-size:19px}
+.fl .row2 p{margin:0;font-size:15.5px}
+@media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
+.fieldpic{display:flex;justify-content:center;margin:8px 0}
+.fieldpic svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>Siły, pole i napięcie elektryczne</h1>
+  <p>Fizyka, kartkówka 23 października. Poziom szkoły średniej</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="false" data-tab="wzory">Wzory</button>
+  <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+  <button role="tab" aria-selected="false" data-tab="otwarte">Zadania</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NOTATKA ============ -->
+<section class="tab" id="notatka">
+
+  <!-- T1 -->
+  <article class="topic" id="t1" style="--c:var(--t4)">
+    <header><div class="num">Temat 1</div><h2>Siły elektryczne</h2><div class="span">ładunek, elektryzowanie, prawo Coulomba</div></header>
+    <div class="tbody">
+      <h3>Ładunek elektryczny</h3>
+      <p>Ładunek <span class="k">q</span> mierzymy w <span class="k">kulombach [C]</span>. Są dwa rodzaje ładunków: <b>dodatnie</b> i <b>ujemne</b>. Ładunki <b>jednoimienne się odpychają</b>, <b>różnoimienne się przyciągają</b>.</p>
+      <div class="grid2">
+        <div class="box"><h4>Ładunek elementarny</h4><p><b>e = 1,6·10⁻¹⁹ C</b>, najmniejszy ładunek występujący swobodnie. Każdy ładunek jest jego wielokrotnością: q = n·e (ładunek jest <b>skwantowany</b>).</p></div>
+        <div class="box"><h4>Elektron i proton</h4><p>elektron: −e, proton: +e. Ładunki mają taką samą wartość, ale proton jest ok. <b>1836 razy</b> cięższy. Neutron nie ma ładunku.</p></div>
+        <div class="box"><h4>Zasada zachowania ładunku</h4><p>W układzie izolowanym <b>suma ładunków się nie zmienia</b>. Ładunki nie powstają z niczego, tylko się przemieszczają (głównie elektrony).</p></div>
+        <div class="box"><h4>Przewodniki i izolatory</h4><p><b>Przewodniki</b> (metale, grafit, roztwory elektrolitów) mają swobodne nośniki ładunku. <b>Izolatory</b> (szkło, plastik, guma, suche powietrze) ich praktycznie nie mają.</p></div>
+      </div>
+
+      <h3>Sposoby elektryzowania</h3>
+      <div class="pill-row">
+        <div class="pr"><b>Przez tarcie</b><span>elektrony przechodzą z jednego ciała na drugie; oba ciała mają ładunki przeciwne o tej samej wartości (szkło potarte jedwabiem +, ebonit potarty futrem −)</span></div>
+        <div class="pr"><b>Przez dotyk</b><span>ciało naelektryzowane oddaje część ładunku; oba ciała mają potem ładunek <b>tego samego znaku</b></span></div>
+        <div class="pr"><b>Przez indukcję (wpływ)</b><span>naelektryzowane ciało zbliżone do przewodnika przesuwa w nim elektrony, bez dotykania; po uziemieniu przewodnik zostaje naelektryzowany <b>przeciwnie</b></span></div>
+      </div>
+      <p style="margin-top:10px"><b>Elektroskop</b> wykrywa ładunek: listki (lub wskazówka) naładowane jednoimiennie odpychają się i się rozchylają.</p>
+
+      <h3>Prawo Coulomba</h3>
+      <div class="f">F = k · |q₁| · |q₂| / r²<small>siła oddziaływania dwóch ładunków punktowych odległych o r</small></div>
+      <dl class="terms">
+        <div><dt>k</dt><dd>stała elektryczna, k = 9·10⁹ N·m²/C² (w próżni i w przybliżeniu w powietrzu); k = 1/(4πε₀), ε₀ = 8,85·10⁻¹² C²/(N·m²)</dd></div>
+        <div><dt>F ~ q₁·q₂</dt><dd>siła rośnie proporcjonalnie do iloczynu ładunków</dd></div>
+        <div><dt>F ~ 1/r²</dt><dd>2 razy większa odległość → siła 4 razy mniejsza; 3 razy większa → 9 razy mniejsza</dd></div>
+        <div><dt>w ośrodku</dt><dd>F = k·q₁·q₂ / (εᵣ·r²), εᵣ to względna przenikalność elektryczna; w wodzie εᵣ ≈ 81, więc siła jest ok. 81 razy mniejsza niż w próżni</dd></div>
+      </dl>
+      <p style="margin-top:10px">Siły są <b>wzajemne</b> (III zasada dynamiki): oba ładunki działają na siebie siłami o tej samej wartości, nawet gdy ładunki są różne. Siły działają wzdłuż prostej łączącej ładunki.</p>
+      <div class="ex"><b>Przykład.</b> q₁ = 2 µC, q₂ = 3 µC, r = 3 cm = 0,03 m. F = 9·10⁹ · 2·10⁻⁶ · 3·10⁻⁶ / 0,03² = 54·10⁻³ / 9·10⁻⁴ = <b>60 N</b>.</div>
+      <div class="warn"><b>Uważaj:</b> w prawie Coulomba odległość jest <b>do kwadratu</b>. Zamieniaj jednostki na podstawowe: 1 µC = 10⁻⁶ C, 1 nC = 10⁻⁹ C, 1 cm = 10⁻² m. Przy tarciu przechodzą <b>elektrony</b>, protony zostają na miejscu. Ciało dodatnie ma <b>niedobór</b> elektronów, a nie „nadmiar protonów”.</div>
+    </div>
+  </article>
+
+  <!-- T2 -->
+  <article class="topic" id="t2" style="--c:var(--t6)">
+    <header><div class="num">Temat 2</div><h2>Pole elektryczne</h2><div class="span">natężenie, linie pola, pole centralne i jednorodne</div></header>
+    <div class="tbody">
+      <h3>Co to jest pole elektryczne</h3>
+      <p>Każdy ładunek wytwarza wokół siebie <span class="k">pole elektryczne</span>, czyli przestrzeń, w której na inny ładunek działa siła elektryczna. Pole badamy małym <b>ładunkiem próbnym</b> (umownie dodatnim).</p>
+
+      <h3>Natężenie pola E</h3>
+      <div class="f">E = F / q<small>siła działająca na ładunek próbny podzielona przez ten ładunek</small></div>
+      <ul class="dots">
+        <li>Natężenie to <b>wektor</b>. Ma kierunek i zwrot siły działającej na <b>dodatni</b> ładunek próbny.</li>
+        <li>Jednostka: <b>N/C</b>, równoważnie <b>V/m</b>.</li>
+        <li>Na ładunek q w polu o natężeniu E działa siła <b>F = q·E</b>. Na ładunek ujemny (np. elektron) siła ma zwrot <b>przeciwny</b> do E.</li>
+      </ul>
+
+      <h3>Pole centralne (ładunku punktowego)</h3>
+      <div class="f">E = k · Q / r²<small>natężenie w odległości r od ładunku Q</small></div>
+      <p>Linie pola są <b>promieniste</b>: od ładunku dodatniego „na zewnątrz”, do ładunku ujemnego „do środka”. Natężenie maleje z kwadratem odległości.</p>
+      <div class="fieldpic"><svg viewBox="0 0 340 130" width="340" role="img" aria-label="Linie pola: od ładunku dodatniego na zewnątrz, do ujemnego do środka">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+        <g stroke="currentColor" stroke-width="1.6" fill="none" style="color:var(--t6)">
+          <line x1="85" y1="65" x2="145" y2="65" marker-end="url(#ar)"/><line x1="55" y1="65" x2="-5" y2="65" marker-end="url(#ar)" transform="translate(10,0)"/>
+          <line x1="70" y1="50" x2="70" y2="8" marker-end="url(#ar)"/><line x1="70" y1="80" x2="70" y2="122" marker-end="url(#ar)"/>
+          <line x1="81" y1="54" x2="111" y2="24" marker-end="url(#ar)"/><line x1="59" y1="54" x2="29" y2="24" marker-end="url(#ar)"/>
+          <line x1="81" y1="76" x2="111" y2="106" marker-end="url(#ar)"/><line x1="59" y1="76" x2="29" y2="106" marker-end="url(#ar)"/>
+          <line x1="330" y1="65" x2="285" y2="65" marker-end="url(#ar)"/><line x1="210" y1="65" x2="255" y2="65" marker-end="url(#ar)"/>
+          <line x1="270" y1="8" x2="270" y2="50" marker-end="url(#ar)"/><line x1="270" y1="122" x2="270" y2="80" marker-end="url(#ar)"/>
+          <line x1="310" y1="25" x2="281" y2="54" marker-end="url(#ar)"/><line x1="230" y1="25" x2="259" y2="54" marker-end="url(#ar)"/>
+          <line x1="310" y1="105" x2="281" y2="76" marker-end="url(#ar)"/><line x1="230" y1="105" x2="259" y2="76" marker-end="url(#ar)"/>
+        </g>
+        <circle cx="70" cy="65" r="13" fill="var(--t4)"/><text x="70" y="71" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">+</text>
+        <circle cx="270" cy="65" r="13" fill="var(--nav)"/><text x="270" y="71" text-anchor="middle" fill="#fff" font-size="20" font-weight="700">−</text>
+      </svg></div>
+
+      <h3>Linie pola: zasady</h3>
+      <ul class="dots">
+        <li>Zaczynają się na ładunkach <b>dodatnich</b>, kończą na <b>ujemnych</b> (lub w nieskończoności).</li>
+        <li><b>Nigdy się nie przecinają</b>: w każdym punkcie pole ma tylko jeden kierunek.</li>
+        <li>Wektor E jest <b>styczny</b> do linii pola.</li>
+        <li>Im <b>gęściej</b> leżą linie, tym <b>silniejsze</b> pole.</li>
+      </ul>
+
+      <h3>Pole jednorodne</h3>
+      <p>Między dwiema równoległymi, przeciwnie naładowanymi płytami (kondensator płaski) pole jest <span class="k">jednorodne</span>: E ma <b>w każdym punkcie</b> tę samą wartość, kierunek i zwrot. Linie są <b>równoległe i równo oddalone</b>, biegną od płyty + do płyty −.</p>
+
+      <h3>Zasada superpozycji</h3>
+      <p>Gdy pole wytwarza kilka ładunków, wypadkowe natężenie to <b>suma wektorowa</b> natężeń od każdego ładunku: E = E₁ + E₂ + … (dodajemy jak wektory, a nie jak liczby).</p>
+      <div class="grid2">
+        <div class="box"><h4>Dwa jednakowe ładunki</h4><p>W połowie odległości między nimi natężenia się znoszą: <b>E = 0</b>.</p></div>
+        <div class="box"><h4>Ładunki +Q i −Q (dipol)</h4><p>W połowie odległości natężenia mają ten sam zwrot (od + do −) i się <b>dodają</b>: E = 2·kQ/(d/2)².</p></div>
+      </div>
+
+      <h3>Przewodnik w polu</h3>
+      <p>W naładowanym przewodniku (w stanie równowagi) ładunek gromadzi się <b>na powierzchni</b>, a <b>wewnątrz E = 0</b>. Tak działa <b>klatka Faradaya</b>: metalowa osłona chroni wnętrze przed polem (np. samochód podczas burzy).</p>
+      <div class="ex"><b>Przykład.</b> Q = 4 nC, r = 20 cm. E = 9·10⁹ · 4·10⁻⁹ / 0,2² = 36 / 0,04 = <b>900 N/C</b>. Na ładunek q = 2 µC w tym punkcie działa siła F = q·E = 2·10⁻⁶ · 900 = 1,8·10⁻³ N.</div>
+      <div class="warn"><b>Uważaj:</b> natężenie <b>nie zależy</b> od ładunku próbnego q. Jeśli q zwiększysz dwa razy, siła wzrośnie dwa razy, a E zostanie takie samo. Linia pola to nie tor ruchu ładunku. Zwrot E pokazuje siłę na ładunek <b>dodatni</b>, na elektron siła działa w drugą stronę.</div>
+    </div>
+  </article>
+
+  <!-- T3 -->
+  <article class="topic" id="t3" style="--c:var(--t3)">
+    <header><div class="num">Temat 3</div><h2>Napięcie elektryczne</h2><div class="span">praca w polu, potencjał, napięcie, elektronowolt</div></header>
+    <div class="tbody">
+      <h3>Praca w polu elektrycznym</h3>
+      <p>Pole elektryczne, przesuwając ładunek, wykonuje <b>pracę</b>. Ta praca <b>nie zależy od toru</b>, tylko od punktu początkowego i końcowego. Takie pole nazywamy <b>zachowawczym</b> (jak pole grawitacyjne). Ładunek ma w polu <b>energię potencjalną</b>.</p>
+
+      <h3>Napięcie U</h3>
+      <div class="f">U = W / q<small>praca przy przesunięciu ładunku między dwoma punktami podzielona przez ten ładunek</small></div>
+      <ul class="dots">
+        <li>Jednostka: <b>wolt [V]</b>, 1 V = 1 J / 1 C.</li>
+        <li>Napięcie 1 V między punktami oznacza, że przeniesienie ładunku 1 C wymaga pracy 1 J.</li>
+        <li>Praca: <b>W = q·U</b>.</li>
+        <li>Napięcie mierzymy <b>woltomierzem</b> podłączonym <b>równolegle</b>.</li>
+      </ul>
+
+      <h3>Potencjał V</h3>
+      <div class="f">V = Eₚ / q &nbsp;&nbsp;·&nbsp;&nbsp; U<sub>AB</sub> = V<sub>A</sub> − V<sub>B</sub><small>potencjał to energia potencjalna na jednostkę ładunku; napięcie to różnica potencjałów</small></div>
+      <ul class="dots">
+        <li>Potencjał pola ładunku punktowego: <b>V = k·Q / r</b> (skalar, bez kwadratu przy r, może być ujemny).</li>
+        <li>Potencjał maleje <b>w kierunku linii pola</b>. Dodatni ładunek „sam z siebie” przesuwa się do niższego potencjału.</li>
+        <li><b>Powierzchnie ekwipotencjalne</b> (o stałym potencjale) są <b>prostopadłe</b> do linii pola. Przesunięcie ładunku po takiej powierzchni nie wymaga pracy (W = 0, bo U = 0).</li>
+        <li>Przy kilku ładunkach potencjały się <b>dodaje jak liczby</b> (z uwzględnieniem znaku).</li>
+      </ul>
+
+      <h3>Napięcie w polu jednorodnym</h3>
+      <div class="f">U = E · d &nbsp;&nbsp;⇔&nbsp;&nbsp; E = U / d<small>d to odległość między punktami mierzona wzdłuż linii pola (np. odległość płyt)</small></div>
+      <p>Stąd druga jednostka natężenia: <b>V/m</b>. Im bliżej płyty przy tym samym napięciu, tym silniejsze pole.</p>
+
+      <h3>Przyspieszanie ładunku i elektronowolt</h3>
+      <p>Ładunek q przyspieszony napięciem U zyskuje energię kinetyczną <b>Eₖ = q·U</b> (gdy startuje z zera: ½·m·v² = q·U).</p>
+      <dl class="terms">
+        <div><dt>1 eV (elektronowolt)</dt><dd>energia, którą zyskuje elektron przyspieszony napięciem 1 V; 1 eV = 1,6·10⁻¹⁹ J</dd></div>
+        <div><dt>masa elektronu</dt><dd>mₑ = 9,11·10⁻³¹ kg</dd></div>
+      </dl>
+      <div class="ex"><b>Przykład.</b> Płyty odległe o d = 4 mm, napięcie U = 200 V. E = U/d = 200 / 0,004 = <b>5·10⁴ V/m</b>. Elektron przyspieszony napięciem 100 V zyskuje 100 eV = 1,6·10⁻¹⁷ J i prędkość v = √(2eU/m) ≈ <b>5,9·10⁶ m/s</b>.</div>
+      <div class="warn"><b>Uważaj:</b> napięcie jest zawsze <b>między dwoma punktami</b> (różnica potencjałów), a potencjał dotyczy jednego punktu względem ustalonego zera. Natężenie (E = kQ/r²) i potencjał (V = kQ/r) to różne wzory. Elektronowolt to jednostka <b>energii</b>, nie napięcia.</div>
+    </div>
+  </article>
+</section>
+
+<!-- ============ WZORY ============ -->
+<section class="tab" id="wzory" hidden>
+  <p class="intro">Wszystkie wzory z trzech tematów w jednym miejscu. Zasłoń prawą kolumnę i sprawdź, czy pamiętasz, co oznaczają.</p>
+  <div class="fl">
+    <div class="row2" style="--c:var(--t4)"><div class="f">F = k·|q₁|·|q₂| / r²</div><p><b>Prawo Coulomba.</b> k = 9·10⁹ N·m²/C², r w metrach, q w kulombach.</p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">q = n·e</div><p><b>Kwantowanie ładunku.</b> e = 1,6·10⁻¹⁹ C, n to liczba ładunków elementarnych.</p></div>
+    <div class="row2" style="--c:var(--t4)"><div class="f">k = 1/(4πε₀)</div><p>ε₀ = 8,85·10⁻¹² C²/(N·m²). W ośrodku siła maleje εᵣ razy.</p></div>
+    <div class="row2" style="--c:var(--t6)"><div class="f">E = F / q</div><p><b>Natężenie pola.</b> [N/C] = [V/m], wektor, zwrot jak siła na ładunek dodatni.</p></div>
+    <div class="row2" style="--c:var(--t6)"><div class="f">F = q·E</div><p>Siła działająca na ładunek q w polu o natężeniu E.</p></div>
+    <div class="row2" style="--c:var(--t6)"><div class="f">E = k·Q / r²</div><p><b>Pole centralne</b> ładunku punktowego Q w odległości r.</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">U = W / q</div><p><b>Napięcie.</b> [V] = [J/C]. Stąd praca W = q·U.</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">U = V<sub>A</sub> − V<sub>B</sub></div><p>Napięcie to różnica potencjałów.</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">V = k·Q / r</div><p><b>Potencjał</b> pola ładunku punktowego (skalar, ze znakiem).</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">U = E·d</div><p><b>Pole jednorodne.</b> d to odległość wzdłuż linii pola.</p></div>
+    <div class="row2" style="--c:var(--t3)"><div class="f">Eₖ = q·U</div><p>Energia zyskana przez ładunek przyspieszony napięciem U. 1 eV = 1,6·10⁻¹⁹ J.</p></div>
+  </div>
+  <h3 style="margin:22px 0 8px">Przedrostki</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Przedrostek</th><th>Znak</th><th>Mnożnik</th><th>Przykład</th></tr>
+    <tr><td>mili</td><td>m</td><td>10⁻³</td><td>4 mm = 0,004 m</td></tr>
+    <tr><td>mikro</td><td>µ</td><td>10⁻⁶</td><td>2 µC = 2·10⁻⁶ C</td></tr>
+    <tr><td>nano</td><td>n</td><td>10⁻⁹</td><td>4 nC = 4·10⁻⁹ C</td></tr>
+    <tr><td>piko</td><td>p</td><td>10⁻¹²</td><td>5 pC = 5·10⁻¹² C</td></tr>
+    <tr><td>kilo</td><td>k</td><td>10³</td><td>5 kV = 5000 V</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ FISZKI ============ -->
+<section class="tab" id="fiszki" hidden>
+  <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
+  <div class="filters" id="fcFilters"></div>
+  <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
+  <div class="row">
+    <button class="btn badb" id="fcNo">Jeszcze nie</button>
+    <button class="btn good" id="fcYes">Umiem</button>
+    <button class="btn" id="fcShuffle">Przetasuj</button>
+    <span class="counter" id="fcCount"></span>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie.</p>
+  <div class="filters" id="qFilters"></div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ ZADANIA ============ -->
+<section class="tab" id="otwarte" hidden>
+  <p class="intro">Pytania teoretyczne i zadania rachunkowe w stylu kartkówki. Najpierw rozwiąż sam(a), potem rozwiń rozwiązanie.</p>
+  <div id="oqList"></div>
+</section>
+
+</div></main>
+
+<script>
+const T = {1:"Siły elektryczne",2:"Pole elektryczne",3:"Napięcie elektryczne"};
+const COL = {1:4,2:6,3:3};
+const C = n => "var(--t"+COL[n]+")";
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(const i of Object.keys(T)) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- flashcards ---------- */
+const FC=[
+ [1,"Ładunek elementarny e","1,6·10⁻¹⁹ C. Najmniejszy ładunek występujący swobodnie; każdy ładunek to q = n·e."],
+ [1,"Jednostka ładunku","Kulomb [C]."],
+ [1,"Zasada zachowania ładunku","W układzie izolowanym suma ładunków jest stała. Ładunki tylko się przemieszczają."],
+ [1,"Kwantowanie ładunku","Ładunek jest zawsze całkowitą wielokrotnością ładunku elementarnego."],
+ [1,"Elektryzowanie przez tarcie","Elektrony przechodzą z jednego ciała na drugie; ciała mają ładunki przeciwne o tej samej wartości."],
+ [1,"Elektryzowanie przez dotyk","Ciało naelektryzowane oddaje część ładunku; oba mają potem ładunek tego samego znaku."],
+ [1,"Elektryzowanie przez indukcję","Zbliżony ładunek rozsuwa ładunki w przewodniku bez dotykania; po uziemieniu przewodnik ma ładunek przeciwny."],
+ [1,"Przewodnik","Ciało ze swobodnymi nośnikami ładunku, np. metale, grafit, roztwory elektrolitów."],
+ [1,"Izolator (dielektryk)","Ciało prawie bez swobodnych nośników ładunku, np. szkło, guma, plastik."],
+ [1,"Prawo Coulomba","F = k·|q₁|·|q₂| / r². Siła rośnie z iloczynem ładunków i maleje z kwadratem odległości."],
+ [1,"Stała k","9·10⁹ N·m²/C², k = 1/(4πε₀)."],
+ [1,"Odległość 2× większa","Siła Coulomba 4× mniejsza (bo r²)."],
+ [1,"Elektroskop","Przyrząd do wykrywania ładunku; naładowane jednoimiennie listki się odpychają."],
+ [1,"Przenikalność względna εᵣ","Mówi, ile razy siła w ośrodku jest mniejsza niż w próżni (woda ok. 81)."],
+ [2,"Pole elektryczne","Przestrzeń wokół ładunku, w której na inny ładunek działa siła elektryczna."],
+ [2,"Natężenie pola E","E = F/q. Wektor; zwrot siły działającej na dodatni ładunek próbny."],
+ [2,"Jednostki natężenia","N/C = V/m."],
+ [2,"Pole centralne","Pole ładunku punktowego: E = kQ/r², linie promieniste."],
+ [2,"Pole jednorodne","E ma wszędzie tę samą wartość, kierunek i zwrot; linie równoległe i równo oddalone (między płytami)."],
+ [2,"Linie pola","Od + do −, nie przecinają się, gęstość pokazuje siłę pola, E jest do nich styczne."],
+ [2,"Zasada superpozycji","Wypadkowe natężenie to wektorowa suma natężeń od wszystkich ładunków."],
+ [2,"Siła na elektron w polu","Ma zwrot przeciwny do wektora natężenia E."],
+ [2,"Klatka Faradaya","Metalowa osłona; wewnątrz przewodnika E = 0, więc wnętrze jest chronione przed polem."],
+ [2,"Ładunek próbny","Mały dodatni ładunek, którym badamy pole; nie zmienia pola, które mierzy."],
+ [3,"Napięcie U","U = W/q. Praca na jednostkę ładunku przy przesunięciu między dwoma punktami."],
+ [3,"Wolt","1 V = 1 J/C."],
+ [3,"Potencjał V","Energia potencjalna na jednostkę ładunku: V = Eₚ/q. Dla ładunku punktowego V = kQ/r."],
+ [3,"Napięcie a potencjał","Napięcie to różnica potencjałów: U = V_A − V_B."],
+ [3,"Pole zachowawcze","Praca sił pola nie zależy od toru, tylko od punktów początkowego i końcowego."],
+ [3,"Powierzchnia ekwipotencjalna","Powierzchnia stałego potencjału; prostopadła do linii pola; ruch po niej nie wymaga pracy."],
+ [3,"U w polu jednorodnym","U = E·d, czyli E = U/d."],
+ [3,"Elektronowolt","1 eV = 1,6·10⁻¹⁹ J, energia elektronu przyspieszonego napięciem 1 V."],
+ [3,"Energia ładunku przyspieszonego","Eₖ = q·U, ½mv² = qU."],
+ [3,"Woltomierz","Mierzy napięcie, włączamy go równolegle."]
+];
+let deck=[],fcIdx=0,known=0;
+const fcEl=document.getElementById("fc");
+function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function drawFC(){
+  fcEl.classList.remove("flip");
+  const cnt=document.getElementById("fcCount");
+  if(!deck.length){
+    fcEl.style.setProperty("--c","var(--ok)");
+    document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;
+    document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
+  }
+  const [n,f,b]=deck[0];
+  fcEl.style.setProperty("--c",C(n));
+  setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;
+  document.querySelector("#fcFront b").textContent=f;
+  cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
+}
+fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;deck.shift();known++;drawFC();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;deck.push(deck.shift());drawFC();});
+let fcFilter="all";
+document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); buildDeck("all");
+
+/* ---------- quiz ---------- */
+const Q=[
+ [1,"Ile wynosi ładunek elementarny?",["1,6·10⁻¹⁹ C","9,11·10⁻³¹ C","1,6·10¹⁹ C","9·10⁹ C"],0,"9,11·10⁻³¹ to masa elektronu w kg, a 9·10⁹ to stała k."],
+ [1,"Dwa ładunki ujemne:",["odpychają się","przyciągają się","nie oddziałują","przyciągają się tylko w próżni"],0,"Ładunki jednoimienne się odpychają, różnoimienne przyciągają."],
+ [1,"Co przechodzi z ciała na ciało podczas elektryzowania przez tarcie?",["elektrony","protony","neutrony","atomy"],0,"Protony są związane w jądrach; przemieszczają się elektrony."],
+ [1,"Ciało naelektryzowane dodatnio ma:",["niedobór elektronów","nadmiar protonów","nadmiar elektronów","nadmiar neutronów"],0,"Liczba protonów się nie zmienia; ciało straciło elektrony."],
+ [1,"Odległość między dwoma ładunkami zwiększono 2 razy. Siła oddziaływania:",["zmalała 4 razy","zmalała 2 razy","wzrosła 4 razy","nie zmieniła się"],0,"F ~ 1/r², więc 2² = 4."],
+ [1,"Odległość między ładunkami zmniejszono 3 razy. Siła:",["wzrosła 9 razy","wzrosła 3 razy","zmalała 9 razy","zmalała 3 razy"],0,"F ~ 1/r²; mniejsza odległość daje większą siłę, 3² = 9."],
+ [1,"Każdy z dwóch ładunków zwiększono 2 razy, odległość bez zmian. Siła:",["wzrosła 4 razy","wzrosła 2 razy","wzrosła 8 razy","nie zmieniła się"],0,"F ~ q₁·q₂, więc 2·2 = 4."],
+ [1,"Ładunek q₁ = 3q₂. Jak mają się siły, którymi ładunki działają na siebie?",["są równe co do wartości","F₁ = 3F₂","F₂ = 3F₁","F₁ = 9F₂"],0,"III zasada dynamiki: siły wzajemne mają równe wartości i przeciwne zwroty."],
+ [1,"Naelektryzowaną kulką dotykamy obojętnej kulki. Druga kulka będzie naładowana:",["tym samym znakiem","przeciwnym znakiem","wcale","zależy od materiału"],0,"Przy dotyku ładunek się dzieli, więc znak jest ten sam."],
+ [1,"Ile wynosi stała k w prawie Coulomba (w próżni)?",["9·10⁹ N·m²/C²","6,67·10⁻¹¹ N·m²/kg²","8,85·10⁻¹² C²/(N·m²)","1,6·10⁻¹⁹ C"],0,"6,67·10⁻¹¹ to stała grawitacji, 8,85·10⁻¹² to ε₀."],
+ [1,"Ile ładunków elementarnych składa się na ładunek 1 C?",["6,25·10¹⁸","1,6·10¹⁹","6,25·10⁻¹⁸","1,6·10⁻¹⁹"],0,"n = q/e = 1 / 1,6·10⁻¹⁹ = 6,25·10¹⁸."],
+ [1,"Ten sam układ ładunków przeniesiono z powietrza do wody (εᵣ ≈ 81). Siła:",["zmalała ok. 81 razy","wzrosła ok. 81 razy","nie zmieniła się","zmalała ok. 9 razy"],0,"W ośrodku F = kq₁q₂/(εᵣr²)."],
+ [1,"Który materiał jest przewodnikiem?",["miedź","szkło","guma","suche drewno"],0,"Metale mają swobodne elektrony."],
+ [2,"Jednostką natężenia pola elektrycznego jest:",["N/C","C/N","J/C","N·C"],0,"E = F/q, więc N/C; równoważnie V/m. J/C to wolt."],
+ [2,"Zwrot wektora natężenia pola to zwrot siły działającej na:",["dodatni ładunek próbny","ujemny ładunek próbny","elektron","dowolny ładunek"],0,"Taka jest umowa; na ładunek ujemny siła ma zwrot przeciwny."],
+ [2,"Odległość od ładunku punktowego zwiększono 3 razy. Natężenie pola:",["zmalało 9 razy","zmalało 3 razy","wzrosło 9 razy","nie zmieniło się"],0,"E = kQ/r²."],
+ [2,"W pewnym punkcie pola zamieniono ładunek próbny na 2 razy większy. Natężenie pola w tym punkcie:",["nie zmieniło się","wzrosło 2 razy","zmalało 2 razy","wzrosło 4 razy"],0,"E zależy od źródła pola i miejsca, nie od ładunku próbnego. Siła wzrosła 2 razy."],
+ [2,"Linie pola elektrycznego:",["nigdy się nie przecinają","przecinają się w pobliżu ładunków","są zawsze zamknięte","biegną od − do +"],0,"W każdym punkcie pole ma jeden kierunek; linie biegną od + do −."],
+ [2,"Pole między dwiema równoległymi płytami naładowanymi przeciwnie jest:",["jednorodne","centralne","zerowe","wirowe"],0,"Linie są równoległe i równo oddalone, E wszędzie takie samo (poza brzegami)."],
+ [2,"Elektron w polu jednorodnym jest odpychany:",["w stronę przeciwną do linii pola","zgodnie z liniami pola","prostopadle do linii pola","wcale"],0,"Ładunek ujemny: F = qE ma zwrot przeciwny do E."],
+ [2,"Ile wynosi natężenie pola wewnątrz naładowanego metalowego przewodnika?",["zero","tyle co na powierzchni","nieskończoność","zależy od kształtu"],0,"Ładunek rozkłada się na powierzchni, wewnątrz E = 0 (klatka Faradaya)."],
+ [2,"W połowie odległości między dwoma jednakowymi ładunkami dodatnimi natężenie pola:",["jest równe zero","jest dwa razy większe niż od jednego","jest takie jak od jednego","jest skierowane do jednego z ładunków"],0,"Natężenia mają równe wartości i przeciwne zwroty, więc się znoszą."],
+ [2,"Na ładunek 2 µC działa w polu siła 0,01 N. Natężenie pola wynosi:",["5000 N/C","500 N/C","2·10⁻⁸ N/C","50 000 N/C"],0,"E = F/q = 0,01 / 2·10⁻⁶ = 5000 N/C."],
+ [2,"Gęstsze linie pola oznaczają:",["silniejsze pole","słabsze pole","wyższą temperaturę","większy ładunek próbny"],0,"Gęstość linii odpowiada wartości natężenia."],
+ [3,"Jednostką napięcia jest wolt, czyli:",["J/C","C/J","N/C","J·C"],0,"U = W/q."],
+ [3,"Jaką pracę wykona pole przy przesunięciu ładunku 3 C między punktami o napięciu 12 V?",["36 J","4 J","0,25 J","15 J"],0,"W = q·U = 3·12 = 36 J."],
+ [3,"Napięcie między płytami 200 V, odległość 4 mm. Natężenie pola:",["5·10⁴ V/m","800 V/m","50 V/m","8·10⁵ V/m"],0,"E = U/d = 200 / 0,004 = 50 000 V/m."],
+ [3,"Elektronowolt jest jednostką:",["energii","napięcia","ładunku","natężenia pola"],0,"1 eV = 1,6·10⁻¹⁹ J."],
+ [3,"Jaką energię zyska elektron przyspieszony napięciem 100 V?",["100 eV","1,6·10⁻¹⁹ eV","100 J","1 eV"],0,"Eₖ = eU = 100 eV = 1,6·10⁻¹⁷ J."],
+ [3,"Praca przy przesunięciu ładunku po powierzchni ekwipotencjalnej:",["jest równa zero","jest największa","zależy od drogi","zawsze jest ujemna"],0,"Potencjał stały, więc U = 0 i W = qU = 0."],
+ [3,"Powierzchnie ekwipotencjalne względem linii pola są:",["prostopadłe","równoległe","nachylone pod kątem 45°","dowolnie ustawione"],0,"Dlatego ruch po nich nie wymaga pracy."],
+ [3,"Potencjał pola ładunku punktowego Q w odległości r wyraża wzór:",["V = kQ/r","V = kQ/r²","V = kQr","V = Q/(kr²)"],0,"kQ/r² to natężenie, a nie potencjał."],
+ [3,"Praca sił pola elektrostatycznego przy przesunięciu ładunku:",["nie zależy od toru","zależy od długości toru","jest zawsze zero","zależy od czasu ruchu"],0,"Pole elektrostatyczne jest zachowawcze."],
+ [3,"Gdy przy stałym napięciu zmniejszymy 2 razy odległość płyt, natężenie pola:",["wzrośnie 2 razy","zmaleje 2 razy","wzrośnie 4 razy","nie zmieni się"],0,"E = U/d."],
+ [3,"Woltomierz podłączamy do elementu obwodu:",["równolegle","szeregowo","dowolnie","tylko przez opornik"],0,"Szeregowo podłączamy amperomierz."]
+];
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    const pct=Math.round(score/qs.length*100);
+    let best=0;try{best=+localStorage.getItem("nauka:fizyka-pole-elektryczne:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:fizyka-pole-elektryczne:best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na kartkówkę.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    return;
+  }
+  const q=qs[qi];
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+startQuiz(filtered());
+
+/* ---------- open questions ---------- */
+const OQ=[
+ [1,"Opisz trzy sposoby elektryzowania ciał.",["<b>Tarcie:</b> elektrony przechodzą z jednego ciała na drugie, ciała mają ładunki przeciwne o równej wartości (szkło + jedwab, ebonit + futro).","<b>Dotyk:</b> ciało naelektryzowane dzieli się ładunkiem z obojętnym, oba mają ładunek tego samego znaku.","<b>Indukcja:</b> zbliżony ładunek przesuwa elektrony w przewodniku bez dotyku; po uziemieniu i odsunięciu przewodnik ma ładunek przeciwny.","Za każdym razem obowiązuje zasada zachowania ładunku."]],
+ [1,"Oblicz siłę, z jaką oddziałują ładunki 2 µC i 3 µC odległe o 3 cm. Czy się przyciągają, czy odpychają?",["Dane: q₁ = 2·10⁻⁶ C, q₂ = 3·10⁻⁶ C, r = 0,03 m, k = 9·10⁹ N·m²/C².","F = k·q₁·q₂ / r² = 9·10⁹ · 6·10⁻¹² / 9·10⁻⁴.","Licznik: 54·10⁻³ = 0,054. Wynik: 0,054 / 0,0009 = <b>60 N</b>.","Oba ładunki dodatnie, więc się <b>odpychają</b>."]],
+ [1,"Jak zmieni się siła Coulomba, gdy jeden ładunek zwiększymy 3 razy, a odległość 2 razy?",["F ~ q₁·q₂ / r².","Ładunek ×3, więc siła ×3. Odległość ×2, więc siła ÷4.","F' = 3/4 · F, czyli siła <b>zmaleje do 3/4</b> (o 25%)."]],
+ [2,"Wyjaśnij, co to jest natężenie pola elektrycznego. Podaj wzór, jednostkę i opisz kierunek oraz zwrot.",["Natężenie to stosunek siły działającej na ładunek próbny do wartości tego ładunku: <b>E = F/q</b>.","Jednostka: N/C (= V/m).","To wektor o kierunku i zwrocie siły działającej na <b>dodatni</b> ładunek próbny.","Nie zależy od ładunku próbnego, tylko od źródła pola i położenia punktu."]],
+ [2,"Oblicz natężenie pola ładunku 4 nC w odległości 20 cm. Jaka siła zadziała tam na ładunek 2 µC?",["E = kQ/r² = 9·10⁹ · 4·10⁻⁹ / 0,2².","9·10⁹ · 4·10⁻⁹ = 36; 0,2² = 0,04; E = 36 / 0,04 = <b>900 N/C</b>.","F = q·E = 2·10⁻⁶ · 900 = <b>1,8·10⁻³ N</b>."]],
+ [2,"Porównaj pole centralne i pole jednorodne.",["<b>Centralne:</b> wytwarza je ładunek punktowy, linie promieniste, E = kQ/r² maleje z odległością.","<b>Jednorodne:</b> między równoległymi płytami, linie równoległe i równo oddalone, E takie samo w każdym punkcie, E = U/d.","W obu linie biegną od + do − i się nie przecinają."]],
+ [2,"Wyjaśnij, dlaczego w samochodzie podczas burzy jesteśmy względnie bezpieczni.",["Metalowa karoseria działa jak <b>klatka Faradaya</b>.","Ładunek gromadzi się na zewnętrznej powierzchni przewodnika, a wewnątrz natężenie pola jest równe zero.","Prąd z wyładowania płynie po karoserii do ziemi, omijając wnętrze."]],
+ [3,"Zdefiniuj napięcie elektryczne i podaj jego jednostkę. Czym różni się od potencjału?",["Napięcie to stosunek pracy przy przesunięciu ładunku między dwoma punktami do wartości tego ładunku: <b>U = W/q</b>.","Jednostka: wolt, 1 V = 1 J/C.","Potencjał dotyczy jednego punktu (energia potencjalna na jednostkę ładunku), a napięcie to <b>różnica potencjałów</b> dwóch punktów: U = V_A − V_B."]],
+ [3,"Płyty kondensatora są odległe o 5 mm, a napięcie między nimi wynosi 100 V. Oblicz natężenie pola i siłę działającą na elektron.",["E = U/d = 100 / 0,005 = <b>2·10⁴ V/m</b>.","F = e·E = 1,6·10⁻¹⁹ · 2·10⁴ = <b>3,2·10⁻¹⁵ N</b>.","Siła na elektron ma zwrot przeciwny do E, czyli w stronę płyty dodatniej."]],
+ [3,"Elektron przyspieszono napięciem 100 V. Oblicz zyskaną energię (w eV i J) oraz prędkość końcową.",["Eₖ = e·U = <b>100 eV</b> = 100 · 1,6·10⁻¹⁹ J = <b>1,6·10⁻¹⁷ J</b>.","½·m·v² = eU, więc v = √(2eU/m).","v = √(2 · 1,6·10⁻¹⁷ / 9,11·10⁻³¹) = √(3,51·10¹³) ≈ <b>5,9·10⁶ m/s</b>."]],
+ [3,"Ile pracy trzeba wykonać, żeby przesunąć ładunek 5 µC między punktami o napięciu 400 V? A po powierzchni ekwipotencjalnej?",["W = q·U = 5·10⁻⁶ · 400 = <b>2·10⁻³ J</b> (2 mJ).","Po powierzchni ekwipotencjalnej U = 0, więc <b>W = 0</b>."]]
+];
+document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+</script>
+</body>
+</html>
