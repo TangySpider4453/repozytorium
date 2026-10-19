@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Historia 3 – dział 1: powtórka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>Od kongresu wiedeńskiego do Wiosny Ludów</h1>
+  <p>Ślady czasu 3, dział 1, tematy 1–6. Powtórka przed sprawdzianem</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="false" data-tab="daty">Oś czasu</button>
+  <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+  <button role="tab" aria-selected="false" data-tab="otwarte">Pytania</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NOTATKA ============ -->
+<section class="tab" id="notatka">
+  <div class="ribbon">
+    <h2>Cały dział na jednej osi</h2>
+    <p class="hint">Każdy pasek to jeden temat i lata, których dotyczy. Dotknij nazwy, żeby przejść do notatki.</p>
+    <div class="rb-scroll"><div class="rb" id="ribbon"></div></div>
+  </div>
+
+  <!-- T1 -->
+  <article class="topic" id="t1" style="--c:var(--t1)">
+    <header><div class="num">Temat 1</div><h2>Kongres wiedeński</h2><div class="span">IX 1814 – VI 1815, Wiedeń</div></header>
+    <div class="tbody">
+      <h3>Po co i kto</h3>
+      <p>Po upadku Napoleona (abdykacja 1814, zesłanie na Elbę) zwycięzcy chcieli ustalić <span class="k">nowy, ponapoleoński ład</span> gwarantujący pokój. Przyjechało 18 delegacji, ale decydował <span class="k">koncert (kwintet) mocarstw</span>: Wielka Brytania, Rosja, Austria, Prusy i Francja. Mniejsze państwa musiały przyjąć ich dyktat.</p>
+      <div class="grid2">
+        <div class="box"><h4>Austria</h4><p><b>Klemens von Metternich</b>, minister spraw zagranicznych, główny architekt kongresu; gospodarz formalny: cesarz <b>Franciszek I</b></p></div>
+        <div class="box"><h4>Rosja</h4><p>car <b>Aleksander I</b>, „wyzwoliciel Europy”, pomysłodawca Świętego Przymierza</p></div>
+        <div class="box"><h4>Prusy</h4><p>król <b>Fryderyk Wilhelm III</b> Hohenzollern</p></div>
+        <div class="box"><h4>Wielka Brytania</h4><p>minister <b>Robert Stewart, wicehrabia Castlereagh</b></p></div>
+        <div class="box"><h4>Francja</h4><p>dyplomata <b>Charles de Talleyrand</b> (Francja przegrała, ale była przy stole)</p></div>
+        <div class="box"><h4>„Tańczący kongres”</h4><p>bale, polowania, teatr; „kongres się nie posuwa, kongres tańczy”. Dwie koalicje: Rosja + Prusy kontra Austria + Wielka Brytania + Francja</p></div>
+      </div>
+      <p style="margin-top:10px"><span class="date">III–VI 1815</span> <b>sto dni Napoleona</b> („lot orła”), przerwa w obradach, klęska pod <b>Waterloo</b> (VI 1815), zesłanie na Wyspę Świętej Heleny (zm. 1821).</p>
+
+      <h3>Trzy zasady ładu wiedeńskiego</h3>
+      <div class="pill-row">
+        <div class="pr"><b>Równowaga sił</b><span>żadne mocarstwo nie może mieć przewagi nad innymi (brytyjska doktryna balance of power)</span></div>
+        <div class="pr"><b>Restauracja</b><span>powrót na trony dynastii obalonych w epoce Napoleona (np. Burbonowie, Ludwik XVIII)</span></div>
+        <div class="pr"><b>Legitymizm</b><span>władza monarchy pochodzi od Boga, to monarcha jest suwerenem, a nie naród</span></div>
+      </div>
+      <p style="margin-top:10px">Dodatkowo: <b>prawo do interwencji zbrojnej</b> przeciw rewolucjom i powstaniom oraz <b>strefy wpływów</b> (Austria pilnuje Italii, Francja Półwyspu Iberyjskiego). Nie dało się jednak cofnąć zdobyczy rewolucji, np. równości wobec prawa czy ziemi chłopów we Francji.</p>
+
+      <h3>Kto co dostał (Akt końcowy, 9 VI 1815, 120 artykułów)</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Państwo</th><th>Zmiany</th></tr>
+        <tr><td><b>Francja</b></td><td>powrót do granic z <b>1789 r.</b> (kara za sto dni; wcześniej proponowano 1792)</td></tr>
+        <tr><td><b>Wielka Brytania</b></td><td>wyspy: <b>Helgoland, Malta, Cejlon, Mauritius</b> + <b>Kapsztad</b> (płd. Afryka). Kontrola szlaków morskich, początek „wieku Imperium Brytyjskiego”</td></tr>
+        <tr><td><b>Rosja</b></td><td><b>Finlandia, Besarabia</b> i większość Księstwa Warszawskiego jako <b>Królestwo Polskie</b> (car jego królem)</td></tr>
+        <tr><td><b>Prusy</b></td><td><b>Nadrenia i Westfalia</b>, <b>Wielkie Księstwo Poznańskie</b>, Gdańsk, 2/5 Saksonii</td></tr>
+        <tr><td><b>Austria</b></td><td><b>okręg tarnopolski</b>, Tyrol, Salzburg, <b>Lombardia i Wenecja</b>, Istria, Dalmacja</td></tr>
+        <tr><td><b>Nowe twory</b></td><td><b>Rzeczpospolita Krakowska</b> (pod kontrolą trzech zaborców), <b>Konfederacja Szwajcarska</b> (wieczyście neutralna), <b>Królestwo Niderlandów</b> (Belgia + Holandia, dynastia orańska), <b>Związek Niemiecki</b> (34 państwa + 4 wolne miasta, sejm we Frankfurcie, na czele cesarz Austrii)</td></tr>
+        <tr><td><b>Skandynawia</b></td><td>Szwecja dostaje <b>Norwegię</b> (rekompensata za Finlandię), Dania Wyspy Owcze</td></tr>
+        <tr><td><b>Italia</b></td><td>bez zjednoczenia: <b>Królestwo Sardynii (Piemont, Turyn)</b>, <b>Królestwo Obojga Sycylii (Neapol)</b>, <b>Państwo Kościelne (Rzym)</b></td></tr>
+      </table></div>
+      <p>Zlikwidowano <b>Księstwo Warszawskie</b> (podzielone na trzy części) i <b>Związek Reński</b>. Nie powstały ani zjednoczone Niemcy, ani zjednoczone Włochy.</p>
+
+      <h3>Święte Przymierze (IX 1815, Paryż)</h3>
+      <ul class="dots">
+        <li>Zawarli: <b>Rosja, Austria, Prusy</b>, z inicjatywy <b>Aleksandra I</b>, przy poparciu Metternicha.</li>
+        <li>Oparte na <b>wartościach chrześcijańskich</b> (katolicyzm, prawosławie, protestantyzm), cel: obrona ładu wiedeńskiego i solidarność przeciw siłom rewolucyjnym.</li>
+        <li>Przystąpiła większość państw (np. Francja). <b>Nie przystąpiły:</b> Wielka Brytania (nie chciała trwałych zobowiązań), Imperium Osmańskie (nikt go nie zaprosił), papież.</li>
+        <li>Zjazdy, pierwszy w <b>Akwizgranie 1818</b>; zgoda na stłumienie przez Austrię liberalnych rządów w Neapolu.</li>
+      </ul>
+
+      <h3>Narodziny ery konstytucyjnej</h3>
+      <div class="grid2">
+        <div class="box"><h4>Konstytucje oktrojowane</h4><p>nadane przez monarchę: Francja (Karta 1814), Królestwo Polskie, Rzeczpospolita Krakowska, Badenia</p></div>
+        <div class="box"><h4>Uchwalone przez parlament</h4><p>Portugalia, Hiszpania, <b>Norwegia (1814, Eidsvoll, bardzo liberalna)</b>, Niderlandy, później Belgia (1831)</p></div>
+      </div>
+      <dl class="terms" style="margin-top:12px">
+        <div><dt>Restauracja</dt><dd>przywrócenie dawnych dynastii na trony</dd></div>
+        <div><dt>Legitymizm</dt><dd>pogląd, że władza monarchy pochodzi od Boga</dd></div>
+        <div><dt>Równowaga sił</dt><dd>żadne mocarstwo nie może zdominować innych</dd></div>
+        <div><dt>Konstytucja oktrojowana</dt><dd>nadana przez władcę (franc. octroyé, „nadany”)</dd></div>
+      </dl>
+      <p class="warn"><b>Uważaj:</b> Francja wróciła do granic z <b>1789</b>, nie 1792. Wielka Brytania <b>nie</b> weszła do Świętego Przymierza. Wielkie Księstwo Poznańskie to Prusy, okręg tarnopolski wrócił do Austrii.</p>
+    </div>
+  </article>
+
+  <!-- T2 -->
+  <article class="topic" id="t2" style="--c:var(--t2)">
+    <header><div class="num">Temat 2</div><h2>Cywilizacja przemysłowa</h2><div class="span">pierwsza połowa XIX w.</div></header>
+    <div class="tbody">
+      <h3>Rewolucja przemysłowa</h3>
+      <p>Przejście od <b>produkcji ręcznej</b> (warsztaty, manufaktury) do <b>produkcji maszynowej</b> (fabryki). Zaczęła się w XVIII w. w <b>Wielkiej Brytanii</b> (i Niderlandach), potem objęła Europę Zachodnią i USA.</p>
+      <div class="grid2">
+        <div class="box"><h4>Dlaczego Wielka Brytania?</h4><ul><li>popyt większy niż podaż</li><li>kapitał z kolonii, stabilizacja polityczna</li><li>wolny rynek (zniesienie limitów cechowych)</li><li>etyka protestancka, wsparcie państwa</li></ul></div>
+        <div class="box"><h4>Banki</h4><p>Londyn finansową stolicą świata, giełda londyńska. Symbol potęgi banków: rodzina <b>Rothschildów</b>.</p></div>
+      </div>
+      <h3>Wynalazki, które trzeba znać</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Rok</th><th>Wynalazek</th><th>Kto</th></tr>
+        <tr><td class="date">1769</td><td>maszyna parowa, symbol epoki</td><td>James Watt (Szkot)</td></tr>
+        <tr><td class="date">1785</td><td>mechaniczne krosno (przemysł włókienniczy)</td><td>Edmund Cartwright</td></tr>
+        <tr><td class="date">1807</td><td>pierwszy rejs statku parowego (rzeka Hudson, Nowy Jork – Albany)</td><td>Robert Fulton (USA)</td></tr>
+        <tr><td class="date">1825</td><td>parowóz, pierwsza linia kolejowa (towarowa) Stockton – Darlington</td><td>George Stephenson, „ojciec kolei”</td></tr>
+        <tr><td class="date">1830</td><td>pierwsza linia pasażerska (Wielka Brytania)</td><td>–</td></tr>
+        <tr><td class="date">1837</td><td>telegraf elektryczny i alfabet Morse’a (1844 linia Waszyngton – Baltimore)</td><td>Samuel Morse</td></tr>
+      </table></div>
+      <h3>Rewolucja agrarna</h3>
+      <ul class="dots">
+        <li><b>Płodozmian</b> zamiast <b>trójpolówki</b>: brak ugoru, cała ziemia uprawiana (4 pola z rotacją).</li>
+        <li><b>Rośliny motylkowe</b> (koniczyna, łubin, lucerna), czyli „zielone nawozy” dające glebie azot.</li>
+        <li>Ziemniaki, buraki cukrowe, rośliny pastewne; siewniki, sieczkarnie, młockarnie parowe; selekcja zwierząt.</li>
+        <li>Przemysł przetwórczy: rzeźnie, mleczarnie, browary, cukrownie, młyny parowe.</li>
+      </ul>
+      <h3>Gdzie powstawał przemysł</h3>
+      <p><b>Wielka Brytania</b>, „fabryka świata” (ponad 40% dochodu z przemysłu). <b>Belgia</b>: stal, węgiel, tekstylia. <b>Prusy</b>: Górny Śląsk i Westfalia. <b>Francja</b>: Lotaryngia, Flandria. <b>Italia</b>: Lombardia i Piemont. <b>Austria</b>: Czechy. Najsłabiej: Europa Wschodnia i Bałkany (rozwój „wyspowy”). Energia: <b>węgiel kamienny</b> i koks.</p>
+      <h3>Urbanizacja (umiastowienie)</h3>
+      <p>Ludzie przenoszą się ze wsi do miast. Najbardziej zurbanizowane na początku XIX w. były <b>Niderlandy (~30%)</b>; w połowie wieku Wielka Brytania ~40%, Niemcy 15%, Rosja poniżej 8%. W Europie: ok. 10% (1800) → ponad 16% (1850).</p>
+      <h3>Nowe społeczeństwo (od góry do dołu)</h3>
+      <div class="pyr">
+        <div style="width:42%">Burżuazja<small>przemysłowcy, bankierzy, wielcy kupcy</small></div>
+        <div style="width:56%;opacity:.9">Klasa średnia i inteligencja<small>wolne zawody: lekarze, adwokaci; inteligencja (nazwa z tekstów polskich pisarzy)</small></div>
+        <div style="width:70%;opacity:.8">Drobnomieszczaństwo<small>rzemieślnicy, sklepikarze</small></div>
+        <div style="width:84%;opacity:.7">Proletariat<small>od „arystokracji robotniczej” po lumpenproletariat</small></div>
+        <div style="width:96%;opacity:.6">Margines społeczny<small>żebracy, bezdomni, przestępcy</small></div>
+      </div>
+      <p>O pozycji decyduje już nie urodzenie, lecz <b>wykształcenie i majątek</b>. Upada system stanowy.</p>
+      <p class="warn"><b>Uważaj:</b> Watt to maszyna parowa, Stephenson to parowóz i kolej, Fulton to statek parowy, Morse to telegraf. Nie myl płodozmianu z trójpolówką.</p>
+    </div>
+  </article>
+
+  <!-- T3 -->
+  <article class="topic" id="t3" style="--c:var(--t3)">
+    <header><div class="num">Temat 3</div><h2>Nurty ideowe i kultura</h2><div class="span">pierwsza połowa XIX w.</div></header>
+    <div class="tbody">
+      <h3>Ideologie w jednej tabeli</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Ideologia</th><th>Przedstawiciele</th><th>Najważniejsze postulaty</th></tr>
+        <tr><td><b>Konserwatyzm</b><br><small>łac. conservare, „zachowywać”</small></td><td>Edmund Burke (twórca), Joseph de Maistre, Adam Jerzy Czartoryski, Chateaubriand</td><td>potępienie rewolucji, rozwój <b>ewolucyjny</b>, silna monarchia, tradycja, rodzina, religia; władza dla monarchy i wykształconych, zamożnych elit</td></tr>
+        <tr><td><b>Liberalizm</b><br><small>łac. liber, „wolny”</small></td><td>Adam Smith („ojciec”), Benjamin Constant, Alexis de Tocqueville, David Ricardo, John Stuart Mill</td><td><b>wolność jednostki</b>; monarchia konstytucyjna z <b>trójpodziałem władzy</b>; państwo prawa, równość wobec prawa; wolność słowa, druku, zrzeszania; wolność wyznania, rozdział Kościoła od państwa; prawo wyborcze <b>tylko dla elit</b></td></tr>
+        <tr><td><b>Socjalizm</b><br><small>łac. societas, „wspólnota”</small></td><td>Saint-Simon, Charles Fourier (falangi, falanstery), Robert Owen, Louis Blanqui</td><td>poprawa losu robotników (<b>kwestia socjalna</b>), wspólnoty produkcyjne, wspólna własność; zwykle <b>pokojowo</b> (wyjątek: Blanqui i zawodowi rewolucjoniści)</td></tr>
+        <tr><td><b>Anarchizm</b><br><small>grec. „bez władcy”</small></td><td>Pierre Joseph Proudhon</td><td>likwidacja państwa (przemoc i przymus); samorządy i wspólnoty sąsiedzkie; bez wojska, policji, pieniędzy; własność kapitalistyczna to kradzież; równouprawnienie kobiet, walka z religią</td></tr>
+        <tr><td><b>Komunizm</b><br><small>łac. communis, „wspólny”</small></td><td>Karol Marks, Fryderyk Engels: Związek Komunistów, <b>Manifest komunistyczny (1848)</b></td><td>powszechna <b>rewolucja socjalna</b> robotników, obalenie państwa klas posiadających, upaństwowienie fabryk, banków i ziemi, kontrola religii („opium ludu”)</td></tr>
+      </table></div>
+      <div class="grid2" style="margin-top:10px">
+        <div class="box"><h4>Burke</h4><p>Irlandczyk, twórca konserwatyzmu, zmiany tylko przez ewolucję, potępił rewolucję francuską.</p></div>
+        <div class="box"><h4>John Stuart Mill</h4><p>„O wolności” (1859), liberalizm demokratyczny, pierwszy poseł popierający prawa wyborcze kobiet.</p></div>
+        <div class="box"><h4>Robert Owen</h4><p>szkocki fabrykant, wspólnoty z wspólną własnością, Giełda Pracy (banknoty w godzinach pracy).</p></div>
+        <div class="box"><h4>Wspólna cecha</h4><p>Konserwatyści <b>i</b> liberałowie chcieli prawa wyborczego tylko dla elit, a obie grupy były bezradne wobec losu robotników.</p></div>
+      </div>
+      <h3>Kultura: klasycyzm kontra romantyzm</h3>
+      <div class="grid2">
+        <div class="box"><h4>Klasycyzm (neoklasycyzm)</h4><p>wzór antyku, harmonia, ład, powściągliwość.</p><ul><li>malarstwo: Jacques-Louis David, Ingres</li><li>rzeźba: Thorvaldsen (pomniki Kopernika i ks. Józefa w Warszawie), Canova</li><li>muzyka: Mozart</li></ul></div>
+        <div class="box"><h4>Romantyzm (lata 90. XVIII w. – lata 40. XIX w.)</h4><p>bunt przeciw racjonalizmowi, uczucia, emocje, intuicja, irracjonalność, nadprzyrodzoność, średniowiecze, ludowość, dzika przyroda, idea narodowa.</p><ul><li>literatura: Byron, Mickiewicz, Słowacki, Puszkin, Petőfi, Hugo, Andersen, Poe, Cooper</li><li>muzyka: Chopin, Liszt, Schumann, Verdi, Paganini…</li><li>malarstwo: Delacroix, Goya, C.D. Friedrich</li><li>architektura: <b>neogotyk</b>, ogrody angielskie</li></ul></div>
+      </div>
+      <p style="margin-top:8px"><b>Na pograniczu epok:</b> Goethe (Faust, Cierpienia młodego Wertera), Schiller (Oda do radości), w muzyce <b>Beethoven</b> jako prekursor romantyzmu.</p>
+      <p><b>Mecenat mieszczański</b> obok królewskiego, marszandzi (handlarze sztuką), kawiarnie artystyczne, styl <b>biedermeier</b>: wygodne, proste, przytulne meble w mieszczańskich salonach.</p>
+    </div>
+  </article>
+
+  <!-- T4 -->
+  <article class="topic" id="t4" style="--c:var(--t4)">
+    <header><div class="num">Temat 4</div><h2>Kontestacja ładu wiedeńskiego</h2><div class="span">1815 – lata 40. XIX w.</div></header>
+    <div class="tbody">
+      <h3>Kto się buntował</h3>
+      <ul class="dots">
+        <li><b>liberałowie i demokraci</b> (ograniczenie władzy monarchów, więcej praw obywateli),</li>
+        <li>narody walczące o <b>niepodległość</b> (Grecy, Belgowie, Polacy, Węgrzy),</li>
+        <li>zwolennicy <b>zjednoczenia</b> Włoch i Niemiec.</li>
+      </ul>
+      <h3>Najważniejsze wystąpienia</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Gdzie, kiedy</th><th>Kto, o co</th><th>Efekt</th></tr>
+        <tr><td><b>Italia</b><br>od 1815</td><td><b>karbonariusze</b> („węglarze”), ruch <b>risorgimento</b>: zjednoczenie Włoch, wyrzucenie Austrii</td><td>powstania tłumione przez Austrię</td></tr>
+        <tr><td><b>Niemcy</b><br><span class="date">X 1817</span></td><td><b>burszowie</b> (studenci), wiec na <b>Górze Wartburskiej</b>: jedność Niemiec, wolności; barwy czarno-czerwono-złote; 1819 zabójstwo Kotzebuego</td><td>porażka, ale rośnie idea jedności Niemiec</td></tr>
+        <tr><td><b>Grecja</b><br><span class="date">1821–1830</span></td><td>powstanie przeciw Turkom (bp Germanos), <b>1822</b> ogłoszenie niepodległości; filhelleniści (m.in. <b>Byron</b>); <b>1827 Navarino</b> (floty Rosji, WB i Francji)</td><td><b>1830 traktat londyński</b>: Grecja niepodległa jako <b>pierwsze państwo po 1815</b>, król Otton Wittelsbach</td></tr>
+        <tr><td><b>Rosja</b><br><span class="date">XII 1825</span></td><td><b>dekabryści</b> (liberalna szlachta) w Petersburgu przy przysiędze dla <b>Mikołaja I</b>: monarchia konstytucyjna lub republika, uwolnienie chłopów</td><td>stłumieni, przywódcy straceni, katorga; car tworzy Korpus Żandarmów</td></tr>
+        <tr><td><b>Francja</b><br><span class="date">27–29 VII 1830</span></td><td><b>rewolucja lipcowa</b> („trzy dni chwały”) przeciw <b>Karolowi X</b> (rozporządzenia: cenzura, ograniczenie praw z Karty 1814)</td><td>abdykacja Karola X; „król Francuzów” <b>Ludwik Filip I</b> z woli narodu; monarchia lipcowa</td></tr>
+        <tr><td><b>Belgia</b><br><span class="date">1830–1831</span></td><td>bunt przeciw <b>Wilhelmowi I</b> (Niderlandy), <b>X 1830</b> proklamacja niepodległości</td><td><b>I 1831 konferencja londyńska</b> uznaje Belgię, król <b>Leopold I</b>; konstytucja 1831 najbardziej liberalna w Europie</td></tr>
+        <tr><td><b>Wielka Brytania</b><br><span class="date">1838–1848</span></td><td><b>czartyści</b>: petycja <b>„Karta ludu”</b> (People’s Charter, 1839 do Izby Gmin)</td><td>odrzucona, ale to pierwszy masowy ruch robotniczy</td></tr>
+        <tr><td><b>Europa</b><br><span class="date">1834</span></td><td><b>Młoda Europa</b> Giuseppe <b>Mazziniego</b> w Szwajcarii (w niej Młoda Polska)</td><td>sieć organizacji walczących o niepodległość i zjednoczenie</td></tr>
+      </table></div>
+      <h3>Postulaty czartystów</h3>
+      <div class="pill-row">
+        <div class="pr"><b>Prawo wyborcze</b><span>dla każdego dorosłego mężczyzny</span></div>
+        <div class="pr"><b>Tajne głosowanie</b><span>bez nacisku pracodawców</span></div>
+        <div class="pr"><b>Bez cenzusu</b><span>majątkowego dla posłów, diety poselskie</span></div>
+      </div>
+      <p style="margin-top:10px">W Wielkiej Brytanii także: <b>1829</b> równouprawnienie katolików (Daniel O’Connell, Irlandia), <b>1832</b> reforma wyborcza (więcej wyborców, silniejsza Izba Gmin).</p>
+      <p><b>Dlaczego to ważne:</b> nieudana interwencja przeciw rewolucji lipcowej (car Mikołaj I chciał, Austria i Prusy nie, Wielka Brytania sprzeciw) to <b>pierwsza poważna porażka Świętego Przymierza</b>. „Kiedy Paryż kichnie, Europa dostaje kataru” – Metternich.</p>
+      <p class="warn"><b>Uważaj:</b> karbonariusze to Włochy, burszowie to Niemcy, dekabryści to Rosja, czartyści to Wielka Brytania. Rewolucja lipcowa to 1830, lutowa to 1848.</p>
+    </div>
+  </article>
+
+  <!-- T5 -->
+  <article class="topic" id="t5" style="--c:var(--t5)">
+    <header><div class="num">Temat 5</div><h2>Wiosna Ludów</h2><div class="span">II 1848 – VIII 1849</div></header>
+    <div class="tbody">
+      <h3>Przyczyny</h3>
+      <ul class="dots">
+        <li>sprzeciw wobec ładu wiedeńskiego: dążenia do <b>zjednoczenia</b> (Niemcy, Włosi), <b>niepodległości</b> (Polacy, Węgrzy), programy liberałów i demokratów (republika, powszechne prawo wyborcze),</li>
+        <li><b>zaraza ziemniaczana</b>, głód (zwłaszcza Irlandia), „rewolucje kartoflane”, bezrobocie,</li>
+        <li>przykład udanych zrywów: Francja, Belgia, Grecja.</li>
+      </ul>
+      <p>„Śpimy na wulkanie” – Alexis de Tocqueville na początku 1848 r.</p>
+      <h3>Francja: rewolucja lutowa</h3>
+      <ul class="dots">
+        <li>zakaz <b>bankietu politycznego</b> w sprawie reformy wyborczej, <span class="date">22 II 1848</span> barykady w Paryżu, Gwardia Narodowa przechodzi na stronę ludu, <b>Ludwik Filip abdykuje</b>.</li>
+        <li><span class="date">25 II 1848</span> <b>II Republika</b>: pierwsze na świecie <b>powszechne prawo wyborcze mężczyzn</b>, wolność prasy i zgromadzeń, prawo do pracy, zniesienie kary śmierci i niewolnictwa w koloniach. Pierwsze państwo demokratyczne.</li>
+        <li><b>Warsztaty narodowe</b> dla bezrobotnych, w czerwcu zlikwidowane, więc powstanie robotników (stłumione).</li>
+        <li>Wybory prezydenckie 1848 wygrywa <b>Karol Ludwik Napoleon Bonaparte</b> (głosy wsi). <span class="date">XII 1851</span> zamach stanu, <span class="date">1852</span> II Cesarstwo, cesarz <b>Napoleon III</b>.</li>
+      </ul>
+      <h3>Pozostałe kraje</h3>
+      <div class="grid2">
+        <div class="box"><h4>Prusy i Niemcy</h4><ul><li>III 1848 <b>rewolucja marcowa</b> w Berlinie; Fryderyk Wilhelm IV: odezwa „Do moich drogich berlińczyków”, wolności, Landtag</li><li>V 1848 <b>parlament frankfurcki</b> (zjednoczenie); „polska debata”: Wlk. Ks. Poznańskie częścią Niemiec</li><li>król Prus odrzuca koronę z rąk ludu</li><li>Badenia 1849: Mierosławski pokonany</li><li>1850 konstytucja pruska</li></ul></div>
+        <div class="box"><h4>Austria</h4><ul><li>III 1848 barykady w Wiedniu, <b>dymisja Metternicha</b></li><li>IV konstytucja cesarza Ferdynanda I</li><li><b>uwłaszczenie chłopów</b>, koniec pańszczyzny</li><li>X 1848 ostatnie powstanie w Wiedniu (Bem)</li><li>XII 1848 cesarzem <b>Franciszek Józef I</b></li></ul></div>
+        <div class="box"><h4>Węgry</h4><ul><li>przywódca <b>Lajos Kossuth</b>; III 1848 sejm w Preszburgu, liberalna konstytucja, uwłaszczenie</li><li>gen. <b>Józef Bem</b> (Siedmiogród), Dembiński, legion Wysockiego</li><li>IV 1849 detronizacja Habsburgów, deklaracja niepodległości: <b>jedyny kraj, który ją zdobył</b></li><li>pomoc <b>Rosji</b> (Paskiewicz), VIII 1849 kapitulacja, terror</li><li>kokarda: czerwony siła, biały wiara, zielony nadzieja</li></ul></div>
+        <div class="box"><h4>Italia</h4><ul><li>III 1848 powstania w <b>Lombardii i Wenecji</b>, Radetzky się wycofuje</li><li>król Sardynii <b>Karol Albert</b> przegrywa pod <b>Custozą</b> (VII 1848) i <b>Novarą</b> (1849, gen. Chrzanowski), abdykuje na rzecz Wiktora Emanuela</li><li>II 1849 <b>Republika Rzymska</b> (Mazzini, Garibaldi), papież Pius IX ucieka; VII 1849 Francuzi zajmują Rzym</li><li>VIII 1849 Wenecja zdobyta (balony z bombami)</li></ul></div>
+      </div>
+      <h3>Polacy w Wiośnie Ludów</h3>
+      <p><b>Józef Bem</b> (Wiedeń, Węgry), <b>Henryk Dembiński</b> (Węgry), <b>Józef Wysocki</b> (legion na Węgrzech), <b>Ludwik Mierosławski</b> (Badenia), <b>Wojciech Chrzanowski</b> (Piemont, Novara), <b>Adam Mickiewicz</b> (Legion we Włoszech), ks. <b>Adam Jerzy Czartoryski</b> (dyplomacja).</p>
+      <h3>Bilans</h3>
+      <div class="grid2">
+        <div class="box" style="border-color:var(--ok)"><h4 style="color:var(--ok)">Wygrali</h4><ul><li><b>liberałowie</b>: konstytucje, trójpodział władzy, równość wobec prawa</li><li><b>chłopi</b>: uwłaszczenie, ziemia na własność</li><li>idea narodowa i społeczeństwo obywatelskie, prasa jako „czwarta władza”</li></ul></div>
+        <div class="box" style="border-color:var(--bad)"><h4 style="color:var(--bad)">Przegrali</h4><ul><li><b>demokraci</b>: republika i powszechne prawo wyborcze „za wcześnie”</li><li>Węgrzy i Polacy: brak niepodległości</li><li>Niemcy i Włosi: brak zjednoczenia</li></ul></div>
+      </div>
+      <p style="margin-top:8px">Pierwsza i jedyna <b>powszechna rewolucja</b> polityczno-społeczna w Europie. Ominęła: <b>Wielką Brytanię, Szwajcarię</b> (już liberalne) oraz <b>Rosję i Imperium Osmańskie</b> (brak sił zdolnych do buntu).</p>
+      <p class="warn"><b>Uważaj:</b> rewolucja lutowa (Francja) i marcowa (Berlin, Wiedeń). Prezydent 1848 to Ludwik Napoleon, nie Ludwik Filip. Węgrom pomogli Polacy, Austrii pomogła Rosja.</p>
+    </div>
+  </article>
+
+  <!-- T6 -->
+  <article class="topic" id="t6" style="--c:var(--t6)">
+    <header><div class="num">Temat 6</div><h2>Ameryka Północna i Południowa</h2><div class="span">pierwsza połowa XIX w.</div></header>
+    <div class="tbody">
+      <h3>Stany Zjednoczone</h3>
+      <ul class="dots">
+        <li>Szybka <b>demokratyzacja</b>: w 1840 r. głosowało 78% białych wolnych mężczyzn (we Francji kilka procent).</li>
+        <li>Wojna z Brytyjczykami <b>1812–1814</b>: wzrost patriotyzmu (hymn i flaga).</li>
+        <li>Ekspansja na zachód kosztem Indian; ludność: 4 mln (1790) → ponad 23 mln (1850).</li>
+        <li><b>1803</b> zakup Luizjany od Francji, <b>1819</b> Floryda od Hiszpanii, <b>1836</b> Teksas ogłasza niepodległość (Sam Houston), <b>1845</b> przyłączenie Teksasu, <b>1846</b> Oregon od Wielkiej Brytanii.</li>
+        <li><b>1846–1848</b> wojna z Meksykiem, <b>pokój w Guadalupe Hidalgo (1848)</b>: m.in. Kalifornia (stan 1850). Obszar USA wzrósł ponad dwa razy.</li>
+      </ul>
+      <div class="pr" style="margin:10px 0"><b>Doktryna Monroego (1823)</b><span>Prezydent James Monroe: „Ameryka dla Amerykanów”. Europa nie może się wtrącać w sprawy obu Ameryk, a USA nie mieszają się w sprawy Europy (izolacjonizm). Ameryka Łacińska staje się strefą wpływów USA.</span></div>
+      <h3>Ameryka Łacińska: kto jest kim</h3>
+      <dl class="terms">
+        <div><dt>Hiszpanie i Portugalczycy</dt><dd>elity władzy z metropolii</dd></div>
+        <div><dt>Kreole</dt><dd>potomkowie europejskich osadników urodzeni w Ameryce; ziemianie, kupcy, bankierzy; to oni walczą o niepodległość</dd></div>
+        <div><dt>Metysi</dt><dd>potomkowie małżeństw indiańsko-europejskich</dd></div>
+        <div><dt>Indianie</dt><dd>ludność rdzenna</dd></div>
+        <div><dt>Junty</dt><dd>rady prowincjonalne Kreoli ogłaszające niepodległość</dd></div>
+      </dl>
+      <h3>Nowe państwa</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Rok</th><th>Państwo</th><th>Kluczowe postacie i fakty</th></tr>
+        <tr><td class="date">1804</td><td><b>Haiti</b> (dawne Santo Domingo, kolonia Francji)</td><td>bunt niewolników, Toussaint Louverture, Dessalines (cesarz Jakub I); pierwsze niepodległe państwo w Ameryce Łacińskiej, drugie po USA na półkuli zachodniej; walczyli tam też polscy legioniści</td></tr>
+        <tr><td class="date">1810–1830</td><td><b>Wenezuela, Kolumbia, Ekwador</b> → <b>Wielka Kolumbia</b> (1819)</td><td><b>Simón Bolivar</b>, „El Libertador”; po jego śmierci (1830) rozpad na trzy państwa</td></tr>
+        <tr><td class="date">1816</td><td><b>Wielka La Plata</b> (Argentyna), potem <b>Chile, Peru</b></td><td>gen. <b>José de San Martín</b>; bitwa pod Chacabuco 1817; La Plata rozpada się na Argentynę, Paragwaj, Urugwaj, Boliwię</td></tr>
+        <tr><td class="date">1821</td><td><b>Meksyk</b></td><td>powstanie od 1810; Agustín de Iturbide cesarzem; <b>1823</b> republika</td></tr>
+        <tr><td class="date">1822</td><td><b>Brazylia</b></td><td>pokojowo, cesarz <b>Pedro I</b> (syn króla Portugalii Jana VI); republika dopiero 1889</td></tr>
+      </table></div>
+      <p>Skutki: granice nowych państw ≈ granice dawnych wicekrólestw, kraje zniszczone wojnami, nazwy <b>Ameryka Łacińska</b> i <b>Latynosi</b>.</p>
+      <p class="warn"><b>Uważaj:</b> Bolivar to północ (Wenezuela, Kolumbia), San Martín to południe (Argentyna, Chile, Peru). Brazylia jako jedyna uzyskała niepodległość pokojowo i była cesarstwem.</p>
+    </div>
+  </article>
+</section>
+
+<!-- ============ OŚ CZASU ============ -->
+<section class="tab" id="daty" hidden>
+  <p class="intro">Wszystkie daty z działu po kolei. Filtruj po temacie, a potem zasłoń lewą kolumnę i sprawdź się.</p>
+  <div class="filters" id="tlFilters"></div>
+  <ol class="tl" id="timeline"></ol>
+</section>
+
+<!-- ============ FISZKI ============ -->
+<section class="tab" id="fiszki" hidden>
+  <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
+  <div class="filters" id="fcFilters"></div>
+  <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
+  <div class="row">
+    <button class="btn badb" id="fcNo">Jeszcze nie</button>
+    <button class="btn good" id="fcYes">Umiem</button>
+    <button class="btn" id="fcShuffle">Przetasuj</button>
+    <span class="counter" id="fcCount"></span>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie.</p>
+  <div class="filters" id="qFilters"></div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ OTWARTE ============ -->
+<section class="tab" id="otwarte" hidden>
+  <p class="intro">Takie polecenia są na końcu każdego tematu w podręczniku, więc łatwo trafiają na sprawdzian. Najpierw odpowiedz sam(a), potem rozwiń wzór.</p>
+  <div id="oqList"></div>
+</section>
+
+</div></main>
+
+<script>
+const T = {1:"Kongres wiedeński",2:"Cywilizacja przemysłowa",3:"Idee i kultura",4:"Kontestacja ładu",5:"Wiosna Ludów",6:"Ameryki"};
+const C = n => "var(--t"+n+")";
+
+/* ---------- ribbon ---------- */
+(function(){
+  const min=1800,max=1855;
+  const rows=[[1,1814,1815,"1814–15"],[2,1800,1850,"wynalazki od 1769"],[3,1800,1855,"idee i romantyzm"],[4,1815,1848,"1815–48"],[5,1848,1852,"1848–49"],[6,1804,1848,"1804–48"]];
+  const pos=y=>((y-min)/(max-min)*100);
+  let h="";
+  rows.forEach(([n,a,b,l])=>{
+    const w=Math.max(pos(b)-pos(a),2.2);
+    h+=`<a class="rb-row" href="#t${n}"><span class="rb-name" style="color:${C(n)}">${n}. ${T[n]}</span><span class="rb-track"><span class="rb-bar" style="left:${pos(a)}%;width:${w}%;background:${C(n)}">${w>12?`<span>${l}</span>`:""}</span></span></a>`;
+  });
+  h+=`<div class="rb-axis"><span></span><div>${[1800,1815,1830,1848].map(y=>`<i style="left:${pos(y)}%">${y}</i>`).join("")}</div></div>`;
+  document.getElementById("ribbon").innerHTML=h;
+})();
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+document.querySelectorAll(".rb-row").forEach(a=>a.addEventListener("click",()=>showTab("notatka")));
+
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(let i=1;i<=6;i++) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- timeline ---------- */
+const TL=[
+ [2,"1769","Maszyna parowa Jamesa Watta"],
+ [2,"1785","Mechaniczne krosno Cartwrighta"],
+ [6,"1803","USA kupują Luizjanę od Francji"],
+ [6,"1804","Niepodległość Haiti","pierwsze państwo Ameryki Łacińskiej"],
+ [2,"1807","Pierwszy rejs parowca Fultona po rzece Hudson"],
+ [6,"1810","Początek powstania w Meksyku; junty w Nowej Grenadzie (1809–1810)"],
+ [6,"1812–14","Wojna USA z Wielką Brytanią"],
+ [1,"1814","Abdykacja Napoleona, Elba; Ludwik XVIII królem; konstytucja Norwegii"],
+ [1,"IX 1814","Początek kongresu wiedeńskiego"],
+ [1,"III–VI 1815","Sto dni Napoleona, Waterloo"],
+ [1,"9 VI 1815","Akt końcowy kongresu wiedeńskiego"],
+ [1,"IX 1815","Święte Przymierze (Rosja, Austria, Prusy)"],
+ [6,"1816","Niepodległość La Platy (San Martín)"],
+ [4,"X 1817","Wiec burszów na Górze Wartburskiej"],
+ [1,"1818","Zjazd Świętego Przymierza w Akwizgranie"],
+ [6,"1819","Wielka Kolumbia (Bolivar); Floryda kupiona przez USA"],
+ [4,"1821","Wybuch powstania greckiego"],
+ [6,"1821","Niepodległość Meksyku (Iturbide)"],
+ [4,"1822","Grecy ogłaszają niepodległość"],
+ [6,"1822","Niepodległość Brazylii (Pedro I)"],
+ [6,"1823","Doktryna Monroego; Meksyk republiką"],
+ [2,"1825","Stephenson: pierwsza linia kolejowa Stockton – Darlington"],
+ [4,"XII 1825","Powstanie dekabrystów w Petersburgu"],
+ [4,"1827","Bitwa morska pod Navarino"],
+ [4,"1829","Równouprawnienie katolików w Wielkiej Brytanii"],
+ [4,"VII 1830","Rewolucja lipcowa we Francji, Ludwik Filip I"],
+ [4,"1830","Traktat londyński: niepodległa Grecja"],
+ [2,"1830","Pierwsza pasażerska linia kolejowa"],
+ [4,"X 1830","Belgia proklamuje niepodległość"],
+ [4,"I 1831","Konferencja londyńska uznaje Belgię, król Leopold I"],
+ [4,"1832","Reforma wyborcza w Wielkiej Brytanii"],
+ [4,"1834","Młoda Europa Mazziniego"],
+ [6,"1836","Teksas ogłasza niepodległość od Meksyku"],
+ [2,"1837","Telegraf Morse’a"],
+ [4,"1839","Czartyści składają Kartę ludu"],
+ [6,"1845","Teksas przyłączony do USA"],
+ [6,"1846–48","Wojna USA z Meksykiem, pokój w Guadalupe Hidalgo"],
+ [3,"1848","Manifest komunistyczny Marksa i Engelsa"],
+ [5,"22–24 II 1848","Rewolucja lutowa w Paryżu, abdykacja Ludwika Filipa"],
+ [5,"25 II 1848","II Republika Francuska"],
+ [5,"III 1848","Rewolucja marcowa w Berlinie i Wiedniu, dymisja Metternicha; sejm węgierski"],
+ [5,"V 1848","Parlament we Frankfurcie"],
+ [5,"VI 1848","Powstanie robotników w Paryżu po likwidacji warsztatów narodowych"],
+ [5,"VII 1848","Klęska Sardynii pod Custozą"],
+ [5,"XII 1848","Franciszek Józef I cesarzem; Ludwik Napoleon prezydentem Francji"],
+ [5,"II 1849","Republika Rzymska"],
+ [5,"III 1849","Klęska Sardynii pod Novarą"],
+ [5,"IV 1849","Deklaracja niepodległości Węgier"],
+ [5,"VIII 1849","Kapitulacja Węgier i Wenecji, koniec Wiosny Ludów"],
+ [3,"1859","J.S. Mill „O wolności”"],
+ [5,"1851–52","Zamach stanu, II Cesarstwo, Napoleon III"]
+];
+function drawTL(f){
+  document.getElementById("timeline").innerHTML=TL.filter(e=>f==="all"||e[0]==f)
+   .map(([n,y,t,s])=>`<li style="--c:${C(n)}"><span class="y">${y}</span><div class="e">${t}${s?`<small>${s}</small>`:""}<small>${n}. ${T[n]}</small></div></li>`).join("");
+}
+makeFilters(document.getElementById("tlFilters"),drawTL); drawTL("all");
+
+/* ---------- flashcards ---------- */
+const FC=[
+ [1,"Legitymizm","Pogląd, że władza monarchy pochodzi od Boga (a nie od narodu)."],
+ [1,"Restauracja","Przywrócenie na trony dynastii obalonych w epoce napoleońskiej."],
+ [1,"Równowaga sił","Zasada, że żadne mocarstwo nie może uzyskać przewagi nad innymi (brytyjska doktryna)."],
+ [1,"Koncert mocarstw","Pięć państw decydujących o Europie: Wielka Brytania, Rosja, Austria, Prusy, Francja."],
+ [1,"Klemens von Metternich","Austriacki minister spraw zagranicznych, główny architekt kongresu wiedeńskiego; rządy policyjne i cenzura."],
+ [1,"Charles de Talleyrand","Francuski dyplomata na kongresie wiedeńskim."],
+ [1,"Święte Przymierze","IX 1815, Rosja, Austria i Prusy; z inicjatywy Aleksandra I; obrona ładu wiedeńskiego na wartościach chrześcijańskich."],
+ [1,"Konstytucja oktrojowana","Konstytucja nadana przez monarchę, np. Karta 1814 we Francji, konstytucja Królestwa Polskiego."],
+ [1,"Związek Niemiecki","34 państwa i 4 wolne miasta, sejm we Frankfurcie, na czele cesarz Austrii."],
+ [1,"Co dostała Wielka Brytania?","Helgoland, Maltę, Cejlon, Mauritius i Kapsztad."],
+ [1,"Co dostały Prusy?","Nadrenię, Westfalię, Wielkie Księstwo Poznańskie, Gdańsk, część Saksonii."],
+ [1,"Co dostała Rosja?","Finlandię, Besarabię i Królestwo Polskie."],
+ [1,"Co dostała Austria?","Okręg tarnopolski, Tyrol, Salzburg, Lombardię, Wenecję, Istrię, Dalmację."],
+ [2,"Rewolucja przemysłowa","Przejście od produkcji ręcznej (manufaktury) do maszynowej (fabryki)."],
+ [2,"Płodozmian","Uprawa bez ugoru z rotacją roślin; zastąpił trójpolówkę."],
+ [2,"Urbanizacja","Umiastowienie: przenoszenie się ludności ze wsi do miast."],
+ [2,"Burżuazja","Najwyższa warstwa nowego społeczeństwa: przemysłowcy, bankierzy, wielcy kupcy."],
+ [2,"Inteligencja","Ludzie wykształceni służący narodowi; nazwa pojawiła się w tekstach polskich pisarzy."],
+ [2,"Proletariat","Robotnicy; od „arystokracji robotniczej” po lumpenproletariat (niewykwalifikowani, bezrobotni)."],
+ [2,"James Watt","Szkot, maszyna parowa (1769)."],
+ [2,"George Stephenson","Ojciec kolei: parowóz, pierwsza linia Stockton – Darlington (1825)."],
+ [2,"Robert Fulton","Amerykanin: statek parowy (1807), wcześniej łódź podwodna Nautilus."],
+ [2,"Samuel Morse","Telegraf elektryczny i alfabet Morse’a (1837)."],
+ [3,"Konserwatyzm","Ewolucja zamiast rewolucji, monarchia, tradycja i religia. Edmund Burke."],
+ [3,"Liberalizm","Wolność jednostki, monarchia konstytucyjna, trójpodział władzy, wolność słowa i wyznania. Adam Smith, J.S. Mill."],
+ [3,"Socjalizm","Poprawa losu robotników przez wspólnoty i wspólną własność. Saint-Simon, Fourier, Owen."],
+ [3,"Anarchizm","Likwidacja państwa, zamiast niego samorządy. Proudhon."],
+ [3,"Komunizm","Rewolucja robotników, upaństwowienie własności. Marks i Engels, Manifest komunistyczny 1848."],
+ [3,"Falanster","Osiedle wspólnoty (falangi) w projekcie Charles’a Fouriera."],
+ [3,"Louis Blanqui","Socjalista: przewrót dokonany przez zawodowych rewolucjonistów."],
+ [3,"Romantyzm","Nurt od lat 90. XVIII w. do lat 40. XIX w.: uczucia, irracjonalność, ludowość, średniowiecze, idea narodowa."],
+ [3,"Biedermeier","Mieszczański styl sztuki użytkowej: wygodne, proste, przytulne meble."],
+ [3,"Kwestia socjalna","Problem trwałej poprawy losu robotników."],
+ [4,"Karbonariusze","Włoscy spiskowcy („węglarze”) walczący o zjednoczenie Włoch."],
+ [4,"Risorgimento","Włoski ruch narodowy („odrodzenie”) dążący do zjednoczenia."],
+ [4,"Burszowie","Niemieccy studenci walczący o jedność Niemiec; wiec na Górze Wartburskiej 1817."],
+ [4,"Filhelleni","Ochotnicy z Europy pomagający Grekom (m.in. lord Byron)."],
+ [4,"Dekabryści","Rosyjscy spiskowcy z XII 1825 przeciw Mikołajowi I, chcieli monarchii konstytucyjnej lub republiki."],
+ [4,"Czartyści","Brytyjski ruch robotniczy; Karta ludu: prawo wyborcze dla mężczyzn, tajne głosowanie."],
+ [4,"Rewolucja lipcowa","27–29 VII 1830 we Francji; obalenie Karola X, królem Ludwik Filip I."],
+ [4,"Młoda Europa","Organizacja Mazziniego (1834, Szwajcaria) walcząca o niepodległość i zjednoczenie narodów."],
+ [4,"Katorga","Ciężkie roboty przymusowe w Rosji, zwykle na Syberii."],
+ [5,"Wiosna Ludów","Fala rewolucji w Europie II 1848 – VIII 1849."],
+ [5,"Warsztaty narodowe","Roboty publiczne dla bezrobotnych w Paryżu 1848; ich likwidacja wywołała powstanie czerwcowe."],
+ [5,"Uwłaszczenie","Nadanie chłopom na własność ziemi, którą uprawiali (np. Austria 1848)."],
+ [5,"Lajos Kossuth","Przywódca Węgrów w czasie Wiosny Ludów."],
+ [5,"Józef Bem","Polski generał: Wiedeń 1848, potem dowódca w Siedmiogrodzie na Węgrzech."],
+ [5,"Napoleon III","Karol Ludwik Napoleon Bonaparte: prezydent 1848, zamach stanu 1851, cesarz od 1852."],
+ [5,"Parlament frankfurcki","Ogólnoniemiecki parlament (od V 1848) próbujący zjednoczyć Niemcy."],
+ [5,"Giuseppe Mazzini","Twórca Młodej Europy, przywódca Republiki Rzymskiej 1849."],
+ [6,"Doktryna Monroego","1823: „Ameryka dla Amerykanów”, Europa ma się nie wtrącać, USA nie mieszają się w sprawy Europy."],
+ [6,"Kreole","Potomkowie europejskich osadników urodzeni w Ameryce; przywódcy walk o niepodległość."],
+ [6,"Metysi","Potomkowie małżeństw indiańsko-europejskich."],
+ [6,"Junta","Rada prowincjonalna Kreoli, ogłaszająca niepodległość."],
+ [6,"Simón Bolivar","El Libertador; Wenezuela, Kolumbia, Ekwador, prezydent Wielkiej Kolumbii."],
+ [6,"José de San Martín","Generał: niepodległość La Platy (Argentyny), Chile i Peru."],
+ [6,"Haiti","1804, pierwsze niepodległe państwo Ameryki Łacińskiej, założone przez byłych niewolników."],
+ [6,"Izolacjonizm","Zasada niewtrącania się USA w sprawy Europy."]
+];
+let deck=[],fcIdx=0,known=0;
+const fcEl=document.getElementById("fc");
+function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function drawFC(){
+  fcEl.classList.remove("flip");
+  const cnt=document.getElementById("fcCount");
+  if(!deck.length){
+    fcEl.style.setProperty("--c","var(--ok)");
+    document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;
+    document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
+  }
+  const [n,f,b]=deck[0];
+  fcEl.style.setProperty("--c",C(n));
+  setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;
+  document.querySelector("#fcFront b").textContent=f;
+  cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
+}
+fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;deck.shift();known++;drawFC();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;deck.push(deck.shift());drawFC();});
+let fcFilter="all";
+document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); buildDeck("all");
+
+/* ---------- quiz ---------- */
+const Q=[
+ [1,"W jakich latach obradował kongres wiedeński?",["1814–1815","1813–1814","1815–1816","1812–1815"],0,"Obrady trwały od jesieni 1814 do czerwca 1815 r. (Akt końcowy 9 VI 1815)."],
+ [1,"Kto był głównym architektem kongresu wiedeńskiego?",["Klemens von Metternich","Charles de Talleyrand","wicehrabia Castlereagh","Fryderyk Wilhelm III"],0,"Austriacki minister Metternich; w jego gabinecie spotykali się monarchowie i dyplomaci."],
+ [1,"Zasada legitymizmu głosi, że:",["władza monarchy pochodzi od Boga","naród jest suwerenem","żadne mocarstwo nie może mieć przewagi","Europa ma być podzielona na strefy wpływów"],0,"Legitymizm (łac. legitimus, „prawowity”) był sprzeczny z oświeceniową ideą suwerenności narodu."],
+ [1,"Zasada, by żadne mocarstwo nie zdobyło przewagi nad innymi, to:",["równowaga sił","restauracja","legitymizm","izolacjonizm"],0,"Brytyjska doktryna balance of power."],
+ [1,"Do jakich granic wróciła Francja po stu dniach Napoleona?",["z 1789 r.","z 1792 r.","z 1795 r.","z 1804 r."],0,"Najpierw proponowano granice z 1792 r., ale za sto dni Francję ukarano granicami z 1789 r."],
+ [1,"Które nabytki otrzymała Wielka Brytania?",["Malta, Helgoland, Cejlon, Kapsztad","Finlandia i Besarabia","Nadrenia i Westfalia","Lombardia i Wenecja"],0,"Głównie wyspy i porty chroniące szlaki handlowe imperium."],
+ [1,"Wielkie Księstwo Poznańskie znalazło się w granicach:",["Prus","Rosji","Austrii","Saksonii"],0,"Utworzono je z Wielkopolski, części dawnego Księstwa Warszawskiego."],
+ [1,"Rzeczpospolita Krakowska po 1815 r.:",["była pod kontrolą trzech państw zaborczych","należała do Austrii","była częścią Królestwa Polskiego","była częścią Prus"],0,"Kontrolowały ją Prusy, Austria i Rosja."],
+ [1,"Święte Przymierze zawarły w 1815 r.:",["Rosja, Austria i Prusy","Rosja, Prusy i Wielka Brytania","Austria, Francja i Wielka Brytania","wszystkie państwa kongresu"],0,"Z inicjatywy cara Aleksandra I, przy poparciu Metternicha."],
+ [1,"Które państwo nie przystąpiło do Świętego Przymierza?",["Wielka Brytania","Francja","Prusy","Austria"],0,"Londyn nie chciał trwałych zobowiązań i skupiał się na koloniach."],
+ [1,"Konstytucja oktrojowana to konstytucja:",["nadana przez monarchę","uchwalona przez parlament","wprowadzona przez rewolucję","narzucona przez obce mocarstwo"],0,"Franc. octroyé, „nadany”; np. Karta 1814 we Francji."],
+ [1,"Co otrzymała Szwecja jako rekompensatę za utratę Finlandii?",["Norwegię","Islandię","Pomorze","Wyspy Owcze"],0,"Norwegię odebrano Danii, sojuszniczce Napoleona."],
+ [2,"Kto i kiedy wynalazł maszynę parową, symbol nowej epoki?",["James Watt, 1769","George Stephenson, 1825","Robert Fulton, 1807","Edmund Cartwright, 1785"],0,"Watt „ujarzmił parę” i skierował jej energię do produkcji."],
+ [2,"Pierwszą linię kolejową Stockton – Darlington otwarto w roku:",["1825","1807","1830","1837"],0,"Konstruktor parowozu: George Stephenson. Pierwsza linia pasażerska to 1830."],
+ [2,"Robert Fulton jest związany z:",["statkiem parowym","telegrafem","parowozem","krosnem mechanicznym"],0,"1807, rejs po rzece Hudson z Nowego Jorku do Albany."],
+ [2,"Płodozmian zastąpił:",["trójpolówkę","dwupolówkę","gospodarkę żarową","folwark pańszczyźniany"],0,"Dzięki płodozmianowi nie było ugoru, uprawiano całą ziemię."],
+ [2,"Rośliny motylkowe (koniczyna, łubin, lucerna) nazywano zielonymi nawozami, bo:",["wzbogacały glebę w azot","były zielone przez cały rok","służyły tylko jako pasza","chroniły przed szkodnikami"],0,"Azot zwiększał plony kolejnych upraw."],
+ [2,"Najbardziej zurbanizowanym regionem Europy na początku XIX w. były:",["Niderlandy","Prusy","Francja","Rosja"],0,"Ok. 30% ludności w miastach. W połowie wieku Wielka Brytania miała już ok. 40%."],
+ [2,"Burżuazja to:",["przemysłowcy, bankierzy i wielcy kupcy","rzemieślnicy i sklepikarze","lekarze i adwokaci","niewykwalifikowani robotnicy"],0,"Rzemieślnicy to drobnomieszczaństwo, lekarze i adwokaci to klasa średnia."],
+ [2,"Nazwa „inteligencja” pojawiła się po raz pierwszy w tekstach:",["polskich pisarzy","francuskich filozofów","angielskich ekonomistów","rosyjskich poetów"],0,"Inteligenci przewodzili narodom bez własnego państwa."],
+ [2,"Lumpenproletariat to:",["niewykwalifikowani, nisko opłacani robotnicy i bezrobotni","wykwalifikowani robotnicy z własnymi domkami","właściciele fabryk","urzędnicy państwowi"],0,"Wykwalifikowani robotnicy to „arystokracja robotnicza”."],
+ [3,"Twórcą doktryny konserwatyzmu był:",["Edmund Burke","John Stuart Mill","Adam Smith","Robert Owen"],0,"Irlandzki polityk; potępił rewolucję francuską, popierał zmiany ewolucyjne."],
+ [3,"Kogo nazywa się ojcem liberalizmu?",["Adama Smitha","Benjamina Constanta","Josepha de Maistre’a","Karola Marksa"],0,"XVIII-wieczny szkocki filozof."],
+ [3,"Falangi i falanstery to pomysł:",["Charles’a Fouriera","Proudhona","Saint-Simona","Blanquiego"],0,"Wspólnoty rolniczo-przemysłowe mieszkające w osobnych osiedlach."],
+ [3,"Kto uważał, że przewrotu w imieniu robotników dokonają zawodowi rewolucjoniści?",["Louis Blanqui","Robert Owen","Charles Fourier","John Stuart Mill"],0,"Do tej koncepcji nawiąże później Lenin."],
+ [3,"Twórcą anarchizmu był:",["Pierre Joseph Proudhon","Karol Marks","Claude Henri Saint-Simon","Alexis de Tocqueville"],0,"Chciał zlikwidować państwo jako instytucję przemocy."],
+ [3,"Manifest komunistyczny wydali w 1848 r.:",["Marks i Engels","Saint-Simon i Fourier","Owen i Blanqui","Proudhon i Mill"],0,"Uznawany za fundament doktryny komunistycznej."],
+ [3,"Co łączyło konserwatystów i liberałów?",["prawo wyborcze tylko dla wykształconych i zamożnych elit","poparcie dla republiki","walka z religią","wspólna własność"],0,"Obie grupy gardziły „motłochem”."],
+ [3,"Biedermeier to:",["mieszczański styl wygodnych, prostych mebli","nurt w malarstwie romantycznym","odmiana klasycyzmu w architekturze","ruch robotniczy w Niemczech"],0,"Popularny w krajach niemieckich i Europie Środkowej."],
+ [3,"Kto był prekursorem romantyzmu w muzyce?",["Ludwig van Beethoven","Wolfgang Amadeusz Mozart","Fryderyk Chopin","Giuseppe Verdi"],0,"Mozart to klasycyzm, Chopin i Verdi to pełny romantyzm."],
+ [3,"Dominujący styl w architekturze epoki romantyzmu to:",["neogotyk","neoklasycyzm","barok","secesja"],0,"Nawiązywał do fascynującego romantyków średniowiecza."],
+ [4,"Karbonariusze działali w:",["Italii","Niemczech","Rosji","Belgii"],0,"„Węglarze” walczący o zjednoczenie Włoch; powstania tłumiła Austria."],
+ [4,"Wiec na Górze Wartburskiej w 1817 r. zorganizowali:",["burszowie","karbonariusze","dekabryści","czartyści"],0,"Niemieccy studenci; przyjęli barwy czarno-czerwono-złote."],
+ [4,"Grecja uzyskała niepodległość na mocy traktatu londyńskiego w roku:",["1830","1822","1827","1821"],0,"1821 wybuch powstania, 1822 ogłoszenie niepodległości, 1827 Navarino, 1830 uznanie."],
+ [4,"Rewolucja lipcowa 1830 r. obaliła króla:",["Karola X","Ludwika XVIII","Ludwika Filipa I","Ludwika XVI"],0,"Nowym „królem Francuzów” został Ludwik Filip I."],
+ [4,"Pierwszym królem niepodległej Belgii został:",["Leopold I","Wilhelm I","Otton Wittelsbach","Ludwik Filip I"],0,"Wybrany przez mocarstwa; pochodził z dynastii sasko-koburskiej."],
+ [4,"Dekabryści to:",["rosyjscy spiskowcy z grudnia 1825 r.","włoscy rewolucjoniści","polscy emigranci we Francji","brytyjscy robotnicy"],0,"Ros. diekabr, „grudzień”; wystąpili przeciw Mikołajowi I."],
+ [4,"Który postulat zgłaszali czartyści?",["tajne głosowanie i prawo wyborcze dla wszystkich dorosłych mężczyzn","zniesienie monarchii","niepodległość Irlandii","likwidację parlamentu"],0,"Także zniesienie cenzusu majątkowego dla posłów i diety poselskie."],
+ [4,"Młodą Europę w 1834 r. założył:",["Giuseppe Mazzini","Giuseppe Garibaldi","Lajos Kossuth","Daniel O’Connell"],0,"W Szwajcarii; w jej skład weszła m.in. Młoda Polska."],
+ [4,"Pierwszą poważną porażką Świętego Przymierza był brak interwencji przeciw:",["rewolucji lipcowej we Francji","powstaniu dekabrystów","ruchowi czartystów","karbonariuszom"],0,"Austria i Prusy nie chciały, a Wielka Brytania się sprzeciwiła."],
+ [5,"Wiosna Ludów rozpoczęła się:",["w lutym 1848 r. we Francji","w marcu 1848 r. w Berlinie","w marcu 1848 r. w Wiedniu","w 1830 r. w Paryżu"],0,"Rewolucja lutowa, potem fala objęła kontynent wiosną."],
+ [5,"Które państwo jako pierwsze na świecie wprowadziło powszechne prawo wyborcze mężczyzn?",["II Republika Francuska","Wielka Brytania","Belgia","Stany Zjednoczone"],0,"25 II 1848 proklamowano II Republikę."],
+ [5,"Kto wygrał wybory prezydenckie we Francji w 1848 r.?",["Karol Ludwik Napoleon Bonaparte","Ludwik Filip I","Alexis de Tocqueville","Louis Blanqui"],0,"Dzięki głosom wsi i małych miast; od 1852 cesarz Napoleon III."],
+ [5,"Głównym celem parlamentu frankfurckiego było:",["zjednoczenie Niemiec","niepodległość Polski","obalenie Habsburgów","reforma rolna w Prusach"],0,"Obrady zakończyły się porażką; król Prus odrzucił koronę z rąk ludu."],
+ [5,"Co osiągnięto w Austrii w 1848 r.?",["dymisję Metternicha i uwłaszczenie chłopów","zjednoczenie Niemiec","niepodległość Węgier","republikę"],0,"Cesarz Ferdynand I nadał też konstytucję."],
+ [5,"Przywódcą Węgrów w czasie Wiosny Ludów był:",["Lajos Kossuth","Sándor Petőfi","Józef Bem","Franciszek Józef I"],0,"Bem był polskim generałem w armii węgierskiej."],
+ [5,"Powstanie węgierskie zostało stłumione z pomocą:",["Rosji","Prus","Francji","Wielkiej Brytanii"],0,"Armia feldmarszałka Paskiewicza, ok. 130 tys. żołnierzy."],
+ [5,"Polski generał, który dowodził wojskami węgierskimi w Siedmiogrodzie, to:",["Józef Bem","Ludwik Mierosławski","Wojciech Chrzanowski","Józef Wysocki"],0,"Mierosławski walczył w Badenii, Chrzanowski pod Novarą."],
+ [5,"Republikę Rzymską w 1849 r. zlikwidowały wojska:",["francuskie","austriackie","rosyjskie","pruskie"],0,"Wysłane przez prezydenta Ludwika Napoleona na prośbę papieża Piusa IX."],
+ [5,"Wiosna Ludów ominęła:",["Wielką Brytanię, Szwajcarię, Rosję i Imperium Osmańskie","Francję i Prusy","Austrię i Węgry","Italię i Niemcy"],0,"Dwa pierwsze miały już liberalne ustroje, w dwóch ostatnich brakowało sił zdolnych do buntu."],
+ [5,"Kto najwięcej zyskał na Wiośnie Ludów?",["liberałowie i chłopi","demokraci","Węgrzy","zwolennicy zjednoczenia Włoch"],0,"Chłopi dostali ziemię, liberałowie konstytucje. Demokraci przegrali."],
+ [6,"Doktryna Monroego (1823) głosiła hasło:",["Ameryka dla Amerykanów","wolność, równość, braterstwo","Bóg, honor, ojczyzna","równowaga sił"],0,"Europa nie może się wtrącać w sprawy obu Ameryk."],
+ [6,"Pierwszym niepodległym państwem Ameryki Łacińskiej było:",["Haiti (1804)","Meksyk (1821)","Brazylia (1822)","Wenezuela (1810)"],0,"Założone przez byłych niewolników na dawnej francuskiej wyspie Santo Domingo."],
+ [6,"Przydomek „El Libertador” nosił:",["Simón Bolivar","José de San Martín","Agustín de Iturbide","Pedro I"],0,"Przywódca walk na północy kontynentu, prezydent Wielkiej Kolumbii."],
+ [6,"José de San Martín przyczynił się do niepodległości:",["Argentyny (La Platy), Chile i Peru","Wenezueli i Kolumbii","Meksyku","Brazylii"],0,"Bitwa pod Chacabuco w 1817 r."],
+ [6,"Brazylia uzyskała niepodległość w 1822 r.:",["pokojowo, jako cesarstwo","po krwawej wojnie z Hiszpanią","jako republika","dzięki pomocy USA"],0,"Cesarzem został Pedro, syn króla Portugalii Jana VI."],
+ [6,"Kreole to:",["potomkowie europejskich osadników urodzeni w Ameryce","potomkowie małżeństw indiańsko-europejskich","rdzenna ludność Ameryki","urzędnicy przysyłani z Hiszpanii"],0,"Mieszane pochodzenie to Metysi, rdzenna ludność to Indianie."],
+ [6,"W którym roku Teksas przyłączono do USA?",["1845","1836","1848","1823"],0,"W 1836 r. ogłosił niepodległość od Meksyku, a w 1848 r. zakończyła się wojna USA z Meksykiem."]
+];
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    const pct=Math.round(score/qs.length*100);
+    let best=0;try{best=+localStorage.getItem("nauka:historia-3-dzial-1:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:historia-3-dzial-1:best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na sprawdzian.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    return;
+  }
+  const q=qs[qi];
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+startQuiz(filtered());
+
+/* ---------- open questions ---------- */
+const OQ=[
+ [1,"Omów główne zasady, na których opierał się ład wiedeński.",["<b>Równowaga sił</b>: żadne mocarstwo nie może zdominować Europy (jak Francja za Napoleona).","<b>Restauracja</b>: powrót obalonych dynastii (np. Burbonowie we Francji, Ludwik XVIII).","<b>Legitymizm</b>: władza monarchy pochodzi od Boga, a nie od narodu.","Nienaruszalność granic, prawo mocarstw do interwencji zbrojnej i podział na strefy wpływów (Austria: Italia, Francja: Półwysep Iberyjski).","Strażnikiem ładu stało się Święte Przymierze."]],
+ [1,"Przedstaw najważniejsze zmiany terytorialne po kongresie wiedeńskim.",["Francja: granice z 1789 r.","Wielka Brytania: Helgoland, Malta, Cejlon, Mauritius, Kapsztad.","Rosja: Finlandia, Besarabia, Królestwo Polskie.","Prusy: Nadrenia, Westfalia, Wielkie Księstwo Poznańskie, Gdańsk, część Saksonii.","Austria: okręg tarnopolski, Tyrol, Salzburg, Lombardia, Wenecja, Istria, Dalmacja.","Nowe twory: Rzeczpospolita Krakowska, Związek Niemiecki, Konfederacja Szwajcarska, Królestwo Niderlandów. Zlikwidowano Księstwo Warszawskie i Związek Reński."]],
+ [1,"Czy Święte Przymierze realizowało wartości, do których się odwoływało? Uzasadnij.",["<b>Teza:</b> nie, w praktyce było narzędziem tłumienia ruchów wolnościowych.","Odwoływało się do chrześcijańskiej miłości, sprawiedliwości i braterstwa, a monarchowie mieli być „ojcami” poddanych.","W rzeczywistości służyło utrzymaniu władzy monarchów i podziału Polski, np. zgoda na obalenie przez Austrię liberalnych rządów w Neapolu.","Tłumiono karbonariuszy, chciano interweniować przeciw rewolucji lipcowej i Belgii."]],
+ [2,"Omów społeczne skutki rewolucji przemysłowej.",["Urbanizacja: migracja ze wsi do miast, rozwój kultury miejskiej.","Upadek społeczeństwa stanowego, o pozycji decydują wykształcenie i majątek.","Nowe grupy: burżuazja, klasa średnia, drobnomieszczaństwo, inteligencja, proletariat.","Ciężkie warunki życia robotników (krótkie życie, brak opieki), co rodzi kwestię socjalną i ideologie socjalistyczne."]],
+ [2,"Wymień najważniejsze wynalazki ery rewolucji przemysłowej.",["1769 maszyna parowa (James Watt).","1785 mechaniczne krosno (Cartwright).","1807 statek parowy (Fulton).","1825 parowóz i kolej (Stephenson).","1837 telegraf (Morse). Także koparka parowa 1836, mosty wiszące, maszyny rolnicze."]],
+ [3,"Porównaj konserwatyzm i liberalizm.",["<b>Różnice:</b> konserwatyści za tradycją, religią, silną monarchią i ewolucją; liberałowie za wolnością jednostki, monarchią konstytucyjną z trójpodziałem władzy, państwem prawa, wolnością słowa i wyznania, rozdziałem Kościoła od państwa.","<b>Podobieństwa:</b> obie grupy chciały prawa wyborczego tylko dla wykształconych i zamożnych elit, obie były bezradne wobec losu robotników.","Przedstawiciele: Burke, de Maistre, Czartoryski kontra Smith, Constant, Tocqueville, Mill."]],
+ [3,"Scharakteryzuj idee odwołujące się do kwestii robotniczej. Wskaż podobieństwa i różnice.",["Wspólny cel: poprawa losu robotników.","Socjaliści (Saint-Simon, Fourier, Owen): wspólnoty, wspólna własność, droga pokojowa (wyjątek: Blanqui, przewrót zawodowych rewolucjonistów).","Anarchizm (Proudhon): likwidacja państwa.","Komunizm (Marks, Engels): powszechna rewolucja socjalna, upaństwowienie własności, kontrola religii."]],
+ [4,"Wyjaśnij, w jaki sposób kontestowano system wiedeński. Podaj przykłady.",["Spiski i powstania: karbonariusze (Italia), dekabryści (Rosja 1825).","Manifestacje: wiec burszów na Górze Wartburskiej (1817).","Rewolucja: lipcowa we Francji (1830).","Walka o niepodległość: Grecja (1821–1830), Belgia (1830–1831).","Działania pokojowe: petycje czartystów, O’Connell w Irlandii. Organizacje międzynarodowe: Młoda Europa Mazziniego."]],
+ [4,"Dlaczego brak interwencji przeciw rewolucji lipcowej uznaje się za porażkę Świętego Przymierza?",["Car Mikołaj I wzywał do interwencji, ale Austria i Prusy nie chciały iść na Paryż.","Wielka Brytania i USA szybko uznały Ludwika Filipa, a Londyn nie godził się na wojska rosyjskie nad Sekwaną.","To pokazało, że interesy mocarstw Świętego Przymierza są rozbieżne; podobnie było z Belgią."]],
+ [5,"Omów przyczyny, przebieg i skutki rewolucji lutowej we Francji.",["<b>Przyczyny:</b> krytyka monarchii lipcowej, kryzys gospodarczy i głód, zakaz bankietu w sprawie reformy wyborczej.","<b>Przebieg:</b> 22 II 1848 barykady, Gwardia Narodowa po stronie ludu, abdykacja Ludwika Filipa, 25 II II Republika.","<b>Skutki:</b> powszechne prawo wyborcze mężczyzn, wolności, zniesienie niewolnictwa w koloniach, warsztaty narodowe i powstanie czerwcowe, prezydentura Ludwika Napoleona, a w 1852 II Cesarstwo."]],
+ [5,"Przedstaw bilans Wiosny Ludów.",["Pierwsza i jedyna powszechna rewolucja w Europie; nigdzie nie wygrała całkowicie, ale nigdzie nie przegrała z kretesem.","Wygrali liberałowie (konstytucje, trójpodział władzy, równość wobec prawa) i chłopi (uwłaszczenie).","Przegrali demokraci (republika, powszechne prawo wyborcze).","Nie powstały zjednoczone Niemcy i Włochy ani niepodległe Węgry i Polska, ale wzmocniła się idea narodowa i społeczeństwo obywatelskie."]],
+ [5,"Opisz udział Polaków w Wiośnie Ludów.",["Węgry: Józef Bem (Siedmiogród), Henryk Dembiński, legion Józefa Wysockiego.","Wiedeń: Bem dowodzi obroną w październiku 1848 r.","Badenia: Ludwik Mierosławski.","Piemont: Wojciech Chrzanowski (Novara). Włochy: Legion Adama Mickiewicza.","Polacy walczyli „za wolność naszą i waszą”, licząc, że osłabienie zaborców pomoże Polsce."]],
+ [6,"Omów znaczenie doktryny Monroego dla polityki USA.",["1823, prezydent James Monroe: „Ameryka dla Amerykanów”.","Zakaz ingerencji Europy w sprawy obu Ameryk, a w zamian izolacjonizm USA wobec Europy.","W praktyce uczyniła Amerykę Łacińską strefą wpływów USA w polityce, gospodarce i kulturze, budząc niechęć sąsiadów („gringo”)."]],
+ [6,"Scharakteryzuj proces powstawania niepodległych państw w Ameryce Łacińskiej.",["Przyczyny: konflikt Kreoli z elitami z metropolii, idee oświecenia, wzór rewolucji francuskiej i amerykańskiej.","Junty ogłaszały niepodległość; 1804 Haiti (byli niewolnicy).","Północ: Simón Bolivar i Wielka Kolumbia; południe: San Martín (La Plata, Chile, Peru).","Meksyk 1821 (Iturbide, od 1823 republika), Brazylia 1822 pokojowo jako cesarstwo.","Skutki: granice jak dawne wicekrólestwa, zniszczenia wojenne, nazwy Ameryka Łacińska i Latynosi."]]
+];
+document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+</script>
+</body>
+</html>

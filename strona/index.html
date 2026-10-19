@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nauka przed lekcją</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Lista materialow do nauki. Dane w sprawdziany.json, kazdy sprawdzian/kartkowka to osobny folder. */
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF; --ok:#2F7D4F; --warn:#B26A00; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid #4DB7C9;outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+header.top{background:var(--nav);color:var(--navInk);padding:14px 0 22px}
+header.top .back{display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:10px}
+header.top .back:hover{opacity:1;text-decoration:underline}
+header.top h1{font-size:clamp(30px,7vw,44px);font-weight:800}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15.5px}
+main{padding:20px 0 60px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.filters button{font:inherit;font-weight:700;font-size:14px;border:2px solid var(--c,var(--line));background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--nav));border-color:var(--c,var(--nav));color:#fff}
+.list{display:grid;gap:14px}
+a.card{display:block;text-decoration:none;background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:14px 16px;transition:transform .12s ease,box-shadow .12s ease}
+a.card:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,0,0,.08)}
+a.card.past{opacity:.62}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px;color:var(--muted)}
+.subj{font-weight:700;color:var(--c)}
+.badge{font-weight:700;font-size:13px;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--ink)}
+.badge.soon{background:var(--bad);color:#fff}
+.badge.week{background:var(--warn);color:#fff}
+.badge.done{background:var(--soft);color:var(--muted)}
+.badge.new{background:var(--ok);color:#fff}
+a.card h2{font-size:clamp(21px,5vw,26px);margin:6px 0 4px}
+a.card p{margin:0;color:var(--muted);font-size:15.5px}
+.foot{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:14px;color:var(--muted)}
+.foot b{color:var(--ink)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:24px;text-align:center;color:var(--muted)}
+.hint{color:var(--muted);font-size:14px;margin-top:26px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="back" href="/">← Serwerek domowy</a>
+  <h1>Nauka przed lekcją</h1>
+  <p>Notatki, fiszki i quizy do sprawdzianów i kartkówek. Najnowsze są na górze.</p>
+</div></header>
+<main><div class="wrap">
+  <div class="filters" id="filters" hidden></div>
+  <div class="list" id="list"><div class="empty">Ładowanie…</div></div>
+  <p class="hint">Wynik z quizu zapisuje się w tej przeglądarce, więc na telefonie i komputerze możesz mieć inne najlepsze wyniki.</p>
+</div></main>
+<script>
+const COLORS=["#2F6FB0","#B23A48","#2F7D4F","#6B4C9A","#A8841A","#16788A","#C0562B","#4D5B68"];
+const MONTHS=["stycznia","lutego","marca","kwietnia","maja","czerwca","lipca","sierpnia","września","października","listopada","grudnia"];
+const DAYS=["niedziela","poniedziałek","wtorek","środa","czwartek","piątek","sobota"];
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[n,v] of Object.entries(a)){if(v==null)continue;if(n==="text")e.textContent=v;else if(n==="class")e.className=v;else e.setAttribute(n,v)}e.append(...k.filter(x=>x!=null));return e};
+const parse=s=>{if(!s)return null;const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
+const fmt=d=>`${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+function countdown(d){
+  const n=Math.round((d-today())/86400000);
+  if(n<0)return{t:"już było",c:"done",past:true};
+  if(n===0)return{t:"dzisiaj!",c:"soon"};
+  if(n===1)return{t:"jutro",c:"soon"};
+  if(n<=7)return{t:`za ${n} dni`,c:"week"};
+  return{t:`za ${n} dni`,c:""};
+}
+function best(id){try{const v=localStorage.getItem(`nauka:${id}:best_all`);return v==null?null:+v}catch(e){return null}}
+
+let ALL=[],subjColor={},filter="all";
+function draw(){
+  const box=document.getElementById("list");box.innerHTML="";
+  const items=ALL.filter(x=>filter==="all"||x.przedmiot===filter);
+  if(!items.length){box.append(el("div",{class:"empty",text:"Na razie nic tu nie ma. Nowe notatki pojawią się, gdy przygotujemy je razem."}));return}
+  for(const x of items){
+    const c=subjColor[x.przedmiot];
+    const meta=el("div",{class:"meta"},el("span",{class:"subj",text:x.przedmiot}),el("span",{text:x.typ||"sprawdzian"}));
+    let past=false;
+    const d=parse(x.data);
+    if(d){const cd=countdown(d);past=!!cd.past;meta.append(el("span",{text:fmt(d)}),el("span",{class:"badge "+cd.c,text:cd.t}))}
+    else meta.append(el("span",{class:"badge",text:"data jeszcze nieznana"}));
+    const added=parse(x.dodano);
+    if(added&&(today()-added)/86400000<=3)meta.append(el("span",{class:"badge new",text:"nowe"}));
+    const foot=el("div",{class:"foot"});
+    if(x.zawiera&&x.zawiera.length)foot.append(el("span",{text:x.zawiera.join(" · ")}));
+    const b=best(x.id);
+    foot.append(b==null?el("span",{text:"quiz jeszcze nierobiony"}):el("span",{},"najlepszy quiz: ",el("b",{text:b+"%"})));
+    if(added)foot.append(el("span",{text:"dodano "+added.getDate()+" "+MONTHS[added.getMonth()]}));
+    const a=el("a",{class:"card"+(past?" past":""),href:x.folder+"/",style:"--c:"+c},meta,el("h2",{text:x.tytul}),x.opis?el("p",{text:x.opis}):null,foot);
+    box.append(a);
+  }
+}
+fetch("sprawdziany.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(list=>{
+  // najnowsza notatka na gorze; przy tej samej dacie dodania - blizszy sprawdzian wyzej
+  ALL=list.slice().sort((a,b)=>(b.dodano||"").localeCompare(a.dodano||"")||(a.data||"9").localeCompare(b.data||"9"));
+  [...new Set(ALL.map(x=>x.przedmiot))].forEach((s,i)=>subjColor[s]=COLORS[i%COLORS.length]);
+  const subjects=Object.keys(subjColor);
+  if(subjects.length>1){
+    const f=document.getElementById("filters");f.hidden=false;
+    const mk=(v,label,c)=>{const b=el("button",{"aria-pressed":String(v===filter),style:c?"--c:"+c:null,text:label});b.onclick=()=>{filter=v;f.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));draw()};return b};
+    f.append(mk("all","Wszystko"),...subjects.map(s=>mk(s,s,subjColor[s])));
+  }
+  draw();
+}).catch(e=>{document.getElementById("list").innerHTML="";document.getElementById("list").append(el("div",{class:"empty",text:"Nie udało się wczytać listy ("+e.message+")."}))});
+</script>
+</body>
+</html>
