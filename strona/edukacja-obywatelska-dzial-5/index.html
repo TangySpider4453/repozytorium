@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Edukacja obywatelska – prawo i prawa człowieka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+body{font-variant-numeric:lining-nums}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+/* wzory */
+.f{font-family:var(--serif);font-size:20px;font-weight:700;text-align:center;padding:10px 12px;margin:8px 0;border-radius:10px;background:color-mix(in srgb,var(--c) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 35%,var(--line))}
+.f small{display:block;font-family:var(--sans);font-weight:400;font-size:14px;color:var(--muted);margin-top:2px}
+.ex{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15.5px}
+.ex b:first-child{color:var(--c)}
+.fl{display:grid;gap:10px}
+.fl .row2{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px}
+.fl .row2 .f{margin:0;font-size:19px}
+.fl .row2 p{margin:0;font-size:15.5px}
+@media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
+.fieldpic{display:flex;justify-content:center;margin:8px 0}
+.fieldpic svg{max-width:100%;height:auto}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>Prawo i prawa człowieka</h1>
+  <p>Edukacja obywatelska, „Masz wpływ 1”, dział 5, tematy 1–5 (s. 187–218). Sprawdzian czw. 12 listopada</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="notatka">Notatka</button>
+  <button role="tab" aria-selected="false" data-tab="pojecia">Pojęcia</button>
+  <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+  <button role="tab" aria-selected="false" data-tab="otwarte">Pytania</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Wyciąg z całego działu: przeczytaj tuż przed sprawdzianem. Szczegóły są w Notatce, definicje w zakładce Pojęcia.</p>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol>
+    <li><b>Zdolność prawna</b> (od urodzenia) to nie to samo co <b>zdolność do czynności prawnych</b>: pełna od 18 lat, ograniczona 13–18, brak poniżej 13.</li>
+    <li>Prawa człowieka są <b>przyrodzone, powszechne, nienaruszalne i niezbywalne</b>; dzielą się na <b>trzy generacje</b> (wolnościowe, społeczne, solidarnościowe).</li>
+    <li><b>Umowa o pracę</b> (Kodeks pracy, podległość, urlop) kontra <b>umowy cywilnoprawne</b> (Kodeks cywilny): zlecenie = staranne działanie, dzieło = rezultat.</li>
+  </ol></div>
+  <div class="key" style="--c:var(--t1)"><h2>1. Prawo i jego znaczenie</h2><ol>
+    <li>Prawo to <b>zbiór norm</b> ustanowionych przez prawodawcę albo <b>uprawnienie</b> (np. prawo do nauki).</li>
+    <li>Rodzaje: <b>karne, cywilne, rodzinne, administracyjne, konstytucyjne</b>; zasięg: międzynarodowe, unijne, krajowe, miejscowe.</li>
+    <li>Dobre prawo: <b>precyzyjne, ogólne, niesprzeczne, spójne, realne, jasne, stabilne</b>.</li>
+    <li>Osoba <b>fizyczna</b> = każdy człowiek; osoba <b>prawna</b> = jednostka organizacyjna (spółka, fundacja, partia, uczelnia).</li>
+    <li>Bezpłatna pomoc prawna: co najmniej <b>2 punkty w każdym powiecie</b>, wystarczy oświadczenie, że nie stać Cię na prawnika.</li>
+  </ol></div>
+  <div class="key" style="--c:var(--t5)"><h2>2. Prawa człowieka</h2><ol>
+    <li>Przysługują każdemu bez względu na płeć, wiek, pochodzenie, poglądy (<b>art. 30</b> Konstytucji: godność).</li>
+    <li><b>Powszechna deklaracja praw człowieka</b> ONZ z <b>1948 r.</b>; 10 grudnia Dzień Praw Człowieka. Nie była prawnie wiążąca.</li>
+    <li><b>I generacja</b>: osobiste, obywatelskie i polityczne (życie, wolność słowa, prawa wyborcze).</li>
+    <li><b>II generacja</b>: ekonomiczne, socjalne, kulturalne (praca, ochrona zdrowia, nauka); zależą od zamożności państwa.</li>
+    <li><b>III generacja</b>: solidarnościowe (pokój, rozwój, czyste środowisko, demokracja); wymagają współpracy państw.</li>
+  </ol></div>
+  <div class="key" style="--c:var(--t6)"><h2>3. Ochrona praw człowieka</h2><ol>
+    <li>Przyczyny łamania: <b>polityczne, prawne, kulturowe, ekonomiczne</b>.</li>
+    <li>Krajowe środki (<b>art. 77–80</b>): prawo do sądu, do wynagrodzenia szkody, do zaskarżenia decyzji I instancji, wniosek do <b>RPO</b>, skarga do <b>Trybunału Konstytucyjnego</b>.</li>
+    <li>Odwołanie od decyzji urzędu: <b>14 dni</b> od doręczenia, składasz <b>przez organ, który ją wydał</b>.</li>
+    <li><b>RPO</b> musi zapoznać się z każdym wnioskiem i odpowiedzieć; wniosek bez szczególnej formy.</li>
+    <li><b>ETPC w Strasburgu</b>: skarga dopiero po <b>wyczerpaniu krajowych środków</b>, można po polsku.</li>
+  </ol></div>
+  <div class="key" style="--c:var(--t3)"><h2>4. Dane osobowe i dobra osobiste</h2><ol>
+    <li>Dane osobowe pozwalają <b>zidentyfikować osobę</b> (imię i nazwisko, PESEL, adres, telefon, e-mail, IP).</li>
+    <li><b>Dane wrażliwe</b>: pochodzenie, poglądy, związki zawodowe, dane genetyczne i biometryczne, zdrowie, orientacja.</li>
+    <li><b>RODO</b>: zgoda na użycie danych, inspektor ochrony danych, zgłaszanie naruszeń; <b>prawo do bycia zapomnianym</b> (art. 17).</li>
+    <li>Oszustwa: <b>phishing</b> (e-mail, strona), <b>vishing</b> (telefon), <b>smishing</b> (SMS), fałszywe konkursy.</li>
+    <li>Dobra osobiste (dobre imię, wizerunek, korespondencja…) chroni sąd w postępowaniu <b>cywilnym</b>; obowiązuje <b>domniemanie bezprawności</b>.</li>
+  </ol></div>
+  <div class="key" style="--c:var(--t4)"><h2>5. Formy zatrudnienia</h2><ol>
+    <li>Umowa o pracę: na <b>okres próbny</b> (max 3 mies.), <b>czas określony</b> (max 3 umowy, łącznie 33 mies.), <b>czas nieokreślony</b>.</li>
+    <li>Pisemnie, w 2 egzemplarzach, <b>najpóźniej w dniu rozpoczęcia pracy</b>; zmiany przez <b>aneks</b>.</li>
+    <li>Okres wypowiedzenia: <b>2 tygodnie</b> (staż do pół roku), <b>1 miesiąc</b> (6 mies. – 3 lata), <b>3 miesiące</b> (ponad 3 lata).</li>
+    <li>Ochrona: przełożony lub HR → <b>PIP</b> → <b>sąd pracy</b> (odwołanie od zwolnienia w 21 dni); pomagają <b>związki zawodowe</b>.</li>
+    <li><b>Staż</b> dla bezrobotnych (stypendium 120% zasiłku), <b>praktyki</b> w ramach nauki w technikum.</li>
+  </ol></div>
+</section>
+
+<!-- ============ NOTATKA ============ -->
+<section class="tab" id="notatka" hidden>
+
+  <!-- T1 -->
+  <article class="topic" id="t1" style="--c:var(--t1)">
+    <header><div class="num">Temat 1 · s. 188–193</div><h2>Prawo i jego znaczenie</h2><div class="span">czym jest prawo, dobre prawo, prawo cywilne i rodzinne, pomoc prawna</div></header>
+    <div class="tbody">
+      <h3>Czym jest prawo</h3>
+      <p>Prawo chroni nas przed chaosem, w którym decydowałaby siła. Słowo „prawo” ma dwa znaczenia:</p>
+      <div class="grid2">
+        <div class="box"><h4>Zbiór norm</h4><p>zasady postępowania obowiązujące na danym terytorium (np. prawo polskie, unijne), ustalone przez <b>prawodawcę</b> i zapisane w aktach prawnych; za ich złamanie grożą <b>sankcje</b>.</p></div>
+        <div class="box"><h4>Uprawnienie</h4><p>przewidziana w przepisach możliwość zachowania się w określony sposób, np. <b>prawo do nauki</b>, prawo do sądu.</p></div>
+      </div>
+      <p style="margin-top:10px"><b>System prawny</b> to uporządkowany zbiór wszystkich norm prawnych obowiązujących w państwie.</p>
+
+      <h3>Rodzaje prawa</h3>
+      <p>Ze względu na <b>zasięg terytorialny</b>: międzynarodowe, unijne (europejskie), krajowe (wewnętrzne), miejscowe (lokalne).</p>
+      <div class="tablewrap"><table>
+        <tr><th>Prawo</th><th>Co reguluje</th></tr>
+        <tr><td><b>karne</b></td><td>jakie czyny są przestępstwami lub wykroczeniami i jakie grożą za nie kary</td></tr>
+        <tr><td><b>cywilne</b></td><td>relacje majątkowe i niemajątkowe między osobami fizycznymi i prawnymi</td></tr>
+        <tr><td><b>rodzinne</b></td><td>relacje osobiste i majątkowe między małżonkami i krewnymi</td></tr>
+        <tr><td><b>administracyjne</b></td><td>działanie administracji publicznej i załatwianie spraw urzędowych</td></tr>
+        <tr><td><b>konstytucyjne</b></td><td>ustrój państwa, kompetencje organów, prawa i obowiązki obywateli</td></tr>
+      </table></div>
+
+      <h3>Cechy dobrego prawa</h3>
+      <div class="pill-row">
+        <div class="pr"><b>precyzyjne</b><span>da się je zrozumieć tylko w jeden sposób</span></div>
+        <div class="pr"><b>ogólne</b><span>ogólna norma dla wielu sytuacji, a nie opis pojedynczych przypadków</span></div>
+        <div class="pr"><b>niesprzeczne</b><span>jeden przepis nie nakazuje tego, czego zakazuje inny</span></div>
+        <div class="pr"><b>spójne</b><span>normy się uzupełniają i tworzą logiczną całość</span></div>
+        <div class="pr"><b>realne</b><span>wymaga zachowań, które da się wykonać</span></div>
+        <div class="pr"><b>jasne</b><span>zrozumiały język, jednoznaczne pojęcia</span></div>
+        <div class="pr"><b>stabilne</b><span>nie zmienia się zbyt często</span></div>
+      </div>
+
+      <h3>Prawo na co dzień: instytucje prawa cywilnego i rodzinnego</h3>
+      <p>Przepisy są w <b>Kodeksie cywilnym</b> oraz w <b>Kodeksie rodzinnym i opiekuńczym</b>.</p>
+      <dl class="terms">
+        <div><dt>Osoba fizyczna</dt><dd>każdy człowiek, od narodzin do śmierci; może mieć prawa (np. własności) i obowiązki cywilne</dd></div>
+        <div><dt>Osoba prawna</dt><dd>jednostka organizacyjna będąca podmiotem prawa cywilnego: spółki akcyjne i z o.o., przedsiębiorstwa państwowe, partie, stowarzyszenia rejestrowe (wpisane do KRS), fundacje, Kościoły i związki wyznaniowe, uczelnie</dd></div>
+        <div><dt>Zdolność prawna</dt><dd>możliwość bycia podmiotem stosunków prawnych; człowiek ma ją od urodzenia, osoba prawna od powstania</dd></div>
+        <div><dt>Zdolność do czynności prawnych</dt><dd>możliwość dokonywania działań prawnie skutecznych (np. kupna samochodu); pełna od 18 lat, ograniczona od 13 do 18 lat, brak do 13 lat; można ją stracić przez ubezwłasnowolnienie orzeczone przez sąd</dd></div>
+        <div><dt>Własność</dt><dd>najszersze prawo do rzeczy: korzystanie, dysponowanie i rozporządzanie nią (art. 20 i 64 Konstytucji)</dd></div>
+        <div><dt>Sprzedaż</dt><dd>umowa, w której sprzedający przenosi własność rzeczy, a kupujący płaci cenę</dd></div>
+        <div><dt>Władza rodzicielska</dt><dd>prawa i obowiązki rodziców wobec małoletnich dzieci: wychowanie, opieka nad dzieckiem i jego majątkiem, reprezentowanie (art. 48 i 72)</dd></div>
+        <div><dt>Małżeństwo</dt><dd>formalny związek kobiety i mężczyzny, z którego wynikają prawa i obowiązki (art. 18 i 33)</dd></div>
+        <div><dt>Alimenty</dt><dd>dostarczanie bliskiej osobie środków utrzymania; obowiązek mogą mieć rodzice wobec dzieci albo dzieci wobec rodziców</dd></div>
+        <div><dt>Przysposobienie (adopcja)</dt><dd>dorosły uznaje małoletniego (poniżej 18 lat) za własne dziecko; zgodę musi wyrazić <b>sąd</b></dd></div>
+      </dl>
+
+      <h3>Co może małoletni?</h3>
+      <div class="tablewrap"><table>
+        <tr><th></th><th>Może</th><th>Nie może</th></tr>
+        <tr><td><b>13–18 lat</b></td><td>dysponować rzeczami oddanymi do swobodnego użytku (kieszonkowe), decydować o własnym zarobku</td><td>sprzedać nieruchomości bez zgody <b>sądu</b> (zgoda rodziców nie wystarczy), dysponować rzeczami danymi do określonego użytku, zawierać umów bez zgody opiekuna</td></tr>
+        <tr><td><b>poniżej 13 lat</b></td><td>drobne sprawy życia codziennego (zeszyt, bilet do kina)</td><td>czynności rażąco krzywdzące (np. zakup po zawyżonej cenie jest nieważny)</td></tr>
+      </table></div>
+      <p style="margin-top:8px">Wyjątek: kobieta w wieku 16–18 lat, której sąd zezwolił na ślub z ważnych przyczyn, uzyskuje <b>pełną</b> zdolność do czynności prawnych.</p>
+
+      <h3>Zawarcie małżeństwa cywilnego</h3>
+      <p>Śluby cywilne udziela <b>urząd stanu cywilnego (USC)</b>. Kroki: zebranie dokumentów → wizyta w USC <b>najpóźniej miesiąc przed ślubem</b> (oświadczenie o braku przeszkód, wybór nazwisk, termin) → ślub (oświadczenia przed kierownikiem USC, świadkowie) → <b>odpis skrócony aktu małżeństwa</b>. <b>Przeszkody małżeńskie</b>: bliskie pokrewieństwo, wiek poniżej 18 lat (poza wyjątkiem), choroba psychiczna, pozostawanie w innym związku małżeńskim. Ślub <b>wyznaniowy</b> ma takie same skutki jak cywilny.</p>
+
+      <h3>Pomoc prawna</h3>
+      <p><b>Adwokaci</b> i <b>radcy prawni</b> pracują odpłatnie, ale istnieje <b>nieodpłatna pomoc prawna</b> (ustawa o nieodpłatnej pomocy prawnej, nieodpłatnym poradnictwie obywatelskim i edukacji prawnej).</p>
+      <ul class="dots">
+        <li>Koordynuje <b>Ministerstwo Sprawiedliwości</b>; może skorzystać każdy, kto złoży <b>oświadczenie</b>, że nie stać go na odpłatną pomoc.</li>
+        <li>Wykaz punktów na stronie <b>starostwa powiatowego</b>; w każdym powiecie co najmniej <b>dwa punkty</b>.</li>
+        <li>Pomoc: informacje o prawach, porady, pomoc w piśmie do urzędu, pismo o zwolnienie z kosztów sądowych lub o <b>pełnomocnika z urzędu</b>.</li>
+        <li>Nie obejmuje m.in. prawa celnego, handlowego i spraw przedsiębiorców (poza rozpoczęciem działalności) ani pism w toczących się postępowaniach.</li>
+        <li>W niektórych miastach działają <b>kliniki prawa</b> (studenci prawa pod okiem opiekuna).</li>
+      </ul>
+      <div class="warn"><b>Uważaj:</b> <b>zdolność prawna</b> (bycie podmiotem praw, od urodzenia) to nie <b>zdolność do czynności prawnych</b> (skuteczne działanie, np. zawarcie umowy, pełna dopiero od 18 lat). Osoba prawna to nie człowiek, tylko organizacja. Sprzedaż nieruchomości przez małoletniego wymaga zgody <b>sądu</b>, nie rodziców.</div>
+    </div>
+  </article>
+
+  <!-- T2 -->
+  <article class="topic" id="t2" style="--c:var(--t5)">
+    <header><div class="num">Temat 2 · s. 194–197</div><h2>Prawa człowieka</h2><div class="span">cechy, trzy generacje, dlaczego są ważne</div></header>
+    <div class="tbody">
+      <h3>Czym są prawa człowieka</h3>
+      <p>Po II wojnie światowej uznano, że istnieją prawa należne każdemu człowiekowi niezależnie od woli władz. <b>Prawa człowieka</b> to zbiór wolności i uprawnień przysługujących każdej osobie bez względu na płeć, wiek, rasę, miejsce zamieszkania, pochodzenie, przynależność etniczną, narodową lub kulturową, poglądy polityczne czy inną cechę (art. 30 Konstytucji RP).</p>
+      <p><b>10 grudnia</b> to Międzynarodowy Dzień Praw Człowieka: rocznica przyjęcia w <b>1948 r.</b> przez Zgromadzenie Ogólne ONZ <b>Powszechnej deklaracji praw człowieka</b>. Nie była prawnie wiążąca, ale była pierwszym takim dokumentem społeczności międzynarodowej.</p>
+
+      <h3>Cechy praw człowieka</h3>
+      <div class="grid2">
+        <div class="box"><h4>Przyrodzoność</h4><p>przysługują od urodzenia, bo człowiek ma godność</p></div>
+        <div class="box"><h4>Powszechność (uniwersalność)</h4><p>dotyczą wszystkich ludzi bez wyjątku</p></div>
+        <div class="box"><h4>Nienaruszalność</h4><p>ani władza, ani inni ludzie nie mogą ich odebrać</p></div>
+        <div class="box"><h4>Niezbywalność</h4><p>nie można się ich zrzec (można tylko z nich nie skorzystać)</p></div>
+      </div>
+
+      <h3>Trzy generacje praw człowieka</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Generacja</th><th>Na czym polega</th><th>Przykłady</th></tr>
+        <tr><td><b>I: prawa wolnościowe</b><br>(osobiste, obywatelskie i polityczne)</td><td>chronią przed nadmierną ingerencją państwa i pozwalają brać udział w życiu publicznym</td><td>prawo do życia, zakaz niewolnictwa, wolność od tortur, tajemnica korespondencji, prawo do sądu, równość wobec prawa, prywatność, wolność myśli, słowa i wyznania, prawo własności; obywatelstwo, wolność zgromadzeń i zrzeszania, prawa wyborcze, skarga na organy państwa, informacja publiczna</td></tr>
+        <tr><td><b>II: prawa społeczne</b><br>(ekonomiczne, socjalne, kulturalne)</td><td>dają środki do godnego życia i rozwoju; realizacja zależy od <b>możliwości ekonomicznych</b> państwa</td><td>prawo do pracy, godziwego wynagrodzenia, bezpiecznych warunków pracy; ochrona zdrowia, zabezpieczenie społeczne, ochrona w razie bezrobocia, ochrona małżeństwa, wypoczynek, ochrona młodocianych; prawo do nauki, wolność twórczości, korzystanie z dóbr kultury</td></tr>
+        <tr><td><b>III: prawa solidarnościowe</b></td><td>przysługują <b>zbiorowościom i narodom</b>; wymagają współpracy między państwami</td><td>prawo do czystego środowiska, rozwoju, pokoju, demokracji, pomocy humanitarnej, samostanowienia narodów, dostępu do wspólnego dziedzictwa ludzkości</td></tr>
+      </table></div>
+      <p style="margin-top:8px">Prawa człowieka w Konstytucji RP: <b>art. 38–76</b>. Niektóre prawa trzeba respektować zawsze i bezwarunkowo: <b>prawo do życia, zakaz niewolnictwa, wolność od tortur</b>.</p>
+
+      <h3>Dlaczego prawa człowieka są ważne</h3>
+      <ul class="dots">
+        <li>Żadna władza ich nie nadaje ani nie odbiera, więc dają jednostce <b>autonomię</b> i ograniczają ingerencję państwa.</li>
+        <li>Państwo musi ich przestrzegać; ograniczać je może tylko w ściśle określonych sytuacjach z konstytucji (np. wojna).</li>
+        <li>Ich przestrzeganie kontrolują instytucje <b>ponadpaństwowe</b>, więc można domagać się ochrony nawet wbrew władzom krajowym.</li>
+        <li>Powszechność praw to podstawa oporu wobec tyranii i ochrony godności na całym świecie.</li>
+      </ul>
+      <p>Trzy funkcje praw człowieka (W. Osiatyński): ochrona wolności przed <b>państwem</b>, obowiązek państwa, by <b>umożliwić</b> realizację praw, ochrona przez państwo przed naruszeniem przez <b>innych ludzi</b>.</p>
+      <div class="warn"><b>Uważaj:</b> podział na generacje <b>nie oznacza</b>, że któreś prawa są ważniejsze. Powszechna deklaracja z 1948 r. <b>nie była prawnie wiążąca</b>. Prawo własności to I generacja (osobiste), a prawo do nauki to II (kulturalne).</div>
+    </div>
+  </article>
+
+  <!-- T3 -->
+  <article class="topic" id="t3" style="--c:var(--t6)">
+    <header><div class="num">Temat 3 · s. 198–202</div><h2>Ochrona praw człowieka</h2><div class="span">przyczyny i przykłady łamania, RPO, odwołania, RPD, ETPC</div></header>
+    <div class="tbody">
+      <h3>Dlaczego łamane są prawa człowieka</h3>
+      <div class="grid2">
+        <div class="box"><h4>Polityczne</h4><p>reżimy autorytarne i totalitarne; łamanie praw jako narzędzie walki z przeciwnikami</p></div>
+        <div class="box"><h4>Prawne</h4><p>państwo nie przystąpiło do traktatów; przepisy wprost pozwalają na naruszenia</p></div>
+        <div class="box"><h4>Kulturowe</h4><p>tradycja uzasadnia gorsze traktowanie np. kobiet, dzieci; prawa człowieka odrzucane jako „przejaw kultury Zachodu”</p></div>
+        <div class="box"><h4>Ekonomiczne</h4><p>bezrobocie i ubóstwo zmuszają do pracy w złych warunkach; państwo nie kontroluje warunków pracy</p></div>
+      </div>
+      <p style="margin-top:8px">Najdrastyczniej prawa łamane są w czasie <b>konfliktów zbrojnych</b> i w państwach z represyjnymi reżimami, ale naruszenia zdarzają się też w demokracjach. Różnica: w demokracji jednostka ma <b>realne narzędzia ochrony</b>.</p>
+
+      <h3>Formy i przykłady łamania praw</h3>
+      <p>Mordy i ludobójstwo, tortury, kara śmierci, niewolnictwo i handel ludźmi, bezprawne zatrzymania, nierzetelne procesy, przemoc, dyskryminacja, ograniczanie praw politycznych, naruszanie prywatności, ograniczanie wolności słowa i wyznania.</p>
+      <ul class="dots">
+        <li><b>Białoruś</b>: w 2023 r. 1430 więźniów politycznych.</li>
+        <li><b>Kara śmierci</b>: przewidziana w 53 państwach, m.in. w <b>USA i Japonii</b>; w Europie zrezygnowano z niej (wyjątek: Białoruś).</li>
+        <li><b>Arabia Saudyjska</b>: kobiety pod opieką mężczyzn, których zgoda jest wymagana do aktywności poza domem.</li>
+        <li><b>Praca dzieci</b> (UNICEF): co najmniej 160 mln dzieci pracuje; w najbiedniejszych krajach co piąte dziecko w wieku 5–17 lat, w Afryce Subsaharyjskiej co czwarte.</li>
+        <li>Ofiarą niewolnictwa i handlu ludźmi pada co roku od 2 do 4 mln osób.</li>
+      </ul>
+
+      <h3>Krajowe środki ochrony (art. 77–80 Konstytucji RP)</h3>
+      <ol class="dots">
+        <li>prawo do <b>sądu</b>,</li>
+        <li>prawo do <b>wynagrodzenia szkody</b> wyrządzonej niezgodnym z prawem działaniem władzy,</li>
+        <li>prawo do <b>zaskarżenia</b> orzeczeń i decyzji wydanych w <b>pierwszej instancji</b>,</li>
+        <li>prawo do wystąpienia z wnioskiem do <b>Rzecznika Praw Obywatelskich</b>,</li>
+        <li>prawo do wniesienia skargi do <b>Trybunału Konstytucyjnego</b>.</li>
+      </ol>
+      <p>Inne instytucje: <b>Rzecznik Praw Dziecka</b>, <b>Rzecznik Praw Pacjenta</b>, <b>Rzecznik Finansowy</b>. Na świecie: organizacje państw (ONZ, <b>Rada Europy</b>, z którą związany jest ETPC) i pozarządowe (<b>Amnesty International</b>, Międzynarodowy Komitet Czerwonego Krzyża).</p>
+
+      <h3>Rzecznik Praw Obywatelskich (RPO)</h3>
+      <p>Konstytucyjny organ stojący na straży wolności i praw. Każdy może złożyć <b>wniosek</b> (potocznie skargę). RPO musi się z nim zapoznać i może: zająć się sprawą, wskazać wnioskodawcy środki działania (np. odwołanie), przekazać sprawę innemu organowi albo uznać wniosek za bezzasadny. <b>Zawsze musi odpowiedzieć.</b></p>
+      <p>Wniosek: elektronicznie (formularz na portalu RPO) albo np. listownie; bez szczególnej formy, ale z danymi wnioskodawcy, opisem sprawy i naruszonych praw oraz kopiami dokumentów.</p>
+
+      <h3>Odwołanie od decyzji</h3>
+      <ul class="dots">
+        <li>Od decyzji urzędu lub orzeczenia sądu I instancji przysługuje <b>odwołanie</b> do <b>organu drugiej instancji</b> (wyższego w hierarchii).</li>
+        <li>Odwołanie składa się <b>za pośrednictwem organu, który wydał decyzję</b>, w terminie <b>14 dni od doręczenia</b> (osobiście, elektronicznie lub pocztą).</li>
+        <li>Organ odwoławczy <b>nie może zmienić decyzji na gorszą</b> dla Ciebie (chyba że decyzja rażąco narusza prawo lub interes społeczny).</li>
+        <li>Gdy nie ma II instancji (np. decyzja ministra): <b>wniosek o ponowne rozpatrzenie sprawy</b>.</li>
+        <li>Gdy organ II instancji odrzuci odwołanie: skarga do <b>wojewódzkiego sądu administracyjnego</b>.</li>
+      </ul>
+
+      <h3>Rzecznik Praw Dziecka (RPD)</h3>
+      <p>Konstytucyjny organ (art. 72) chroniący praw dziecka z Konstytucji i <b>Konwencji o prawach dziecka</b>. Może m.in. zbadać sprawę na miejscu, żądać wszczęcia postępowania, brać udział w postępowaniach dotyczących nieletnich, zwracać się do organów z wnioskami i żądać zmiany prawa. Działa z własnej inicjatywy lub po zgłoszeniu; zgłosić może dorosły i dziecko (listownie, telefonicznie, formularzem).</p>
+
+      <h3>Europejski Trybunał Praw Człowieka (ETPC) w Strasburgu</h3>
+      <ul class="dots">
+        <li>Sąd międzynarodowy powołany na mocy <b>Europejskiej konwencji praw człowieka</b>; skargi mogą wnosić obywatele państw, które ją ratyfikowały (także Polacy).</li>
+        <li>Skarga tylko po <b>wyczerpaniu wszystkich krajowych środków</b>; w języku państwa-strony, czyli <b>po polsku</b>; na formularzu, wysłanym pocztą, z kopiami dokumentów.</li>
+        <li>Dotyczy działania władz, przez które skarżący doznał <b>znaczącego uszczerbku</b>. Trybunał może nakazać <b>odszkodowanie</b> lub zalecić inne działania.</li>
+        <li>Rocznie ok. <b>50 tys.</b> skarg, ok. 95% odrzuca się formalnie; na rozpatrzenie czeka się nawet rok, sprawa trwa kilka lat.</li>
+      </ul>
+      <div class="warn"><b>Uważaj:</b> ETPC (Strasburg) to sąd <b>Rady Europy</b> i Europejskiej konwencji praw człowieka, a nie instytucja UE. Do ETPC idziesz <b>na końcu</b>, po sprawach w Polsce. Odwołanie składasz <b>przez</b> urząd, który wydał decyzję, a nie bezpośrednio do wyższego.</div>
+    </div>
+  </article>
+
+  <!-- T4 -->
+  <article class="topic" id="t4" style="--c:var(--t3)">
+    <header><div class="num">Temat 4 · s. 203–207 · rozszerzenie (F)</div><h2>Ochrona danych osobowych i dóbr osobistych</h2><div class="span">dane wrażliwe, RODO, oszustwa w sieci, dobra osobiste</div></header>
+    <div class="tbody">
+      <h3>Dane osobowe</h3>
+      <p><b>Dane osobowe</b> to wszystkie informacje pozwalające zidentyfikować osobę: imię i nazwisko, PESEL, adres, telefon, e-mail, numer IP komputera, a nawet historia przeglądania.</p>
+      <p><b>Dane wrażliwe</b> to szczególny rodzaj danych, których ujawnienie grozi dyskryminacją lub naruszeniem prywatności: pochodzenie rasowe lub etniczne, poglądy polityczne i światopogląd, członkostwo w związkach zawodowych, dane genetyczne i biometryczne (odciski palców, skan tęczówki), zdrowie, życie prywatne, orientacja seksualna.</p>
+
+      <h3>Jak chronione są dane (art. 51 Konstytucji, RODO)</h3>
+      <p><b>RODO</b> to unijne rozporządzenie o ochronie danych osobowych. Firmy i instytucje muszą m.in.: pytać o <b>zgodę</b> na użycie danych, wyznaczyć osobę odpowiedzialną za ochronę danych (<b>inspektora</b>), <b>zgłaszać naruszenia</b> organom państwa. Każdy może zażądać usunięcia swoich danych: <b>prawo do bycia zapomnianym</b> (art. 17 RODO). Za naruszenia firmom grożą kary nawet do 20 mln euro.</p>
+
+      <h3>Dlaczego dbać o dane i jak</h3>
+      <p>Przestępcy mogą <b>ukraść tożsamość</b> i wziąć kredyt, podszyć się pod Ciebie w sieci albo sprzedać dane reklamodawcom (np. wyciek danych 533 mln użytkowników Facebooka w 2021 r.).</p>
+      <ul class="dots">
+        <li><b>Mocne hasła</b> (nie „123456”), <b>uwierzytelnianie dwuskładnikowe</b> (np. kod SMS).</li>
+        <li>Nie udostępniaj wrażliwych informacji (nawet zdjęcia legitymacji), nie loguj się na publicznych komputerach.</li>
+        <li>Sprawdzaj, czy adres strony zaczyna się od <b>https://</b>.</li>
+        <li>Bezpiecznie: samo imię, zdjęcie z ograniczoną widocznością. <b>Nie</b>: numer telefonu, hasła, adres domowy.</li>
+      </ul>
+
+      <h3>Najczęstsze oszustwa online</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Oszustwo</th><th>Na czym polega</th></tr>
+        <tr><td><b>Phishing</b> [pisz-ing]</td><td>fałszywe e-maile lub strony udające bank, sklep, serwis, by wyłudzić dane logowania</td></tr>
+        <tr><td><b>Vishing</b> [wisz-ing]</td><td>telefon od „pracownika banku lub urzędu”, który żąda danych, przelewu lub instalacji aplikacji</td></tr>
+        <tr><td><b>Smishing</b> [smisz-ing]</td><td>fałszywe SMS-y z linkami (np. „dopłata do paczki”)</td></tr>
+        <tr><td><b>Fałszywe konkursy i loterie</b></td><td>trzeba podać dane albo wpłacić „symboliczną” kwotę za nagrodę</td></tr>
+      </table></div>
+      <p style="margin-top:8px">Obrona: sprawdzaj nadawcę, nie klikaj podejrzanych linków, dzwoń na oficjalną infolinię. Cechy phishingu: <b>podejrzany adres nadawcy</b>, <b>literówki i błędy</b>, <b>pośpiech i presja</b> („w ciągu 24 h”), <b>podejrzane linki</b>.</p>
+
+      <h3>Dobra osobiste</h3>
+      <p><b>Dobra osobiste</b> to wartości niematerialne związane z tożsamością i godnością człowieka: dobre imię i reputacja, wizerunek, nietykalność cielesna, integralność seksualna, prywatność i tajemnica korespondencji, nienaruszalność mieszkania, twórczość naukowa, artystyczna, wynalazcza i racjonalizatorska, pamięć o zmarłej osobie bliskiej (Konstytucja m.in. art. 47, 49, 50; Kodeks cywilny art. 23–24).</p>
+      <div class="tablewrap"><table>
+        <tr><th>Dobro</th><th>Przykład naruszenia</th></tr>
+        <tr><td>dobre imię</td><td>rozpowszechnianie fałszywych informacji o kimś</td></tr>
+        <tr><td>tajemnica korespondencji</td><td>publikacja wykradzionych prywatnych wiadomości</td></tr>
+        <tr><td>wizerunek</td><td>udostępnianie zdjęć bez zgody osoby na nich widocznej</td></tr>
+        <tr><td>godność</td><td>mowa nienawiści, hejt, obraźliwe komentarze</td></tr>
+      </table></div>
+      <p style="margin-top:8px"><b>Reakcja:</b> zgłoś naruszenie administratorowi serwisu → zażądaj od sprawcy usunięcia treści → zbierz dowody (zrzuty ekranu, linki) → w poważnej sprawie <b>policja</b> i równolegle <b>pozew cywilny</b>. Można żądać zaniechania działania, usunięcia skutków (np. przeprosin), zadośćuczynienia lub wpłaty na cel społeczny, a przy szkodzie majątkowej także jej naprawienia.</p>
+      <div class="warn"><b>Uważaj:</b> obowiązuje <b>domniemanie bezprawności</b>: to <b>pozwany</b> musi udowodnić, że działał legalnie, a nie poszkodowany, że sprawca działał bezprawnie. Phishing = e-mail/strona, vishing = <b>v</b>oice (telefon), smishing = <b>S</b>MS. Ten temat jest w podręczniku oznaczony „F” (rozszerzenie), ale nauczyciel podał tematy 1–5, więc warto go umieć.</div>
+    </div>
+  </article>
+
+  <!-- T5 -->
+  <article class="topic" id="t5" style="--c:var(--t4)">
+    <header><div class="num">Temat 5 · s. 208–215</div><h2>Formy zatrudnienia</h2><div class="span">umowa o pracę, prawa i obowiązki, ochrona, zlecenie i dzieło, staż i praktyki</div></header>
+    <div class="tbody">
+      <h3>Praca</h3>
+      <p>Praca to świadomy wysiłek człowieka, by osiągnąć cel; jej efektem są <b>dobra</b> lub <b>usługi</b>. Gdy daje dochód, jest pracą <b>zawodową</b>. Praca to jeden z trzech czynników produkcji (obok <b>ziemi</b> i <b>kapitału</b>). Relacje reguluje <b>Kodeks pracy</b> (umowa o pracę) i <b>Kodeks cywilny</b> (umowy cywilnoprawne); nadzór sprawuje <b>Państwowa Inspekcja Pracy (PIP)</b>.</p>
+
+      <h3>Umowa o pracę</h3>
+      <p>Zawierają ją <b>pracodawca</b> i <b>pracownik</b>: pracownik osobiście wykonuje pracę, pracodawca zapewnia warunki i płaci wynagrodzenie. Forma <b>pisemna</b>, <b>dwa egzemplarze</b>, najpóźniej <b>w dniu rozpoczęcia pracy</b>.</p>
+      <div class="pill-row">
+        <div class="pr"><b>Na okres próbny</b><span>maksymalnie 3 miesiące; sprawdzenie kwalifikacji</span></div>
+        <div class="pr"><b>Na czas określony</b><span>najwyżej 3 takie umowy, łącznie do 33 miesięcy (bez okresu próbnego)</span></div>
+        <div class="pr"><b>Na czas nieokreślony</b><span>obowiązuje do rozwiązania</span></div>
+      </div>
+      <p style="margin-top:8px">W umowie: data i miejsce zawarcia, strony (z adresami), rodzaj pracy i miejsce, wynagrodzenie, wymiar czasu pracy (np. cały etat), dzień rozpoczęcia (w umowach terminowych też termin końca). Zmiany za zgodą obu stron: <b>aneks</b> (pisemnie, 2 egzemplarze). Przed pracą: <b>orzeczenie lekarskie</b> od lekarza <b>medycyny pracy</b> (badania wstępne, okresowe, kontrolne) i <b>szkolenie BHP</b>.</p>
+
+      <h3>Prawa i obowiązki pracownika</h3>
+      <div class="grid2">
+        <div class="box"><h4>Pracownik ma prawo do</h4><ul><li>swobodnego wyboru pracy, godnego wynagrodzenia</li><li>równego traktowania (równa płaca za tę samą pracę)</li><li>urlopu i wypoczynku, godności (zakaz dyskryminacji)</li><li>bezpiecznej pracy, przerwy wliczonej w czas pracy</li><li>zrzeszania się, tworzenia związków zawodowych</li><li>odszkodowania przy mobbingu lub nierównym traktowaniu</li><li>odprawy, powrotu do pracy po urlopie bezpłatnym i przed końcem macierzyńskiego, urlopu rodzicielskiego</li></ul></div>
+        <div class="box"><h4>Pracownik ma obowiązek</h4><ul><li>przestrzegać regulaminu i czasu pracy, usprawiedliwiać nieobecności</li><li>starannie i sumiennie pracować</li><li>przestrzegać BHP i przepisów przeciwpożarowych</li><li>dbać o dobro zakładu, nie ujawniać szkodliwych informacji, zachować tajemnicę</li><li>przestrzegać zasad współżycia społecznego</li></ul></div>
+      </div>
+      <p style="margin-top:8px">Za naruszenia grozi odpowiedzialność <b>porządkowa</b> (np. nagana), <b>materialna</b> (grzywna), a w poważnych przypadkach <b>karna</b>. <b>Mobbing</b> to uporczywe, długotrwałe nękanie lub zastraszanie pracownika (np. izolowanie w zespole); pracodawca musi mu <b>przeciwdziałać</b> (art. 94 Kodeksu pracy), a ofiara może żądać zadośćuczynienia lub odszkodowania (co najmniej minimalne wynagrodzenie). <b>Odprawa</b> to jednorazowa wypłata od pracodawcy za rozwiązanie stosunku pracy.</p>
+
+      <h3>Prawa i obowiązki pracodawcy</h3>
+      <div class="grid2">
+        <div class="box"><h4>Pracodawca ma prawo do</h4><ul><li>rozliczania z efektów i egzekwowania sumiennej pracy</li><li>polecenia pracy w nadgodzinach (na szczególnych zasadach)</li><li>kar porządkowych, nagród i premii</li><li>odwołania z urlopu w określonych sytuacjach, udzielenia urlopu bezpłatnego</li><li>monitoringu (gdy niezbędny), kontroli służbowej poczty, potrąceń przewidzianych prawem</li></ul></div>
+        <div class="box"><h4>Pracodawca ma obowiązek</h4><ul><li>zapoznać z obowiązkami i uprawnieniami, dobrze zorganizować pracę</li><li>zapewnić BHP i szkolenia, terminowo płacić</li><li>pomagać w podnoszeniu kwalifikacji, wspierać absolwentów</li><li>stosować sprawiedliwą ocenę, prowadzić akta osobowe</li><li>przeciwdziałać mobbingowi, informować o wolnych etatach</li></ul></div>
+      </div>
+      <p style="margin-top:8px">Urlop: <b>20 dni</b> przy stażu poniżej 10 lat, <b>26 dni</b> przy co najmniej 10 latach; ukończone studia doliczają 8 lat stażu.</p>
+
+      <h3>Jak bronić praw pracowniczych</h3>
+      <ol class="dots">
+        <li>Polubownie: <b>bezpośredni przełożony</b> albo dział kadr (<b>HR</b>).</li>
+        <li><b>Państwowa Inspekcja Pracy</b>: porada prawna, skarga; PIP <b>nie ujawnia</b> danych skarżącego.</li>
+        <li><b>Sąd pracy</b> (wydział pracy i ubezpieczeń społecznych sądu powszechnego).</li>
+        <li><b>Związki zawodowe</b> (art. 12 i 59 Konstytucji): dobrowolne, samorządne, niezależne od pracodawców; założyć może co najmniej <b>10 osób</b> (uchwała, statut, komitet założycielski, rejestracja w KRS).</li>
+      </ol>
+
+      <h3>Rozwiązanie umowy o pracę</h3>
+      <ul class="dots">
+        <li><b>Za porozumieniem stron</b>: w każdej chwili, zgoda obu stron.</li>
+        <li><b>Za wypowiedzeniem</b>: pisemne oświadczenie z podaniem przyczyny (poza umową na okres próbny).</li>
+        <li><b>Bez wypowiedzenia</b> (dyscyplinarne): ciężkie naruszenie obowiązków, przestępstwo, utrata uprawnień.</li>
+        <li><b>Z upływem czasu</b>, na który zawarto umowę; <b>wygaśnięcie</b> (np. śmierć pracownika lub pracodawcy).</li>
+      </ul>
+      <p>Okres wypowiedzenia: <b>2 tygodnie</b> (staż do pół roku), <b>miesiąc</b> (od 6 miesięcy do 3 lat), <b>3 miesiące</b> (ponad 3 lata). Pracodawca może zwolnić z obowiązku pracy w tym czasie, ale płaci. Od zwolnienia można się odwołać do <b>sądu pracy w ciągu 21 dni</b>.</p>
+
+      <h3>Umowy cywilnoprawne (Kodeks cywilny)</h3>
+      <p>Strony są <b>równorzędne</b> (brak podległości służbowej); swoboda wykonywania pracy, niższe składki i podatki, ale mniej przywilejów.</p>
+      <div class="tablewrap"><table>
+        <tr><th></th><th>Umowa zlecenia</th><th>Umowa o dzieło</th></tr>
+        <tr><td>Strony</td><td>zleceniodawca i zleceniobiorca</td><td>zlecający (zamawiający) dzieło i wykonawca dzieła</td></tr>
+        <tr><td>Cel</td><td>wykonanie określonej <b>usługi</b></td><td>wykonanie <b>konkretnego dzieła</b></td></tr>
+        <tr><td>Charakter</td><td>umowa <b>starannego działania</b> (liczy się wykonywanie czynności, nie rezultat)</td><td>umowa <b>rezultatu</b>; nie trzeba wykonać osobiście, ale wykonawca odpowiada za jakość i poprawia wady</td></tr>
+        <tr><td>Wynagrodzenie</td><td>stawka godzinowa, prawo określa <b>płacę minimalną</b></td><td>stawka za projekt, <b>bez</b> płacy minimalnej</td></tr>
+        <tr><td>ZUS</td><td><b>tak</b> (wyjątek: studenci przed 26. rokiem życia, osoby z umową o pracę z min. wynagrodzeniem u innego pracodawcy)</td><td><b>nie</b> odprowadza się składek</td></tr>
+        <tr><td>Urlopy, odprawa</td><td>nie</td><td>nie</td></tr>
+        <tr><td>Przykłady</td><td>adwokat broniący w sądzie, trener prowadzący szkolenia, prowadzenie profilu w mediach społecznościowych</td><td>suknia ślubna u krawca, napisanie książki, strona internetowa dla sklepu</td></tr>
+      </table></div>
+      <p style="margin-top:8px"><b>„Umowy śmieciowe”</b>: potoczna nazwa umów cywilnoprawnych nadużywanych zamiast etatu (rozkwit 2010–2015). Gdy jest określone <b>miejsce, czas pracy i podległość służbowa</b>, powinna to być umowa o pracę. <b>ZUS</b> zbiera składki na ubezpieczenia społeczne (emerytalne, rentowe, chorobowe, wypadkowe) i zdrowotne.</p>
+
+      <h3>Staż i praktyki</h3>
+      <div class="grid2">
+        <div class="box"><h4>Staż</h4><p>nauka zawodu w miejscu pracy, głównie dla <b>bezrobotnych bez doświadczenia</b>. Stypendium <b>120% zasiłku dla bezrobotnych</b>, 2 dni wolne za każde 30 dni, ubezpieczenia emerytalne, rentowe i zdrowotne, zwrot dojazdu, 8 h dziennie / 40 h tygodniowo; dokumentacja do urzędu pracy.</p></div>
+        <div class="box"><h4>Praktyki</h4><p>część kształcenia w <b>technikach</b>, szkołach branżowych i na studiach. Umowa często <b>trójstronna</b> (praktykant, firma, szkoła); zwykle <b>bez wynagrodzenia</b>; praktykant ma ubezpieczenie, prowadzi <b>dzienniczek</b> i sprawozdanie.</p></div>
+      </div>
+      <div class="warn"><b>Uważaj:</b> okres próbny trwa max <b>3 miesiące</b> i <b>nie wlicza się</b> do limitu 33 miesięcy umów terminowych. Zlecenie = <b>staranne działanie</b>, dzieło = <b>rezultat</b>. Przy umowie o dzieło <b>nie ma</b> ZUS ani płacy minimalnej. Prawo do wydawania poleceń i kontroli poczty to prawa <b>pracodawcy</b>, nie pracownika. Do sądu pracy: <b>21 dni</b>; odwołanie od decyzji urzędu: <b>14 dni</b>.</div>
+    </div>
+  </article>
+</section>
+
+<!-- ============ POJĘCIA ============ -->
+<section class="tab" id="pojecia" hidden>
+  <p class="intro">Słowniczek pojęć z całego działu. Zasłoń definicję i sprawdź, czy umiesz ją wyjaśnić własnymi słowami.</p>
+  <div class="key" style="--c:var(--t1)"><h2>1. Prawo i jego znaczenie</h2><dl class="terms">
+    <div><dt>Prawo (1)</dt><dd>zbiór norm ustalonych przez prawodawcę, których trzeba przestrzegać</dd></div>
+    <div><dt>Prawo (2)</dt><dd>uprawnienie, czyli możliwość zachowania się w określony sposób</dd></div>
+    <div><dt>System prawny</dt><dd>uporządkowany zbiór wszystkich norm obowiązujących w państwie</dd></div>
+    <div><dt>Osoba fizyczna</dt><dd>każdy człowiek od narodzin do śmierci</dd></div>
+    <div><dt>Osoba prawna</dt><dd>jednostka organizacyjna będąca podmiotem prawa cywilnego</dd></div>
+    <div><dt>Stowarzyszenie rejestrowe</dt><dd>wpisane do KRS, ma osobowość prawną (w odróżnieniu od zwykłego)</dd></div>
+    <div><dt>Zdolność prawna</dt><dd>możliwość bycia podmiotem praw i obowiązków</dd></div>
+    <div><dt>Zdolność do czynności prawnych</dt><dd>możliwość skutecznego działania prawnego (pełna 18+, ograniczona 13–18)</dd></div>
+    <div><dt>Przeszkody małżeńskie</dt><dd>okoliczności uniemożliwiające ślub, np. bliskie pokrewieństwo, wiek poniżej 18 lat, inny związek</dd></div>
+    <div><dt>Pełnomocnik z urzędu</dt><dd>adwokat lub radca prawny przydzielony przez sąd osobie, której nie stać na prawnika</dd></div>
+  </dl></div>
+  <div class="key" style="--c:var(--t5)"><h2>2. Prawa człowieka</h2><dl class="terms">
+    <div><dt>Prawa człowieka</dt><dd>wolności i uprawnienia przysługujące każdemu bez względu na jakąkolwiek cechę</dd></div>
+    <div><dt>Przyrodzoność</dt><dd>prawa przysługują od urodzenia z racji bycia człowiekiem</dd></div>
+    <div><dt>Powszechność</dt><dd>dotyczą wszystkich ludzi bez wyjątku</dd></div>
+    <div><dt>Nienaruszalność</dt><dd>nikt nie może ich odebrać</dd></div>
+    <div><dt>Niezbywalność</dt><dd>nie można się ich zrzec</dd></div>
+    <div><dt>I generacja</dt><dd>prawa wolnościowe: osobiste, obywatelskie, polityczne</dd></div>
+    <div><dt>II generacja</dt><dd>prawa społeczne: ekonomiczne, socjalne, kulturalne</dd></div>
+    <div><dt>III generacja</dt><dd>prawa solidarnościowe, przysługujące zbiorowościom i narodom</dd></div>
+  </dl></div>
+  <div class="key" style="--c:var(--t6)"><h2>3. Ochrona praw człowieka</h2><dl class="terms">
+    <div><dt>RPO</dt><dd>Rzecznik Praw Obywatelskich, konstytucyjny organ stojący na straży wolności i praw</dd></div>
+    <div><dt>Wniosek do RPO</dt><dd>potocznie skarga; prośba o pomoc w ochronie naruszonych praw</dd></div>
+    <div><dt>Organ drugiej instancji</dt><dd>organ wyższy w hierarchii, rozpatrujący odwołanie</dd></div>
+    <div><dt>Wniosek o ponowne rozpatrzenie</dt><dd>gdy decyzję wydał np. minister i nie ma wyższej instancji</dd></div>
+    <div><dt>RPD</dt><dd>Rzecznik Praw Dziecka, konstytucyjny organ chroniący praw dziecka</dd></div>
+    <div><dt>ETPC</dt><dd>Europejski Trybunał Praw Człowieka w Strasburgu, rozpatruje skargi na naruszenie Europejskiej konwencji praw człowieka</dd></div>
+    <div><dt>Organizacje pozarządowe</dt><dd>np. Amnesty International, Międzynarodowy Komitet Czerwonego Krzyża</dd></div>
+  </dl></div>
+  <div class="key" style="--c:var(--t3)"><h2>4. Dane osobowe i dobra osobiste</h2><dl class="terms">
+    <div><dt>Dane osobowe</dt><dd>informacje pozwalające zidentyfikować osobę</dd></div>
+    <div><dt>Dane wrażliwe</dt><dd>dane, których ujawnienie grozi dyskryminacją lub naruszeniem prywatności</dd></div>
+    <div><dt>RODO</dt><dd>unijne rozporządzenie o ochronie danych osobowych</dd></div>
+    <div><dt>Prawo do bycia zapomnianym</dt><dd>możliwość żądania usunięcia swoich danych (art. 17 RODO)</dd></div>
+    <div><dt>Phishing / vishing / smishing</dt><dd>wyłudzanie danych przez e-mail lub stronę / telefon / SMS</dd></div>
+    <div><dt>Dobra osobiste</dt><dd>wartości niematerialne związane z tożsamością i godnością człowieka</dd></div>
+    <div><dt>Domniemanie bezprawności</dt><dd>to pozwany musi wykazać, że działał legalnie</dd></div>
+  </dl></div>
+  <div class="key" style="--c:var(--t4)"><h2>5. Formy zatrudnienia</h2><dl class="terms">
+    <div><dt>Umowa o pracę</dt><dd>umowa pracodawcy i pracownika (Kodeks pracy); pracownik osobiście wykonuje pracę</dd></div>
+    <div><dt>Aneks</dt><dd>pisemna zmiana warunków umowy podpisana przez obie strony</dd></div>
+    <div><dt>Medycyna pracy</dt><dd>specjalizacja lekarska: badania wpływu pracy na zdrowie, choroby zawodowe</dd></div>
+    <div><dt>Mobbing</dt><dd>uporczywe, długotrwałe nękanie lub zastraszanie pracownika</dd></div>
+    <div><dt>Odprawa</dt><dd>jednorazowa wypłata od pracodawcy za rozwiązanie stosunku pracy</dd></div>
+    <div><dt>PIP</dt><dd>Państwowa Inspekcja Pracy, pilnuje przestrzegania prawa pracy</dd></div>
+    <div><dt>Sąd pracy</dt><dd>wydział pracy i ubezpieczeń społecznych w sądzie powszechnym</dd></div>
+    <div><dt>Związek zawodowy</dt><dd>dobrowolna, samorządna organizacja ludzi pracy, broniąca ich praw</dd></div>
+    <div><dt>Umowa zlecenia</dt><dd>umowa starannego działania o wykonanie usługi</dd></div>
+    <div><dt>Umowa o dzieło</dt><dd>umowa rezultatu o wykonanie konkretnego dzieła</dd></div>
+    <div><dt>Składki ZUS</dt><dd>opłaty na ubezpieczenia społeczne (emerytalne, rentowe, chorobowe, wypadkowe) i zdrowotne</dd></div>
+    <div><dt>Staż</dt><dd>nauka zawodu w miejscu pracy dla bezrobotnych bez doświadczenia</dd></div>
+    <div><dt>Praktyki</dt><dd>część kształcenia zawodowego w technikum, szkole branżowej lub na studiach</dd></div>
+  </dl></div>
+</section>
+
+<!-- ============ FISZKI ============ -->
+<section class="tab" id="fiszki" hidden>
+  <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
+  <div class="filters" id="fcFilters"></div>
+  <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
+  <div class="row">
+    <button class="btn badb" id="fcNo">Jeszcze nie</button>
+    <button class="btn good" id="fcYes">Umiem</button>
+    <button class="btn" id="fcShuffle">Przetasuj</button>
+    <span class="counter" id="fcCount"></span>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie.</p>
+  <div class="filters" id="qFilters"></div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ PYTANIA ============ -->
+<section class="tab" id="otwarte" hidden>
+  <p class="intro">Pytania podsumowujące i „Sprawdź się!” z podręcznika. Najpierw odpowiedz sam(a), potem rozwiń wzór odpowiedzi.</p>
+  <div id="oqList"></div>
+</section>
+
+</div></main>
+
+<script>
+const T = {1:"Prawo i jego znaczenie",2:"Prawa człowieka",3:"Ochrona praw człowieka",4:"Dane i dobra osobiste",5:"Formy zatrudnienia"};
+const COL = {1:1,2:5,3:6,4:3,5:4};
+const C = n => "var(--t"+COL[n]+")";
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(const i of Object.keys(T)) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- flashcards ---------- */
+const FC=[
+ [1,"Dwa znaczenia słowa „prawo”","1) zbiór norm ustalonych przez prawodawcę; 2) uprawnienie, np. prawo do nauki."],
+ [1,"System prawny","Uporządkowany zbiór wszystkich norm prawnych obowiązujących w państwie."],
+ [1,"Cechy dobrego prawa","Precyzyjne, ogólne, niesprzeczne, spójne, realne, jasne, stabilne."],
+ [1,"Prawo karne","Określa, jakie czyny są przestępstwami lub wykroczeniami i jakie grożą za nie kary."],
+ [1,"Prawo cywilne","Reguluje relacje majątkowe i niemajątkowe między osobami fizycznymi i prawnymi."],
+ [1,"Prawo administracyjne","Zasady działania administracji publicznej i załatwiania spraw urzędowych."],
+ [1,"Osoba prawna","Jednostka organizacyjna będąca podmiotem prawa cywilnego, np. spółka, fundacja, partia, uczelnia."],
+ [1,"Zdolność prawna","Możliwość bycia podmiotem stosunków prawnych; człowiek od urodzenia, osoba prawna od powstania."],
+ [1,"Zdolność do czynności prawnych","Możliwość skutecznych działań prawnych: pełna od 18 lat, ograniczona 13–18, brak do 13."],
+ [1,"Przysposobienie","Adopcja: dorosły uznaje małoletniego za swoje dziecko; zgodę wyraża sąd."],
+ [1,"Przeszkody małżeńskie","Np. bliskie pokrewieństwo, wiek poniżej 18 lat, choroba psychiczna, inny związek małżeński."],
+ [1,"Nieodpłatna pomoc prawna","Dla każdego, kto oświadczy, że nie stać go na prawnika; co najmniej 2 punkty w powiecie; koordynuje Ministerstwo Sprawiedliwości."],
+ [1,"Pełnomocnik z urzędu","Adwokat lub radca prawny przydzielony przez sąd osobie, której nie stać na prawnika."],
+ [2,"Prawa człowieka","Wolności i uprawnienia każdej osoby bez względu na płeć, wiek, pochodzenie, poglądy czy inne cechy."],
+ [2,"Cztery cechy praw człowieka","Przyrodzoność, powszechność, nienaruszalność, niezbywalność."],
+ [2,"Niezbywalność","Nie można się tych praw zrzec (można z nich nie skorzystać)."],
+ [2,"Powszechna deklaracja praw człowieka","Przyjęta przez ONZ w 1948 r.; nie była prawnie wiążąca. 10 grudnia: Dzień Praw Człowieka."],
+ [2,"I generacja praw","Prawa wolnościowe: osobiste, obywatelskie i polityczne, np. prawo do życia, wolność słowa, prawa wyborcze."],
+ [2,"II generacja praw","Prawa społeczne: ekonomiczne, socjalne, kulturalne, np. prawo do pracy, ochrony zdrowia, nauki. Zależą od zamożności państwa."],
+ [2,"III generacja praw","Prawa solidarnościowe zbiorowości i narodów, np. do pokoju, rozwoju, czystego środowiska, demokracji."],
+ [2,"Prawa bezwarunkowe","Trzeba je respektować zawsze, np. prawo do życia, zakaz niewolnictwa, wolność od tortur."],
+ [3,"Przyczyny łamania praw człowieka","Polityczne, prawne, kulturowe, ekonomiczne."],
+ [3,"Krajowe środki ochrony (art. 77–80)","Prawo do sądu, wynagrodzenia szkody, zaskarżenia decyzji I instancji, wniosek do RPO, skarga do TK."],
+ [3,"Co może zrobić RPO z wnioskiem?","Zająć się sprawą, wskazać środki działania, przekazać innemu organowi lub uznać za bezzasadny; zawsze odpowiada."],
+ [3,"Termin odwołania od decyzji","14 dni od doręczenia; składane przez organ, który wydał decyzję."],
+ [3,"Organ drugiej instancji","Organ wyższy w hierarchii, który rozpatruje odwołanie."],
+ [3,"Rzecznik Praw Dziecka","Konstytucyjny organ chroniący praw dziecka (Konstytucja, Konwencja o prawach dziecka)."],
+ [3,"ETPC","Europejski Trybunał Praw Człowieka w Strasburgu; skargi z Europejskiej konwencji praw człowieka."],
+ [3,"Kiedy można złożyć skargę do ETPC?","Po wyczerpaniu wszystkich krajowych środków zaskarżenia; można po polsku."],
+ [4,"Dane osobowe","Informacje pozwalające zidentyfikować osobę, np. imię i nazwisko, PESEL, adres, e-mail, IP."],
+ [4,"Dane wrażliwe","Np. pochodzenie, poglądy, związki zawodowe, dane genetyczne i biometryczne, zdrowie, orientacja."],
+ [4,"RODO","Unijne rozporządzenie o ochronie danych: zgoda, inspektor ochrony danych, zgłaszanie naruszeń."],
+ [4,"Prawo do bycia zapomnianym","Prawo do żądania usunięcia swoich danych (art. 17 RODO)."],
+ [4,"Phishing, vishing, smishing","Wyłudzanie danych przez e-mail lub stronę, przez telefon, przez SMS."],
+ [4,"Dobra osobiste","Wartości niematerialne związane z tożsamością i godnością, np. dobre imię, wizerunek, tajemnica korespondencji."],
+ [4,"Domniemanie bezprawności","W sprawie o dobra osobiste to pozwany musi udowodnić, że działał legalnie."],
+ [5,"Umowa na okres próbny","Najwyżej 3 miesiące; sprawdzenie kwalifikacji pracownika."],
+ [5,"Umowa na czas określony","Najwyżej 3 umowy, łącznie do 33 miesięcy (bez okresu próbnego)."],
+ [5,"Okres wypowiedzenia","2 tygodnie (staż do pół roku), 1 miesiąc (6 mies. – 3 lata), 3 miesiące (ponad 3 lata)."],
+ [5,"Mobbing","Uporczywe i długotrwałe nękanie lub zastraszanie pracownika; pracodawca musi mu przeciwdziałać."],
+ [5,"Gdzie bronić praw pracowniczych?","Przełożony lub HR, Państwowa Inspekcja Pracy, sąd pracy, związki zawodowe."],
+ [5,"Umowa zlecenia","Umowa starannego działania; płaca minimalna i składki ZUS (z wyjątkami)."],
+ [5,"Umowa o dzieło","Umowa rezultatu; bez ZUS i bez płacy minimalnej; wykonawca poprawia wady."],
+ [5,"Staż","Nauka zawodu w miejscu pracy dla bezrobotnych; stypendium 120% zasiłku dla bezrobotnych."],
+ [5,"Urlop wypoczynkowy","20 dni przy stażu poniżej 10 lat, 26 dni przy co najmniej 10 latach."]
+];
+let deck=[],fcIdx=0,known=0;
+const fcEl=document.getElementById("fc");
+function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function drawFC(){
+  fcEl.classList.remove("flip");
+  const cnt=document.getElementById("fcCount");
+  if(!deck.length){
+    fcEl.style.setProperty("--c","var(--ok)");
+    document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;
+    document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
+  }
+  const [n,f,b]=deck[0];
+  fcEl.style.setProperty("--c",C(n));
+  setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;
+  document.querySelector("#fcFront b").textContent=f;
+  cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
+}
+fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;deck.shift();known++;drawFC();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;deck.push(deck.shift());drawFC();});
+let fcFilter="all";
+document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); buildDeck("all");
+
+/* ---------- quiz ---------- */
+const Q=[
+ [1,"Prawo rozumiane jako możliwość zachowania się w określony sposób (np. prawo do nauki) to:",["uprawnienie","system prawny","norma karna","sankcja"],0,"Drugie znaczenie słowa „prawo”; pierwsze to zbiór norm."],
+ [1,"Które prawo określa, jakie czyny są przestępstwami i jakie grożą za nie kary?",["karne","cywilne","administracyjne","konstytucyjne"],0,"Prawo cywilne reguluje relacje majątkowe i niemajątkowe."],
+ [1,"Relacje osobiste i majątkowe między małżonkami i krewnymi reguluje prawo:",["rodzinne","administracyjne","karne","międzynarodowe"],0,"Przepisy są w Kodeksie rodzinnym i opiekuńczym."],
+ [1,"Prawo, w którym jeden przepis nie nakazuje tego, czego zakazuje inny, jest:",["niesprzeczne","ogólne","stabilne","realne"],0,"Realne = da się je wykonać, stabilne = nie zmienia się zbyt często."],
+ [1,"Prawo „realne” to takie, które:",["wymaga zachowań możliwych do wykonania","rzadko się zmienia","opisuje każdy pojedynczy przypadek","jest napisane prostym językiem"],0,"Prosty język to cecha prawa jasnego."],
+ [1,"Która z wymienionych jest osobą prawną?",["fundacja","pełnoletni obywatel","stowarzyszenie zwykłe","małoletni uczeń"],0,"Stowarzyszenie zwykłe nie ma osobowości prawnej, ma ją stowarzyszenie rejestrowe (KRS)."],
+ [1,"Zdolność prawną człowiek nabywa:",["z chwilą urodzenia","w wieku 13 lat","w wieku 18 lat","po uzyskaniu dowodu osobistego"],0,"Zdolność prawna to możliwość bycia podmiotem praw; mają ją wszyscy ludzie."],
+ [1,"Ograniczoną zdolność do czynności prawnych ma osoba w wieku:",["13–18 lat","od urodzenia do 13 lat","16–21 lat","powyżej 18 lat"],0,"Do 13 lat brak, od 18 pełna."],
+ [1,"16-letni uczeń chce sprzedać odziedziczone mieszkanie. Potrzebuje zgody:",["sądu","rodziców","notariusza","szkoły"],0,"Zgoda rodziców nie wystarczy przy sprzedaży nieruchomości przez małoletniego."],
+ [1,"Zgodę na przysposobienie (adopcję) wyraża:",["sąd","urząd stanu cywilnego","rzecznik praw dziecka","kurator oświaty"],0,"Przysposobienie dotyczy osoby małoletniej (poniżej 18 lat)."],
+ [1,"Śluby cywilne udziela:",["urząd stanu cywilnego","sąd rejonowy","starostwo powiatowe","notariusz"],0,"Wizyta w USC najpóźniej miesiąc przed ślubem."],
+ [1,"Które z wymienionych jest przeszkodą małżeńską?",["pozostawanie w innym związku małżeńskim","różnica wieku","różne wyznania","brak pracy"],0,"Inne przeszkody: bliskie pokrewieństwo, wiek poniżej 18 lat, choroba psychiczna."],
+ [1,"Ile co najmniej punktów nieodpłatnej pomocy prawnej powinno działać w każdym powiecie?",["dwa","jeden","pięć","dziesięć"],0,"Wykaz punktów jest na stronie starostwa powiatowego."],
+ [1,"Kto może skorzystać z nieodpłatnej pomocy prawnej?",["każdy, kto oświadczy, że nie stać go na odpłatną pomoc","tylko osoby bezrobotne","tylko emeryci","tylko przedsiębiorcy"],0,"Wystarczy oświadczenie złożone w punkcie pomocy."],
+ [2,"Cecha praw człowieka oznaczająca, że nie można się ich zrzec, to:",["niezbywalność","nienaruszalność","przyrodzoność","powszechność"],0,"Nienaruszalność = nikt nie może ich odebrać."],
+ [2,"Powszechną deklarację praw człowieka przyjęto w roku:",["1948","1945","1950","1989"],0,"Przyjęło ją Zgromadzenie Ogólne ONZ; rocznica to 10 grudnia."],
+ [2,"Powszechna deklaracja praw człowieka:",["nie była aktem prawnie wiążącym","jest częścią Konstytucji RP","jest rozporządzeniem UE","powołała ETPC"],0,"Mimo to była pierwszym dokumentem zapowiadającym ochronę praw wszystkich ludzi."],
+ [2,"Prawo własności należy do praw:",["I generacji","II generacji","III generacji","żadnej generacji"],0,"To prawo osobiste, czyli wolnościowe."],
+ [2,"Prawo do ochrony zdrowia należy do praw:",["II generacji","I generacji","III generacji","obywatelskich"],0,"To prawo socjalne, czyli społeczne."],
+ [2,"Prawo do pokoju i do czystego środowiska to prawa:",["solidarnościowe (III generacji)","wolnościowe (I generacji)","ekonomiczne (II generacji)","polityczne"],0,"Przysługują zbiorowościom i narodom."],
+ [2,"Prawa, których realizacja zależy od możliwości ekonomicznych państwa, to prawa:",["II generacji","I generacji","III generacji","osobiste"],0,"Np. prawo do zabezpieczenia społecznego, ochrony zdrowia."],
+ [2,"Wolność zgromadzeń należy do praw:",["obywatelskich i politycznych (I generacja)","kulturalnych (II generacja)","solidarnościowych (III generacja)","socjalnych"],0,"I generacja obejmuje też prawa wyborcze i prawo do informacji publicznej."],
+ [2,"Które prawo należy respektować zawsze i bezwarunkowo?",["zakaz niewolnictwa","prawo do wypoczynku","prawo do rozwoju","prawo do zabezpieczenia społecznego"],0,"Bezwarunkowe są też prawo do życia i wolność od tortur."],
+ [2,"Prawa i wolności człowieka zawiera Konstytucja RP w artykułach:",["38–76","1–29","77–80","95–125"],0,"Art. 77–80 to środki ochrony tych praw."],
+ [3,"Brak przystąpienia państwa do traktatów o prawach człowieka to przyczyna łamania praw:",["prawna","kulturowa","ekonomiczna","religijna"],0,"Cztery grupy przyczyn: polityczne, prawne, kulturowe, ekonomiczne."],
+ [3,"Praca dzieci w warunkach zagrażających zdrowiu z powodu skrajnego ubóstwa to przykład przyczyn:",["ekonomicznych","politycznych","prawnych","kulturowych"],0,"Ubóstwo i bezrobocie zmuszają do pracy w złych warunkach."],
+ [3,"Który środek NIE należy do krajowych środków ochrony z art. 77–80 Konstytucji?",["skarga do ETPC","wniosek do RPO","skarga do Trybunału Konstytucyjnego","prawo do sądu"],0,"ETPC to instytucja międzynarodowa."],
+ [3,"Odwołanie od decyzji organu administracji składa się w terminie:",["14 dni od doręczenia","7 dni od wydania","21 dni od doręczenia","30 dni od wydania"],0,"21 dni to termin odwołania od zwolnienia z pracy do sądu pracy."],
+ [3,"Odwołanie od decyzji urzędu składa się:",["za pośrednictwem organu, który wydał decyzję","bezpośrednio do ministra","do Rzecznika Praw Obywatelskich","do ETPC"],0,"Rozpatruje je organ drugiej instancji."],
+ [3,"Gdy decyzję wydał minister i nie ma drugiej instancji, można złożyć:",["wniosek o ponowne rozpatrzenie sprawy","skargę do ETPC","odwołanie do prezydenta","wniosek do RPD"],0,"Wniosek kieruje się do organu, który wydał decyzję."],
+ [3,"Organ odwoławczy co do zasady:",["nie może zmienić decyzji na bardziej niekorzystną dla odwołującego","zawsze musi uchylić decyzję","może dowolnie zaostrzyć decyzję","nie może zmienić decyzji"],0,"Wyjątek: decyzja rażąco narusza prawo lub interes społeczny."],
+ [3,"Co RPO musi zrobić z każdym wnioskiem?",["zapoznać się z nim i udzielić odpowiedzi","przekazać go do sądu","nadać mu bieg w ETPC","zażądać opłaty"],0,"Może też uznać wniosek za bezzasadny, ale i tak odpowiada."],
+ [3,"Siedziba Europejskiego Trybunału Praw Człowieka to:",["Strasburg","Bruksela","Haga","Luksemburg"],0,"Trybunał działa na podstawie Europejskiej konwencji praw człowieka."],
+ [3,"Skargę do ETPC można złożyć:",["po wyczerpaniu krajowych środków zaskarżenia","zaraz po naruszeniu prawa","tylko przez adwokata z UE","tylko po angielsku"],0,"Można ją napisać w języku państwa-strony konwencji, czyli po polsku."],
+ [3,"Organizacją pozarządową chroniącą prawa człowieka jest:",["Amnesty International","Rada Europy","ONZ","Trybunał Konstytucyjny"],0,"ONZ i Rada Europy to organizacje zrzeszające państwa."],
+ [4,"Które z wymienionych to dane wrażliwe?",["poglądy polityczne","adres e-mail","numer telefonu","imię"],0,"Wrażliwe są też np. dane o zdrowiu, pochodzeniu, dane biometryczne."],
+ [4,"Prawo do bycia zapomnianym wynika z:",["RODO","Kodeksu pracy","Kodeksu karnego","Powszechnej deklaracji praw człowieka"],0,"Art. 17 RODO pozwala żądać usunięcia swoich danych."],
+ [4,"Oszustwo, w którym przestępca dzwoni, podając się za pracownika banku, to:",["vishing","phishing","smishing","spam"],0,"Vishing = telefon, smishing = SMS, phishing = e-mail lub strona."],
+ [4,"SMS o „dopłacie do paczki” z linkiem to przykład:",["smishingu","vishingu","hejtu","naruszenia wizerunku"],0,"W 2022 r. tysiące Polaków dostały takie SMS-y."],
+ [4,"Którą informację podręcznik uznaje za bezpieczną do udostępnienia w sieci?",["samo imię","numer telefonu","adres domowy","hasło"],0,"Zdjęcie twarzy tylko z ograniczoną widocznością."],
+ [4,"Udostępnienie w sieci zdjęcia bez zgody widocznej na nim osoby narusza:",["wizerunek","tajemnicę korespondencji","nienaruszalność mieszkania","twórczość naukową"],0,"Wizerunek to jedno z dóbr osobistych."],
+ [4,"Domniemanie bezprawności oznacza, że:",["pozwany musi wykazać, że działał legalnie","poszkodowany musi udowodnić bezprawność","sąd zawsze uznaje winę","sprawa trafia do policji"],0,"Dlatego poszkodowany nie musi dowodzić bezprawności czynu."],
+ [4,"Sprawę o naruszenie dóbr osobistych kieruje się do sądu w postępowaniu:",["cywilnym","administracyjnym","konstytucyjnym","dyscyplinarnym"],0,"W poważnych sprawach można równolegle zgłosić się na policję."],
+ [5,"Umowa na okres próbny może trwać najwyżej:",["3 miesiące","6 miesięcy","1 miesiąc","12 miesięcy"],0,"Pozwala sprawdzić kwalifikacje pracownika."],
+ [5,"Łączny okres umów na czas określony u jednego pracodawcy nie może przekroczyć:",["33 miesięcy","24 miesięcy","36 miesięcy","12 miesięcy"],0,"Można zawrzeć najwyżej 3 takie umowy; okresu próbnego się nie wlicza."],
+ [5,"Umowę o pracę zawiera się pisemnie najpóźniej:",["w dniu rozpoczęcia pracy","po okresie próbnym","w ciągu 14 dni od rozpoczęcia","w ciągu miesiąca"],0,"W dwóch egzemplarzach."],
+ [5,"Zmianę warunków umowy o pracę (np. podwyżkę) wprowadza się:",["aneksem","nową rekrutacją","ustnym poleceniem","regulaminem szkoły"],0,"Aneks podpisują obie strony, w dwóch egzemplarzach."],
+ [5,"Okres wypowiedzenia przy stażu od 6 miesięcy do 3 lat wynosi:",["1 miesiąc","2 tygodnie","3 miesiące","2 miesiące"],0,"Do pół roku: 2 tygodnie, ponad 3 lata: 3 miesiące."],
+ [5,"Na odwołanie od zwolnienia z pracy do sądu pracy pracownik ma:",["21 dni","14 dni","7 dni","3 miesiące"],0,"Sąd może przywrócić do pracy lub zasądzić odszkodowanie."],
+ [5,"Instytucja, która przyjmuje skargi pracowników i nie ujawnia danych skarżącego, to:",["Państwowa Inspekcja Pracy","ZUS","urząd skarbowy","Rzecznik Praw Pacjenta"],0,"PIP stoi na straży przestrzegania prawa pracy."],
+ [5,"Związek zawodowy może założyć co najmniej:",["10 osób","3 osoby","15 osób","50 osób"],0,"Muszą podjąć uchwałę, przyjąć statut, wybrać komitet założycielski i zarejestrować związek w KRS."],
+ [5,"Umowa starannego działania, w której liczy się wykonywanie czynności, a nie rezultat, to:",["umowa zlecenia","umowa o dzieło","umowa o pracę","umowa sprzedaży"],0,"Umowa o dzieło to umowa rezultatu."],
+ [5,"Od wynagrodzenia z umowy o dzieło:",["nie odprowadza się składek ZUS","zawsze odprowadza się składki ZUS","odprowadza się tylko składkę zdrowotną","pracodawca płaci odprawę"],0,"Prawo nie określa też dla niej płacy minimalnej."],
+ [5,"Napisanie książki dla wydawcy to typowy przykład umowy:",["o dzieło","zlecenia","o pracę","o praktyki"],0,"Liczy się konkretny rezultat."],
+ [5,"Prawo do kontroli służbowej poczty elektronicznej przysługuje:",["pracodawcy","pracownikowi","związkowi zawodowemu","PIP"],0,"Pracownik ma m.in. prawo do bezpiecznej pracy i tworzenia związków zawodowych."],
+ [5,"Stażysta otrzymuje stypendium w wysokości:",["120% zasiłku dla bezrobotnych","minimalnego wynagrodzenia","50% zasiłku dla bezrobotnych","nie otrzymuje nic"],0,"Za każde 30 dni stażu przysługują też 2 dni wolne."],
+ [5,"Praktyki zawodowe w technikum zwykle:",["odbywają się bez wynagrodzenia, na podstawie umowy często trójstronnej","wymagają statusu bezrobotnego","dają stypendium 120% zasiłku","trwają co najmniej rok"],0,"Praktykant prowadzi dzienniczek i sprawozdanie."]
+];
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    const pct=Math.round(score/qs.length*100);
+    let best=0;try{best=+localStorage.getItem("nauka:edukacja-obywatelska-dzial-5:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:edukacja-obywatelska-dzial-5:best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na sprawdzian.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    return;
+  }
+  const q=qs[qi];
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+startQuiz(filtered());
+
+/* ---------- open questions ---------- */
+const OQ=[
+ [1,"Wytłumacz, co oznacza, że prawo powinno być precyzyjne, niesprzeczne oraz realne.",["<b>Precyzyjne:</b> przepis da się zinterpretować tylko w jeden sposób, wiadomo, co jest zgodne z prawem.","<b>Niesprzeczne:</b> jeden przepis nie nakazuje zachowania, którego zakazuje inny.","<b>Realne:</b> wymaga zachowań możliwych do wykonania; nie tworzy norm, których ludzie nie są w stanie przestrzegać."]],
+ [1,"Wyjaśnij, jaka jest różnica między osobą prawną a osobą fizyczną.",["<b>Osoba fizyczna</b> to każdy człowiek, od narodzin do śmierci.","<b>Osoba prawna</b> to jednostka organizacyjna (np. spółka z o.o., fundacja, partia, uczelnia, stowarzyszenie rejestrowe).","Obie mogą być podmiotem prawa cywilnego. Zdolność prawną człowiek ma od urodzenia, osoba prawna od powstania; osoba prawna ma pełną zdolność do czynności prawnych."]],
+ [1,"Na czym polega ograniczona zdolność do czynności prawnych i kto ją posiada?",["Mają ją osoby w wieku <b>13–18 lat</b> (oraz np. częściowo ubezwłasnowolnione).","Mogą dysponować rzeczami oddanymi do swobodnego użytku (kieszonkowe) i własnym zarobkiem.","Nie mogą bez zgody opiekuna skutecznie zawierać umów, a nieruchomość mogą sprzedać tylko za zgodą <b>sądu</b>."]],
+ [1,"W jakich okolicznościach obywatel może skorzystać z nieodpłatnej pomocy prawnej? Co obejmuje?",["Gdy złoży oświadczenie, że nie stać go na odpłatną pomoc prawną.","Punkty: wykaz na stronie starostwa, co najmniej 2 w powiecie; koordynuje Ministerstwo Sprawiedliwości.","Obejmuje: informacje o prawach, porady, pomoc w piśmie, pismo o zwolnienie z kosztów lub o pełnomocnika z urzędu.","Nie obejmuje m.in. prawa celnego, handlowego, spraw przedsiębiorców (poza rozpoczęciem działalności) ani pism w toczących się postępowaniach."]],
+ [2,"Czym są prawa człowieka i jakie są ich najważniejsze cechy?",["Zbiór wolności i uprawnień każdej osoby bez względu na płeć, wiek, pochodzenie, poglądy itd.","<b>Przyrodzone</b> (z racji bycia człowiekiem), <b>powszechne</b> (dla wszystkich), <b>nienaruszalne</b> (nikt ich nie odbierze), <b>niezbywalne</b> (nie można się ich zrzec)."]],
+ [2,"Czym są generacje praw człowieka? Podaj przykłady praw należących do każdej z nich.",["<b>I generacja</b>, prawa wolnościowe (osobiste, obywatelskie, polityczne): prawo do życia, wolność słowa, prawa wyborcze.","<b>II generacja</b>, prawa społeczne (ekonomiczne, socjalne, kulturalne): prawo do pracy, ochrony zdrowia, nauki; zależą od zamożności państwa.","<b>III generacja</b>, prawa solidarnościowe: prawo do pokoju, rozwoju, czystego środowiska; wymagają współpracy państw.","Podział nie oznacza, że któreś prawa są ważniejsze."]],
+ [2,"Przyporządkuj prawa do generacji: prawo własności, do pracy, do ochrony zdrowia, do pokoju, do nauki, do rozwoju, wolność zgromadzeń, prawo do demokracji.",["<b>I generacja:</b> prawo własności, wolność zgromadzeń.","<b>II generacja:</b> prawo do pracy, do ochrony zdrowia, do nauki.","<b>III generacja:</b> prawo do pokoju, do rozwoju, do demokracji."]],
+ [2,"Dlaczego prawa człowieka są istotne w życiu każdego z nas?",["Żadna władza ich nie nadaje ani nie odbiera, więc chronią autonomię jednostki i ograniczają ingerencję państwa.","Państwo musi ich przestrzegać, a ograniczać może tylko w wyjątkowych sytuacjach (np. wojna).","Kontrolują je instytucje ponadpaństwowe, więc można się bronić nawet wbrew władzom krajowym.","Są podstawą oporu wobec tyranii i ochrony godności na całym świecie."]],
+ [3,"Jakie działania władz publicznych naruszają prawa człowieka? Podaj przyczyny łamania praw.",["Np. tortury, kara śmierci, bezprawne zatrzymania, nierzetelne procesy, dyskryminacja, ograniczanie wolności słowa i praw politycznych, naruszanie prywatności.","Przyczyny: <b>polityczne</b> (reżimy autorytarne), <b>prawne</b> (brak traktatów, przepisy dopuszczające naruszenia), <b>kulturowe</b> (tradycja), <b>ekonomiczne</b> (ubóstwo, bezrobocie)."]],
+ [3,"Do jakich instytucji krajowych może się zwrócić osoba, której prawa i wolności zostały naruszone?",["Sąd (prawo do sądu, wynagrodzenie szkody, zaskarżenie orzeczeń I instancji).","Rzecznik Praw Obywatelskich (wniosek).","Trybunał Konstytucyjny (skarga).","Inni rzecznicy: Rzecznik Praw Dziecka, Rzecznik Praw Pacjenta, Rzecznik Finansowy."]],
+ [3,"Co należy zrobić, aby uzyskać pomoc Rzecznika Praw Obywatelskich?",["Złożyć <b>wniosek</b>: elektronicznie (formularz na portalu RPO) lub np. listownie; nie ma wymaganej formy.","Podać dane wnioskodawcy (imię, nazwisko, adres), opisać sprawę i wskazać naruszone prawa, dołączyć kopie dokumentów.","RPO może zająć się sprawą, wskazać środki, przekazać sprawę innemu organowi lub uznać ją za bezzasadną; zawsze odpowiada."]],
+ [3,"W jakich okolicznościach obywatel Polski może złożyć skargę do ETPC?",["Gdy władze naruszyły prawa z Europejskiej konwencji praw człowieka i doznał znaczącego uszczerbku.","Dopiero po wyczerpaniu wszystkich krajowych środków zaskarżenia.","Skargę pisze się na formularzu (można po polsku), wysyła pocztą do Strasburga z kopiami dokumentów.","Trybunał może nakazać odszkodowanie lub zalecić inne działania."]],
+ [4,"Czym są dane osobowe i dane wrażliwe? W jaki sposób UE chroni dane osobowe?",["<b>Dane osobowe</b>: informacje pozwalające zidentyfikować osobę (imię i nazwisko, PESEL, adres, telefon, e-mail, IP).","<b>Dane wrażliwe</b>: których ujawnienie grozi dyskryminacją lub naruszeniem prywatności (pochodzenie, poglądy, zdrowie, dane biometryczne…).","<b>RODO</b>: zgoda na użycie danych, inspektor ochrony danych, zgłaszanie naruszeń, prawo do bycia zapomnianym (art. 17); kary dla firm."]],
+ [4,"Wymień trzy dobra osobiste i podaj po jednym przykładzie ich naruszenia. Co można zrobić w razie naruszenia?",["<b>Dobre imię</b>: rozpowszechnianie fałszywych informacji; <b>wizerunek</b>: zdjęcie bez zgody; <b>tajemnica korespondencji</b>: publikacja prywatnych wiadomości; <b>godność</b>: hejt.","Reakcja: zgłoszenie administratorowi, żądanie usunięcia treści od sprawcy, zebranie dowodów, policja i pozew cywilny.","Obowiązuje domniemanie bezprawności: to pozwany musi udowodnić, że działał legalnie."]],
+ [5,"Jakie informacje powinna zawierać umowa o pracę i na jaki czas można ją zawrzeć?",["Data i miejsce zawarcia, strony, rodzaj pracy i miejsce, wynagrodzenie, wymiar czasu pracy, dzień rozpoczęcia (w terminowych także koniec).","Rodzaje: na okres próbny (max 3 mies.), na czas określony (max 3 umowy, łącznie 33 mies.), na czas nieokreślony.","Pisemnie, w 2 egzemplarzach, najpóźniej w dniu rozpoczęcia pracy; zmiany przez aneks."]],
+ [5,"Jakie są zasady rozwiązania umowy o pracę? Komu przysługuje ta możliwość?",["Może to zrobić <b>każda ze stron</b> (pracownik i pracodawca).","Sposoby: porozumienie stron, wypowiedzenie (pisemne, z przyczyną, poza okresem próbnym), bez wypowiedzenia (dyscyplinarne), upływ czasu umowy, wygaśnięcie.","Okres wypowiedzenia: 2 tygodnie / 1 miesiąc / 3 miesiące zależnie od stażu.","Od zwolnienia: odwołanie do sądu pracy w 21 dni."]],
+ [5,"Które z praw przysługują pracownikowi: tworzenie związków zawodowych, powrót do pracy przed końcem urlopu macierzyńskiego, wydawanie poleceń, kontrola służbowej poczty, nakładanie kar porządkowych, bezpieczne wykonywanie obowiązków?",["<b>Pracownika:</b> tworzenie związków zawodowych, powrót do pracy przed końcem urlopu macierzyńskiego, bezpieczne wykonywanie obowiązków.","<b>Pracodawcy:</b> wydawanie poleceń (np. nadgodziny), kontrola służbowej poczty, nakładanie kar porządkowych."]],
+ [5,"W jaki sposób można się bronić przed łamaniem praw pracowniczych?",["Polubownie: bezpośredni przełożony, dział HR.","Państwowa Inspekcja Pracy: porada lub skarga (PIP nie ujawnia danych skarżącego).","Sąd pracy (wydział pracy i ubezpieczeń społecznych).","Związki zawodowe: pomoc w sporze, wsparcie prawne i finansowe."]],
+ [5,"Wymień dwa rodzaje umów cywilnoprawnych oraz podaj dwa podobieństwa i dwie różnice między nimi.",["Rodzaje: <b>umowa zlecenia</b> i <b>umowa o dzieło</b> (Kodeks cywilny).","Podobieństwa: strony równorzędne, bez podległości służbowej; brak urlopów i odprawy; większa swoboda wykonywania pracy.","Różnice: zlecenie to staranne działanie, dzieło to rezultat; przy zleceniu są składki ZUS (z wyjątkami) i płaca minimalna, przy dziele nie."]],
+ [5,"Czym jest staż, na jakich warunkach się odbywa i jakie korzyści przynosi?",["Nauka zawodu w miejscu pracy, głównie dla bezrobotnych bez doświadczenia.","Warunki: stypendium 120% zasiłku dla bezrobotnych, 2 dni wolne za każde 30 dni, ubezpieczenia, zwrot dojazdu, 8 h dziennie / 40 h tygodniowo, dokumentacja do urzędu pracy.","Korzyści: walka z bezrobociem młodych, praktyczne umiejętności, nauka pod okiem mentora."]]
+];
+document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+</script>
+</body>
+</html>
