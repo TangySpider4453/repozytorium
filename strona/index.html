@@ -42,9 +42,22 @@ main{padding:20px 0 60px}
 .filters button{font:inherit;font-weight:700;font-size:14px;border:2px solid var(--c,var(--line));background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
 .filters button[aria-pressed="true"]{background:var(--c,var(--nav));border-color:var(--c,var(--nav));color:#fff}
 .list{display:grid;gap:14px}
-a.card{display:block;text-decoration:none;background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:14px 16px;transition:transform .12s ease,box-shadow .12s ease}
-a.card:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,0,0,.08)}
-a.card.past{opacity:.62}
+.card{position:relative;background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:14px 16px;transition:transform .12s ease,box-shadow .12s ease}
+.card:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.card a.open{text-decoration:none}
+.card a.open::after{content:"";position:absolute;inset:0;border-radius:14px}
+.card button,.card input,.card .datebox{position:relative;z-index:1}
+.tabs{display:flex;gap:6px;margin:0 0 14px;border-bottom:2px solid var(--line)}
+.tabs button{font:inherit;font-weight:700;font-size:16px;border:0;background:none;color:var(--muted);padding:8px 12px;margin-bottom:-2px;border-bottom:3px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--nav)}
+.datebtn{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:2px 10px;cursor:pointer}
+.datebox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px;background:var(--bg)}
+.datebox input{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.datebox button{font:inherit;font-weight:700;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
+.datebox button.save{background:var(--nav);border-color:var(--nav);color:#fff}
+.datebox .err{color:var(--bad);font-size:14px;width:100%}
+.prog{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:14px;color:var(--muted)}
+.prog b{color:var(--ink)}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px;color:var(--muted)}
 .subj{font-weight:700;color:var(--c)}
 .badge{font-weight:700;font-size:13px;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--ink)}
@@ -52,8 +65,8 @@ a.card.past{opacity:.62}
 .badge.week{background:var(--warn);color:#fff}
 .badge.done{background:var(--soft);color:var(--muted)}
 .badge.new{background:var(--ok);color:#fff}
-a.card h2{font-size:clamp(21px,5vw,26px);margin:6px 0 4px}
-a.card p{margin:0;color:var(--muted);font-size:15.5px}
+.card h2{font-size:clamp(21px,5vw,26px);margin:6px 0 4px}
+.card p{margin:0;color:var(--muted);font-size:15.5px}
 .foot{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:14px;color:var(--muted)}
 .foot b{color:var(--ink)}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:24px;text-align:center;color:var(--muted)}
@@ -64,12 +77,13 @@ a.card p{margin:0;color:var(--muted);font-size:15.5px}
 <header class="top"><div class="wrap">
   <a class="back" href="/">← Serwerek domowy</a>
   <h1>Nauka przed lekcją</h1>
-  <p>Notatki, fiszki i quizy do sprawdzianów i kartkówek. Najnowsze są na górze.</p>
+  <p>Notatki, fiszki i quizy do sprawdzianów i kartkówek. Najnowsze są na górze, te po terminie w „Archiwalne”.</p>
 </div></header>
 <main><div class="wrap">
+  <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="nad">Nadchodzące</button><button role="tab" aria-selected="false" data-tab="arch">Archiwalne</button></div>
   <div class="filters" id="filters" hidden></div>
   <div class="list" id="list"><div class="empty">Ładowanie…</div></div>
-  <p class="hint">Wynik z quizu zapisuje się w tej przeglądarce, więc na telefonie i komputerze możesz mieć inne najlepsze wyniki.</p>
+  <p class="hint">Postępy (fiszki i wyniki quizów) zapisują się na Raspberry Pi, więc telefon, iPad i komputer widzą to samo. Gdy nauczyciel przesunie termin, kliknij „zmień datę” przy karcie. Sprawdziany po terminie trafiają do zakładki „Archiwalne”.</p>
 </div></main>
 <script>
 const COLORS=["#2F6FB0","#B23A48","#2F7D4F","#6B4C9A","#A8841A","#16788A","#C0562B","#4D5B68"];
@@ -87,32 +101,63 @@ function countdown(d){
   if(n<=7)return{t:`za ${n} dni`,c:"week"};
   return{t:`za ${n} dni`,c:""};
 }
-function best(id){try{const v=localStorage.getItem(`nauka:${id}:best_all`);return v==null?null:+v}catch(e){return null}}
-
-let ALL=[],subjColor={},filter="all";
+let ALL=[],subjColor={},filter="all",tab="nad",POSTEP={};
+const isPast=x=>{const d=parse(x.data);return !!d&&d<today()};
+function progress(x){
+  const p=POSTEP[x.id],box=el("div",{class:"prog"});
+  if(!p){box.append(el("span",{text:"jeszcze się nie uczyłeś"}));return box}
+  const q=p.quizy||[];
+  if(q.length){
+    const pc=r=>r.wszystkie?Math.round(r.dobre/r.wszystkie*100):0;
+    const last=q[q.length-1],best=Math.max(...q.map(pc));
+    box.append(el("span",{},"ostatni quiz: ",el("b",{text:pc(last)+"%"})),el("span",{},"najlepszy: ",el("b",{text:best+"%"})),el("span",{text:"podejść: "+q.length}));
+  }else box.append(el("span",{text:"quiz jeszcze nierobiony"}));
+  const f=p.fiszki||{},all=(p.ile||{}).fiszki;
+  const known=Object.values(f).filter(v=>v===1).length;
+  if(all)box.append(el("span",{},"fiszki: ",el("b",{text:`${known}/${all}`})));
+  const bl=Object.keys(p.bledne||{}).length;
+  if(bl)box.append(el("span",{text:"pytania do powtórki: "+bl}));
+  return box;
+}
+function dateEditor(x,card){
+  if(card.querySelector(".datebox"))return;
+  const inp=el("input",{type:"date",value:x.data||""}),err=el("div",{class:"err"});
+  const send=v=>fetch("/api/nauka/data/"+encodeURIComponent(x.id),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data:v})})
+    .then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(()=>{x.data=v;draw()}).catch(e=>{err.textContent="Nie udało się zapisać ("+e.message+"). Spróbuj jeszcze raz."});
+  const save=el("button",{class:"save",text:"Zapisz"});save.onclick=()=>{if(!inp.value){err.textContent="Wybierz datę albo kliknij „Data nieznana”.";return}send(inp.value)};
+  const none=el("button",{text:"Data nieznana"});none.onclick=()=>send(null);
+  const cancel=el("button",{text:"Anuluj"});cancel.onclick=()=>box.remove();
+  const box=el("div",{class:"datebox"},el("span",{text:"Nowa data:"}),inp,save,none,cancel,err);
+  card.append(box);inp.focus();
+}
 function draw(){
   const box=document.getElementById("list");box.innerHTML="";
-  const items=ALL.filter(x=>filter==="all"||x.przedmiot===filter);
-  if(!items.length){box.append(el("div",{class:"empty",text:"Na razie nic tu nie ma. Nowe notatki pojawią się, gdy przygotujemy je razem."}));return}
+  const arch=ALL.filter(isPast);
+  document.querySelector('.tabs [data-tab="arch"]').textContent=`Archiwalne (${arch.length})`;
+  let items=(tab==="arch"?arch.slice().sort((a,b)=>b.data.localeCompare(a.data)):ALL.filter(x=>!isPast(x)))
+    .filter(x=>filter==="all"||x.przedmiot===filter);
+  if(!items.length){box.append(el("div",{class:"empty",text:tab==="arch"?"W archiwum jeszcze nic nie ma. Sprawdziany trafiają tu same dzień po terminie.":"Na razie nic tu nie ma. Nowe notatki pojawią się, gdy przygotujemy je razem."}));return}
   for(const x of items){
-    const c=subjColor[x.przedmiot];
+    const c=subjColor[x.przedmiot],past=isPast(x);
     const meta=el("div",{class:"meta"},el("span",{class:"subj",text:x.przedmiot}),el("span",{text:x.typ||"sprawdzian"}));
-    let past=false;
     const d=parse(x.data);
-    if(d){const cd=countdown(d);past=!!cd.past;meta.append(el("span",{text:fmt(d)}),el("span",{class:"badge "+cd.c,text:cd.t}))}
+    if(d){const cd=countdown(d);meta.append(el("span",{text:(past?"było: ":"")+fmt(d)+" "+d.getFullYear()}),el("span",{class:"badge "+cd.c,text:cd.t}))}
     else meta.append(el("span",{class:"badge",text:"data jeszcze nieznana"}));
     const added=parse(x.dodano);
-    if(added&&(today()-added)/86400000<=3)meta.append(el("span",{class:"badge new",text:"nowe"}));
+    if(!past&&added&&(today()-added)/86400000<=3)meta.append(el("span",{class:"badge new",text:"nowe"}));
+    const db=el("button",{class:"datebtn",text:"📅 zmień datę"});
+    meta.append(db);
     const foot=el("div",{class:"foot"});
     if(x.zawiera&&x.zawiera.length)foot.append(el("span",{text:x.zawiera.join(" · ")}));
-    const b=best(x.id);
-    foot.append(b==null?el("span",{text:"quiz jeszcze nierobiony"}):el("span",{},"najlepszy quiz: ",el("b",{text:b+"%"})));
     if(added)foot.append(el("span",{text:"dodano "+added.getDate()+" "+MONTHS[added.getMonth()]}));
-    const a=el("a",{class:"card"+(past?" past":""),href:x.folder+"/",style:"--c:"+c},meta,el("h2",{text:x.tytul}),x.opis?el("p",{text:x.opis}):null,foot);
-    box.append(a);
+    const card=el("div",{class:"card",style:"--c:"+c},meta,el("h2",{},el("a",{class:"open",href:x.folder+"/",text:x.tytul})),x.opis?el("p",{text:x.opis}):null,progress(x),foot);
+    db.onclick=e=>{e.preventDefault();dateEditor(x,card)};
+    box.append(card);
   }
 }
-fetch("sprawdziany.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(list=>{
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));draw()});
+const postep=fetch("/api/nauka/postep",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(d=>{POSTEP=d}).catch(()=>{});
+Promise.all([fetch("sprawdziany.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}),postep]).then(([list])=>{
   // najnowsza notatka na gorze; przy tej samej dacie dodania - blizszy sprawdzian wyzej
   ALL=list.slice().sort((a,b)=>(b.dodano||"").localeCompare(a.dodano||"")||(a.data||"9").localeCompare(b.data||"9"));
   [...new Set(ALL.map(x=>x.przedmiot))].forEach((s,i)=>subjColor[s]=COLORS[i%COLORS.length]);

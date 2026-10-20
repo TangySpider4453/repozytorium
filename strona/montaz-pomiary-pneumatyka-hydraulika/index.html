@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" data-nauka="montaz-pomiary-pneumatyka-hydraulika">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -190,7 +190,17 @@ details.oq .ans ul{margin:0;padding-left:20px}
 .top3 h2{font-size:21px;margin-bottom:6px}
 .top3 ol{margin:0;padding-left:22px}
 .top3 li{margin:5px 0}
+
+/* postępy */
+.fcopt{margin:0 0 10px}
+.chk{display:flex;align-items:center;gap:6px;font-size:15px;cursor:pointer}
+.chk input{width:18px;height:18px}
+.qhist{display:grid;gap:8px;margin:0 0 14px}
+.qh{font-size:14px;color:var(--muted)}
+.qh b{color:var(--ink)}
+.qh span{display:block}
 </style>
+<script src="../postep.js"></script>
 </head>
 <body>
 <header class="top"><div class="wrap">
@@ -417,6 +427,7 @@ details.oq .ans ul{margin:0;padding-left:20px}
 <section class="tab" id="fiszki" hidden>
   <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
   <div class="filters" id="fcFilters"></div>
+  <div class="row fcopt"><label class="chk"><input type="checkbox" id="fcSkip" checked> Pomiń karty, które już umiem</label><button class="btn" id="fcReset">Wyzeruj fiszki</button><span class="counter" id="fcStat"></span></div>
   <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
   <div class="row">
     <button class="btn badb" id="fcNo">Jeszcze nie</button>
@@ -430,6 +441,7 @@ details.oq .ans ul{margin:0;padding-left:20px}
 <section class="tab" id="quiz" hidden>
   <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie.</p>
   <div class="filters" id="qFilters"></div>
+  <div class="qhist" id="qHist"></div>
   <div id="qArea"></div>
 </section>
 
@@ -509,7 +521,7 @@ const FC=[
 ];
 let deck=[],fcIdx=0,known=0;
 const fcEl=document.getElementById("fc");
-function buildDeck(f){deck=shuffle(FC.filter(c=>f==="all"||c[0]==f));fcIdx=0;known=0;drawFC();}
+function buildDeck(f){const all=FC.filter(c=>f==="all"||c[0]==f),st=c=>Postep.stan(fcKey(c)),skip=document.getElementById("fcSkip").checked;deck=[...shuffle(all.filter(c=>st(c)===0)),...shuffle(all.filter(c=>st(c)===undefined)),...(skip?[]:shuffle(all.filter(c=>st(c)===1)))];fcIdx=0;known=0;drawFC();fcStatDraw();}
 function drawFC(){
   fcEl.classList.remove("flip");
   const cnt=document.getElementById("fcCount");
@@ -526,11 +538,11 @@ function drawFC(){
   cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
 }
 fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
-document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;deck.shift();known++;drawFC();});
-document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;deck.push(deck.shift());drawFC();});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;Postep.fiszka(fcKey(deck[0]),true);deck.shift();known++;drawFC();fcStatDraw();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;Postep.fiszka(fcKey(deck[0]),false);deck.push(deck.shift());drawFC();fcStatDraw();});
 let fcFilter="all";
 document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
-makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); buildDeck("all");
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); Postep.ready.then(()=>buildDeck(fcFilter));
 
 /* ---------- quiz ---------- */
 const Q=[
@@ -574,16 +586,17 @@ const Q=[
  [5,"Żeby uniknąć błędu paralaksy, na skalę manometru patrzymy:",["prostopadle","z lewej strony","z dużej odległości","pod kątem 45°"],0,"Patrzenie z ukosa przesuwa pozorne położenie wskazówki."]
 ];
 let qs=[],qi=0,score=0,wrong=[],qFilter="all";
-function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function startQuiz(list,powt){qPowt=!!powt;qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
 function drawQ(){
   const A=document.getElementById("qArea");
   if(qi>=qs.length){
     const pct=Math.round(score/qs.length*100);
+    if(qs.length)Postep.quiz({filtr:qPowt?"błędne":qFilter,dobre:score,wszystkie:qs.length},wrong.map(q=>q[1]),qs.filter(q=>!wrong.includes(q.src)).map(q=>q.t)).then(qHistDraw);
     let best=0;try{best=+localStorage.getItem("nauka:montaz-pomiary-pneumatyka-hydraulika:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:montaz-pomiary-pneumatyka-hydraulika:best_"+qFilter,pct)}catch(e){}
     const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na kartkówkę.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
     A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
     document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
-    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong,true);
     return;
   }
   const q=qs[qi];
@@ -625,6 +638,35 @@ const OQ=[
  [5,"Manometr wskazał 5,2 bar, a ciśnienie rzeczywiste (wzorcowe) wynosiło 5,0 bar. Oblicz błąd bezwzględny i względny.",["Δp = |5,2 − 5,0| = <b>0,2 bar</b>.","δ = 0,2 / 5,0 · 100% = <b>4%</b>."]]
 ];
 document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+
+/* ---------- zapis postępów (../postep.js, dane na Raspberry Pi) ---------- */
+var qPowt=false;
+function fcKey(c){return c[0]+"|"+c[1]}
+function fcStatDraw(){
+  const e=document.getElementById("fcStat");if(!e||typeof FC==="undefined")return;
+  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter);
+  const k=all.filter(c=>Postep.stan(fcKey(c))===1).length,n=all.filter(c=>Postep.stan(fcKey(c))===0).length;
+  e.textContent=`umiesz ${k} z ${all.length}`+(n?`, do powtórki ${n}`:"");
+}
+function qLabel(f){return f==="all"?"wszystko":(T[f]?f+". "+T[f]:f)}
+function qHistDraw(){
+  const box=document.getElementById("qHist");if(!box)return;box.innerHTML="";
+  const bl=Postep.bledne().filter(t=>Q.some(q=>q[1]===t));
+  if(bl.length){const b=document.createElement("button");b.className="btn badb";b.textContent=`Powtórz pytania, w których się myliłeś (${bl.length})`;b.onclick=()=>startQuiz(Q.filter(q=>bl.includes(q[1])),true);box.append(b)}
+  const hist=Postep.quizy().slice(-5).reverse();
+  if(hist.length){
+    const h=document.createElement("div");h.className="qh";const t=document.createElement("b");t.textContent="Ostatnie wyniki";h.append(t);
+    hist.forEach(r=>{const d=new Date(r.czas),s=document.createElement("span"),p=r.wszystkie?Math.round(r.dobre/r.wszystkie*100):0;
+      s.textContent=`${p}% (${r.dobre}/${r.wszystkie}) · ${d.getDate()}.${String(d.getMonth()+1).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} · ${qLabel(r.filtr)}`;h.append(s)});
+    box.append(h);
+  }
+}
+(function(){
+  const sk=document.getElementById("fcSkip"),rs=document.getElementById("fcReset");
+  if(sk)sk.addEventListener("change",()=>buildDeck(fcFilter));
+  if(rs)rs.addEventListener("click",()=>{if(confirm("Wyzerować zapamiętane fiszki? Wszystkie karty wrócą do nauki."))Postep.zerujFiszki().then(()=>buildDeck(fcFilter))});
+  Postep.ready.then(()=>{qHistDraw();Postep.ile(typeof FC!=="undefined"?{fiszki:FC.length,quiz:Q.length}:{quiz:Q.length})});
+})();
 </script>
 </body>
 </html>

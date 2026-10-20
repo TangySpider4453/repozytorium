@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" data-nauka="polski-tetmajer-lubie-kiedy-kobieta">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -218,7 +218,17 @@ textarea.inp{width:100%;font:inherit;font-family:var(--serif);font-size:19px;pad
 .plan li{display:grid;grid-template-columns:96px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
 .plan li:last-child{border-bottom:0}
 .plan b{color:var(--c)}
+
+/* postępy */
+.fcopt{margin:0 0 10px}
+.chk{display:flex;align-items:center;gap:6px;font-size:15px;cursor:pointer}
+.chk input{width:18px;height:18px}
+.qhist{display:grid;gap:8px;margin:0 0 14px}
+.qh{font-size:14px;color:var(--muted)}
+.qh b{color:var(--ink)}
+.qh span{display:block}
 </style>
+<script src="../postep.js"></script>
 </head>
 <body>
 <header class="top"><div class="wrap">
@@ -331,6 +341,7 @@ textarea.inp{width:100%;font:inherit;font-family:var(--serif);font-size:19px;pad
 <section class="tab" id="quiz" hidden>
   <p class="intro">Pytania o tekst (kolejność wersów, brakujące słowa), autora, epokę i budowę wiersza.</p>
   <div class="filters" id="qFilters"></div>
+  <div class="qhist" id="qHist"></div>
   <div id="qArea"></div>
 </section>
 
@@ -477,6 +488,7 @@ function drawChk(){
   const card=el("div","qcard"); card.style.setProperty("--c","var(--t3)"); A.appendChild(card);
   if(ci>=items.length){
     const pct=Math.round(good/items.length*100), best=saveBest(pct);
+    Postep.quiz({filtr:"Sprawdź się: "+(chkS==="all"?"cały wiersz":"strofa "+chkS),dobre:good,wszystkie:items.length},[],[]).then(qHistDraw);
     card.classList.add("result");
     card.appendChild(el("div","big",good+"/"+items.length));
     const h=el("h3",null,pct+"%");h.style.marginTop="10px";card.appendChild(h);
@@ -567,16 +579,17 @@ const Q=[
  [3,"Kim jest podmiot liryczny?",["mężczyzną, który mówi, co lubi","kobietą","narratorem, który opisuje obcych ludzi","samym poetą jako dzieckiem"],0,"Mówi w 1. osobie: „lubię”, „koło mnie”."]
 ];
 let qs=[],qi=0,score=0,wrong=[],qFilter="all";
-function startQuiz(list){qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function startQuiz(list,powt){qPowt=!!powt;qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
 function drawQ(){
   const A=document.getElementById("qArea");
   if(qi>=qs.length){
     const pct=Math.round(score/qs.length*100);
+    if(qs.length)Postep.quiz({filtr:qPowt?"błędne":qFilter,dobre:score,wszystkie:qs.length},wrong.map(q=>q[1]),qs.filter(q=>!wrong.includes(q.src)).map(q=>q.t)).then(qHistDraw);
     let best=0;try{best=+localStorage.getItem("nauka:"+ID+":best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:"+ID+":best_"+qFilter,pct)}catch(e){}
     const msg=pct>=90?"Świetnie!":pct>=70?"Dobrze! Powtórz błędne pytania.":"Wróć do zakładek „Wiersz” i „Najważniejsze”, potem spróbuj ponownie.";
     A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
     document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
-    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong);
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong,true);
     return;
   }
   const q=qs[qi];
@@ -599,6 +612,35 @@ function answer(i){
 const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
 makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
 startQuiz(filtered());
+
+/* ---------- zapis postępów (../postep.js, dane na Raspberry Pi) ---------- */
+var qPowt=false;
+function fcKey(c){return c[0]+"|"+c[1]}
+function fcStatDraw(){
+  const e=document.getElementById("fcStat");if(!e||typeof FC==="undefined")return;
+  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter);
+  const k=all.filter(c=>Postep.stan(fcKey(c))===1).length,n=all.filter(c=>Postep.stan(fcKey(c))===0).length;
+  e.textContent=`umiesz ${k} z ${all.length}`+(n?`, do powtórki ${n}`:"");
+}
+function qLabel(f){return f==="all"?"wszystko":(T[f]?f+". "+T[f]:f)}
+function qHistDraw(){
+  const box=document.getElementById("qHist");if(!box)return;box.innerHTML="";
+  const bl=Postep.bledne().filter(t=>Q.some(q=>q[1]===t));
+  if(bl.length){const b=document.createElement("button");b.className="btn badb";b.textContent=`Powtórz pytania, w których się myliłeś (${bl.length})`;b.onclick=()=>startQuiz(Q.filter(q=>bl.includes(q[1])),true);box.append(b)}
+  const hist=Postep.quizy().slice(-5).reverse();
+  if(hist.length){
+    const h=document.createElement("div");h.className="qh";const t=document.createElement("b");t.textContent="Ostatnie wyniki";h.append(t);
+    hist.forEach(r=>{const d=new Date(r.czas),s=document.createElement("span"),p=r.wszystkie?Math.round(r.dobre/r.wszystkie*100):0;
+      s.textContent=`${p}% (${r.dobre}/${r.wszystkie}) · ${d.getDate()}.${String(d.getMonth()+1).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} · ${qLabel(r.filtr)}`;h.append(s)});
+    box.append(h);
+  }
+}
+(function(){
+  const sk=document.getElementById("fcSkip"),rs=document.getElementById("fcReset");
+  if(sk)sk.addEventListener("change",()=>buildDeck(fcFilter));
+  if(rs)rs.addEventListener("click",()=>{if(confirm("Wyzerować zapamiętane fiszki? Wszystkie karty wrócą do nauki."))Postep.zerujFiszki().then(()=>buildDeck(fcFilter))});
+  Postep.ready.then(()=>{qHistDraw();Postep.ile(typeof FC!=="undefined"?{fiszki:FC.length,quiz:Q.length}:{quiz:Q.length})});
+})();
 </script>
 </body>
 </html>
