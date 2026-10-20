@@ -199,6 +199,12 @@ details.oq .ans ul{margin:0;padding-left:20px}
 .qh{font-size:14px;color:var(--muted)}
 .qh b{color:var(--ink)}
 .qh span{display:block}
+.fcmem{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px}
+.fcm-top{display:flex;justify-content:space-between;font-size:15px}
+.fcm-bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin:6px 0}
+.fcm-bar i{display:block;height:100%;background:var(--ok)}
+.fcm-row{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--muted)}
+.fcm-row b{color:var(--ink)}
 </style>
 <script src="../postep.js"></script>
 </head>
@@ -404,7 +410,8 @@ details.oq .ans ul{margin:0;padding-left:20px}
 <section class="tab" id="fiszki" hidden>
   <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
   <div class="filters" id="fcFilters"></div>
-  <div class="row fcopt"><label class="chk"><input type="checkbox" id="fcSkip" checked> Pomiń karty, które już umiem</label><button class="btn" id="fcReset">Wyzeruj fiszki</button><span class="counter" id="fcStat"></span></div>
+  <div class="row fcopt"><label class="chk"><input type="checkbox" id="fcSkip" checked> Pomiń karty, które już umiem</label><button class="btn" id="fcReset">Wyzeruj fiszki</button></div>
+  <div class="fcmem" id="fcStat"></div>
   <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
   <div class="row">
     <button class="btn badb" id="fcNo">Jeszcze nie</button>
@@ -542,15 +549,15 @@ function drawFC(){
   const cnt=document.getElementById("fcCount");
   if(!deck.length){
     fcEl.style.setProperty("--c","var(--ok)");
-    document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;
+    const fc0=fcCounts();document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>W tym zestawie umiesz ${fc0.k} z ${fc0.n} kart (zapisane na stałe). Przetasuj, żeby powtórzyć te, których jeszcze nie umiesz, albo odznacz „Pomiń karty, które już umiem”.</small>`;
     document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
   }
   const [n,f,b]=deck[0];
   fcEl.style.setProperty("--c",C(n));
   setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
-  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]} · ${fcTag(deck[0])}</small>`;
   document.querySelector("#fcFront b").textContent=f;
-  cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;
+  cnt.textContent=`w talii: ${deck.length}`;
 }
 fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
 document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;Postep.fiszka(fcKey(deck[0]),true);deck.shift();known++;drawFC();fcStatDraw();});
@@ -617,12 +624,17 @@ document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="o
 /* ---------- zapis postępów (../postep.js, dane na Raspberry Pi) ---------- */
 var qPowt;
 function fcKey(c){return c[0]+"|"+c[1]}
+function fcCounts(){
+  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter),st=c=>Postep.stan(fcKey(c));
+  return{n:all.length,k:all.filter(c=>st(c)===1).length,z:all.filter(c=>st(c)===0).length};
+}
 function fcStatDraw(){
   const e=document.getElementById("fcStat");if(!e||typeof FC==="undefined")return;
-  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter);
-  const k=all.filter(c=>Postep.stan(fcKey(c))===1).length,n=all.filter(c=>Postep.stan(fcKey(c))===0).length;
-  e.textContent=`umiesz ${k} z ${all.length}`+(n?`, do powtórki ${n}`:"");
+  const c=fcCounts(),pct=c.n?Math.round(c.k/c.n*100):0;
+  e.innerHTML=`<div class="fcm-top"><b>Zapamiętane na stałe</b><span>${pct}%</span></div><div class="fcm-bar"><i style="width:${pct}%"></i></div>`+
+    `<div class="fcm-row"><span>✅ umiesz <b>${c.k}</b></span><span>🔁 do powtórki <b>${c.z}</b></span><span>🆕 nowe <b>${c.n-c.k-c.z}</b></span><span>z ${c.n} kart</span></div>`;
 }
+function fcTag(c){const v=Postep.stan(fcKey(c));return v===1?"✅ umiesz":v===0?"🔁 jeszcze nie umiesz":"🆕 nowa"}
 function qLabel(f){return f==="all"?"wszystko":(T[f]?f+". "+T[f]:f)}
 function qHistDraw(){
   const box=document.getElementById("qHist");if(!box)return;box.innerHTML="";

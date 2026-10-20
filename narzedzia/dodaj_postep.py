@@ -13,17 +13,28 @@ CSS = """
 .qh{font-size:14px;color:var(--muted)}
 .qh b{color:var(--ink)}
 .qh span{display:block}
+.fcmem{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px}
+.fcm-top{display:flex;justify-content:space-between;font-size:15px}
+.fcm-bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin:6px 0}
+.fcm-bar i{display:block;height:100%;background:var(--ok)}
+.fcm-row{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--muted)}
+.fcm-row b{color:var(--ink)}
 """
 HELPERS = r"""
 /* ---------- zapis postępów (../postep.js, dane na Raspberry Pi) ---------- */
 var qPowt;
 function fcKey(c){return c[0]+"|"+c[1]}
+function fcCounts(){
+  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter),st=c=>Postep.stan(fcKey(c));
+  return{n:all.length,k:all.filter(c=>st(c)===1).length,z:all.filter(c=>st(c)===0).length};
+}
 function fcStatDraw(){
   const e=document.getElementById("fcStat");if(!e||typeof FC==="undefined")return;
-  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter);
-  const k=all.filter(c=>Postep.stan(fcKey(c))===1).length,n=all.filter(c=>Postep.stan(fcKey(c))===0).length;
-  e.textContent=`umiesz ${k} z ${all.length}`+(n?`, do powtórki ${n}`:"");
+  const c=fcCounts(),pct=c.n?Math.round(c.k/c.n*100):0;
+  e.innerHTML=`<div class="fcm-top"><b>Zapamiętane na stałe</b><span>${pct}%</span></div><div class="fcm-bar"><i style="width:${pct}%"></i></div>`+
+    `<div class="fcm-row"><span>✅ umiesz <b>${c.k}</b></span><span>🔁 do powtórki <b>${c.z}</b></span><span>🆕 nowe <b>${c.n-c.k-c.z}</b></span><span>z ${c.n} kart</span></div>`;
 }
+function fcTag(c){const v=Postep.stan(fcKey(c));return v===1?"✅ umiesz":v===0?"🔁 jeszcze nie umiesz":"🆕 nowa"}
 function qLabel(f){return f==="all"?"wszystko":(T[f]?f+". "+T[f]:f)}
 function qHistDraw(){
   const box=document.getElementById("qHist");if(!box)return;box.innerHTML="";
@@ -44,7 +55,27 @@ function qHistDraw(){
   Postep.ready.then(()=>{qHistDraw();Postep.ile(typeof FC!=="undefined"?{fiszki:FC.length,quiz:Q.length}:{quiz:Q.length})});
 })();
 """
-FC_ROW = '\n  <div class="row fcopt"><label class="chk"><input type="checkbox" id="fcSkip" checked> Pomiń karty, które już umiem</label><button class="btn" id="fcReset">Wyzeruj fiszki</button><span class="counter" id="fcStat"></span></div>'
+FC_ROW = '\n  <div class="row fcopt"><label class="chk"><input type="checkbox" id="fcSkip" checked> Pomiń karty, które już umiem</label><button class="btn" id="fcReset">Wyzeruj fiszki</button></div>\n  <div class="fcmem" id="fcStat"></div>'
+
+NEW_FN = r"""function fcCounts(){
+  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter),st=c=>Postep.stan(fcKey(c));
+  return{n:all.length,k:all.filter(c=>st(c)===1).length,z:all.filter(c=>st(c)===0).length};
+}
+function fcStatDraw(){
+  const e=document.getElementById("fcStat");if(!e||typeof FC==="undefined")return;
+  const c=fcCounts(),pct=c.n?Math.round(c.k/c.n*100):0;
+  e.innerHTML=`<div class="fcm-top"><b>Zapamiętane na stałe</b><span>${pct}%</span></div><div class="fcm-bar"><i style="width:${pct}%"></i></div>`+
+    `<div class="fcm-row"><span>✅ umiesz <b>${c.k}</b></span><span>🔁 do powtórki <b>${c.z}</b></span><span>🆕 nowe <b>${c.n-c.k-c.z}</b></span><span>z ${c.n} kart</span></div>`;
+}
+function fcTag(c){const v=Postep.stan(fcKey(c));return v===1?"✅ umiesz":v===0?"🔁 jeszcze nie umiesz":"🆕 nowa"}
+"""
+FCMEM_CSS = """.fcmem{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px}
+.fcm-top{display:flex;justify-content:space-between;font-size:15px}
+.fcm-bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin:6px 0}
+.fcm-bar i{display:block;height:100%;background:var(--ok)}
+.fcm-row{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--muted)}
+.fcm-row b{color:var(--ink)}
+"""
 
 RESUME = r"""
 /* ---------- wznawianie: przerwany quiz i ostatnia zakładka po przeładowaniu ---------- */
@@ -71,6 +102,28 @@ function qRestore(){
 })();
 """
 
+def fcmem(pid, s):
+    """Widoczny, trwały stan fiszek: panel „Zapamiętane na stałe” i etykieta na karcie."""
+    if "`w talii: ${deck.length}`" in s or "function buildDeck(f)" not in s:
+        return s
+    def rep(a, b):
+        nonlocal s
+        assert s.count(a) == 1, (pid, a[:60], s.count(a))
+        s = s.replace(a, b)
+    if "function fcTag" not in s:
+        start = s.index("function fcStatDraw(){"); end = s.index("function qLabel(f)")
+        s = s[:start] + NEW_FN + s[end:]
+    if ".fcmem{" not in s:
+        rep(".qh span{display:block}\n", ".qh span{display:block}\n" + FCMEM_CSS)
+    if '<span class="counter" id="fcStat"></span></div>' in s:
+        rep('<span class="counter" id="fcStat"></span></div>', '</div>\n  <div class="fcmem" id="fcStat"></div>')
+    rep('cnt.textContent=`zostało ${deck.length}, umiesz ${known}`;', 'cnt.textContent=`w talii: ${deck.length}`;')
+    rep('document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]}</small>`;',
+        'document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]} · ${fcTag(deck[0])}</small>`;')
+    rep('document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>Umiesz ${known} kart. Przetasuj, żeby zacząć od nowa.</small>`;',
+        'const fc0=fcCounts();document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>W tym zestawie umiesz ${fc0.k} z ${fc0.n} kart (zapisane na stałe). Przetasuj, żeby powtórzyć te, których jeszcze nie umiesz, albo odznacz „Pomiń karty, które już umiem”.</small>`;')
+    return s
+
 def resume(pid, s):
     if "function qRestore" in s:
         return s
@@ -78,7 +131,8 @@ def resume(pid, s):
         nonlocal s
         assert s.count(a) == 1, (pid, a[:60], s.count(a))
         s = s.replace(a, b)
-    rep("var qPowt=false;\n", "var qPowt;\n")
+    if "var qPowt=false;\n" in s:
+        rep("var qPowt=false;\n", "var qPowt;\n")
     rep("function showTab(id){", 'function showTab(id){try{localStorage.setItem(tabLS(),JSON.stringify({id,czas:Date.now()}))}catch(e){}')
     rep("function startQuiz(list,powt){qPowt=!!powt;", 'function startQuiz(list,powt){qPowt=!!powt;const r=document.getElementById("qResume");if(r)r.remove();')
     rep("  if(qi>=qs.length){\n", "  if(qi>=qs.length){\n    qClear();\n")
@@ -95,9 +149,9 @@ def patch(pid):
     p = f"strona/{pid}/index.html"
     s = open(p, encoding="utf-8").read()
     if "postep.js" in s:
-        s2 = resume(pid, s)
+        s2 = fcmem(pid, resume(pid, s))
         if s2 != s:
-            open(p, "w", encoding="utf-8").write(s2); print(pid, "dodano wznawianie")
+            open(p, "w", encoding="utf-8").write(s2); print(pid, "zaktualizowano")
         else:
             print(pid, "już podłączona")
         return
@@ -135,7 +189,7 @@ def patch(pid):
             "    Postep.quiz({filtr:\"Sprawdź się: \"+(chkS===\"all\"?\"cały wiersz\":\"strofa \"+chkS),dobre:good,wszystkie:items.length},[],[]).then(qHistDraw);")
     i = s.rfind("</script>")
     s = s[:i] + HELPERS + s[i:]
-    s = resume(pid, s)
+    s = fcmem(pid, resume(pid, s))
     open(p, "w", encoding="utf-8").write(s)
     print(pid, "ok")
 
