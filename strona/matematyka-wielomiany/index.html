@@ -437,7 +437,7 @@ const C = n => "var(--t"+COL[n]+")";
 
 /* ---------- tabs ---------- */
 const tabs=[...document.querySelectorAll("nav.tabs button")];
-function showTab(id){
+function showTab(id){try{localStorage.setItem(tabLS(),JSON.stringify({id,czas:Date.now()}))}catch(e){}
   tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
   document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
   window.scrollTo({top:0});
@@ -560,10 +560,11 @@ document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFi
 makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); Postep.ready.then(()=>buildDeck(fcFilter));
 
 let qs=[],qi=0,score=0,wrong=[],qFilter="all";
-function startQuiz(list,powt){qPowt=!!powt;qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function startQuiz(list,powt){qPowt=!!powt;const r=document.getElementById("qResume");if(r)r.remove();qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
 function drawQ(){
   const A=document.getElementById("qArea");
   if(qi>=qs.length){
+    qClear();
     const pct=Math.round(score/qs.length*100);
     if(qs.length)Postep.quiz({filtr:qPowt?"błędne":qFilter,dobre:score,wszystkie:qs.length},wrong.map(q=>q[1]),qs.filter(q=>!wrong.includes(q.src)).map(q=>q.t)).then(qHistDraw);
     let best=0;try{best=+localStorage.getItem("nauka:matematyka-wielomiany:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:matematyka-wielomiany:best_"+qFilter,pct)}catch(e){}
@@ -573,26 +574,27 @@ function drawQ(){
     const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong,true);
     return;
   }
-  const q=qs[qi];
+  const q=qs[qi];qSave(null);
   A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
   A.querySelector("h3").textContent=q.t;
   const box=A.querySelector(".opts");
   q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
 }
-function answer(i){
+function answer(i,odtw){
   const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
   btns.forEach(b=>b.disabled=true);
   btns[q.a].classList.add("right");
-  if(i===q.a)score++;else{btns[i].classList.add("wrong");wrong.push(q.src)}
+  if(i===q.a){if(!odtw)score++}else{btns[i].classList.add("wrong");if(!odtw)wrong.push(q.src)}
   const x=document.getElementById("qx");
   x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
   x.querySelector(".expl span").textContent=q.e;
   document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
   document.getElementById("qNext").focus();
+  if(!odtw)qSave(i);
 }
 const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
 makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
-startQuiz(filtered());
+if(!qRestore())startQuiz(filtered());
 
 /* ---------- open questions ---------- */
 const OQ=[
@@ -613,7 +615,7 @@ const OQ=[
 document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
 
 /* ---------- zapis postępów (../postep.js, dane na Raspberry Pi) ---------- */
-var qPowt=false;
+var qPowt;
 function fcKey(c){return c[0]+"|"+c[1]}
 function fcStatDraw(){
   const e=document.getElementById("fcStat");if(!e||typeof FC==="undefined")return;
@@ -639,6 +641,29 @@ function qHistDraw(){
   if(sk)sk.addEventListener("change",()=>buildDeck(fcFilter));
   if(rs)rs.addEventListener("click",()=>{if(confirm("Wyzerować zapamiętane fiszki? Wszystkie karty wrócą do nauki."))Postep.zerujFiszki().then(()=>buildDeck(fcFilter))});
   Postep.ready.then(()=>{qHistDraw();Postep.ile(typeof FC!=="undefined"?{fiszki:FC.length,quiz:Q.length}:{quiz:Q.length})});
+})();
+
+/* ---------- wznawianie: przerwany quiz i ostatnia zakładka po przeładowaniu ---------- */
+function qLS(){return "nauka:"+document.documentElement.dataset.nauka+":quiz_w_toku"}
+function tabLS(){return "nauka:"+document.documentElement.dataset.nauka+":zakladka"}
+function qSave(ans){try{localStorage.setItem(qLS(),JSON.stringify({qs:qs.map(q=>({n:q.n,t:q.t,o:q.o,a:q.a,e:q.e,i:Q.indexOf(q.src)})),qi,score,wrong:wrong.map(w=>Q.indexOf(w)),qFilter,qPowt:!!qPowt,ans:ans==null?null:ans}))}catch(e){}}
+function qClear(){try{localStorage.removeItem(qLS())}catch(e){}const r=document.getElementById("qResume");if(r)r.remove()}
+function qRestore(){
+  let s=null;try{s=JSON.parse(localStorage.getItem(qLS())||"null")}catch(e){}
+  if(!s||!Array.isArray(s.qs)||!s.qs.length||s.qi>=s.qs.length||(s.qi===0&&s.ans==null))return false;
+  if(s.qs.some(q=>!Q[q.i]||Q[q.i][1]!==q.t)){qClear();return false}
+  qs=s.qs.map(q=>({n:q.n,t:q.t,o:q.o,a:q.a,e:q.e,src:Q[q.i]}));qi=s.qi;score=s.score;wrong=s.wrong.map(i=>Q[i]).filter(Boolean);qFilter=s.qFilter;qPowt=s.qPowt;
+  document.querySelectorAll("#qFilters button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===String(qFilter))));
+  drawQ();if(s.ans!=null)answer(s.ans,true);
+  const r=document.createElement("div");r.id="qResume";r.className="expl";r.style.margin="0 0 12px";
+  r.append(`Wróciłeś do przerwanego quizu: pytanie ${Math.min(qi+1,qs.length)} z ${qs.length}, dobrze ${score}. `);
+  const b=document.createElement("button");b.className="btn";b.textContent="Zacznij od nowa";b.onclick=()=>startQuiz(filtered());r.append(b);
+  document.getElementById("qArea").before(r);
+  return true;
+}
+(function(){
+  let t=null;try{t=JSON.parse(localStorage.getItem(tabLS())||"null")}catch(e){}
+  if(t&&Date.now()-t.czas<3*3600*1000&&document.getElementById(t.id))showTab(t.id);
 })();
 </script>
 </body>
