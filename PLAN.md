@@ -265,3 +265,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   „Archiwalne”, zmiana daty z listy, wznawianie przerwanego quizu i ostatniej zakładki. Nowe API w `app.py` (za zgodą
   użytkownika), restart tylko `home-portal`; portal i usługi Minecraft `active`. Test end-to-end na kopii portalu
   (2 „urządzenia”, archiwum, zmiana daty) i test API na Pi. Format `sprawdziany.json` po zapisie przez API bez zmian.
+- **2026-10-20 (3)**: Fiszki zapisywały się poprawnie, ale licznik „umiesz” liczył tylko bieżące podejście, więc po
+  odświeżeniu wyglądało to jak reset. Dodano panel „Zapamiętane na stałe” (umiesz / do powtórki / nowe, pasek) i etykietę
+  stanu na karcie. Postępy w `dane/nauka/` zostają na zawsze, także dla sprawdzianów w archiwum.
