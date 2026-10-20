@@ -101,6 +101,12 @@ Co zmieniono w `app.py` dla tego projektu:
   po przeładowaniu (localStorage, na danym urządzeniu). Wymaga standardowego kodu fiszek/quizu z szablonu.
 - **Lista:** zakładki „Nadchodzące” / „Archiwalne” (data < dzisiaj → archiwum, sort malejąco po dacie), przy karcie
   postępy i przycisk „📅 zmień datę”.
+- **Zakładka „Licz”** (zadania rachunkowe z losowymi liczbami): silnik `strona/licz.js`, generatory
+  `narzedzia/licz/<id>.js` → instalacja `python3 narzedzia/dodaj_licz.py <id>` (kopiuje do `strona/<id>/licz-zadania.js`,
+  dodaje zakładkę po „Wzory”). Generator: `{id, temat, nazwa, gen()}` → `{tresc, pola:[{etykieta, jednostka, odp, tol,
+  rodzaj}], rozw:[kroki]}`. Seria 10 zadań → `Postep.quiz` z filtrem „Licz: …”; przerwana seria wraca po przeładowaniu.
+  Na razie: fizyka (12 typów) i matematyka (10 typów). **Przy nowych przedmiotach ścisłych dodawaj „Licz”** i sprawdzaj
+  generatory testem (np. 2000 losowań na typ, odpowiedź przeliczona niezależnie).
 - ⚠️ **Użytkownik sam zmienia daty na Pi.** Przed każdą edycją `sprawdziany.json` najpierw pobierz go z Pi
   (`scp pi:/home/tonyg/portal/sites/nauka/sprawdziany.json strona/`), dopiero potem dopisuj i wgrywaj. Inaczej nadpiszesz
   jego zmiany dat.
@@ -268,3 +274,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-20 (3)**: Fiszki zapisywały się poprawnie, ale licznik „umiesz” liczył tylko bieżące podejście, więc po
   odświeżeniu wyglądało to jak reset. Dodano panel „Zapamiętane na stałe” (umiesz / do powtórki / nowe, pasek) i etykietę
   stanu na karcie. Postępy w `dane/nauka/` zostają na zawsze, także dla sprawdzianów w archiwum.
+- **2026-10-20 (4)**: Zakładka „Licz” w fizyce i matematyce: zadania z losowymi liczbami, sprawdzanie wyniku (przecinek,
+  10ⁿ, e-notacja, ułamki, zbiory pierwiastków), rozwiązanie krok po kroku (w matmie z tabelą Hornera), serie po 10
+  zapisywane w wynikach, wznawianie po przeładowaniu. 22 generatory × 2000 losowań sprawdzone automatycznie.
