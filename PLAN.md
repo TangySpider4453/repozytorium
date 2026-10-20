@@ -30,7 +30,7 @@ Zasady od użytkownika:
 | Kafelek „Nauka: notatki i quizy” na stronie startowej portalu | ✅ pojawia się automatycznie |
 | Historia: *Od kongresu wiedeńskiego do Wiosny Ludów* (Ślady czasu 3, dział 1, tematy 1–6) | ✅ na Pi, 58 fiszek, 58 pytań quizu, 14 pytań otwartych |
 | Zakładka „Najważniejsze” | ✅ na wszystkich 4 stronach, pierwsza i domyślnie otwarta |
-| Data sprawdzianu z historii | ✅ **2026-10-20**, zakres tematy 1, 2, 3, 5, 6 (bez 4). Na stronie ramka z zakresem i filtr „Na sprawdzian (bez 4)” |
+| Data sprawdzianu z historii | ✅ **2026-10-20**, cały dział: tematy 1–6 (użytkownik potwierdził, że temat 4 też obowiązuje, mimo że dziennik podawał 1, 2, 3, 5, 6) |
 | Fizyka: *Siły, pole i napięcie elektryczne* (kartkówka **2026-10-23**) | ✅ na Pi, 34 fiszki, 35 pytań quizu, 11 zadań, zakładka „Wzory” zamiast osi czasu. Treść z typowego programu liceum (bez zdjęć od użytkownika) |
 | Matematyka: *Wielomiany* (sprawdzian **2026-10-23**) | ✅ na Pi, `matematyka-wielomiany`, 33 fiszki, 40 pytań, 13 zadań, rachunki sprawdzone w sympy |
 | Montaż urządzeń mechatronicznych: *Pomiary w układach elektropneumatycznych i elektrohydraulicznych* (kartkówka **2026-10-26**, grupa 3 KL-1/2) | ✅ na Pi, `montaz-pomiary-pneumatyka-hydraulika`, 38 fiszek, 38 pytań, 14 zadań. Wiedza podręcznikowa, bez notatek nauczyciela |
@@ -238,3 +238,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   (Masz wpływ 1, dział 5), plus polski: wiersz Tetmajera do nauki na pamięć (tekst z pamięci, do weryfikacji).
   Wszystkie 7 stron na Pi z zakładką „Najważniejsze”, HTTP 200, usługi Minecraft bez zmian.
   Backup: `sprawdziany.json.bak_2026-10-19_ang-pol-edo`. PDF-y podręczników nie są w repo (tylko w uploadach sesji).
+- **2026-10-20**: Historia: temat 4 jednak obowiązuje — usunięto ramkę zakresu, wyszarzenie i filtr „spr”, dodano kartę
+  tematu 4 w „Najważniejsze”. Wgrane na Pi po ponownym zatwierdzeniu „check” (minęło 12 h). Backup `*.bak_2026-10-20`.
