@@ -21,7 +21,7 @@ Zasady od użytkownika:
 
 ---
 
-## 2. Stan na 2026-10-19
+## 2. Stan na 2026-10-20
 
 | Co | Stan |
 |---|---|
@@ -29,6 +29,7 @@ Zasady od użytkownika:
 | Link „Nauka” w menu portalu (obok „Łazik”) | ✅ działa |
 | Kafelek „Nauka: notatki i quizy” na stronie startowej portalu | ✅ pojawia się automatycznie |
 | Historia: *Od kongresu wiedeńskiego do Wiosny Ludów* (Ślady czasu 3, dział 1, tematy 1–6) | ✅ na Pi, 58 fiszek, 58 pytań quizu, 14 pytań otwartych |
+| Zapis postępów, archiwum, zmiana daty, wznawianie quizu | ✅ na Pi od 2026-10-20 (szczegóły w sekcji 4a) |
 | Zakładka „Najważniejsze” | ✅ na wszystkich 4 stronach, pierwsza i domyślnie otwarta |
 | Data sprawdzianu z historii | ✅ **2026-10-20**, cały dział: tematy 1–6 (użytkownik potwierdził, że temat 4 też obowiązuje, mimo że dziennik podawał 1, 2, 3, 5, 6) |
 | Fizyka: *Siły, pole i napięcie elektryczne* (kartkówka **2026-10-23**) | ✅ na Pi, 34 fiszki, 35 pytań quizu, 11 zadań, zakładka „Wzory” zamiast osi czasu. Treść z typowego programu liceum (bez zdjęć od użytkownika) |
@@ -85,6 +86,24 @@ Co zmieniono w `app.py` dla tego projektu:
 - w `<nav>` linki `/strony/lazik/` „Łazik” i `/strony/nauka/` „Nauka”,
 - w `site_files()` obsługa podfolderów: `/strony/x/sub/` podaje `sub/index.html`, a `/strony/x/sub` przekierowuje 302
   na wersję z ukośnikiem. `..` dalej daje 404 (sprawdzone).
+- (2026-10-20) API nauki: `/api/nauka/postep` (GET wszystkie), `/api/nauka/postep/<id>` (GET, POST z `op`:
+  `fiszka`, `zeruj_fiszki`, `quiz`, `ile`), `/api/nauka/data/<id>` (POST `{"data":"RRRR-MM-DD"|null}`, zapisuje
+  `sprawdziany.json` w miejscu). Limit 64 KB, walidacja id/daty, zapis atomowy z blokadą.
+  Kopia aktualnego `app.py` jest w repo: `pi/app.py` (poprzednia: `pi/app.py.przed_postepami`).
+  Backup na Pi: `app.py.bak_2026-10-20_postep`, strona: `~/portal/nauka.bak_2026-10-20_postep.tgz`.
+
+### 4a. Postępy, archiwum i zmiana daty (od 2026-10-20)
+- **Postępy na Pi:** `~/portal/dane/nauka/<id>.json` (`fiszki` klucz `"nrTematu|przód"` → 1 umiem / 0 jeszcze nie,
+  `quizy` lista wyników, `bledne` tekst pytania → licznik, `ile` liczba fiszek i pytań). Wspólne dla wszystkich urządzeń.
+- **`strona/postep.js`** (wspólny skrypt, ładowany `../postep.js`) + każda strona ma `<html data-nauka="<id>">`.
+- **Nowa strona MUSI być podłączona:** `python3 narzedzia/dodaj_postep.py <id>` (z katalogu repo). Dodaje zapis fiszek,
+  historię wyników, „Powtórz pytania, w których się myliłeś” oraz **wznawianie** przerwanego quizu i ostatniej zakładki
+  po przeładowaniu (localStorage, na danym urządzeniu). Wymaga standardowego kodu fiszek/quizu z szablonu.
+- **Lista:** zakładki „Nadchodzące” / „Archiwalne” (data < dzisiaj → archiwum, sort malejąco po dacie), przy karcie
+  postępy i przycisk „📅 zmień datę”.
+- ⚠️ **Użytkownik sam zmienia daty na Pi.** Przed każdą edycją `sprawdziany.json` najpierw pobierz go z Pi
+  (`scp pi:/home/tonyg/portal/sites/nauka/sprawdziany.json strona/`), dopiero potem dopisuj i wgrywaj. Inaczej nadpiszesz
+  jego zmiany dat.
 
 ### ⚠️ Czego NIE ruszać
 Na tym Pi działa **serwer Minecraft, na którym grają znajomi** (`powernukkitx`, `playit`, `pi-dashboard`).
@@ -193,6 +212,8 @@ Wszystko musi się zgadzać z notatką. Gotowe narzędzie: `narzedzia/dodaj_najw
 ## 7. Procedura: dodanie nowej kartkówki (lokalnie, z SSH)
 
 ```bash
+# 0. pobierz aktualny spis z Pi (użytkownik mógł zmienić daty): scp pi:/home/tonyg/portal/sites/nauka/sprawdziany.json strona/
+# 0b. po zbudowaniu strony: python3 narzedzia/dodaj_postep.py <id>
 # 1. przygotuj lokalnie: nauka-z-claude/strona/<id>/index.html + nowy wpis w strona/sprawdziany.json
 # 2. wgraj na Pi (z folderu nauka-z-claude)
 scp -r strona/<id> tonyg@100.108.241.58:/home/tonyg/portal/sites/nauka/
@@ -240,3 +261,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   Backup: `sprawdziany.json.bak_2026-10-19_ang-pol-edo`. PDF-y podręczników nie są w repo (tylko w uploadach sesji).
 - **2026-10-20**: Historia: temat 4 jednak obowiązuje — usunięto ramkę zakresu, wyszarzenie i filtr „spr”, dodano kartę
   tematu 4 w „Najważniejsze”. Wgrane na Pi po ponownym zatwierdzeniu „check” (minęło 12 h). Backup `*.bak_2026-10-20`.
+- **2026-10-20 (2)**: Zapis postępów na Pi (fiszki umiem/jeszcze nie, wyniki quizów, błędne pytania), zakładka
+  „Archiwalne”, zmiana daty z listy, wznawianie przerwanego quizu i ostatniej zakładki. Nowe API w `app.py` (za zgodą
+  użytkownika), restart tylko `home-portal`; portal i usługi Minecraft `active`. Test end-to-end na kopii portalu
+  (2 „urządzenia”, archiwum, zmiana daty) i test API na Pi. Format `sprawdziany.json` po zapisie przez API bez zmian.
