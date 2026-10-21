@@ -111,7 +111,7 @@ function ustawFormularz(data){
   $("fNotatka").value = w && w.notatka || "";
   const ile = DANE.zdjecia.filter(z => z.data === data).length;
   $("fIstnieje").hidden = !(w || ile);
-  $("fIstnieje").textContent = `Dla ${krotko(data)} są już zapisane ${w ? "wyniki z wagi" : ""}${w && ile ? " i " : ""}${ile ? ile + " zdj." : ""}. Zapis podmieni wyniki, a zdjęcia dopisze.`;
+  $("fIstnieje").textContent = `Dla ${krotko(data)} są już zapisane ${w ? "wyniki z wagi" : ""}${w && ile ? " i " : ""}${ile ? ile + " " + (ile === 1 ? "zdjęcie" : ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? "zdjęcia" : "zdjęć") : ""}. Zapis podmieni wyniki, a zdjęcia dopisze.`;
   NOWE.forEach(n => { if(!n.wlasnaData) n.data = data; rysujNowe(n); });
 }
 $("fData").onchange = () => ustawFormularz($("fData").value || dzis());

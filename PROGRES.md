@@ -46,3 +46,6 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 - **2026-10-21**: Pierwsza wersja. Test: 4 zdjęcia (3 różne kadry tego samego zdjęcia + bok) rozpoznane, wyrównanie
   zgodne do ~3%, nagranie MP4 2,1 s, wykresy z dymkiem. Wdrożone z kopią `app.py.bak_2026-10-21_progres`;
   restart tylko `home-portal`, usługi Minecraft `active`.
+- **2026-10-21 (2)**: Wyrównanie na iPhonie/iPadzie: formularz w siatce 4 kolumny (telefon 2), jednostki obok nazw pól,
+  jednakowa wysokość pól. Na stronie głównej portalu kafelki statystyk: telefon 2+2+1, tablet 3+2, szeroko 5 w rzędzie,
+  paski przy dolnej krawędzi (backup `app.py.bak_2026-10-21_kafelki`).

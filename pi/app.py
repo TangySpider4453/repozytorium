@@ -670,10 +670,17 @@ nav a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 nav a:hover{border-color:var(--accent)}
 section{display:flex;flex-direction:column;gap:14px}
 .sec-note{color:var(--muted);max-width:75ch;margin:0}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+/* 5 kafelkow bez osieroconego ostatniego: telefon 2+2+1, tablet 3+2, szeroki ekran 5 w rzedzie */
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;grid-column:span 2;min-width:0}
+.tile:nth-child(4),.tile:nth-child(5){grid-column:span 3}
+.tile .bar{margin-top:auto}
+.tile .d{margin-bottom:8px}
+@media (max-width:540px){.tile,.tile:nth-child(4){grid-column:span 3}.tile:nth-child(5){grid-column:span 6}}
+@media (max-width:360px){.tile .v{white-space:normal}}
+@media (min-width:1080px){.tiles{grid-template-columns:repeat(5,minmax(0,1fr))}.tile,.tile:nth-child(4),.tile:nth-child(5){grid-column:span 1}.tile .v{font-size:26px}}
 .tile .k{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
-.tile .v{font-family:var(--display);font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.tile .v{font-family:var(--display);font-size:clamp(22px,6vw,30px);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .d{font-size:13px;color:var(--muted)}
 .bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:var(--accent)}

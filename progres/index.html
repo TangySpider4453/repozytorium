@@ -51,7 +51,12 @@ section.tab[hidden]{display:none}
 .small{font-size:14px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-@media (max-width:480px){.grid3{grid-template-columns:1fr 1fr}.grid3 .full{grid-column:1/-1}}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.grid4{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.grid3{grid-template-columns:1fr 1fr}}
+label.f{justify-content:flex-end}
+input[type=text],input[type=number],input[type=date],select{height:46px;line-height:normal;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
 label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:15px}
 label.f span.u{font-weight:400;color:var(--muted)}
 input[type=text],input[type=number],input[type=date],textarea,select{width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);font-size:17px}
@@ -122,13 +127,13 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <section class="tab" id="dodaj">
   <div class="card">
     <h2>Pomiar z wagi</h2>
-    <div class="grid3">
-      <label class="f full">Data<input type="date" id="fData"></label>
-      <label class="f">Masa <span class="u">kg</span><input type="text" inputmode="decimal" id="fMasa" placeholder="np. 78,4"></label>
-      <label class="f">Tłuszcz <span class="u">%</span><input type="text" inputmode="decimal" id="fFat" placeholder="np. 15,2"></label>
-      <label class="f">Mięśnie <span class="u">%</span><input type="text" inputmode="decimal" id="fMuscle" placeholder="np. 42,1"></label>
+    <div class="grid4">
+      <label class="f"><span>Data</span><input type="date" id="fData"></label>
+      <label class="f"><span>Masa <span class="u">kg</span></span><input type="text" inputmode="decimal" id="fMasa" placeholder="np. 78,4"></label>
+      <label class="f"><span>Tłuszcz <span class="u">%</span></span><input type="text" inputmode="decimal" id="fFat" placeholder="np. 15,2"></label>
+      <label class="f"><span>Mięśnie <span class="u">%</span></span><input type="text" inputmode="decimal" id="fMuscle" placeholder="np. 42,1"></label>
     </div>
-    <label class="f" style="margin-top:10px">Notatka <span class="u">(opcjonalnie)</span><textarea id="fNotatka" placeholder="np. rano na czczo"></textarea></label>
+    <label class="f" style="margin-top:10px"><span>Notatka <span class="u">(opcjonalnie)</span></span><textarea id="fNotatka" placeholder="np. rano na czczo"></textarea></label>
     <p class="hint small" id="fIstnieje" hidden></p>
   </div>
   <div class="card">
