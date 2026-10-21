@@ -25,10 +25,21 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   format 4:5 / 9:16 / 1:1, przejście płynne/cięcie, napis z datą i wynikami. Podgląd na canvasie, nagrywanie przez
   MediaRecorder (MP4 w Safari/Chrome, inaczej WebM). Ustawienia zapisują się na Pi.
 
+- **Tryby filmu:** `tryb: "seria"` (zdjęcia co N dni, `sek`, `przejscie`) albo `tryb: "pp"` – przed i po z 2 zdjęć
+  (`pp1`, `pp2`, `ppT` = czas zdjęcia, `ppTr` = czas przejścia): zdjęcie 1 → przejście → oba nałożone 50/50 →
+  przejście → zdjęcie 2. Oś czasu `plan()` w `app.js` i `plan()` w `pi/progres_render.py` muszą być zgodne.
+- **Render na Raspberry:** przycisk „Renderuj na Raspberry” → `POST /api/progres/render {film, ids, opis}` → kolejka
+  (jeden film naraz, wątek w `app.py`) uruchamia `nice -n 15 python3 ~/portal/progres_render.py` (Pillow + ffmpeg
+  libx264, 30 fps, CRF 20, yuv420p, faststart). Gotowe filmy: `dane/progres/filmy/<id>.mp4` + `<id>.json`, lista
+  „Gotowe filmy” (obejrzyj / pobierz / udostępnij / usuń). Test 2026-10-21: 30 zdjęć → 15,6 s filmu w 21 s na Pi.
+  Zgodność z podglądem sprawdzona porównaniem klatek (średnia różnica ~1/255).
+
 ## Pliki
 | Gdzie | Co |
 |---|---|
 | repo `progres/` | `index.html`, `app.js`, `site.json` (kopiowane do `~/portal/sites/progres/`) |
+| repo `pi/progres_render.py` | render filmu na Pi (kopiowany do `~/portal/progres_render.py`) |
+| Pi `~/portal/dane/progres/filmy/` | filmy z renderu na Pi (`<id>.mp4`, `<id>.json`) |
 | repo `pi/app.py` | portal z API `/api/progres*` (kopia z Pi; poprzednia wersja `pi/app.py.przed_progresem`) |
 | Pi `~/portal/dane/progres/dane.json` | `{wpisy: {data: {masa, fat, muscle, notatka}}, zdjecia: [{id, data, typ, w, h, pose?, reczne?, dodano}], ustawienia: {film}}` |
 | Pi `~/portal/dane/progres/zdjecia/` | `<id>.jpg` i `<id>_m.jpg` |
@@ -44,6 +55,8 @@ zapasową `~/portal/dane/` (np. przez udział Samba na komputer).
 - `POST /api/progres/zdjecie/<id>` `{data?, typ?, pose?, reczne?}` albo `{usun:true}` (do kosza)
 - `GET /api/progres/plik/<id>.jpg` i `<id>_m.jpg`
 - `POST /api/progres/ustawienia` `{film:{...}}`
+- `POST /api/progres/render` `{film, ids, opis}`, `GET /api/progres/filmy`, `GET /api/progres/film/<id>.mp4` (Range),
+  `POST /api/progres/film/<id>` `{usun:true}` (nie w trakcie renderu)
 Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 
 ## Dziennik
@@ -62,3 +75,6 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   i „Udostępnij / Zapisz w Zdjęciach” (Web Share API z plikiem, iOS/iPadOS). Nazwa pliku z zakresem dat. `app.js?v=4`.
 - **2026-10-21 (5)**: Karta „Kadr filmu”: przybliżenie i wysokość sylwetki, szkielet-wzór, krawędzie zdjęć na podglądzie,
   automatyczne przycięcie do części wspólnej (test: czarne brzegi 35–100% → 0%), własna ramka. `app.js?v=5`.
+- **2026-10-21 (6)**: Render filmów na Raspberry (kolejka, lista gotowych filmów, udostępnianie), tryb „Przed i po”
+  z dwóch zdjęć, wyraźniejsze kolory (wybrane = niebieskie z ✓, kontrast ≥ 4,5:1), aktywna zakładka biała.
+  Backup `app.py.bak_2026-10-21_render`. `app.js?v=7`.

@@ -374,7 +374,7 @@ async function kadruj(z, poZapisie){
 }
 
 /* ---------- FILM ---------- */
-let FM = {typ:"przod", od:"", do:"", co:7, sek:0.5, format:"4:5", przejscie:0.25, napisy:true};
+let FM = {tryb:"seria", typ:"przod", od:"", do:"", co:7, sek:0.5, format:"4:5", przejscie:0.25, napisy:true, pp1:"", pp2:"", ppT:1.5, ppTr:1};
 function formatWH(){ return {"4:5":[1080, 1350], "9:16":[1080, 1920], "1:1":[1080, 1080]}[FM.format] || [1080, 1350]; }
 function klatki(){
   const zd = DANE.zdjecia.filter(z => z.typ === FM.typ && (!FM.od || z.data >= FM.od) && (!FM.do || z.data <= FM.do)).sort((a, b) => a.data.localeCompare(b.data) || a.dodano.localeCompare(b.dodano));
@@ -388,24 +388,68 @@ function klatki(){
   }
   return wyn;
 }
+/* plan filmu: zdjęcia (kl), długość w sekundach (dl) i stan(s) = co widać w chwili s:
+   a, b = indeksy zdjęć w kl, w = udział zdjęcia b (0..1), napis = indeksy zdjęć do podpisu.
+   Ten sam plan liczy render na Raspberry (progres_render.py), więc film z Pi wygląda jak podgląd. */
+function plan(){
+  if(FM.tryb === "pp"){
+    const z1 = DANE.zdjecia.find(z => z.id === FM.pp1), z2 = DANE.zdjecia.find(z => z.id === FM.pp2);
+    if(!z1 || !z2 || z1.id === z2.id) return {kl:[], dl:0, stan:() => null};
+    const t = Math.max(0.1, FM.ppT || 1.5), tr = Math.max(0, FM.ppTr || 0);
+    // zdjęcie 1 → przejście → oba nałożone 50/50 → przejście → zdjęcie 2
+    const stan = s => {
+      let w;
+      if(s < t) w = 0;
+      else if(s < t + tr) w = 0.5 * (s - t) / tr;
+      else if(s < 2 * t + tr) w = 0.5;
+      else if(s < 2 * t + 2 * tr) w = 0.5 + 0.5 * (s - 2 * t - tr) / tr;
+      else w = 1;
+      return {a:0, b:1, w, napis:w < 0.25 ? [0] : w > 0.75 ? [1] : [0, 1]};
+    };
+    return {kl:[z1, z2], dl:3 * t + 2 * tr, stan};
+  }
+  const kl = klatki(), n = kl.length, sek = Math.max(0.1, FM.sek), fade = Math.min(FM.przejscie || 0, sek);
+  return {kl, dl:n ? n * sek + 0.6 : 0, stan:s => {
+    const i = Math.min(Math.floor(s / sek), n - 1), wK = s - i * sek;
+    if(fade > 0 && i + 1 < n && wK > sek - fade) return {a:i, b:i + 1, w:(wK - (sek - fade)) / fade, napis:[i]};
+    return {a:i, b:null, w:0, napis:[i]};
+  }};
+}
+function zdjeciaTypu(){ return DANE.zdjecia.filter(z => z.typ === FM.typ).sort((a, b) => a.data.localeCompare(b.data) || a.dodano.localeCompare(b.dodano)); }
 function filmUstaw(){
   Object.assign(FM, DANE.ustawienia.film || {});
   const ileTyp = k => DANE.zdjecia.filter(z => z.typ === k).length;
   if(!ileTyp(FM.typ)){ const t = TYPY.find(([k]) => ileTyp(k)); if(t) FM.typ = t[0]; }
   $("fmCaly").setAttribute("aria-pressed", String(!FM.od && !FM.do));
+  const pp = FM.tryb === "pp";
+  $("fmTrybSeria").setAttribute("aria-pressed", String(!pp)); $("fmTrybPP").setAttribute("aria-pressed", String(pp));
+  $("fmSeria").hidden = pp; $("fmPP").hidden = !pp;
+  const zt = zdjeciaTypu();
+  if(pp && zt.length >= 2){
+    if(!zt.some(z => z.id === FM.pp1)) FM.pp1 = zt[0].id;
+    if(!zt.some(z => z.id === FM.pp2) || FM.pp2 === FM.pp1) FM.pp2 = zt[zt.length - 1].id;
+  }
+  [["fmPP1", FM.pp1], ["fmPP2", FM.pp2]].forEach(([id, v]) => { const sel = $(id); sel.innerHTML = "";
+    zt.forEach((z, i) => { const nr = zt.filter(q => q.data === z.data).length > 1 ? ` (${zt.filter(q => q.data === z.data).indexOf(z) + 1})` : "";
+      sel.append(el("option", {value:z.id, text:`${krotko(z.data)}${nr}${DANE.wpisy[z.data] && DANE.wpisy[z.data].masa != null ? " · " + pl(DANE.wpisy[z.data].masa) + " kg" : ""}`})); }); sel.value = v; });
+  $("fmPPT").value = String(FM.ppT).replace(".", ","); $("fmPPTr").value = String(FM.ppTr).replace(".", ",");
   const ch = $("fmTyp"); ch.innerHTML = "";
   TYPY.forEach(([k, n]) => { const ile = DANE.zdjecia.filter(z => z.typ === k).length; if(!ile && k !== FM.typ) return;
     ch.append(el("button", {"aria-pressed":String(FM.typ === k), text:`${n} (${ile})`, onclick:() => { FM.typ = k; zapiszFM(); filmUstaw(); }})); });
   $("fmOd").value = FM.od; $("fmDo").value = FM.do; $("fmCo").value = FM.co; $("fmSek").value = String(FM.sek).replace(".", ",");
   $("fmFormat").value = FM.format; $("fmPrzejscie").value = String(FM.przejscie).replace(".", ","); $("fmNapisy").checked = !!FM.napisy;
   const [W, H] = formatWH(); const c = $("fmCanvas"); if(c.width !== W || c.height !== H){ c.width = W; c.height = H; }
-  const k = klatki(), sek = Math.max(0.1, FM.sek);
-  const przej = FM.przejscie > 0 ? `przejście ${pl(Math.min(FM.przejscie, sek), 2)} s` + (FM.przejscie > sek ? " (skrócone do czasu klatki)" : "") : "cięcie bez przejścia";
-  $("fmInfo").textContent = k.length ? `${k.length} klatek (${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)}), film ok. ${pl(k.length * sek, 1)} s, ${przej}.` : "Brak zdjęć tego rodzaju w wybranym zakresie.";
+  const P = plan(), k = P.kl, sek = Math.max(0.1, FM.sek);
+  if(pp) $("fmInfo").textContent = k.length === 2 ? `Przed i po: ${krotko(k[0].data)} → ${krotko(k[1].data)}. Film ${pl(P.dl, 1)} s: zdjęcie 1 (${pl(FM.ppT, 1)} s) → przejście (${pl(FM.ppTr, 1)} s) → oba nałożone (${pl(FM.ppT, 1)} s) → przejście → zdjęcie 2.` : "Wybierz dwa różne zdjęcia tego rodzaju (potrzebne są co najmniej 2).";
+  else {
+    const przej = FM.przejscie > 0 ? `przejście ${pl(Math.min(FM.przejscie, sek), 2)} s` + (FM.przejscie > sek ? " (skrócone do czasu klatki)" : "") : "cięcie bez przejścia";
+    $("fmInfo").textContent = k.length ? `${k.length} klatek (${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)}), film ok. ${pl(P.dl - 0.6, 1)} s, ${przej}.` : "Brak zdjęć tego rodzaju w wybranym zakresie.";
+  }
   const kl = $("fmKlatki"); kl.innerHTML = "";
   k.forEach(z => kl.append(el("button", {class:z.pose || z.reczne ? "" : "bez", onclick:() => kadruj(z, filmUstaw)}, el("img", {src:plik(z, true), alt:"", loading:"lazy"}), krotko(z.data).replace(/ \d{4}$/, ""))));
   if(k.length) pokazKlatke(0);
   rysujSzablon();
+  listaFilmow();
 }
 function zapiszFM(){ post(API + "/ustawienia", {film:FM}).catch(() => {}); DANE.ustawienia.film = Object.assign({}, FM); }
 ["fmOd", "fmDo", "fmCo", "fmSek", "fmFormat", "fmPrzejscie", "fmNapisy"].forEach(id => $(id).onchange = () => {
@@ -415,41 +459,62 @@ function zapiszFM(){ post(API + "/ustawienia", {film:FM}).catch(() => {}); DANE.
   zapiszFM(); filmUstaw();
 });
 $("fmCaly").onclick = () => { FM.od = ""; FM.do = ""; zapiszFM(); filmUstaw(); };
-function napis(g, z, W, H){
-  if(!FM.napisy) return;
-  const w = DANE.wpisy[z.data] || {}, czesci = [krotko(z.data)];
+$("fmTrybSeria").onclick = () => { FM.tryb = "seria"; zapiszFM(); filmUstaw(); };
+$("fmTrybPP").onclick = () => { FM.tryb = "pp"; zapiszFM(); filmUstaw(); };
+["fmPP1", "fmPP2", "fmPPT", "fmPPTr"].forEach(id => $(id).onchange = () => {
+  FM.pp1 = $("fmPP1").value; FM.pp2 = $("fmPP2").value;
+  const t = num($("fmPPT").value), tr = num($("fmPPTr").value);
+  FM.ppT = Number.isFinite(t) && t > 0 ? Math.min(t, 20) : 1.5; FM.ppTr = Number.isFinite(tr) && tr >= 0 ? Math.min(tr, 20) : 1;
+  zapiszFM(); filmUstaw();
+});
+function tekstNapisu(zs){
+  const W_ = z => DANE.wpisy[z.data] || {};
+  if(zs.length === 2){
+    const [a, b] = zs.map(W_), cz = [`${krotko(zs[0].data)} → ${krotko(zs[1].data)}`];
+    if(a.masa != null && b.masa != null) cz.push(`${pl(a.masa)} → ${pl(b.masa)} kg`);
+    if(a.fat != null && b.fat != null) cz.push(`${pl(a.fat)} → ${pl(b.fat)}% tł.`);
+    return cz.join("  ·  ");
+  }
+  const w = W_(zs[0]), czesci = [krotko(zs[0].data)];
   if(w.masa != null) czesci.push(pl(w.masa) + " kg"); if(w.fat != null) czesci.push(pl(w.fat) + "% tł."); if(w.muscle != null) czesci.push(pl(w.muscle) + "% mięśni");
-  const t = czesci.join("  ·  "), fs = Math.round(W * 0.038);
+  return czesci.join("  ·  ");
+}
+function napis(g, zs, W, H){
+  if(!FM.napisy) return;
+  if(!Array.isArray(zs)) zs = [zs];
+  const t = tekstNapisu(zs); let fs = Math.round(W * 0.038);
   g.font = `700 ${fs}px "Alegreya Sans", sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
-  const tw = g.measureText(t).width, y = H - fs * 1.6;
+  let tw = g.measureText(t).width;
+  while(tw > W * 0.88){ fs = Math.floor(fs * 0.92); g.font = `700 ${fs}px "Alegreya Sans", sans-serif`; tw = g.measureText(t).width; }
+  const y = H - Math.round(W * 0.038) * 1.6;
   g.fillStyle = "rgba(0,0,0,.55)"; g.beginPath(); g.roundRect ? g.roundRect(W / 2 - tw / 2 - fs * 0.7, y - fs * 0.85, tw + fs * 1.4, fs * 1.7, fs * 0.5) : g.rect(W / 2 - tw / 2 - fs * 0.7, y - fs * 0.85, tw + fs * 1.4, fs * 1.7); g.fill();
   g.fillStyle = "#fff"; g.fillText(t, W / 2, y);
 }
 async function pokazKlatke(i){
   synchCEL();
-  const k = klatki(); if(!k[i]) return; const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, r = ramkaKoncowa(k, W, H);
+  const k = plan().kl; if(!k[i]) return; const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, r = ramkaKoncowa(k, W, H);
   const img = await obraz(k[i]); g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
   wRamce(g, r, W, () => rysujKlatke(g, img, k[i], W, H)); napis(g, k[i], W, H);
 }
 /* odtwarzanie w czasie rzeczywistym (podgląd i nagrywanie używają tego samego) */
 async function odtworz(onKoniec){
-  const k = klatki(); if(!k.length) return;
+  const P = plan(), k = P.kl; if(!k.length) return;
   $("fmStatus").textContent = "Wczytuję zdjęcia…";
   const imgs = await Promise.all(k.map(obraz));
   synchCEL();
-  const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, sek = Math.max(0.1, FM.sek), fade = Math.min(FM.przejscie, sek), rk = ramkaKoncowa(k, W, H);
-  const total = k.length * sek + 0.6; let start = null;
+  const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, rk = ramkaKoncowa(k, W, H);
+  const total = P.dl; let start = null;
   $("fmStatus").textContent = "";
   return new Promise(res => {
     const krok = t => {
       if(start == null) start = t;
-      const el_ = (t - start) / 1000, i = Math.min(Math.floor(el_ / sek), k.length - 1), wKlatce = el_ - i * sek;
+      const el_ = (t - start) / 1000, st = P.stan(Math.min(el_, total - 1e-6));
       g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
       wRamce(g, rk, W, () => {
-        rysujKlatke(g, imgs[i], k[i], W, H);
-        if(fade > 0 && i + 1 < k.length && wKlatce > sek - fade) rysujKlatke(g, imgs[i + 1], k[i + 1], W, H, (wKlatce - (sek - fade)) / fade);
+        rysujKlatke(g, imgs[st.a], k[st.a], W, H);
+        if(st.b != null && st.w > 0) rysujKlatke(g, imgs[st.b], k[st.b], W, H, st.w);
       });
-      napis(g, k[i], W, H);
+      napis(g, st.napis.map(i => k[i]), W, H);
       if(el_ < total) requestAnimationFrame(krok); else { res(); if(onKoniec) onKoniec(); }
     };
     requestAnimationFrame(krok);
@@ -469,7 +534,7 @@ $("fmNagraj").onclick = async () => {
   await odtworz(); rec.stop(); await gotowe;
   const blob = new Blob(czesci, {type:rec.mimeType || mime || "video/webm"}), ext = (rec.mimeType || mime).includes("mp4") ? "mp4" : "webm";
   const url = URL.createObjectURL(blob), v = $("fmVideo"); v.src = url; v.hidden = false;
-  const kl = klatki(), nazwa = `progres-${FM.typ}-${(kl[0] || {}).data || ""}_${(kl[kl.length - 1] || {}).data || ""}.${ext}`;
+  const kl = plan().kl, nazwa = `progres-${FM.tryb === "pp" ? "przed-po-" : ""}${FM.typ}-${(kl[0] || {}).data || ""}_${(kl[kl.length - 1] || {}).data || ""}.${ext}`;
   const plikFilmu = new File([blob], nazwa, {type:blob.type}), mb = (blob.size / 1e6).toFixed(1).replace(".", ",");
   const box = $("fmPobierz"); box.innerHTML = "";
   // eksport: pobranie pliku albo systemowe „Udostępnij” (na iPhonie/iPadzie: Zapisz wideo w Zdjęciach, AirDrop, komunikatory)
@@ -504,7 +569,7 @@ async function rysujSzablon(){
   const c = $("szCanvas"); if(!c) return;
   synchCEL();
   const [Wf, Hf] = formatWH(); if(c.width !== Wf / 2 || c.height !== Hf / 2){ c.width = Wf / 2; c.height = Hf / 2; }
-  const g = c.getContext("2d"), W = c.width, H = c.height, kl = klatki();
+  const g = c.getContext("2d"), W = c.width, H = c.height, kl = plan().kl;
   $("szS").value = CEL.s; $("szY").value = CEL.y; $("szSv").textContent = `(tułów = ${Math.round(CEL.s * 100)}% wysokości)`; $("szYv").textContent = `(${Math.round(CEL.y * 100)}% od góry)`;
   $("szPrzytnij").checked = FM.przytnij !== false;
   g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
@@ -562,7 +627,69 @@ $("szRysuj").onclick = () => { szTryb = szTryb === "rysuj" ? null : "rysuj"; rys
   c.addEventListener("pointerup", koniec); c.addEventListener("pointercancel", koniec);
 })();
 
-window.__progres = {pokazKlatke, klatki, ramkaKoncowa, geom, FM:() => FM};   // do testów automatycznych
+/* ---------- render na Raspberry: zlecenie i lista gotowych filmów ---------- */
+function opisFilmu(){
+  const k = plan().kl, typ = NAZWA[FM.typ] || FM.typ;
+  if(FM.tryb === "pp") return k.length === 2 ? `${typ} · przed i po: ${krotko(k[0].data)} → ${krotko(k[1].data)}` : typ;
+  return k.length ? `${typ} · seria ${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)} · ${k.length} zdj., co ${FM.co} dni` : typ;
+}
+$("fmPi").onclick = async () => {
+  const k = plan().kl;
+  if(!k.length){ $("fmStatus").textContent = "Najpierw wybierz zdjęcia do filmu."; return; }
+  $("fmPi").disabled = true;
+  try{ await post(API + "/render", {film:FM, ids:k.map(z => z.id), opis:opisFilmu()}); $("fmStatus").textContent = "Zlecono render na Raspberry ✓ Film pojawi się na liście poniżej, możesz zamknąć stronę."; }
+  catch(e){ $("fmStatus").textContent = "Nie udało się zlecić renderu: " + e.message; }
+  $("fmPi").disabled = false; listaFilmow();
+};
+const BLOBY = {};
+let pollFilmow = null;
+async function listaFilmow(){
+  const box = $("fmFilmy"); if(!box) return;
+  let lista = [];
+  try{ lista = await (await fetch(API + "/filmy", {cache:"no-store"})).json(); }catch(e){ box.innerHTML = ""; box.append(el("p", {class:"err small", text:"Nie udało się wczytać listy filmów."})); return; }
+  box.innerHTML = "";
+  if(!lista.length) box.append(el("p", {class:"muted small", text:"Jeszcze nie ma filmów. Ustaw film powyżej i kliknij „Renderuj na Raspberry”."}));
+  lista.forEach(m => {
+    const url = `${API}/film/${m.id}.mp4`, nazwa = `progres-${m.utworzono.slice(0, 10)}-${m.id.slice(0, 6)}.mp4`;
+    const stan = {oczekuje:["q", "w kolejce"], renderuje:["run", `renderuje ${m.postep || 0}%`], gotowe:["ok", "gotowe"], blad:["err", "błąd"]}[m.status] || ["q", m.status];
+    const d = new Date(m.utworzono), kiedy = `${d.getDate()} ${MIES[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const info = [kiedy]; if(m.rozmiar) info.push((m.rozmiar / 1e6).toFixed(1).replace(".", ",") + " MB"); if(m.czas_renderu) info.push(`render ${m.czas_renderu} s`);
+    const wiersz = el("div", {class:"film"}, el("div", {class:"t"}, m.opis || "Film", el("span", {class:"stan " + stan[0], text:stan[1]})), el("div", {class:"m", text:info.join(" · ")}));
+    if(m.status === "renderuje") wiersz.append(el("div", {class:"pasek"}, el("i", {style:`width:${m.postep || 0}%`})));
+    if(m.status === "blad") wiersz.append(el("div", {class:"m err", text:m.blad || ""}));
+    const akcje = el("div", {class:"row", style:"margin-top:6px"});
+    if(m.status === "gotowe"){
+      akcje.append(el("button", {class:"btn", text:"▶ Obejrzyj", onclick:() => { const b = $("modalBox"); b.innerHTML = ""; $("modal").hidden = false;
+        b.append(el("video", {src:url, controls:"", playsinline:"", autoplay:""}), el("div", {class:"row", style:"justify-content:center"}, el("button", {class:"btn", text:"Zamknij", onclick:zamknij}))); }}),
+        el("a", {class:"btn primary", href:url, download:nazwa, text:"⬇ Pobierz"}));
+      if(navigator.canShare){
+        const ud = el("button", {class:"btn", text:"📤 Udostępnij / Zapisz w Zdjęciach"});
+        ud.onclick = async () => {
+          // iOS wymaga, żeby udostępnienie było bezpośrednio po dotknięciu: najpierw pobieramy film, potem drugie dotknięcie udostępnia
+          if(!BLOBY[m.id]){ ud.disabled = true; ud.textContent = "Przygotowuję…";
+            try{ const bl = await (await fetch(url)).blob(); BLOBY[m.id] = new File([bl], nazwa, {type:"video/mp4"}); }catch(e){}
+            ud.disabled = false; ud.textContent = "📤 Dotknij jeszcze raz, żeby udostępnić"; return; }
+          if(navigator.canShare({files:[BLOBY[m.id]]})) navigator.share({files:[BLOBY[m.id]], title:"Progres"}).catch(() => {});
+        };
+        akcje.append(ud);
+      }
+    }
+    if(m.status !== "renderuje") akcje.append(el("button", {class:"btn bad", text:"Usuń", onclick:async () => { if(!confirm("Usunąć ten film?")) return; await post(`${API}/film/${m.id}`, {usun:true}); listaFilmow(); }}));
+    wiersz.append(akcje); box.append(wiersz);
+  });
+  clearTimeout(pollFilmow);
+  if(lista.some(m => m.status === "oczekuje" || m.status === "renderuje")) pollFilmow = setTimeout(() => { if(!$("film").hidden) listaFilmow(); }, 3000);
+}
+
+/* rysuje chwilę s filmu (do testów porównujących z renderem na Pi) */
+async function rysujChwile(s){
+  synchCEL(); const P = plan(), k = P.kl; if(!k.length) return;
+  const imgs = await Promise.all(k.map(obraz)), c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, rk = ramkaKoncowa(k, W, H), st = P.stan(Math.min(s, P.dl - 1e-6));
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+  wRamce(g, rk, W, () => { rysujKlatke(g, imgs[st.a], k[st.a], W, H); if(st.b != null && st.w > 0) rysujKlatke(g, imgs[st.b], k[st.b], W, H, st.w); });
+  napis(g, st.napis.map(i => k[i]), W, H);
+}
+window.__progres = {pokazKlatke, klatki, plan, ramkaKoncowa, geom, rysujChwile, FM:() => FM};   // do testów automatycznych
 
 /* ---------- start ---------- */
 (async () => {

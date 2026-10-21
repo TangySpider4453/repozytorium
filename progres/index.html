@@ -11,7 +11,7 @@
 /* Dziennik sylwetki: pomiary z wagi, zdjęcia i film z postępu. Dane i zdjęcia tylko na Pi (/api/progres). */
 :root{
   --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
-  --nav:#1F3A5F; --navInk:#FFFFFF; --ok:#2F7D4F; --bad:#B23A48; --acc:#2a78d6;
+  --nav:#1F3A5F; --navInk:#FFFFFF; --ok:#2F7D4F; --bad:#B23A48; --acc:#2a78d6; --sel:#1d63c4; --chipLine:#8A97A8;
   --s1:#2a78d6; --s2:#eb6834; --grid:#E4E9F0;
   --serif:"Alegreya",Georgia,serif; --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   color-scheme:light;
@@ -19,13 +19,13 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
-    --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --bad:#E06C79; --acc:#3987e5;
+    --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --bad:#E06C79; --acc:#3987e5; --sel:#1f6fd6; --chipLine:#6B7F99;
     --s1:#3987e5; --s2:#d95926; --grid:#223146; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
-  --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --bad:#E06C79; --acc:#3987e5;
+  --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --bad:#E06C79; --acc:#3987e5; --sel:#1f6fd6; --chipLine:#6B7F99;
   --s1:#3987e5; --s2:#d95926; --grid:#223146; color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -42,7 +42,7 @@ header.top p{margin:4px 0 0;opacity:.8;font-size:15px}
 nav.tabs{position:sticky;top:0;z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
 nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
 nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
-nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+nav.tabs button[aria-selected="true"]{opacity:1;background:#fff;color:#16202C}
 main{padding:18px 0 70px}
 section.tab[hidden]{display:none}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 14px}
@@ -65,12 +65,15 @@ label.f span.u{font-weight:400;color:var(--muted)}
 input[type=text],input[type=number],input[type=date],textarea,select{width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);font-size:17px}
 textarea{min-height:60px;resize:vertical}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
-.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.primary{background:var(--sel);color:#fff;border-color:var(--sel)}
 .btn.bad{color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:default}
+a.btn{text-decoration:none;display:inline-block}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chips button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
-.chips button[aria-pressed="true"]{background:var(--nav);border-color:var(--nav);color:#fff}
+/* wybrane = pełny niebieski z ✓, niewybrane = puste z obwódką (kontrast tekstu >= 4,5:1) */
+.chips button{border:2px solid var(--chipLine);background:transparent;color:var(--ink);border-radius:999px;padding:6px 13px;font-weight:700;font-size:14px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--sel);border-color:var(--sel);color:#fff}
+.chips button[aria-pressed="true"]::before{content:"✓ "}
 .hint{background:var(--soft);border-radius:10px;padding:8px 12px;font-size:15px;margin:8px 0 0}
 .err{color:var(--bad);font-weight:700}
 .okmsg{color:var(--ok);font-weight:700}
@@ -111,6 +114,14 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 .modal[hidden]{display:none}
 .modal .box{background:var(--surface);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 .modal img{display:block;max-width:100%;max-height:50vh;margin:0 auto 10px;border-radius:10px}
+.film{border-top:1px solid var(--line);padding:10px 0}
+.film:first-child{border-top:0}
+.film .t{font-weight:700}
+.film .m{font-size:14px;color:var(--muted)}
+.stan{display:inline-block;font-size:13px;font-weight:700;border-radius:999px;padding:1px 9px;margin-left:6px;vertical-align:middle}
+.stan.ok{background:var(--ok);color:#fff}.stan.run{background:var(--sel);color:#fff}.stan.q{background:var(--soft);color:var(--ink)}.stan.err{background:var(--bad);color:#fff}
+.pasek{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin:6px 0}
+.pasek i{display:block;height:100%;background:var(--sel)}
 </style>
 </head>
 <body>
@@ -158,15 +169,29 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <section class="tab" id="film" hidden>
   <div class="card">
     <h2>Ustawienia filmu</h2>
+    <div class="f" style="margin-bottom:10px">Rodzaj filmu<div class="chips"><button id="fmTrybSeria" aria-pressed="true">Seria zdjęć</button><button id="fmTrybPP" aria-pressed="false">Przed i po (2 zdjęcia)</button></div></div>
     <div class="f" style="margin-bottom:10px">Rodzaj zdjęcia<div class="chips" id="fmTyp"></div></div>
-    <div class="f" style="margin-bottom:10px">Zakres<div class="chips"><button id="fmCaly" aria-pressed="true">Cały zapis</button></div></div>
-    <div class="grid3">
-      <label class="f">Od<input type="date" id="fmOd"></label>
-      <label class="f">Do<input type="date" id="fmDo"></label>
-      <label class="f">Co ile dni<input type="number" id="fmCo" min="1" max="365" value="7"></label>
-      <label class="f">Sekund na zdjęcie<input type="text" inputmode="decimal" id="fmSek" value="0,5"></label>
+    <div id="fmSeria">
+      <div class="f" style="margin-bottom:10px">Zakres<div class="chips"><button id="fmCaly" aria-pressed="true">Cały zapis</button></div></div>
+      <div class="grid3">
+        <label class="f">Od<input type="date" id="fmOd"></label>
+        <label class="f">Do<input type="date" id="fmDo"></label>
+        <label class="f">Co ile dni<input type="number" id="fmCo" min="1" max="365" value="7"></label>
+        <label class="f"><span>Na zdjęcie <span class="u">s</span></span><input type="text" inputmode="decimal" id="fmSek" value="0,5"></label>
+        <label class="f"><span>Przejście <span class="u">s (0 = cięcie)</span></span><input type="text" inputmode="decimal" id="fmPrzejscie" value="0,25"></label>
+      </div>
+    </div>
+    <div id="fmPP" hidden>
+      <div class="grid4">
+        <label class="f"><span>Zdjęcie 1 <span class="u">(przed)</span></span><select id="fmPP1"></select></label>
+        <label class="f"><span>Zdjęcie 2 <span class="u">(po)</span></span><select id="fmPP2"></select></label>
+        <label class="f"><span>Na zdjęcie <span class="u">s</span></span><input type="text" inputmode="decimal" id="fmPPT" value="1,5"></label>
+        <label class="f"><span>Przejście <span class="u">s</span></span><input type="text" inputmode="decimal" id="fmPPTr" value="1"></label>
+      </div>
+      <p class="muted small" style="margin:8px 0 0">Zdjęcie 1 → przejście → oba zdjęcia nałożone na siebie (wyrównane według sylwetki) → przejście → zdjęcie 2.</p>
+    </div>
+    <div class="grid3" style="margin-top:10px">
       <label class="f">Format<select id="fmFormat"><option value="4:5">4:5 (Instagram)</option><option value="9:16">9:16 (relacja)</option><option value="1:1">1:1</option></select></label>
-      <label class="f"><span>Przejście <span class="u">s (0 = cięcie)</span></span><input type="text" inputmode="decimal" id="fmPrzejscie" value="0,25"></label>
     </div>
     <label class="row" style="margin-top:10px;font-weight:700"><input type="checkbox" id="fmNapisy" checked> Pokazuj datę i wyniki z wagi</label>
     <p class="hint small" id="fmInfo"></p>
@@ -186,10 +211,12 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
     <p class="hint small" id="szInfo"></p>
   </div>
   <div class="stage"><canvas id="fmCanvas" width="1080" height="1350"></canvas></div>
-  <div class="row" style="justify-content:center"><button class="btn" id="fmPlay">▶ Podgląd</button><button class="btn primary" id="fmNagraj">⬇ Eksportuj film</button></div>
+  <div class="row" style="justify-content:center"><button class="btn" id="fmPlay">▶ Podgląd</button><button class="btn primary" id="fmPi">🖥 Renderuj na Raspberry</button><button class="btn" id="fmNagraj">⬇ Eksportuj tutaj</button></div>
+  <p class="muted small" style="text-align:center;margin:6px 0 0">„Renderuj na Raspberry” robi film w tle: możesz zamknąć stronę, a gotowy film pobierzesz na każdym urządzeniu. „Eksportuj tutaj” nagrywa od razu w tej przeglądarce.</p>
   <p class="small" id="fmStatus" style="text-align:center"></p>
   <video id="fmVideo" controls playsinline hidden></video>
   <p style="text-align:center" id="fmPobierz"></p>
+  <div class="card" style="margin-top:14px"><h2>Gotowe filmy <span class="muted small">(na Raspberry)</span></h2><div id="fmFilmy"><p class="muted small">Ładowanie…</p></div></div>
 </section>
 
 </div></main>
@@ -197,6 +224,6 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <!-- podgląd zdjęcia: typ, data, usuń, kadrowanie -->
 <div class="modal" id="modal" hidden><div class="box" id="modalBox"></div></div>
 
-<script type="module" src="app.js?v=5"></script>
+<script type="module" src="app.js?v=7"></script>
 </body>
 </html>

@@ -23,6 +23,7 @@ import shutil
 import socket
 import struct
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -1294,6 +1295,141 @@ def api_progres_ustawienia():
         d["ustawienia"].update(b)
         zapisz_json(PROGRES / "dane.json", d)
     return jsonify(d["ustawienia"])
+
+
+# ---------- Progres: render filmu na Pi (kolejka, jeden film naraz, nice 15) ----------
+# dane/progres/filmy/<id>.json (opis i stan), <id>.mp4 (gotowy film), <id>.postep (procent w trakcie)
+PROGRES_FILMY = PROGRES / "filmy"
+RENDER_SKRYPT = BASE / "progres_render.py"
+RENDER_BUDZIK = threading.Event()
+RENDER_FORMATY = {"4:5": (1080, 1350), "9:16": (1080, 1920), "1:1": (1080, 1080)}
+
+
+def film_meta(fid):
+    try:
+        return json.loads((PROGRES_FILMY / f"{fid}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def film_zapisz(m):
+    zapisz_json(PROGRES_FILMY / f"{m['id']}.json", m)
+
+
+def render_petla():
+    while True:
+        oczekujace = sorted((m for m in (film_meta(p.stem) for p in PROGRES_FILMY.glob("*.json")) if m and m.get("status") == "oczekuje"),
+                            key=lambda m: m["utworzono"])
+        if not oczekujace:
+            RENDER_BUDZIK.wait(600)
+            RENDER_BUDZIK.clear()
+            continue
+        m = oczekujace[0]
+        m["status"], m["start"] = "renderuje", time.strftime("%Y-%m-%dT%H:%M:%S")
+        film_zapisz(m)
+        d = progres_dane()
+        zd = {z["id"]: z for z in d["zdjecia"]}
+        kl = [{k: zd[i][k] for k in ("id", "w", "h", "data", "pose", "reczne") if k in zd[i]} for i in m["ids"] if i in zd]
+        wej = PROGRES_FILMY / f"{m['id']}.wejscie.json"
+        zapisz_json(wej, {"film": m["film"], "kl": kl, "wpisy": d["wpisy"], "katalog": str(PROGRES_ZDJ)})
+        tmp, post = PROGRES_FILMY / f"{m['id']}.tmp.mp4", PROGRES_FILMY / f"{m['id']}.postep"
+        t0 = time.time()
+        try:
+            r = subprocess.run(["nice", "-n", "15", sys.executable, str(RENDER_SKRYPT), str(wej), str(tmp), str(post)],
+                               capture_output=True, text=True, timeout=3 * 3600)
+            ok, blad = r.returncode == 0 and tmp.exists(), (r.stderr or "")[-400:]
+        except (OSError, subprocess.TimeoutExpired) as e:
+            ok, blad = False, str(e)[-400:]
+        m = film_meta(m["id"]) or m
+        if ok:
+            os.replace(tmp, PROGRES_FILMY / f"{m['id']}.mp4")
+            m.update(status="gotowe", rozmiar=(PROGRES_FILMY / f"{m['id']}.mp4").stat().st_size, czas_renderu=round(time.time() - t0))
+        else:
+            m.update(status="blad", blad=blad or "nieznany blad")
+            tmp.unlink(missing_ok=True)
+        for p in (wej, post):
+            p.unlink(missing_ok=True)
+        film_zapisz(m)
+
+
+def render_start():
+    PROGRES_FILMY.mkdir(parents=True, exist_ok=True)
+    for p in PROGRES_FILMY.glob("*.json"):            # przerwany restartem portalu: zrob jeszcze raz
+        m = film_meta(p.stem)
+        if m and m.get("status") == "renderuje":
+            m["status"] = "oczekuje"
+            film_zapisz(m)
+    threading.Thread(target=render_petla, name="progres-render", daemon=True).start()
+
+
+@app.route("/api/progres/render", methods=["POST"])
+def api_progres_render():
+    from flask import request
+    import uuid
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not isinstance(b.get("film"), dict) or len(json.dumps(b["film"])) > 4000:
+        abort(400)
+    ids = b.get("ids")
+    znane = {z["id"] for z in progres_dane()["zdjecia"]}
+    if not (isinstance(ids, list) and 1 <= len(ids) <= 2000 and all(isinstance(i, str) and i in znane for i in ids)):
+        abort(400)
+    if b["film"].get("format", "4:5") not in RENDER_FORMATY:
+        abort(400)
+    opis = b.get("opis")
+    m = {"id": uuid.uuid4().hex, "status": "oczekuje", "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S"),
+         "film": b["film"], "ids": ids, "opis": opis[:200] if isinstance(opis, str) else ""}
+    film_zapisz(m)
+    RENDER_BUDZIK.set()
+    return jsonify(m)
+
+
+@app.route("/api/progres/filmy")
+def api_progres_filmy():
+    lista = []
+    for p in PROGRES_FILMY.glob("*.json"):
+        if p.name.endswith(".wejscie.json"):
+            continue
+        m = film_meta(p.stem)
+        if not m:
+            continue
+        if m.get("status") == "renderuje":
+            try:
+                m["postep"] = int((PROGRES_FILMY / f"{m['id']}.postep").read_text())
+            except (OSError, ValueError):
+                m["postep"] = 0
+        m.pop("ids", None)
+        lista.append(m)
+    return jsonify(sorted(lista, key=lambda m: m["utworzono"], reverse=True))
+
+
+@app.route("/api/progres/film/<nazwa>")
+def api_progres_film_plik(nazwa):
+    if not re.fullmatch(r"[0-9a-f]{32}\.mp4", nazwa):
+        abort(404)
+    resp = send_from_directory(PROGRES_FILMY, nazwa, mimetype="video/mp4", conditional=True)
+    resp.headers["Cache-Control"] = "private, max-age=86400"
+    return resp
+
+
+@app.route("/api/progres/film/<fid>", methods=["POST"])
+def api_progres_film_zmien(fid):
+    from flask import request
+    if not re.fullmatch(r"[0-9a-f]{32}", fid):
+        abort(404)
+    b = request.get_json(silent=True)
+    m = film_meta(fid)
+    if m is None:
+        abort(404)
+    if not isinstance(b, dict) or b.get("usun") is not True:
+        abort(400)
+    if m.get("status") == "renderuje":
+        abort(409)
+    for nazwa in (f"{fid}.json", f"{fid}.mp4", f"{fid}.tmp.mp4", f"{fid}.postep", f"{fid}.wejscie.json"):
+        (PROGRES_FILMY / nazwa).unlink(missing_ok=True)
+    return jsonify({"ok": True})
+
+
+render_start()
 
 
 def tailscale_ipv4():
