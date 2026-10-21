@@ -49,3 +49,8 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 - **2026-10-21 (2)**: Wyrównanie na iPhonie/iPadzie: formularz w siatce 4 kolumny (telefon 2), jednostki obok nazw pól,
   jednakowa wysokość pól. Na stronie głównej portalu kafelki statystyk: telefon 2+2+1, tablet 3+2, szeroko 5 w rzędzie,
   paski przy dolnej krawędzi (backup `app.py.bak_2026-10-21_kafelki`).
+- **2026-10-21 (3)**: „Użyj daty ze zdjęcia” ustawia datę pomiaru i wszystkich wybranych zdjęć (wpisane ręcznie liczby
+  zostają, wartości wypełnione automatycznie z innego dnia są podmieniane). Film: przycisk „Cały zapis”, domyślny rodzaj
+  zdjęcia = pierwszy, który ma zdjęcia. Safari/iPad: pola daty nie wypychają siatki (`min-width:0`), `app.js?v=3`.
+  Portal: JS/CSS stron z `Cache-Control: no-cache` (backup `app.py.bak_2026-10-21_cache`).
+  **Przy zmianie `app.js` podbijaj `?v=` w `progres/index.html`.**

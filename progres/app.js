@@ -102,19 +102,28 @@ const doBloba = (c, q) => new Promise(res => c.toBlob(res, "image/jpeg", q));
 
 /* ---------- DODAJ ---------- */
 const NOWE = [];
-function ustawFormularz(data){
+function ustawFormularz(data, zachowaj){
   $("fData").value = data;
   const w = DANE.wpisy[data];
-  $("fMasa").value = w && w.masa != null ? pl(w.masa) : "";
-  $("fFat").value = w && w.fat != null ? pl(w.fat) : "";
-  $("fMuscle").value = w && w.muscle != null ? pl(w.muscle) : "";
-  $("fNotatka").value = w && w.notatka || "";
+  // „zachowaj”: przy zmianie daty z EXIF nie kasuj wpisanych liczb, tylko uzupełnij puste pola zapisanymi wartościami
+  // pole wypełnione automatycznie (data-auto) można podmienić; to, co wpisałeś ręcznie, zostaje
+  const wstaw = (id, v) => { const e = $(id); if(!zachowaj || !e.value.trim() || e.dataset.auto) { e.value = v; if(v) e.dataset.auto = "1"; else delete e.dataset.auto; } };
+  wstaw("fMasa", w && w.masa != null ? pl(w.masa) : "");
+  wstaw("fFat", w && w.fat != null ? pl(w.fat) : "");
+  wstaw("fMuscle", w && w.muscle != null ? pl(w.muscle) : "");
+  wstaw("fNotatka", w && w.notatka || "");
   const ile = DANE.zdjecia.filter(z => z.data === data).length;
   $("fIstnieje").hidden = !(w || ile);
   $("fIstnieje").textContent = `Dla ${krotko(data)} są już zapisane ${w ? "wyniki z wagi" : ""}${w && ile ? " i " : ""}${ile ? ile + " " + (ile === 1 ? "zdjęcie" : ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? "zdjęcia" : "zdjęć") : ""}. Zapis podmieni wyniki, a zdjęcia dopisze.`;
   NOWE.forEach(n => { if(!n.wlasnaData) n.data = data; rysujNowe(n); });
 }
+/* „Użyj daty ze zdjęcia”: ta data trafia do pomiaru i do wszystkich wybranych zdjęć */
+function uzyjDaty(d){
+  NOWE.forEach(n => n.wlasnaData = false);
+  ustawFormularz(d, true);
+}
 $("fData").onchange = () => ustawFormularz($("fData").value || dzis());
+["fMasa", "fFat", "fMuscle", "fNotatka"].forEach(id => $(id).addEventListener("input", () => delete $(id).dataset.auto));
 
 $("fPliki").onchange = async e => {
   const files = [...e.target.files]; e.target.value = "";
@@ -147,7 +156,7 @@ function rysujNowe(n){
   TYPY.forEach(([k, nazwa]) => chips.append(el("button", {"aria-pressed":String(n.typ === k), text:nazwa, onclick:() => { n.typ = k; rysujNowe(n); }})));
   const data = el("input", {type:"date", value:n.data, onchange:e => { n.data = e.target.value || $("fData").value; n.wlasnaData = true; }});
   const prawa = el("div", {}, chips, el("label", {class:"f", style:"margin-top:8px"}, "Data zdjęcia", data));
-  if(n.exif && n.exif !== n.data) prawa.append(el("button", {class:"btn small", style:"margin-top:6px;padding:6px 10px", text:`Użyj daty ze zdjęcia: ${krotko(n.exif)}`, onclick:() => { n.data = n.exif; n.wlasnaData = true; rysujNowe(n); }}));
+  if(n.exif && n.exif !== n.data) prawa.append(el("button", {class:"btn small", style:"margin-top:6px;padding:6px 10px", text:`Użyj daty ze zdjęcia: ${krotko(n.exif)}`, onclick:() => uzyjDaty(n.exif)}));
   prawa.append(el("div", {class:"st " + (n.blad ? "err" : ""), text:n.status}),
     el("button", {class:"btn bad small", style:"margin-top:6px;padding:6px 10px", text:"Usuń z listy", onclick:() => { NOWE.splice(NOWE.indexOf(n), 1); n.el.remove(); }}));
   n.el.append(podglad, prawa);
@@ -352,6 +361,9 @@ function klatki(){
 }
 function filmUstaw(){
   Object.assign(FM, DANE.ustawienia.film || {});
+  const ileTyp = k => DANE.zdjecia.filter(z => z.typ === k).length;
+  if(!ileTyp(FM.typ)){ const t = TYPY.find(([k]) => ileTyp(k)); if(t) FM.typ = t[0]; }
+  $("fmCaly").setAttribute("aria-pressed", String(!FM.od && !FM.do));
   const ch = $("fmTyp"); ch.innerHTML = "";
   TYPY.forEach(([k, n]) => { const ile = DANE.zdjecia.filter(z => z.typ === k).length; if(!ile && k !== FM.typ) return;
     ch.append(el("button", {"aria-pressed":String(FM.typ === k), text:`${n} (${ile})`, onclick:() => { FM.typ = k; zapiszFM(); filmUstaw(); }})); });
@@ -371,6 +383,7 @@ function zapiszFM(){ post(API + "/ustawienia", {film:FM}).catch(() => {}); DANE.
   FM.format = $("fmFormat").value; FM.przejscie = +$("fmPrzejscie").value; FM.napisy = $("fmNapisy").checked;
   zapiszFM(); filmUstaw();
 });
+$("fmCaly").onclick = () => { FM.od = ""; FM.do = ""; zapiszFM(); filmUstaw(); };
 function napis(g, z, W, H){
   if(!FM.napisy) return;
   const w = DANE.wpisy[z.data] || {}, czesci = [krotko(z.data)];

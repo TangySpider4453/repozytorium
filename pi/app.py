@@ -895,6 +895,9 @@ def page(name):
 def no_cache(resp):
     if resp.mimetype in ("application/json", "text/html"):
         resp.headers["Cache-Control"] = "no-store"
+    elif resp.mimetype in ("text/javascript", "application/javascript", "text/css") and "Cache-Control" not in resp.headers:
+        # skrypty stron: przegladarka zawsze pyta o nowsza wersje (iPad trzymal stare app.js po aktualizacji)
+        resp.headers["Cache-Control"] = "no-cache"
     resp.headers["X-Content-Type-Options"] = "nosniff"
     return resp
 

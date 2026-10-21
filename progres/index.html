@@ -54,7 +54,10 @@ section.tab[hidden]{display:none}
 .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 @media (max-width:640px){.grid4{grid-template-columns:1fr 1fr}}
 @media (max-width:480px){.grid3{grid-template-columns:1fr 1fr}}
-label.f{justify-content:flex-end}
+label.f{justify-content:flex-end;min-width:0}
+input[type=date]{min-width:0;max-width:100%;display:block}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+input[type=date]::-webkit-datetime-edit{padding:0}
 input[type=text],input[type=number],input[type=date],select{height:46px;line-height:normal;-webkit-appearance:none;appearance:none}
 select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
 label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:15px}
@@ -156,6 +159,7 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
   <div class="card">
     <h2>Ustawienia filmu</h2>
     <div class="f" style="margin-bottom:10px">Rodzaj zdjęcia<div class="chips" id="fmTyp"></div></div>
+    <div class="f" style="margin-bottom:10px">Zakres<div class="chips"><button id="fmCaly" aria-pressed="true">Cały zapis</button></div></div>
     <div class="grid3">
       <label class="f">Od<input type="date" id="fmOd"></label>
       <label class="f">Do<input type="date" id="fmDo"></label>
@@ -181,6 +185,6 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <!-- podgląd zdjęcia: typ, data, usuń, kadrowanie -->
 <div class="modal" id="modal" hidden><div class="box" id="modalBox"></div></div>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=3"></script>
 </body>
 </html>
