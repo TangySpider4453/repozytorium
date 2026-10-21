@@ -255,6 +255,7 @@ let WYK = {dni:null, koniec:null};
 try{ Object.assign(WYK, JSON.parse(localStorage.getItem("progres:wykres") || "{}")); }catch(e){}
 const zapiszWYK = () => { try{ localStorage.setItem("progres:wykres", JSON.stringify(WYK)); }catch(e){} };
 const DZIEN = 864e5;
+const GODZ = 36e5;
 function rysujWykresy(){
   const wpisy = Object.entries(DANE.wpisy).sort((a, b) => a[0].localeCompare(b[0]));
   const ser = k => wpisy.filter(([, w]) => w[k] != null).map(([d, w]) => [d, w[k]]);
@@ -262,29 +263,34 @@ function rysujWykresy(){
   const daty = wpisy.filter(([, w]) => w.masa != null || w.fat != null || w.muscle != null).map(([d]) => pd(d).getTime());
   const dmin = daty.length ? daty[0] : Date.now(), dmax = daty.length ? daty[daty.length - 1] : Date.now(), rozpietosc = Math.round((dmax - dmin) / DZIEN);
   const okno = WYK.dni && WYK.dni < rozpietosc + 1;
-  let zak = null;
-  if(okno){
-    const kmin = dmin + (WYK.dni - 1) * DZIEN;
-    const koniec = Math.min(Math.max(WYK.koniec == null ? dmax : WYK.koniec, kmin), dmax);
-    zak = {x0:koniec - (WYK.dni - 1) * DZIEN, x1:koniec, kmin};
-  }
+  const kmin = okno ? dmin + (WYK.dni - 1) * DZIEN : dmin;
+  const zakres = koniec => { koniec = Math.min(Math.max(koniec, kmin), dmax); return {x0:koniec - (WYK.dni - 1) * DZIEN, x1:koniec}; };
+  let zak = okno ? zakres(WYK.koniec == null ? dmax : WYK.koniec) : null;
   const box = $("wykresy"); box.innerHTML = "";
   // zakres: gotowe przyciski + własna liczba dni
   const chips = el("div", {class:"chips"});
   ZAKRESY.forEach(([d, n]) => chips.append(el("button", {"aria-pressed":String(WYK.dni === d), text:n, onclick:() => { WYK.dni = d; WYK.koniec = null; zapiszWYK(); rysujWykresy(); }})));
   const wlasne = el("input", {type:"number", min:2, max:3650, inputmode:"numeric", placeholder:"np. 45", style:"width:90px;height:38px", value:ZAKRESY.some(([d]) => d === WYK.dni) ? "" : WYK.dni});
   wlasne.onchange = () => { const v = parseInt(wlasne.value); if(v >= 2){ WYK.dni = Math.min(v, 3650); WYK.koniec = null; zapiszWYK(); rysujWykresy(); } };
-  box.append(el("h2", {text:"Wykresy"}), el("div", {class:"f", style:"margin-bottom:6px"}, "Zakres", chips),
-    el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})),
+  // same wykresy są w osobnym pojemniku: suwak przerysowuje tylko je, więc można go płynnie przeciągać
+  const wnetrze = el("div");
+  const rysujSame = () => { wnetrze.replaceChildren(
     wykres("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg", zak),
-    wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak));
-  // suwak od dołu: przesuwa okno w czasie (wspólny dla obu wykresów)
+    wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak)); };
+  box.append(el("h2", {text:"Wykresy"}), el("div", {class:"f", style:"margin-bottom:6px"}, "Zakres", chips),
+    el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})), wnetrze);
+  rysujSame();
+  // suwak od dołu: przesuwa okno w czasie co godzinę (płynnie), wspólny dla obu wykresów
   if(okno){
-    const kroki = Math.round((dmax - zak.kmin) / DZIEN);
-    const sw = el("input", {type:"range", min:0, max:kroki, step:1, value:Math.round((zak.x1 - zak.kmin) / DZIEN), "aria-label":"Przesuń zakres wykresu"});
-    const opis = el("div", {class:"small", style:"text-align:center;font-weight:700", text:`${krotko(iso(new Date(zak.x0)))} – ${krotko(iso(new Date(zak.x1)))}`});
+    const opisZak = () => `${krotko(iso(new Date(zak.x0)))} – ${krotko(iso(new Date(zak.x1)))}`;
+    const sw = el("input", {type:"range", min:0, max:Math.max(1, Math.round((dmax - kmin) / GODZ)), step:1, value:Math.round((zak.x1 - kmin) / GODZ), "aria-label":"Przesuń zakres wykresu"});
+    const opis = el("div", {class:"small", style:"text-align:center;font-weight:700", text:opisZak()});
     let raf = 0;
-    sw.oninput = () => { WYK.koniec = zak.kmin + (+sw.value) * DZIEN; zapiszWYK(); cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { rysujWykresy(); const n = $("wykresy").querySelector('input[type=range]'); if(n) n.focus(); }); };
+    sw.addEventListener("input", () => {
+      zak = zakres(kmin + (+sw.value) * GODZ); WYK.koniec = zak.x1; opis.textContent = opisZak();
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(rysujSame);
+    });
+    sw.addEventListener("change", zapiszWYK);          // zapamiętaj po puszczeniu suwaka
     box.append(el("div", {class:"przesun"}, el("div", {class:"row small muted", style:"justify-content:space-between"}, el("span", {text:"◀ starsze"}), el("span", {text:"nowsze ▶"})), sw, opis));
   } else if(WYK.dni) box.append(el("p", {class:"muted small", style:"margin:0", text:"Wszystkie pomiary mieszczą się w tym zakresie, więc nie ma czego przesuwać."}));
 }

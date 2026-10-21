@@ -102,7 +102,7 @@ a.btn{text-decoration:none;display:inline-block}
 .tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:13.5px;box-shadow:0 4px 14px rgba(0,0,0,.15);white-space:nowrap;z-index:5}
 .chartwrap{position:relative}
 .przesun{margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
-.przesun input[type=range]{height:32px;accent-color:var(--sel)}
+.przesun input[type=range]{height:36px;accent-color:var(--sel);touch-action:pan-y}
 /* film i kadrowanie */
 .stage{position:relative;background:#000;border-radius:12px;overflow:hidden;margin:10px auto;max-width:440px}
 .stage canvas{display:block;width:100%;height:auto;touch-action:none}
@@ -229,6 +229,6 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <!-- podgląd zdjęcia: typ, data, usuń, kadrowanie -->
 <div class="modal" id="modal" hidden><div class="box" id="modalBox"></div></div>
 
-<script type="module" src="app.js?v=9"></script>
+<script type="module" src="app.js?v=10"></script>
 </body>
 </html>
