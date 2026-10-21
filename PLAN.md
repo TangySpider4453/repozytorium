@@ -295,3 +295,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   `/etc/nas-credentials`). Folder `Raspberry/` z `Logi/` (zdrowie, kopia, dziennik systemu co minutę),
   `Progres-zdjecia/`, `Progres-filmy/`, `Kopia-systemu/` (cały system co noc o 02:00 + instrukcja przywracania).
   Gdy NAS niedostępny: dioda czerwona. Skrypty w `pi/nas/`, opis w `SERWER.md`. Backup `app.py.bak_2026-10-22_nas`.
+- **2026-10-22 (wyłączanie)**: Komenda `raspiproszewylaczsie` do bezpiecznego wyłączenia Pi (zapis świata Minecraft,
+  czekanie na kopię, logi na NAS, poweroff). Sprawdzone: wszystkie usługi i timery startują same po zaniku prądu.

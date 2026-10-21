@@ -31,6 +31,13 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `/var/lib/kopia-pi/stan.json`, `ostatnia-udana.json`, log na NAS `Logi/kopia-systemu.log` (gdy NAS padł:
   `/var/lib/kopia-pi/zalegly.log`, dopisywany później). Obok kopii: `JAK-PRZYWROCIC.txt` i `przywroc.sh /dev/sdX`
   (odtwarza partycje z tymi samymi PARTUUID/UUID, więc nowa karta startuje bez poprawek).
+- **Bezpieczne wyłączenie**: komenda `raspiproszewylaczsie` (`/usr/local/bin`, repo `pi/nas/`): pyta o potwierdzenie
+  (`-t` bez pytania), czeka na trwającą kopię (`--teraz` przerywa ją), Minecraft `save-all` + `stop` przez
+  `~/powernukkitx/console.fifo`, zatrzymuje playit i portal, wpis w dzienniku zdrowia, ostatnie logi na NAS, odmontowanie
+  NAS, `poweroff`.
+- **Po zaniku prądu** wszystko startuje samo: usługi `enabled` (portal, Minecraft, playit, tailscale, dashboard, terminal,
+  ollama, smbd, wayvnc), timery NAS/logów/kopii; NAS z fstab (`nofail`) + `nas-montuj` co 2 min; kopia z
+  `Persistent=true` nadrabia pominiętą 02:00 zaraz po starcie, a przerwaną naprawia `e2fsck` przy następnym przebiegu.
 - **Pliki w repo**: `pi/nas/` (skrypty, jednostki systemd, instrukcje, `instaluj.sh`; instalacja: skopiuj folder na Pi
   i `sudo bash instaluj.sh`).
 
