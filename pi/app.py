@@ -11,6 +11,9 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
   /api/progres/...   dziennik sylwetki: pomiary z wagi i zdjecia (tylko na Pi, dane/progres/) dla /strony/progres/
   /api/zdrowie       stan serwera dla diody na kazdej stronie i dziennik problemow (dane/zdrowie/), strona /strony/zdrowie/
 
+NAS (Tony-Folder/Raspberry w /mnt/nas, montuje go nas-montuj.timer): zdjecia i filmy Progres oraz logi zdrowia ida tam
+od razu. Gdy NAS niedostepny, zostaja na Pi (czerwona dioda) i przenosza sie same po jego powrocie (watek nas_petla).
+
 Nasluch tylko na adresie Tailscale (port 80) - strona nie jest widoczna w sieci domowej ani w internecie.
 Uruchamiane przez systemd: home-portal.service (uzytkownik tonyg, CAP_NET_BIND_SERVICE dla portu 80).
 Konfiguracja (adres tunelu Minecraft, dodatkowe linki): config.json obok tego pliku.
@@ -1135,9 +1138,57 @@ def api_nauka_ustawienia():
     return jsonify(u)
 
 
+# ---------- NAS: zdjecia, filmy i logi od razu na NAS, Pi tylko jako bufor, gdy NAS niedostepny ----------
+# /mnt/nas = //172.23.0.28/Tony-Folder (fstab + nas-montuj). Znacznik Raspberry/.nas odroznia zamontowany NAS
+# od pustego katalogu na karcie. Sprawdzenie w osobnym watku z limitem czasu: zawieszony NAS nie blokuje portalu.
+NAS = Path("/mnt/nas/Raspberry")
+NAS_ZDJ, NAS_FILMY, NAS_LOGI = NAS / "Progres-zdjecia", NAS / "Progres-filmy", NAS / "Logi"
+NAS_STAN = {"ok": False, "t": -1e9}
+NAS_BUDZIK = threading.Event()
+
+
+def nas_ok(ttl=15):
+    if time.monotonic() - NAS_STAN["t"] < ttl:
+        return NAS_STAN["ok"]
+    wynik = []
+    th = threading.Thread(target=lambda: wynik.append(os.path.ismount("/mnt/nas") and (NAS / ".nas").is_file()), daemon=True)
+    th.start()
+    th.join(5)
+    NAS_STAN.update(ok=bool(wynik and wynik[0]), t=time.monotonic())
+    return NAS_STAN["ok"]
+
+
+def nas_blad():
+    NAS_STAN.update(ok=False, t=time.monotonic())
+
+
+def nas_zapisz(cel, dane=None, zrodlo=None):
+    """zapis na NAS przez plik .tmp (przerwany zapis nie zostawia polowy pliku pod wlasciwa nazwa)"""
+    cel.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cel.with_name(cel.name + ".tmp")
+    try:
+        if zrodlo is not None:
+            shutil.copyfile(zrodlo, tmp)
+        else:
+            tmp.write_bytes(dane)
+        os.replace(tmp, cel)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def nas_przenies(zrodlo, cel):
+    nas_zapisz(cel, zrodlo=zrodlo)
+    zrodlo.unlink()
+
+
 # ---------- Progres: dziennik sylwetki (pomiary z wagi i zdjecia) ----------
-# Wszystko tylko na Pi: dane/progres/dane.json + dane/progres/zdjecia/<id>.jpg i <id>_m.jpg (miniatura).
-# Usuniete zdjecia trafiaja do dane/progres/kosz/ (nie sa kasowane od razu).
+# Dane: dane/progres/dane.json na Pi (kopia na NAS: Progres-zdjecia/dane.json). Zdjecia <id>.jpg i <id>_m.jpg
+# (miniatura) od razu na NAS w Progres-zdjecia/; dane/progres/zdjecia/ to tylko bufor, gdy NAS niedostepny.
+# Usuniete zdjecia trafiaja do Progres-zdjecia/Usuniete/ (albo dane/progres/kosz/ na Pi), nie sa kasowane.
 PROGRES = BASE / "dane" / "progres"
 PROGRES_ZDJ = PROGRES / "zdjecia"
 PROGRES_LOCK = threading.Lock()
@@ -1250,9 +1301,8 @@ def api_progres_zdjecie_nowe():
     except OSError:
         abort(400)
     zid = uuid.uuid4().hex
-    PROGRES_ZDJ.mkdir(parents=True, exist_ok=True)
-    (PROGRES_ZDJ / f"{zid}.jpg").write_bytes(duze)
-    (PROGRES_ZDJ / f"{zid}_m.jpg").write_bytes(male)
+    progres_zapisz_zdjecie(f"{zid}.jpg", duze)
+    progres_zapisz_zdjecie(f"{zid}_m.jpg", male)
     rec = {"id": zid, "data": data, "typ": typ, "w": w, "h": h, "dodano": time.strftime("%Y-%m-%dT%H:%M:%S")}
     if pose:
         rec["pose"] = pose
@@ -1279,11 +1329,17 @@ def api_progres_zdjecie_zmien(zid):
         if rec is None:
             abort(404)
         if b.get("usun") is True:
-            kosz = PROGRES / "kosz"
-            kosz.mkdir(parents=True, exist_ok=True)
             for nazwa in (f"{zid}.jpg", f"{zid}_m.jpg"):
                 if (PROGRES_ZDJ / nazwa).exists():
-                    os.replace(PROGRES_ZDJ / nazwa, kosz / nazwa)
+                    (PROGRES / "kosz").mkdir(parents=True, exist_ok=True)
+                    os.replace(PROGRES_ZDJ / nazwa, PROGRES / "kosz" / nazwa)
+                elif nas_ok():
+                    try:
+                        if (NAS_ZDJ / nazwa).exists():
+                            (NAS_ZDJ / "Usuniete").mkdir(exist_ok=True)
+                            os.replace(NAS_ZDJ / nazwa, NAS_ZDJ / "Usuniete" / nazwa)
+                    except OSError:
+                        nas_blad()      # zostanie na NAS bez wpisu w dane.json: nas_petla przeniesie go do Usuniete
             d["zdjecia"] = [z for z in d["zdjecia"] if z["id"] != zid]
         else:
             if "data" in b:
@@ -1313,11 +1369,40 @@ def api_progres_zdjecie_zmien(zid):
     return jsonify(d)
 
 
+def progres_zapisz_zdjecie(nazwa, dane):
+    """na NAS; gdy sie nie da, na Pi (bufor) i od razu czerwona dioda"""
+    if nas_ok():
+        try:
+            nas_zapisz(NAS_ZDJ / nazwa, dane)
+            return
+        except OSError:
+            nas_blad()
+    PROGRES_ZDJ.mkdir(parents=True, exist_ok=True)
+    (PROGRES_ZDJ / nazwa).write_bytes(dane)
+    ZDROWIE_BUDZIK.set()
+
+
+def progres_gdzie(lokalny, na_nas, nazwa):
+    """katalog, w ktorym jest plik: najpierw bufor na Pi, potem NAS"""
+    if (lokalny / nazwa).is_file():
+        return lokalny
+    if nas_ok():
+        try:
+            if (na_nas / nazwa).is_file():
+                return na_nas
+        except OSError:
+            nas_blad()
+    return None
+
+
 @app.route("/api/progres/plik/<nazwa>")
 def api_progres_plik(nazwa):
     if not re.fullmatch(r"[0-9a-f]{32}(_m)?\.jpg", nazwa):
         abort(404)
-    resp = send_from_directory(PROGRES_ZDJ, nazwa, mimetype="image/jpeg")
+    katalog = progres_gdzie(PROGRES_ZDJ, NAS_ZDJ, nazwa)
+    if katalog is None:
+        abort(503 if not nas_ok() else 404)
+    resp = send_from_directory(katalog, nazwa, mimetype="image/jpeg")
     resp.headers["Cache-Control"] = "private, max-age=31536000, immutable"
     return resp
 
@@ -1372,7 +1457,7 @@ def render_petla():
             if z["id"] in (m.get("geo") or {}):
                 z["geo"] = m["geo"][z["id"]]
         wej = PROGRES_FILMY / f"{m['id']}.wejscie.json"
-        zapisz_json(wej, {"film": m["film"], "kl": kl, "wpisy": d["wpisy"], "katalog": str(PROGRES_ZDJ)})
+        zapisz_json(wej, {"film": m["film"], "kl": kl, "wpisy": d["wpisy"], "katalogi": [str(PROGRES_ZDJ), str(NAS_ZDJ)]})
         tmp, post = PROGRES_FILMY / f"{m['id']}.tmp.mp4", PROGRES_FILMY / f"{m['id']}.postep"
         t0 = time.time()
         try:
@@ -1383,8 +1468,16 @@ def render_petla():
             ok, blad = False, str(e)[-400:]
         m = film_meta(m["id"]) or m
         if ok:
-            os.replace(tmp, PROGRES_FILMY / f"{m['id']}.mp4")
-            m.update(status="gotowe", rozmiar=(PROGRES_FILMY / f"{m['id']}.mp4").stat().st_size, czas_renderu=round(time.time() - t0))
+            gotowy = PROGRES_FILMY / f"{m['id']}.mp4"
+            os.replace(tmp, gotowy)
+            m.update(status="gotowe", rozmiar=gotowy.stat().st_size, czas_renderu=round(time.time() - t0))
+            if nas_ok():
+                try:
+                    nas_przenies(gotowy, NAS_FILMY / gotowy.name)
+                except OSError:
+                    nas_blad()
+            if gotowy.exists():
+                ZDROWIE_BUDZIK.set()
         else:
             m.update(status="blad", blad=blad or "nieznany blad")
             tmp.unlink(missing_ok=True)
@@ -1452,7 +1545,10 @@ def api_progres_filmy():
 def api_progres_film_plik(nazwa):
     if not re.fullmatch(r"[0-9a-f]{32}\.mp4", nazwa):
         abort(404)
-    resp = send_from_directory(PROGRES_FILMY, nazwa, mimetype="video/mp4", conditional=True)
+    katalog = progres_gdzie(PROGRES_FILMY, NAS_FILMY, nazwa)
+    if katalog is None:
+        abort(503 if not nas_ok() else 404)
+    resp = send_from_directory(katalog, nazwa, mimetype="video/mp4", conditional=True)
     resp.headers["Cache-Control"] = "private, max-age=86400"
     return resp
 
@@ -1472,6 +1568,11 @@ def api_progres_film_zmien(fid):
         abort(409)
     for nazwa in (f"{fid}.json", f"{fid}.mp4", f"{fid}.tmp.mp4", f"{fid}.postep", f"{fid}.wejscie.json"):
         (PROGRES_FILMY / nazwa).unlink(missing_ok=True)
+    if nas_ok():
+        try:
+            (NAS_FILMY / f"{fid}.mp4").unlink(missing_ok=True)
+        except OSError:
+            nas_blad()
     return jsonify({"ok": True})
 
 
@@ -1482,6 +1583,7 @@ render_start()
 # dane/zdrowie/incydenty.json: kazdy problem {id, klucz, tytul, opis, poziom (warn/crit, najgorszy), od, do, wartosc,
 #   przejrzane}; zakonczony problem czeka na „Przejrzane”, wiec nic nie znika bez sladu.
 # dane/zdrowie/dziennik.log: kazda zmiana jako linia tekstu (start, pogorszenie, koniec).
+# Oba pliki sa od razu kopiowane na NAS (Logi/zdrowie-dziennik.log, Logi/zdrowie-incydenty.json) przez nas_petla.
 # Progi mozna nadpisac w config.json: {"zdrowie": {"temp": [70, 80], ...}}.
 ZDROWIE = BASE / "dane" / "zdrowie"
 ZDROWIE_LOCK = threading.Lock()
@@ -1497,6 +1599,8 @@ ZDROWIE_PROGI = {
     "zadania": ["mc-autoupdate"],    # usluga uruchamiana timerem: ostatni przebieg zakonczony bledem -> zolta
 }
 ZDROWIE_STAN = {"sprawdzono": None, "pomiary": {}, "liczniki": {}, "cpu": [], "cpu_prev": None}
+ZDROWIE_BUDZIK = threading.Event()      # pomiar od razu (np. zdjecie zapisane na Pi, bo NAS niedostepny)
+KOPIA_STAN = Path("/var/lib/kopia-pi")  # stan nocnej kopii systemu (skrypt kopia-pi)
 
 
 def zdrowie_progi():
@@ -1516,6 +1620,7 @@ def zdrowie_log(linia):
     ZDROWIE.mkdir(parents=True, exist_ok=True)
     with open(ZDROWIE / "dziennik.log", "a", encoding="utf-8") as f:
         f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " " + linia + "\n")
+    NAS_BUDZIK.set()
 
 
 def zdrowie_cpu():
@@ -1619,6 +1724,32 @@ def zdrowie_problemy(prog):
         nazwa = u.removesuffix(".service")
         if nazwa not in uslugi and nazwa not in prog["zadania"]:
             pr.append((f"failed:{u}", "warn", f"Jednostka systemd z błędem: {u}", "systemctl --failed", 1))
+    nas = nas_ok(ttl=0)
+    pom["nas"] = "ok" if nas else "brak"
+    if not nas:
+        pr.append(("nas", "crit", "NAS niedostępny", "Zdjęcia, filmy i logi zapisują się na Pi, nocna kopia systemu się nie zrobi. "
+                   "Sprawdź, czy NAS (172.23.0.28) jest włączony.", 1))
+    bufor = [p for p in list(PROGRES_ZDJ.glob("*.jpg")) + list(PROGRES_FILMY.glob("*.mp4")) if not p.name.endswith(".tmp.mp4")]
+    pom["bufor"] = len(bufor)
+    if bufor:
+        pr.append(("nas_bufor", "crit", "Zdjęcia lub filmy tylko na Pi (nie ma ich na NAS)",
+                   f"{len(bufor)} plików czeka na Pi. Przeniosą się same, gdy NAS będzie dostępny.", len(bufor), "natychmiast"))
+    try:
+        st = json.loads((KOPIA_STAN / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        st = None
+    try:
+        ok_ = json.loads((KOPIA_STAN / "ostatnia-udana.json").read_text(encoding="utf-8"))
+        wiek = (time.time() - time.mktime(time.strptime(ok_["czas"], "%Y-%m-%dT%H:%M:%S"))) / 3600
+        pom["kopia"] = ok_["czas"]
+    except (OSError, ValueError, KeyError):
+        wiek = None
+    if st and st.get("wynik") == "blad":
+        pr.append(("kopia", "crit", "Nocna kopia systemu nie udała się", f"Próba {st.get('start', '?')}. Szczegóły: NAS → Raspberry/Logi/kopia-systemu.log.", 1))
+    elif st and (wiek is None or wiek > 26):
+        poziom = "crit" if wiek is None or wiek > 50 else "warn"
+        pr.append(("kopia_stara", poziom, "Dawno nie było kopii systemu",
+                   f"Ostatnia udana: {pom.get('kopia', 'nigdy')}.", round(wiek or 0)))
     if Path("/var/run/reboot-required").exists():
         pr.append(("restart", "warn", "Potrzebny restart Pi", "Po aktualizacji systemu. Zrób go, gdy nikt nie gra.", 1))
     pom["uslugi"] = uslugi
@@ -1639,7 +1770,8 @@ def zdrowie_krok(teraz=None):
         widziane = set()
         for pr in problemy:
             klucz, poziom, tytul, opis, wartosc = pr[:5]
-            jednorazowy = len(pr) > 5
+            jednorazowy = pr[5:] == ("jednorazowo",)
+            prog_startu = 1 if pr[5:] == ("natychmiast",) else 2
             widziane.add(klucz)
             licz[klucz] = licz.get(klucz, 0) + 1 if licz.get(klucz, 0) >= 0 else 1
             if jednorazowy:
@@ -1655,7 +1787,7 @@ def zdrowie_krok(teraz=None):
                 if poziom == "crit" and a["poziom"] != "crit":
                     a["poziom"] = "crit"
                     zdrowie_log(f"POGORSZENIE crit {klucz}: {tytul} - {opis}")
-            elif licz[klucz] >= 2:
+            elif licz[klucz] >= prog_startu:
                 inc.append({"id": uuid_hex(), "klucz": klucz, "tytul": tytul, "opis": opis, "poziom": poziom, "teraz": poziom,
                             "od": teraz, "do": None, "ostatnio": teraz, "wartosc": wartosc, "przejrzane": False})
                 zdrowie_log(f"START {poziom} {klucz}: {tytul} - {opis}")
@@ -1692,7 +1824,8 @@ def zdrowie_petla():
                 zdrowie_log(f"BLAD MONITORA {type(e).__name__}: {e}")
             except OSError:
                 pass
-        time.sleep(60)
+        ZDROWIE_BUDZIK.wait(60)
+        ZDROWIE_BUDZIK.clear()
 
 
 def zdrowie_podsumowanie():
@@ -1743,8 +1876,68 @@ def api_zdrowie_dziennik():
     return jsonify(linie[::-1])
 
 
+# ---------- NAS: przenoszenie bufora z Pi i kopie logow (co 30 s albo od razu po zmianie) ----------
+NAS_KOPIE = {}      # plik -> zawartosc ostatnio wyslana na NAS
+
+
+def nas_lustro(zrodlo, cel):
+    try:
+        dane = zrodlo.read_bytes()
+    except OSError:
+        return
+    if NAS_KOPIE.get(cel) != dane:
+        nas_zapisz(cel, dane)
+        NAS_KOPIE[cel] = dane
+
+
+def nas_krok(sprzatanie=False):
+    if not nas_ok():
+        return
+    try:
+        for p in sorted(PROGRES_ZDJ.glob("*.jpg")):
+            nas_przenies(p, NAS_ZDJ / p.name)
+        for p in sorted((PROGRES / "kosz").glob("*.jpg")):
+            nas_przenies(p, NAS_ZDJ / "Usuniete" / p.name)
+        for p in sorted(PROGRES_FILMY.glob("*.mp4")):
+            if not p.name.endswith(".tmp.mp4"):
+                nas_przenies(p, NAS_FILMY / p.name)
+        nas_lustro(ZDROWIE / "dziennik.log", NAS_LOGI / "zdrowie-dziennik.log")
+        nas_lustro(ZDROWIE / "incydenty.json", NAS_LOGI / "zdrowie-incydenty.json")
+        nas_lustro(PROGRES / "dane.json", NAS_ZDJ / "dane.json")
+        if sprzatanie:      # pliki usuniete na stronie, gdy NAS byl niedostepny (starsze niz 10 min: nie w trakcie dodawania)
+            znane = {z["id"] for z in progres_dane()["zdjecia"]}
+            filmy = {p.stem for p in PROGRES_FILMY.glob("*.json")}
+            stare = time.time() - 600
+            for p in NAS_ZDJ.glob("*.jpg"):
+                if p.name.split(".")[0].removesuffix("_m") not in znane and p.stat().st_mtime < stare:
+                    (NAS_ZDJ / "Usuniete").mkdir(exist_ok=True)
+                    os.replace(p, NAS_ZDJ / "Usuniete" / p.name)
+            for p in NAS_FILMY.glob("*.mp4"):
+                if p.stem not in filmy and p.stat().st_mtime < stare:
+                    p.unlink()
+    except OSError:
+        nas_blad()
+
+
+def nas_petla():
+    n = 0
+    while True:
+        try:
+            nas_krok(sprzatanie=n % 20 == 0)
+        except Exception as e:      # watek nie moze zatrzymac portalu
+            try:
+                zdrowie_log(f"BLAD NAS {type(e).__name__}: {e}")
+            except OSError:
+                pass
+        n += 1
+        NAS_BUDZIK.wait(30)
+        NAS_BUDZIK.clear()
+        time.sleep(1)       # kilka zmian naraz = jedna kopia
+
+
 if not os.environ.get("PORTAL_TEST"):
     threading.Thread(target=zdrowie_petla, name="zdrowie", daemon=True).start()
+    threading.Thread(target=nas_petla, name="nas", daemon=True).start()
 
 
 def tailscale_ipv4():

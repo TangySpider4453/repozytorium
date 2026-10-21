@@ -45,14 +45,15 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
 |---|---|
 | repo `progres/` | `index.html`, `app.js`, `site.json` (kopiowane do `~/portal/sites/progres/`) |
 | repo `pi/progres_render.py` | render filmu na Pi (kopiowany do `~/portal/progres_render.py`) |
-| Pi `~/portal/dane/progres/filmy/` | filmy z renderu na Pi (`<id>.mp4`, `<id>.json`) |
+| Pi `~/portal/dane/progres/filmy/` | opisy filmów (`<id>.json`); `<id>.mp4` tylko w trakcie renderu albo gdy NAS niedostępny |
+| NAS `Tony-Folder/Raspberry/Progres-filmy/` | gotowe filmy `<id>.mp4` (przenoszone zaraz po renderze) |
 | repo `pi/app.py` | portal z API `/api/progres*` (kopia z Pi; poprzednia wersja `pi/app.py.przed_progresem`) |
 | Pi `~/portal/dane/progres/dane.json` | `{wpisy: {data: {masa, fat, muscle, notatka}}, zdjecia: [{id, data, typ, w, h, pose?, reczne?, dodano}], ustawienia: {film}}` |
-| Pi `~/portal/dane/progres/zdjecia/` | `<id>.jpg` i `<id>_m.jpg` |
-| Pi `~/portal/dane/progres/kosz/` | usunięte zdjęcia (nie są kasowane) |
+| NAS `Tony-Folder/Raspberry/Progres-zdjecia/` | zdjęcia `<id>.jpg` i `<id>_m.jpg` (zapisywane od razu na NAS), `dane.json` (kopia), `Usuniete/` |
+| Pi `~/portal/dane/progres/zdjecia/`, `kosz/` | tylko bufor, gdy NAS niedostępny (czerwona dioda), przenoszony sam po powrocie NAS |
 
-**Zdjęcia NIGDY nie trafiają do repozytorium** (prywatne). Są tylko na karcie SD Raspberry. Warto kiedyś zrobić kopię
-zapasową `~/portal/dane/` (np. przez udział Samba na komputer).
+**Zdjęcia NIGDY nie trafiają do repozytorium** (prywatne). Są na NAS (od 2026-10-22, szczegóły w `SERWER.md`, sekcja NAS);
+na Pi tylko chwilowo, gdy NAS nie odpowiada. Render szuka zdjęć najpierw w buforze na Pi, potem na NAS (`katalogi`).
 
 ## API (portal, tylko Tailscale)
 - `GET /api/progres` – całość danych
@@ -93,3 +94,5 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   za krawędź okna (przycięte), oś Y liczona z punktów w oknie. `app.js?v=9`.
 - **2026-10-22**: Suwak wykresów można przytrzymać i płynnie przeciągać: przerysowuje tylko wykresy (nie siebie),
   krok co 1 godzinę, pozycja zapisywana po puszczeniu. `app.js?v=10`.
+- **2026-10-22 (2)**: Zdjęcia i filmy na NAS (`Tony-Folder/Raspberry/Progres-zdjecia`, `Progres-filmy`), istniejące
+  przeniesione. Gdy NAS niedostępny: zapis na Pi i od razu czerwona dioda („Zdjęcia lub filmy tylko na Pi”).

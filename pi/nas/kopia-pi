@@ -1,0 +1,103 @@
+#!/bin/bash
+# Nocna kopia calego systemu Raspberry Pi na NAS (uruchamiana przez kopia-pi.timer o 02:00, jako root).
+#
+# Kopia to plik z systemem plikow ext4 na NAS: Raspberry/Kopia-systemu/raspberry-system.img
+# (podlaczany jako urzadzenie loop). Dzieki temu zostaja wlasciciele, uprawnienia, ACL, atrybuty i dowiazania,
+# czego sam udzial SMB nie przechowuje. Co noc rsync przepisuje tylko to, co sie zmienilo, i usuwa skasowane pliki.
+# Przywracanie: Raspberry/Kopia-systemu/JAK-PRZYWROCIC.txt i przywroc.sh.
+set -uo pipefail
+
+NAS=/mnt/nas
+R=$NAS/Raspberry
+K=$R/Kopia-systemu
+IMG=$K/raspberry-system.img
+MNT=/mnt/pi-kopia
+STAN=/var/lib/kopia-pi
+LOG=$R/Logi/kopia-systemu.log
+LIB=/usr/local/lib/kopia-pi
+ROZMIAR=64G            # pojemnosc pliku z kopia (plik rzadki: zajmuje na NAS tyle, ile danych)
+
+mkdir -p "$STAN"
+TMPLOG=$STAN/ostatni-przebieg.log
+: > "$TMPLOG"
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" | tee -a "$TMPLOG"; }
+koniec() {        # dopisz przebieg do logu na NAS (albo zostaw lokalnie, gdy NAS niedostepny)
+    local wynik=$1
+    printf '{"wynik": "%s", "czas": "%s", "start": "%s", "sekundy": %d}\n' "$wynik" "$(date '+%Y-%m-%dT%H:%M:%S')" \
+        "$START" $(( $(date +%s) - START_S )) > "$STAN/stan.json"
+    [ "$wynik" = ok ] && cp "$STAN/stan.json" "$STAN/ostatnia-udana.json"
+    if mountpoint -q "$NAS" && [ -d "$R/Logi" ]; then
+        { [ -s "$STAN/zalegly.log" ] && cat "$STAN/zalegly.log"; cat "$TMPLOG"; echo; } >> "$LOG" && rm -f "$STAN/zalegly.log"
+        cp "$STAN/stan.json" "$K/ostatnia-kopia.json" 2>/dev/null
+    else
+        { cat "$TMPLOG"; echo; } >> "$STAN/zalegly.log"
+    fi
+}
+sprzataj() {
+    mountpoint -q "$MNT" && { sync; umount "$MNT" || umount -l "$MNT"; }
+    [ -n "${LOOP:-}" ] && losetup -d "$LOOP" 2>/dev/null
+}
+trap sprzataj EXIT
+
+START=$(date '+%Y-%m-%dT%H:%M:%S'); START_S=$(date +%s)
+log "START kopii systemu"
+
+# NAS: zamontowany i to naprawde nasz udzial (znacznik), a nie pusty katalog na karcie
+mountpoint -q "$NAS" || /usr/local/sbin/nas-montuj
+if ! mountpoint -q "$NAS" || [ ! -f "$R/.nas" ]; then
+    log "BLAD: NAS niedostepny ($NAS), kopia nie zrobiona"; koniec blad; exit 1
+fi
+mkdir -p "$K" "$R/Logi"
+
+if [ ! -f "$IMG" ]; then
+    log "Tworze nowy plik kopii $IMG ($ROZMIAR)"
+    truncate -s "$ROZMIAR" "$IMG" && mkfs.ext4 -q -F -L pi-kopia -m 0 -E lazy_itable_init=1 "$IMG" \
+        || { log "BLAD: nie udalo sie utworzyc pliku kopii"; rm -f "$IMG"; koniec blad; exit 1; }
+fi
+
+LOOP=$(losetup --find --show "$IMG") || { log "BLAD: losetup"; koniec blad; exit 1; }
+e2fsck -p "$LOOP" >> "$TMPLOG" 2>&1
+rc=$?
+if [ $rc -ge 4 ]; then
+    log "e2fsck -p nie wystarczyl (kod $rc), naprawiam e2fsck -y"
+    e2fsck -fy "$LOOP" >> "$TMPLOG" 2>&1
+    [ $? -ge 4 ] && { log "BLAD: system plikow kopii uszkodzony"; koniec blad; exit 1; }
+fi
+mkdir -p "$MNT"
+mount -o noatime "$LOOP" "$MNT" || { log "BLAD: nie da sie zamontowac kopii"; koniec blad; exit 1; }
+
+log "rsync / -> kopia"
+rsync -aAXH --numeric-ids --delete --delete-excluded --stats \
+    --exclude='/proc/*' --exclude='/sys/*' --exclude='/dev/*' --exclude='/run/*' --exclude='/tmp/*' \
+    --exclude='/mnt/*' --exclude='/media/*' --exclude='/lost+found' --exclude='/var/swap' --exclude='/swapfile' \
+    --exclude='/var/tmp/*' --exclude='/var/cache/apt/archives/*.deb' --exclude='/var/lib/kopia-pi/ostatni-przebieg.log' \
+    --exclude='/home/*/.cache/*' --exclude='/root/.cache/*' \
+    / "$MNT/" > "$STAN/rsync.log" 2>&1
+rc=$?
+grep -E '^(Number of (regular )?files|Number of created|Number of deleted|Total transferred file size|Total file size)' "$STAN/rsync.log" \
+    | sed 's/^/    /' | tee -a "$TMPLOG" > /dev/null
+# 24 = pliki zniknely w trakcie kopiowania (normalne na dzialajacym systemie)
+if [ $rc -ne 0 ] && [ $rc -ne 24 ]; then
+    tail -20 "$STAN/rsync.log" >> "$TMPLOG"
+    log "BLAD: rsync zakonczyl sie kodem $rc"; koniec blad; exit 1
+fi
+# po rsync (rsync --delete usuwa ten katalog): informacje potrzebne do odtworzenia karty
+INFO=$MNT/.kopia-info
+mkdir -p "$INFO"
+sfdisk -d /dev/mmcblk0 > "$INFO/partycje.sfdisk" 2>/dev/null
+blkid > "$INFO/blkid.txt" 2>/dev/null
+lsblk -o NAME,SIZE,FSTYPE,LABEL,UUID,PARTUUID,MOUNTPOINT > "$INFO/lsblk.txt"
+dpkg --get-selections > "$INFO/pakiety.txt" 2>/dev/null
+cp /etc/fstab "$INFO/fstab"
+
+date '+%Y-%m-%d %H:%M:%S' > "$INFO/data-kopii.txt"
+sync
+UZYTE=$(df -h --output=used "$MNT" | tail -1 | tr -d ' ')
+umount "$MNT" || { log "BLAD: umount"; koniec blad; exit 1; }
+losetup -d "$LOOP"; LOOP=
+
+# instrukcja i skrypt przywracania zawsze obok kopii (aktualne wersje)
+cp "$LIB/JAK-PRZYWROCIC.txt" "$LIB/przywroc.sh" "$K/" 2>/dev/null
+log "OK: kopia gotowa (zajete w kopii: $UZYTE, czas $(( $(date +%s) - START_S )) s)"
+koniec ok
+exit 0

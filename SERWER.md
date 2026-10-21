@@ -5,8 +5,34 @@ Portal: **http://100.108.241.58/** (tylko Tailscale), `~/portal/app.py` (kopia w
 `pi-dashboard`): nie restartuj ich i nie rób rebootu bez pytania. Po każdej zmianie portalu sprawdź
 `systemctl is-active home-portal powernukkitx playit pi-dashboard`.
 
-Pi jest w tej samej sieci lokalnej co serwer NAS użytkownika (eth0 172.23.0.20, wlan0 172.23.0.24). NAS ma służyć
-do kopii zapasowych (szczegóły: do ustalenia z użytkownikiem).
+Pi jest w tej samej sieci lokalnej co serwer NAS użytkownika (eth0 172.23.0.20, wlan0 172.23.0.24), NAS: Synology
+DSM 7, **172.23.0.28** (szczegóły niżej).
+
+## NAS: zdjęcia, logi i nocna kopia systemu (od 2026-10-22)
+- **Połączenie**: udział SMB `//172.23.0.28/Tony-Folder` → `/mnt/nas` (linia w `/etc/fstab`, `soft`, `nofail`),
+  użytkownik `tony`, hasło **tylko** w `/etc/nas-credentials` (root, 600; nigdy w repo). `nas-montuj.timer` co 2 min
+  montuje ponownie, gdy połączenie padło, i tworzy foldery. SSH na NAS dla `tony` jest zablokowane, SMB bez rozszerzeń
+  POSIX (dlatego kopia systemu jest w pliku z ext4, a nie jako zwykłe pliki).
+- **Widoczne foldery** w `Tony-Folder/Raspberry/` (opis: `CZYTAJ.txt`; znacznik `.nas` = to właściwy folder):
+  `Logi/` (`zdrowie-dziennik.log`, `zdrowie-incydenty.json`, `kopia-systemu.log`, `system/RRRR-MM-DD.log`),
+  `Progres-zdjecia/` (+ `dane.json`, `Usuniete/`), `Progres-filmy/`, `Kopia-systemu/`.
+- **Portal** (`app.py`, wątek `nas_petla` co 30 s albo od razu po zmianie): zdjęcia i filmy Progres zapisuje prosto
+  na NAS; gdy NAS niedostępny, do bufora na Pi (`dane/progres/zdjecia`, `filmy`) i od razu czerwona dioda
+  („nas_bufor”, startuje po 1 wykryciu). Po powrocie NAS bufor przenosi się sam. Logi zdrowia i `dane.json` są
+  lustrzane na NAS po każdej zmianie. Monitor: „NAS niedostępny” (czerwona), „Nocna kopia systemu nie udała się”
+  (czerwona), „Dawno nie było kopii” (> 26 h żółta, > 50 h czerwona).
+- **Dziennik systemu**: journald trwały (`/etc/systemd/journald.conf.d/50-trwaly.conf`, max 300 MB), `logi-na-nas.timer`
+  co minutę dopisuje nowe wpisy do `Logi/system/<data>.log` (kursor w `/var/lib/kopia-pi/journal.kursor`, zaległe
+  dochodzą po powrocie NAS).
+- **Kopia całego systemu**: `kopia-pi.timer` codziennie 02:00 (`Persistent=true`: nadrabia, jeśli Pi było wyłączone).
+  `/usr/local/sbin/kopia-pi`: plik `Kopia-systemu/raspberry-system.img` (rzadki, 64 GB, ext4) podłączany przez loop,
+  `e2fsck`, `rsync -aAXH --numeric-ids --delete` całego `/` (bez /proc, /sys, /dev, /run, /tmp, /mnt, /media,
+  swapu, cache), do tego `.kopia-info/` (tablica partycji, blkid, fstab, lista pakietów). Stan:
+  `/var/lib/kopia-pi/stan.json`, `ostatnia-udana.json`, log na NAS `Logi/kopia-systemu.log` (gdy NAS padł:
+  `/var/lib/kopia-pi/zalegly.log`, dopisywany później). Obok kopii: `JAK-PRZYWROCIC.txt` i `przywroc.sh /dev/sdX`
+  (odtwarza partycje z tymi samymi PARTUUID/UUID, więc nowa karta startuje bez poprawek).
+- **Pliki w repo**: `pi/nas/` (skrypty, jednostki systemd, instrukcje, `instaluj.sh`; instalacja: skopiuj folder na Pi
+  i `sudo bash instaluj.sh`).
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
@@ -24,7 +50,7 @@ do kopii zapasowych (szczegóły: do ustalenia z użytkownikiem).
   {id | wszystkie:true}`, `GET /api/zdrowie/dziennik`.
 - **Progi i listy usług** można zmienić w `~/portal/config.json` → `"zdrowie": {"temp": [70, 80], "uslugi": [...]}`
   (restart portalu niepotrzebny; czytane przy każdym pomiarze). Nowa usługa (np. kopia zapasowa) = dopisać do
-  `uslugi`/`uslugi_kryt` albo `zadania` (dla usług uruchamianych timerem).
+  `uslugi`/`uslugi_kryt` albo `zadania` (dla usług uruchamianych timerem). NAS i kopia systemu: sekcja NAS wyżej.
 
 ## Dziennik
 - **2026-10-22**: Monitor zdrowia, dioda na wszystkich stronach, strona „Zdrowie serwera”, link w menu portalu.

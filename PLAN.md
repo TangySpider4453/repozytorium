@@ -40,6 +40,7 @@ Zasady od użytkownika:
 | Angielski: *Impulse 3 Unit 3 „Mysteries”* (sprawdzian **2026-10-22**) | ✅ na Pi, `angielski-impulse3-unit3`, z PDF podręcznika (s. 39–53, wordlist z tłumaczeniami): 142 fiszki z przełącznikiem EN↔PL, 66 pytań, 22 ćwiczenia |
 | Polski: wiersz na pamięć, Tetmajer *„Lubię, kiedy kobieta…”* (**2026-10-27**) | ✅ na Pi, `polski-tetmajer-lubie-kiedy-kobieta`: nauka na pamięć (5 poziomów), wpisywanie wersów, quiz 28. ⚠️ Tekst z pamięci Claude, **niesprawdzony z podręcznikiem (str. 90)** — poproś o zdjęcie i porównaj |
 | Edukacja obywatelska: *Masz wpływ 1*, dział 5 „Prawo i prawa człowieka”, tematy 1–5 (sprawdzian **2026-11-12**) | ✅ na Pi, `edukacja-obywatelska-dzial-5`, z PDF podręcznika (s. 187–218): 45 fiszek, 57 pytań, 20 pytań otwartych. Temat 4 oznaczony w podręczniku „F” (fakultatywny) — uwzględniony, do potwierdzenia u nauczyciela |
+| Kopie zapasowe na NAS (172.23.0.28, `Tony-Folder/Raspberry/`) | ✅ od 2026-10-22: logi i zdjęcia Progres od razu na NAS, cały system co noc o 02:00 (szczegóły w `SERWER.md`). Postępy nauki (`dane/nauka/`) i strony są w nocnej kopii |
 
 Kalendarz sprawdzianów użytkownik wkleja jako zrzut z dziennika (Librus: „najbliższe sprawdziany”). Klasa 3 KL, technikum, zawód technik robotyk.
 
@@ -290,3 +291,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   przy każdym rysowaniu, więc zmiana daty od razu przestawia kartę. Archiwum: najświeższy termin na górze.
 - **2026-10-21 (3)**: Gwiazdka „ważne” na kartach i przełącznik „Najpierw ważne” (nowe API w `app.py`, restart tylko
   `home-portal`, wszystko `active`). Backup `app.py.bak_2026-10-21_wazne`, poprzednia wersja w repo `pi/app.py.przed_waznymi`.
+- **2026-10-22 (NAS)**: Pi połączone z NAS (Synology 172.23.0.28, udział Tony-Folder, poświadczenia tylko na Pi w
+  `/etc/nas-credentials`). Folder `Raspberry/` z `Logi/` (zdrowie, kopia, dziennik systemu co minutę),
+  `Progres-zdjecia/`, `Progres-filmy/`, `Kopia-systemu/` (cały system co noc o 02:00 + instrukcja przywracania).
+  Gdy NAS niedostępny: dioda czerwona. Skrypty w `pi/nas/`, opis w `SERWER.md`. Backup `app.py.bak_2026-10-22_nas`.

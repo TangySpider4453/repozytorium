@@ -1,0 +1,10 @@
+[Unit]
+Description=Dziennik systemu na NAS co minute
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

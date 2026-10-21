@@ -1,0 +1,24 @@
+#!/bin/bash
+# Co minute (logi-na-nas.timer): nowe wpisy z dziennika systemu (journalctl) dopisywane do
+# Tony-Folder/Raspberry/Logi/system/RRRR-MM-DD.log. Kursor pamieta, co juz wyslano, wiec gdy NAS jest niedostepny,
+# nic nie ginie: po powrocie NAS zalegle wpisy (takze sprzed restartu Pi, dziennik jest trwaly) dochodza same.
+R=/mnt/nas/Raspberry
+STAN=/var/lib/kopia-pi
+mkdir -p "$STAN"
+mountpoint -q /mnt/nas && [ -f "$R/.nas" ] || exit 0
+mkdir -p "$R/Logi/system"
+TMP=$STAN/journal.nowe
+K=$STAN/journal.kursor
+rm -f "$K.nowy"; [ -f "$K" ] && cp "$K" "$K.nowy"
+timeout 60 journalctl --cursor-file="$K.nowy" -o short-iso --no-pager -q > "$TMP" 2>/dev/null
+rc=$?
+if [ $rc -ne 0 ] && [ ! -s "$TMP" ]; then     # nieznany kursor (np. wyczyszczony dziennik): zacznij od nowa
+    rm -f "$K" "$K.nowy" "$TMP"; exit 0
+fi
+[ -s "$TMP" ] || { rm -f "$TMP" "$K.nowy"; exit 0; }
+# kursor przesuwamy dopiero, gdy zapis na NAS sie udal
+if timeout 60 bash -c "cat '$TMP' >> '$R/Logi/system/$(date +%F).log'"; then
+    [ -s "$K.nowy" ] && mv "$K.nowy" "$K"
+fi
+rm -f "$TMP" "$K.nowy"
+exit 0
