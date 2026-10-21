@@ -171,6 +171,9 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
     <h2>Ustawienia filmu</h2>
     <div class="f" style="margin-bottom:10px">Rodzaj filmu<div class="chips"><button id="fmTrybSeria" aria-pressed="true">Seria zdjęć</button><button id="fmTrybPP" aria-pressed="false">Przed i po (2 zdjęcia)</button></div></div>
     <div class="f" style="margin-bottom:10px">Rodzaj zdjęcia<div class="chips" id="fmTyp"></div></div>
+    <div class="f" style="margin-bottom:10px" id="fmDopas" hidden>Dopasuj kadr do<div class="chips"><button id="fmDopSyl" aria-pressed="true">Całej sylwetki</button><button id="fmDopRece" aria-pressed="false">Samych rąk</button></div></div>
+    <p class="muted small" id="fmWzor" style="margin:0 0 8px"></p>
+    <p class="hint small" id="fmPunkty" hidden></p>
     <div id="fmSeria">
       <div class="f" style="margin-bottom:10px">Zakres<div class="chips"><button id="fmCaly" aria-pressed="true">Cały zapis</button></div></div>
       <div class="grid3">
@@ -224,6 +227,6 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <!-- podgląd zdjęcia: typ, data, usuń, kadrowanie -->
 <div class="modal" id="modal" hidden><div class="box" id="modalBox"></div></div>
 
-<script type="module" src="app.js?v=7"></script>
+<script type="module" src="app.js?v=8"></script>
 </body>
 </html>

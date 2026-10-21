@@ -35,7 +35,13 @@ def pl(x, n=1):
 # ---------- geometria (jak geom / ramkaAuto / ramkaKoncowa w app.js) ----------
 def geom(z, W, H, cel):
     iw, ih = z["w"], z["h"]
-    r, p = z.get("reczne") or {}, z.get("pose")
+    r, p, g = z.get("reczne") or {}, z.get("pose"), z.get("geo")
+    L, zz = cel["s"] * H, r.get("z") or 1
+    if g:
+        # dopasowanie do wzoru szkieletu: punkt zdjecia P (piksele) -> s*P + t (dlugosci tulowia wzgledem srodka tulowia)
+        s, tx, ty = g
+        return {"k": zz * L * s, "ox": W / 2 + (r.get("dx") or 0) * L + zz * L * tx,
+                "oy": cel["y"] * H + (r.get("dy") or 0) * L + zz * L * ty, "w": iw * zz * L * s, "h": ih * zz * L * s}
     if p and p.get("s", 0) > 0:
         k = (cel["s"] * H) / (p["s"] * ih) * (r.get("z") or 1)
         ox = W / 2 + (r.get("dx") or 0) * cel["s"] * H - p["cx"] * iw * k

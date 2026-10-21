@@ -968,7 +968,7 @@ app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # zdjecia w /api/progres; r
 @app.before_request
 def limit_malych_zapytan():
     from flask import request
-    if request.path.startswith("/api/") and not request.path.startswith("/api/progres/zdjecie"):
+    if request.path.startswith("/api/") and not request.path.startswith("/api/progres/"):
         if (request.content_length or 0) > 64 * 1024:
             abort(413)
 
@@ -1123,7 +1123,7 @@ def api_nauka_ustawienia():
 PROGRES = BASE / "dane" / "progres"
 PROGRES_ZDJ = PROGRES / "zdjecia"
 PROGRES_LOCK = threading.Lock()
-PROGRES_TYPY = ("przod", "bok", "biceps", "tyl", "inne")
+PROGRES_TYPY = ("przod", "bok", "biceps", "tyl", "tylbiceps", "inne")
 
 
 def progres_dane():
@@ -1144,6 +1144,13 @@ def progres_data_ok(v):
         return True
     except ValueError:
         return False
+
+
+def progres_lm_ok(lm):
+    """33 punkty MediaPipe [x, y, widocznosc] (ulamki zdjecia) albo [] = sylwetki nie rozpoznano"""
+    return lm is None or (isinstance(lm, list) and len(lm) in (0, 33) and all(
+        isinstance(p, list) and len(p) == 3 and all(isinstance(v, (int, float)) and not isinstance(v, bool) and -5 <= v <= 5 for v in p)
+        for p in lm))
 
 
 def progres_pose_ok(p):
@@ -1205,7 +1212,11 @@ def api_progres_zdjecie_nowe():
         pose = json.loads(request.form.get("pose") or "null")
     except ValueError:
         abort(400)
-    if not progres_pose_ok(pose):
+    try:
+        lm = json.loads(request.form.get("lm") or "null")
+    except ValueError:
+        abort(400)
+    if not progres_pose_ok(pose) or not progres_lm_ok(lm):
         abort(400)
     duze, male = f.read(), m.read()
     if len(male) > 2 * 1024 * 1024:
@@ -1227,6 +1238,8 @@ def api_progres_zdjecie_nowe():
     rec = {"id": zid, "data": data, "typ": typ, "w": w, "h": h, "dodano": time.strftime("%Y-%m-%dT%H:%M:%S")}
     if pose:
         rec["pose"] = pose
+    if lm is not None:
+        rec["lm"] = lm
     with PROGRES_LOCK:
         d = progres_dane()
         d["zdjecia"].append(rec)
@@ -1263,6 +1276,13 @@ def api_progres_zdjecie_zmien(zid):
                 if b["typ"] not in PROGRES_TYPY:
                     abort(400)
                 rec["typ"] = b["typ"]
+            if "lm" in b:
+                if not progres_lm_ok(b["lm"]):
+                    abort(400)
+                if b["lm"] is None:
+                    rec.pop("lm", None)
+                else:
+                    rec["lm"] = b["lm"]
             for k, ok in (("pose", progres_pose_ok), ("reczne", progres_reczne_ok)):
                 if k in b:
                     if not ok(b[k]):
@@ -1330,6 +1350,9 @@ def render_petla():
         d = progres_dane()
         zd = {z["id"]: z for z in d["zdjecia"]}
         kl = [{k: zd[i][k] for k in ("id", "w", "h", "data", "pose", "reczne") if k in zd[i]} for i in m["ids"] if i in zd]
+        for z in kl:
+            if z["id"] in (m.get("geo") or {}):
+                z["geo"] = m["geo"][z["id"]]
         wej = PROGRES_FILMY / f"{m['id']}.wejscie.json"
         zapisz_json(wej, {"film": m["film"], "kl": kl, "wpisy": d["wpisy"], "katalog": str(PROGRES_ZDJ)})
         tmp, post = PROGRES_FILMY / f"{m['id']}.tmp.mp4", PROGRES_FILMY / f"{m['id']}.postep"
@@ -1375,9 +1398,13 @@ def api_progres_render():
         abort(400)
     if b["film"].get("format", "4:5") not in RENDER_FORMATY:
         abort(400)
+    geo = b.get("geo") or {}
+    if not (isinstance(geo, dict) and all(k in ids and isinstance(v, list) and len(v) == 3 and all(
+            isinstance(x, (int, float)) and not isinstance(x, bool) and abs(x) < 1e6 for x in v) for k, v in geo.items())):
+        abort(400)
     opis = b.get("opis")
     m = {"id": uuid.uuid4().hex, "status": "oczekuje", "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S"),
-         "film": b["film"], "ids": ids, "opis": opis[:200] if isinstance(opis, str) else ""}
+         "film": b["film"], "ids": ids, "geo": geo, "opis": opis[:200] if isinstance(opis, str) else ""}
     film_zapisz(m)
     RENDER_BUDZIK.set()
     return jsonify(m)
@@ -1398,6 +1425,7 @@ def api_progres_filmy():
             except (OSError, ValueError):
                 m["postep"] = 0
         m.pop("ids", None)
+        m.pop("geo", None)
         lista.append(m)
     return jsonify(sorted(lista, key=lambda m: m["utworzono"], reverse=True))
 

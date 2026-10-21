@@ -5,13 +5,19 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
 
 ## Co robi
 - **Dodaj:** data (domyślnie dzisiaj, można wybrać wcześniejszą), masa [kg], tłuszcz [%], mięśnie [%], notatka;
-  zdjęcia z typem: `przod`, `bok`, `biceps` (przód z napięciem bicepsa), `tyl`, `inne`. Przy starszych zdjęciach strona
+  zdjęcia z typem: `przod`, `bok`, `biceps` (przód z napięciem bicepsa), `tyl`, `tylbiceps` (plecy z bicepsem), `inne`. Przy starszych zdjęciach strona
   podpowiada datę z EXIF (DateTimeOriginal) albo z daty pliku. Zdjęcia są zmniejszane w przeglądarce do 1800 px
   (JPEG 0,88) + miniatura 480 px, ponowne kodowanie usuwa EXIF (np. GPS).
 - **Rozpoznawanie sylwetki:** MediaPipe Pose Landmarker (full) w przeglądarce, pliki hostowane na Pi w
   `~/portal/sites/progres/mp/` (pobiera je `narzedzia/progres_pobierz_mediapipe.sh`, nie są w repo).
   Z barków (11, 12) i bioder (23, 24) liczone jest `pose = {cx, cy, s, ok}`: środek tułowia (ułamek szer./wys.)
   i długość tułowia (ułamek wysokości).
+- **Wzór szkieletu per rodzaj (od 2026-10-21):** każde zdjęcie ma `lm` = 33 punkty MediaPipe `[x, y, widoczność]`
+  (`[]` = nie rozpoznano). Wzór rodzaju = średnia punktów ze wszystkich zdjęć tego rodzaju (Prokrustes: skala +
+  przesunięcie, 3 iteracje), w jednostkach tułowia. Zdjęcie dopasowane do wzoru ważoną MNK (`WAGI` w `app.js`: barki
+  i biodra 3–3,5, głowa/kolana ok. 1, ręce 0,05–0,5; bok najmniej rąk). `FM.rece` (tylko `biceps`/`tylbiceps`):
+  dopasowanie tylko do barków, łokci, nadgarstków. Wynik `{s, tx, ty}` liczy przeglądarka i wysyła do renderu jako
+  `geo` (Python go tylko stosuje). Starsze zdjęcia bez `lm` są uzupełniane automatycznie w zakładce Film.
 - **Wyrównanie w filmie:** każda klatka jest skalowana tak, by tułów miał `celS` wysokości kadru (domyślnie 26%),
   a jego środek był w poziomie na środku i na `celY` wysokości (domyślnie 44%). Oba ustawia się w karcie „Kadr filmu”
   (suwaki „Przybliżenie” i „Wysokość”, podgląd ze szkieletem); zapis w `ustawienia.film`.
@@ -78,3 +84,7 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 - **2026-10-21 (6)**: Render filmów na Raspberry (kolejka, lista gotowych filmów, udostępnianie), tryb „Przed i po”
   z dwóch zdjęć, wyraźniejsze kolory (wybrane = niebieskie z ✓, kontrast ≥ 4,5:1), aktywna zakładka biała.
   Backup `app.py.bak_2026-10-21_render`. `app.js?v=7`.
+- **2026-10-21 (7)**: Rodzaj „Tył + biceps”, wzór szkieletu dla każdego rodzaju (średnia z 33 punktów), dopasowanie
+  ważone (tułów/barki najważniejsze, ręce mało), tryb „Samych rąk” dla biceps/tył+biceps, szkielet też w kadrowaniu
+  pojedynczego zdjęcia, automatyczne uzupełnianie punktów. Render na Pi zgodny z podglądem (~1/255).
+  Backup `app.py.bak_2026-10-21_szkielety`. `app.js?v=8`.
