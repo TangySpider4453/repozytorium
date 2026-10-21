@@ -9,6 +9,7 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
   /api/status, /api/siec   dane w JSON dla powyzszych stron
   /api/nauka/...     postepy nauki (fiszki, quizy), zmiana daty, „wazne” i ustawienia listy dla /strony/nauka/
   /api/progres/...   dziennik sylwetki: pomiary z wagi i zdjecia (tylko na Pi, dane/progres/) dla /strony/progres/
+  /api/zdrowie       stan serwera dla diody na kazdej stronie i dziennik problemow (dane/zdrowie/), strona /strony/zdrowie/
 
 Nasluch tylko na adresie Tailscale (port 80) - strona nie jest widoczna w sieci domowej ani w internecie.
 Uruchamiane przez systemd: home-portal.service (uzytkownik tonyg, CAP_NET_BIND_SERVICE dla portu 80).
@@ -727,6 +728,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <a href="/strony/lazik/" data-p="lazik">Łazik</a>
     <a href="/strony/nauka/" data-p="nauka">Nauka</a>
     <a href="/strony/progres/" data-p="progres">Progres</a>
+    <a href="/strony/zdrowie/" data-p="zdrowie">Zdrowie</a>
   </nav>
 </header>
 <main id="main" class="wrap" style="padding:0;width:100%"></main>
@@ -900,6 +902,22 @@ def no_cache(resp):
         # skrypty stron: przegladarka zawsze pyta o nowsza wersje (iPad trzymal stare app.js po aktualizacji)
         resp.headers["Cache-Control"] = "no-cache"
     resp.headers["X-Content-Type-Options"] = "nosniff"
+    return wstaw_diode(resp)
+
+
+DIODA_TAG = b'<script src="/strony/zdrowie/dioda.js" defer></script>'
+
+
+def wstaw_diode(resp):
+    """dioda stanu serwera na kazdej stronie HTML (portal i /strony/*): skrypt doklejany przed </body>"""
+    from flask import request
+    if resp.mimetype != "text/html" or resp.status_code != 200 or request.path.startswith("/api/"):
+        return resp
+    resp.direct_passthrough = False
+    body = resp.get_data()
+    if DIODA_TAG not in body and b"</body>" in body:
+        i = body.rfind(b"</body>")
+        resp.set_data(body[:i] + DIODA_TAG + body[i:])
     return resp
 
 
@@ -1458,6 +1476,275 @@ def api_progres_film_zmien(fid):
 
 
 render_start()
+
+
+# ---------- Zdrowie serwera: monitor co minute, aktywne problemy i dziennik zdarzen ----------
+# dane/zdrowie/incydenty.json: kazdy problem {id, klucz, tytul, opis, poziom (warn/crit, najgorszy), od, do, wartosc,
+#   przejrzane}; zakonczony problem czeka na „Przejrzane”, wiec nic nie znika bez sladu.
+# dane/zdrowie/dziennik.log: kazda zmiana jako linia tekstu (start, pogorszenie, koniec).
+# Progi mozna nadpisac w config.json: {"zdrowie": {"temp": [70, 80], ...}}.
+ZDROWIE = BASE / "dane" / "zdrowie"
+ZDROWIE_LOCK = threading.Lock()
+ZDROWIE_PROGI = {
+    "temp": [70, 80],            # °C: zolta, czerwona
+    "dysk": [80, 90],            # % zajetosci (karta SD, /boot/firmware)
+    "ram": [85, 95],             # % uzycia (bez cache)
+    "swap": [80, 95],            # % uzycia swap (zram)
+    "cpu": [85, 95],             # % sredniego obciazenia: zolta po 10 min, czerwona po 30 min
+    "cpu_min": [10, 30],
+    "uslugi_kryt": ["powernukkitx", "playit", "tailscaled", "home-portal"],
+    "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama"],
+    "zadania": ["mc-autoupdate"],    # usluga uruchamiana timerem: ostatni przebieg zakonczony bledem -> zolta
+}
+ZDROWIE_STAN = {"sprawdzono": None, "pomiary": {}, "liczniki": {}, "cpu": [], "cpu_prev": None}
+
+
+def zdrowie_progi():
+    p = dict(ZDROWIE_PROGI)
+    p.update((config().get("zdrowie") or {}))
+    return p
+
+
+def zdrowie_incydenty():
+    try:
+        return json.loads((ZDROWIE / "incydenty.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def zdrowie_log(linia):
+    ZDROWIE.mkdir(parents=True, exist_ok=True)
+    with open(ZDROWIE / "dziennik.log", "a", encoding="utf-8") as f:
+        f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " " + linia + "\n")
+
+
+def zdrowie_cpu():
+    """wlasny pomiar CPU (nie miesza sie z pomiarem strony glownej)"""
+    vals = [int(x) for x in read("/proc/stat").splitlines()[0].split()[1:]]
+    cur = (vals[3] + vals[4], sum(vals))
+    prev, ZDROWIE_STAN["cpu_prev"] = ZDROWIE_STAN["cpu_prev"], cur
+    if not prev or cur[1] - prev[1] <= 0:
+        return None
+    return 100.0 * (1 - (cur[0] - prev[0]) / (cur[1] - prev[1]))
+
+
+def usluga_stan(nazwa):
+    out = sh(["systemctl", "show", "-p", "LoadState,ActiveState,SubState,Result", f"{nazwa}.service"])
+    return dict(l.split("=", 1) for l in out.splitlines() if "=" in l)
+
+
+def zdrowie_problemy(prog):
+    """lista aktualnych problemow: (klucz, poziom, tytul, opis, wartosc)"""
+    pr, pom = [], {}
+    pz = lambda v, p: "crit" if v >= p[1] else "warn" if v >= p[0] else None
+    try:
+        t = int(read("/sys/class/thermal/thermal_zone0/temp", "0")) / 1000
+        pom["temp"] = round(t, 1)
+        if pz(t, prog["temp"]):
+            pr.append(("temp", pz(t, prog["temp"]), "Wysoka temperatura procesora", f"{t:.1f} °C (progi {prog['temp'][0]}/{prog['temp'][1]} °C)", round(t, 1)))
+    except ValueError:
+        pass
+    out = sh(["vcgencmd", "get_throttled"])
+    m = re.search(r"0x([0-9a-fA-F]+)", out)
+    if m:
+        v = int(m.group(1), 16)
+        pom["throttled"] = hex(v)
+        if v & 0x1:
+            pr.append(("napiecie", "crit", "Za niskie napięcie zasilania", "Zasilacz nie daje rady (ryzyko uszkodzenia karty SD). Sprawdź zasilacz i kabel.", 1))
+        if v & 0x4:
+            pr.append(("throttling", "crit", "Procesor zwolniony (throttling)", "Pi obniża taktowanie z powodu temperatury lub zasilania.", 1))
+        elif v & 0x2 or v & 0x8:
+            pr.append(("taktowanie", "warn", "Ograniczone taktowanie procesora", "Pi zbliża się do limitu temperatury.", 1))
+        boot = read("/proc/sys/kernel/random/boot_id").strip()
+        plik = ZDROWIE / "boot.json"
+        try:
+            zap = json.loads(plik.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            zap = {}
+        znane = zap.get("bity", 0) if zap.get("boot") == boot else 0
+        nowe = v & 0x50000 & ~znane          # „wystapilo od uruchomienia”: zapis jednorazowy na uruchomienie Pi
+        if nowe:
+            zapisz_json(plik, {"boot": boot, "bity": znane | nowe})
+            opis = "za niskie napięcie" if nowe & 0x10000 else "zwolnienie procesora"
+            pr.append(("historia_zasilania", "warn", "Od uruchomienia Pi wystąpiło: " + opis, "Problem minął, ale się zdarzył. Warto sprawdzić zasilacz.", 1, "jednorazowo"))
+    for nazwa, sciezka in (("dysk", "/"), ("boot", "/boot/firmware")):
+        try:
+            du = shutil.disk_usage(sciezka)
+        except OSError:
+            continue
+        proc = du.used / du.total * 100
+        pom[nazwa] = round(proc, 1)
+        if pz(proc, prog["dysk"]):
+            pr.append((f"dysk:{sciezka}", pz(proc, prog["dysk"]), f"Mało miejsca: {sciezka}", f"Zajęte {proc:.0f}% (wolne {du.free / 1e9:.1f} GB)", round(proc, 1)))
+    mi = meminfo()
+    if mi.get("MemTotal"):
+        ram = (mi["MemTotal"] - mi.get("MemAvailable", 0)) / mi["MemTotal"] * 100
+        pom["ram"] = round(ram, 1)
+        if pz(ram, prog["ram"]):
+            pr.append(("ram", pz(ram, prog["ram"]), "Kończy się pamięć RAM", f"Użyte {ram:.0f}%", round(ram, 1)))
+    if mi.get("SwapTotal"):
+        sw = (mi["SwapTotal"] - mi.get("SwapFree", 0)) / mi["SwapTotal"] * 100
+        pom["swap"] = round(sw, 1)
+        if pz(sw, prog["swap"]):
+            pr.append(("swap", pz(sw, prog["swap"]), "Pełny swap (pamięć zapasowa)", f"Użyte {sw:.0f}%", round(sw, 1)))
+    c = zdrowie_cpu()
+    if c is not None:
+        teraz = time.time()
+        ZDROWIE_STAN["cpu"] = [x for x in ZDROWIE_STAN["cpu"] if x[0] > teraz - 3600] + [(teraz, c)]
+        def srednia(minuty):
+            xs = [v for t_, v in ZDROWIE_STAN["cpu"] if t_ > teraz - minuty * 60]
+            pelne = ZDROWIE_STAN["cpu"] and ZDROWIE_STAN["cpu"][0][0] <= teraz - minuty * 60 + 90
+            return sum(xs) / len(xs) if xs and pelne else None
+        s10, s30 = srednia(prog["cpu_min"][0]), srednia(prog["cpu_min"][1])
+        pom["cpu"], pom["cpu10"], pom["cpu30"] = round(c, 1), s10 and round(s10, 1), s30 and round(s30, 1)
+        if s30 is not None and s30 >= prog["cpu"][1]:
+            pr.append(("cpu", "crit", "Procesor długo przeciążony", f"Średnio {s30:.0f}% przez {prog['cpu_min'][1]} min", round(s30, 1)))
+        elif s10 is not None and s10 >= prog["cpu"][0]:
+            pr.append(("cpu", "warn", "Procesor mocno obciążony", f"Średnio {s10:.0f}% przez {prog['cpu_min'][0]} min", round(s10, 1)))
+    uslugi = {}
+    for poziom, lista in (("crit", prog["uslugi_kryt"]), ("warn", prog["uslugi"])):
+        for u in lista:
+            st = usluga_stan(u)
+            if st.get("LoadState") != "loaded":
+                continue
+            uslugi[u] = st.get("ActiveState")
+            if st.get("ActiveState") != "active":
+                opis = SERVICE_INFO.get(u, ("", u))[1]
+                pr.append((f"usluga:{u}", poziom, f"Usługa nie działa: {u}", f"{opis}. Stan: {st.get('ActiveState')}/{st.get('SubState')}.", 1))
+    for u in prog["zadania"]:
+        st = usluga_stan(u)
+        if st.get("LoadState") == "loaded" and st.get("Result") not in (None, "", "success"):
+            pr.append((f"zadanie:{u}", "warn", f"Zadanie zakończone błędem: {u}", f"Ostatni przebieg: {st.get('Result')}.", 1))
+    for u in [l.split()[0] for l in sh(["systemctl", "--failed", "--no-legend", "--plain", "--no-pager"]).splitlines() if l.strip()]:
+        nazwa = u.removesuffix(".service")
+        if nazwa not in uslugi and nazwa not in prog["zadania"]:
+            pr.append((f"failed:{u}", "warn", f"Jednostka systemd z błędem: {u}", "systemctl --failed", 1))
+    if Path("/var/run/reboot-required").exists():
+        pr.append(("restart", "warn", "Potrzebny restart Pi", "Po aktualizacji systemu. Zrób go, gdy nikt nie gra.", 1))
+    pom["uslugi"] = uslugi
+    return pr, pom
+
+
+def zdrowie_krok(teraz=None):
+    """jeden przebieg monitora: problem zaczyna sie po 2 kolejnych wykryciach, konczy po 2 kolejnych brakach"""
+    teraz = teraz or time.strftime("%Y-%m-%dT%H:%M:%S")
+    prog = zdrowie_progi()
+    problemy, pom = zdrowie_problemy(prog)
+    with ZDROWIE_LOCK:
+        inc = zdrowie_incydenty()
+        aktywne = {i["klucz"]: i for i in inc if not i.get("do")}
+        licz = ZDROWIE_STAN["liczniki"]
+        for k in aktywne:                   # po restarcie portalu: aktywne problemy musza moc sie zakonczyc
+            licz.setdefault(k, 2)
+        widziane = set()
+        for pr in problemy:
+            klucz, poziom, tytul, opis, wartosc = pr[:5]
+            jednorazowy = len(pr) > 5
+            widziane.add(klucz)
+            licz[klucz] = licz.get(klucz, 0) + 1 if licz.get(klucz, 0) >= 0 else 1
+            if jednorazowy:
+                inc.append({"id": uuid_hex(), "klucz": klucz, "tytul": tytul, "opis": opis, "poziom": poziom,
+                            "od": teraz, "do": teraz, "wartosc": wartosc, "przejrzane": False})
+                zdrowie_log(f"ZDARZENIE {poziom} {klucz}: {tytul}")
+                continue
+            if klucz in aktywne:
+                a = aktywne[klucz]
+                a["opis"], a["ostatnio"], a["teraz"] = opis, teraz, poziom
+                if isinstance(wartosc, (int, float)) and wartosc > (a.get("wartosc") or 0):
+                    a["wartosc"] = wartosc
+                if poziom == "crit" and a["poziom"] != "crit":
+                    a["poziom"] = "crit"
+                    zdrowie_log(f"POGORSZENIE crit {klucz}: {tytul} - {opis}")
+            elif licz[klucz] >= 2:
+                inc.append({"id": uuid_hex(), "klucz": klucz, "tytul": tytul, "opis": opis, "poziom": poziom, "teraz": poziom,
+                            "od": teraz, "do": None, "ostatnio": teraz, "wartosc": wartosc, "przejrzane": False})
+                zdrowie_log(f"START {poziom} {klucz}: {tytul} - {opis}")
+        for klucz in list(licz):
+            if klucz not in widziane:
+                licz[klucz] = min(licz[klucz], 0) - 1
+                if klucz in aktywne and licz[klucz] <= -2:
+                    aktywne[klucz]["do"] = teraz
+                    zdrowie_log(f"KONIEC {aktywne[klucz]['poziom']} {klucz}: {aktywne[klucz]['tytul']} (od {aktywne[klucz]['od']})")
+                if licz[klucz] <= -2 and klucz not in aktywne:
+                    licz.pop(klucz)
+        # porzadek: zostaw 1000 ostatnich, ale nigdy nie wyrzucaj aktywnych ani nieprzejrzanych
+        if len(inc) > 1000:
+            stare = [i for i in inc if i.get("do") and i.get("przejrzane")]
+            usun = {i["id"] for i in stare[:len(inc) - 1000]}
+            inc = [i for i in inc if i["id"] not in usun]
+        zapisz_json(ZDROWIE / "incydenty.json", inc)
+        ZDROWIE_STAN["sprawdzono"], ZDROWIE_STAN["pomiary"] = teraz, pom
+
+
+def uuid_hex():
+    import uuid
+    return uuid.uuid4().hex
+
+
+def zdrowie_petla():
+    zdrowie_cpu()
+    time.sleep(5)
+    while True:
+        try:
+            zdrowie_krok()
+        except Exception as e:      # monitor nie moze zatrzymac portalu
+            try:
+                zdrowie_log(f"BLAD MONITORA {type(e).__name__}: {e}")
+            except OSError:
+                pass
+        time.sleep(60)
+
+
+def zdrowie_podsumowanie():
+    inc = zdrowie_incydenty()
+    aktywne = [i for i in inc if not i.get("do")]
+    do_przejrzenia = [i for i in inc if i.get("do") and not i.get("przejrzane")]
+    stan = "crit" if any(i.get("teraz", i["poziom"]) == "crit" for i in aktywne) else "warn" if aktywne or do_przejrzenia else "ok"
+    return {"stan": stan, "liczba": len(aktywne) + len(do_przejrzenia), "aktywne": aktywne,
+            "do_przejrzenia": sorted(do_przejrzenia, key=lambda i: i["od"], reverse=True),
+            "sprawdzono": ZDROWIE_STAN["sprawdzono"], "pomiary": ZDROWIE_STAN["pomiary"], "progi": zdrowie_progi()}
+
+
+@app.route("/api/zdrowie")
+def api_zdrowie():
+    from flask import request
+    d = zdrowie_podsumowanie()
+    if request.args.get("historia"):
+        inc = zdrowie_incydenty()
+        d["historia"] = sorted((i for i in inc if i.get("do") and i.get("przejrzane")), key=lambda i: i["od"], reverse=True)[:200]
+    return jsonify(d)
+
+
+@app.route("/api/zdrowie/przejrzane", methods=["POST"])
+def api_zdrowie_przejrzane():
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not (b.get("wszystkie") is True or isinstance(b.get("id"), str)):
+        abort(400)
+    with ZDROWIE_LOCK:
+        inc = zdrowie_incydenty()
+        n = 0
+        for i in inc:
+            if i.get("do") and not i.get("przejrzane") and (b.get("wszystkie") is True or i["id"] == b.get("id")):
+                i["przejrzane"], i["przejrzano"] = True, time.strftime("%Y-%m-%dT%H:%M:%S")
+                n += 1
+        zapisz_json(ZDROWIE / "incydenty.json", inc)
+    if n:
+        zdrowie_log(f"PRZEJRZANE {n} zdarzen")
+    return jsonify(zdrowie_podsumowanie())
+
+
+@app.route("/api/zdrowie/dziennik")
+def api_zdrowie_dziennik():
+    try:
+        linie = (ZDROWIE / "dziennik.log").read_text(encoding="utf-8").splitlines()[-300:]
+    except OSError:
+        linie = []
+    return jsonify(linie[::-1])
+
+
+if not os.environ.get("PORTAL_TEST"):
+    threading.Thread(target=zdrowie_petla, name="zdrowie", daemon=True).start()
 
 
 def tailscale_ipv4():

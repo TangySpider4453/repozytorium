@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zdrowie serwera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Zdrowie serwera: aktywne problemy, zdarzenia do przejrzenia, pomiary, historia i dziennik (/api/zdrowie). */
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF; --sel:#1d63c4; --ok:#1f8a4c; --warn:#a86b00; --bad:#c03442;
+  --dOk:#22c55e; --dWarn:#facc15; --dCrit:#ef4444;
+  --serif:"Alegreya",Georgia,serif; --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5;font-variant-numeric:lining-nums}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+header.top{background:var(--nav);color:var(--navInk);padding:14px 0 18px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+header.top .back{display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px}
+header.top h1{font-size:clamp(30px,7vw,42px);font-weight:800}
+header.top p{margin:4px 0 0;opacity:.8;font-size:15px}
+main{padding:18px 0 60px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 14px}
+.card h2{font-size:22px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.muted{color:var(--muted)} .small{font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:15px}
+.btn.primary{background:var(--sel);color:#fff;border-color:var(--sel)}
+.item{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:start;border-top:1px solid var(--line);padding:10px 0}
+.item:first-of-type{border-top:0}
+.kropka{width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(120,128,138,.95);margin-top:4px}
+.kropka.warn{background:var(--dWarn)} .kropka.crit{background:var(--dCrit)} .kropka.ok{background:var(--dOk)}
+.item .t{font-weight:700}
+.item .o{font-size:15px;color:var(--muted)}
+.item .c{font-size:13.5px;color:var(--muted)}
+.dobrze{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:15.5px}
+td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top}
+tr:first-child td{border-top:0}
+td:first-child{color:var(--muted);width:38%}
+.ch{display:inline-block;font-size:13px;font-weight:700;border-radius:999px;padding:1px 9px;margin:2px 4px 2px 0;border:1.5px solid var(--line)}
+.ch.on{border-color:var(--ok);color:var(--ok)} .ch.off{border-color:var(--bad);color:var(--bad)}
+.pas{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-top:4px;max-width:260px}
+.pas i{display:block;height:100%;background:var(--ok)} .pas i.warn{background:var(--warn)} .pas i.crit{background:var(--bad)}
+details summary{cursor:pointer;font-weight:700}
+pre{white-space:pre-wrap;font-size:13px;line-height:1.45;background:var(--bg);border-radius:10px;padding:10px;max-height:420px;overflow:auto}
+.err{color:var(--bad);font-weight:700}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="back" href="/">← Serwerek domowy</a>
+  <h1>Zdrowie serwera</h1>
+  <p id="sprawdzono">Ładowanie…</p>
+</div></header>
+<main><div class="wrap">
+  <div class="card"><h2>Teraz</h2><div id="teraz"></div></div>
+  <div class="card"><h2>Do przejrzenia <span class="muted small" id="ileDP"></span></h2>
+    <p class="muted small" style="margin:0 0 6px">Problemy, które już minęły. Dioda świeci na żółto, dopóki ich nie przejrzysz, żeby nic nie zniknęło bez śladu.</p>
+    <div id="dp"></div></div>
+  <div class="card"><h2>Pomiary</h2><table id="pomiary"></table><p class="muted small" style="margin:8px 0 0">Sprawdzane co minutę. Problem zapala diodę, gdy utrzymuje się przez 2 kolejne pomiary, i gaśnie po 2 minutach spokoju.</p></div>
+  <div class="card"><h2>Historia</h2><div id="historia"></div></div>
+  <div class="card"><details><summary>Dziennik zdarzeń (ostatnie 300 wpisów)</summary><pre id="dziennik">…</pre></details></div>
+</div></main>
+<script>
+const $ = id => document.getElementById(id);
+const el = (t, a = {}, ...k) => { const e = document.createElement(t); for(const [n, v] of Object.entries(a)){ if(v == null) continue; if(n === "text") e.textContent = v; else if(n === "class") e.className = v; else if(n.startsWith("on")) e[n] = v; else e.setAttribute(n, v); } e.append(...k.filter(x => x != null)); return e; };
+const MIES = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
+const czas = s => { const d = new Date(s); return `${d.getDate()} ${MIES[d.getMonth()]} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const trwanie = (od, doo) => { const m = Math.max(1, Math.round(((doo ? new Date(doo) : new Date()) - new Date(od)) / 60000)); return m < 60 ? `${m} min` : m < 2880 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${Math.floor(m / 1440)} dni`; };
+const POZIOM = {warn:"do sprawdzenia", crit:"wymaga uwagi"};
+async function post(url, body){ const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}); if(!r.ok) throw new Error(r.status); return r.json(); }
+function wiersz(i, przycisk){
+  const p = i.do ? i.poziom : (i.teraz || i.poziom);
+  const kiedy = i.do ? `${czas(i.od)} – ${czas(i.do)} (${trwanie(i.od, i.do)})` : `od ${czas(i.od)} (${trwanie(i.od)})`;
+  return el("div", {class:"item"}, el("span", {class:"kropka " + p, title:POZIOM[p]}),
+    el("div", {}, el("div", {class:"t", text:i.tytul}), el("div", {class:"o", text:i.opis}),
+      el("div", {class:"c", text:kiedy + (i.do && i.poziom === "crit" ? " · najgorszy poziom: wymagało uwagi" : "")})),
+    przycisk || el("span"));
+}
+function pasek(v, progi){ if(v == null) return null; const k = v >= progi[1] ? "crit" : v >= progi[0] ? "warn" : ""; return el("div", {class:"pas"}, el("i", {class:k, style:`width:${Math.min(100, v)}%`})); }
+async function odswiez(){
+  let z;
+  try{ z = await (await fetch("/api/zdrowie?historia=1", {cache:"no-store"})).json(); }
+  catch(e){ $("teraz").innerHTML = ""; $("teraz").append(el("p", {class:"err", text:"Nie udało się pobrać stanu serwera."})); return; }
+  $("sprawdzono").textContent = z.sprawdzono ? `Ostatni pomiar: ${czas(z.sprawdzono)}. Odświeża się samo.` : "Monitor startuje, pierwszy pomiar za chwilę.";
+  const t = $("teraz"); t.innerHTML = "";
+  if(!z.aktywne.length) t.append(el("div", {class:"dobrze"}, el("span", {class:"kropka ok"}), "Wszystko działa. Nie ma teraz żadnych problemów."));
+  z.aktywne.sort((a, b) => (b.teraz === "crit") - (a.teraz === "crit")).forEach(i => t.append(wiersz(i)));
+  $("ileDP").textContent = z.do_przejrzenia.length ? `(${z.do_przejrzenia.length})` : "";
+  const dp = $("dp"); dp.innerHTML = "";
+  if(!z.do_przejrzenia.length) dp.append(el("p", {class:"muted", style:"margin:0", text:"Nic nie czeka."}));
+  else {
+    dp.append(el("div", {class:"row", style:"margin-bottom:4px"}, el("button", {class:"btn primary", text:"✓ Oznacz wszystkie jako przejrzane", onclick:async () => { await post("/api/zdrowie/przejrzane", {wszystkie:true}); odswiez(); }})));
+    z.do_przejrzenia.forEach(i => dp.append(wiersz(i, el("button", {class:"btn", text:"Przejrzane", onclick:async () => { await post("/api/zdrowie/przejrzane", {id:i.id}); odswiez(); }}))));
+  }
+  const p = z.pomiary || {}, g = z.progi || {}, tb = $("pomiary"); tb.innerHTML = "";
+  const r = (n, ...v) => tb.append(el("tr", {}, el("td", {text:n}), el("td", {}, ...v)));
+  if(p.temp != null) r("Temperatura procesora", `${String(p.temp).replace(".", ",")} °C`, el("span", {class:"muted small", text:` (żółta od ${g.temp[0]}, czerwona od ${g.temp[1]} °C)`}), pasek(p.temp / 85 * 100, [g.temp[0] / 85 * 100, g.temp[1] / 85 * 100]));
+  if(p.cpu != null) r("Procesor", `teraz ${Math.round(p.cpu)}%`, p.cpu10 != null ? ` · 10 min: ${Math.round(p.cpu10)}%` : "", p.cpu30 != null ? ` · 30 min: ${Math.round(p.cpu30)}%` : "", el("div", {class:"muted small", text:`żółta: średnio ≥ ${g.cpu[0]}% przez ${g.cpu_min[0]} min, czerwona: ≥ ${g.cpu[1]}% przez ${g.cpu_min[1]} min`}));
+  if(p.ram != null) r("Pamięć RAM", `${Math.round(p.ram)}% użyte`, pasek(p.ram, g.ram));
+  if(p.swap != null) r("Swap (zram)", `${Math.round(p.swap)}% użyte`, pasek(p.swap, g.swap));
+  if(p.dysk != null) r("Karta SD (/)", `${Math.round(p.dysk)}% zajęte`, pasek(p.dysk, g.dysk));
+  if(p.boot != null) r("Partycja rozruchowa", `${Math.round(p.boot)}% zajęte`, pasek(p.boot, g.dysk));
+  if(p.throttled) r("Zasilanie i taktowanie", p.throttled === "0x0" ? "✓ bez zastrzeżeń" : `kod ${p.throttled}`);
+  if(p.uslugi) r("Usługi", ...Object.entries(p.uslugi).map(([u, s]) => el("span", {class:"ch " + (s === "active" ? "on" : "off"), text:`${s === "active" ? "✓" : "✕"} ${u}`})));
+  const h = $("historia"); h.innerHTML = "";
+  if(!(z.historia || []).length) h.append(el("p", {class:"muted", style:"margin:0", text:"Brak przejrzanych zdarzeń."}));
+  (z.historia || []).slice(0, 100).forEach(i => h.append(wiersz(i)));
+  try{ $("dziennik").textContent = (await (await fetch("/api/zdrowie/dziennik", {cache:"no-store"})).json()).join("\n") || "Pusto."; }catch(e){}
+}
+odswiez(); setInterval(odswiez, 30000);
+</script>
+</body>
+</html>
