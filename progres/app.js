@@ -196,14 +196,22 @@ $("zapisz").onclick = async () => {
 };
 
 /* ---------- HISTORIA: wykresy i dni ---------- */
-function wykres(tytul, serie, jedn){
-  // serie: [{nazwa, kolor, pkt:[[data, wartosc]]}] - jedna oś y, wspólna jednostka
-  const all = serie.flatMap(s => s.pkt);
+function wykres(tytul, serie, jedn, zak){
+  // serie: [{nazwa, kolor, pkt:[[data, wartosc]]}] - jedna oś y, wspólna jednostka; zak = {x0, x1} (ms) albo null = całość
+  const wszystkie = serie.flatMap(s => s.pkt);
   const box = el("div", {class:"chart"}, el("h3", {text:tytul}));
-  if(new Set(all.map(p => p[0])).size < 2){ box.append(el("p", {class:"muted small", text:"Wykres pojawi się po pomiarach z co najmniej dwóch dni."})); return box; }
+  if(new Set(wszystkie.map(p => p[0])).size < 2){ box.append(el("p", {class:"muted small", text:"Wykres pojawi się po pomiarach z co najmniej dwóch dni."})); return box; }
   const W = Math.max(300, Math.round(($("wykresy").clientWidth || 600) - 34)), H = 190, L = 40, R = serie.length > 1 ? 100 : 64, T = 10, B = 24;
-  const xs = all.map(p => pd(p[0]).getTime()), ys = all.map(p => p[1]);
-  let x0 = Math.min(...xs), x1 = Math.max(...xs); if(x1 === x0) x1 = x0 + 864e5;
+  const ms = p => pd(p[0]).getTime();
+  let x0, x1;
+  if(zak){ x0 = zak.x0; x1 = zak.x1; } else { const xs = wszystkie.map(ms); x0 = Math.min(...xs); x1 = Math.max(...xs); }
+  if(x1 === x0) x1 = x0 + 864e5;
+  // w oknie: punkty z zakresu + po jednym sąsiedzie z każdej strony (linia wychodzi za krawędź i jest przycinana)
+  serie = serie.map(s => { const w = s.pkt.filter(p => ms(p) >= x0 && ms(p) <= x1), przed = s.pkt.filter(p => ms(p) < x0).pop(), po = s.pkt.find(p => ms(p) > x1);
+    return Object.assign({}, s, {pkt:w, linia:[przed, ...w, po].filter(Boolean)}); });
+  const all = serie.flatMap(s => s.pkt);
+  if(!all.length){ box.append(el("p", {class:"muted small", text:"Brak pomiarów w tym okresie. Przesuń suwak albo wybierz dłuższy zakres."})); return box; }
+  const ys = all.map(p => p[1]);
   let y0 = Math.min(...ys), y1 = Math.max(...ys); const pad_ = Math.max((y1 - y0) * 0.15, 0.5); y0 -= pad_; y1 += pad_;
   const X = t => L + (t - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
   const ns = "http://www.w3.org/2000/svg", S = (t, a) => { const e = document.createElementNS(ns, t); for(const k in a) e.setAttribute(k, a[k]); return e; };
@@ -214,10 +222,13 @@ function wykres(tytul, serie, jedn){
     const t = S("text", {x:L - 6, y:y + 4, "text-anchor":"end", "font-size":12, fill:"var(--muted)"}); t.textContent = pl(v); svg.append(t);
   }
   [x0, x1].forEach((t, i) => { const e = S("text", {x:X(t), y:H - 6, "text-anchor":i ? "end" : "start", "font-size":12, fill:"var(--muted)"}); e.textContent = krotko(iso(new Date(t))); svg.append(e); });
+  const clipId = "c" + Math.random().toString(36).slice(2);
+  const defs = S("defs", {}), cp = S("clipPath", {id:clipId}); cp.append(S("rect", {x:L, y:0, width:W - L - R, height:H - B})); defs.append(cp); svg.append(defs);
   serie.forEach(s => {
+    if(!s.linia.length) return;
+    const d = s.linia.map((p, i) => (i ? "L" : "M") + X(pd(p[0]).getTime()).toFixed(1) + "," + Y(Math.min(Math.max(p[1], y0 - (y1 - y0)), y1 + (y1 - y0))).toFixed(1)).join("");
+    svg.append(S("path", {d, fill:"none", stroke:s.kolor, "stroke-width":2, "stroke-linejoin":"round", "stroke-linecap":"round", "clip-path":`url(#${clipId})`}));
     if(!s.pkt.length) return;
-    const d = s.pkt.map((p, i) => (i ? "L" : "M") + X(pd(p[0]).getTime()).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
-    svg.append(S("path", {d, fill:"none", stroke:s.kolor, "stroke-width":2, "stroke-linejoin":"round", "stroke-linecap":"round"}));
     s.pkt.forEach(p => svg.append(S("circle", {cx:X(pd(p[0]).getTime()), cy:Y(p[1]), r:4, fill:s.kolor, stroke:"var(--surface)", "stroke-width":2})));
     const last = s.pkt[s.pkt.length - 1], lab = S("text", {x:X(pd(last[0]).getTime()) + 8, y:Y(last[1]) + 4, "font-size":13, fill:"var(--ink)", "font-weight":700});
     lab.textContent = (serie.length > 1 ? s.nazwa + " " : "") + pl(last[1]) + jedn; svg.append(lab);
@@ -238,13 +249,47 @@ function wykres(tytul, serie, jedn){
   if(serie.length > 1) box.append(el("div", {class:"legend"}, ...serie.map(s => el("span", {}, el("i", {style:`background:${s.kolor}`}), s.nazwa))));
   return box;
 }
-function rysujHistorie(){
+/* zakres wykresów: liczba dni (null = całość) i koniec okna (suwak); zapamiętywane w tej przeglądarce */
+const ZAKRESY = [[7, "7 dni"], [30, "Miesiąc"], [61, "2 mies."], [91, "3 mies."], [182, "6 mies."], [365, "Rok"], [null, "Całość"]];
+let WYK = {dni:null, koniec:null};
+try{ Object.assign(WYK, JSON.parse(localStorage.getItem("progres:wykres") || "{}")); }catch(e){}
+const zapiszWYK = () => { try{ localStorage.setItem("progres:wykres", JSON.stringify(WYK)); }catch(e){} };
+const DZIEN = 864e5;
+function rysujWykresy(){
   const wpisy = Object.entries(DANE.wpisy).sort((a, b) => a[0].localeCompare(b[0]));
   const ser = k => wpisy.filter(([, w]) => w[k] != null).map(([d, w]) => [d, w[k]]);
   const cs = getComputedStyle(document.documentElement), s1 = cs.getPropertyValue("--s1").trim(), s2 = cs.getPropertyValue("--s2").trim();
-  $("wykresy").innerHTML = ""; $("wykresy").append(el("h2", {text:"Wykresy"}),
-    wykres("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg"),
-    wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%"));
+  const daty = wpisy.filter(([, w]) => w.masa != null || w.fat != null || w.muscle != null).map(([d]) => pd(d).getTime());
+  const dmin = daty.length ? daty[0] : Date.now(), dmax = daty.length ? daty[daty.length - 1] : Date.now(), rozpietosc = Math.round((dmax - dmin) / DZIEN);
+  const okno = WYK.dni && WYK.dni < rozpietosc + 1;
+  let zak = null;
+  if(okno){
+    const kmin = dmin + (WYK.dni - 1) * DZIEN;
+    const koniec = Math.min(Math.max(WYK.koniec == null ? dmax : WYK.koniec, kmin), dmax);
+    zak = {x0:koniec - (WYK.dni - 1) * DZIEN, x1:koniec, kmin};
+  }
+  const box = $("wykresy"); box.innerHTML = "";
+  // zakres: gotowe przyciski + własna liczba dni
+  const chips = el("div", {class:"chips"});
+  ZAKRESY.forEach(([d, n]) => chips.append(el("button", {"aria-pressed":String(WYK.dni === d), text:n, onclick:() => { WYK.dni = d; WYK.koniec = null; zapiszWYK(); rysujWykresy(); }})));
+  const wlasne = el("input", {type:"number", min:2, max:3650, inputmode:"numeric", placeholder:"np. 45", style:"width:90px;height:38px", value:ZAKRESY.some(([d]) => d === WYK.dni) ? "" : WYK.dni});
+  wlasne.onchange = () => { const v = parseInt(wlasne.value); if(v >= 2){ WYK.dni = Math.min(v, 3650); WYK.koniec = null; zapiszWYK(); rysujWykresy(); } };
+  box.append(el("h2", {text:"Wykresy"}), el("div", {class:"f", style:"margin-bottom:6px"}, "Zakres", chips),
+    el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})),
+    wykres("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg", zak),
+    wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak));
+  // suwak od dołu: przesuwa okno w czasie (wspólny dla obu wykresów)
+  if(okno){
+    const kroki = Math.round((dmax - zak.kmin) / DZIEN);
+    const sw = el("input", {type:"range", min:0, max:kroki, step:1, value:Math.round((zak.x1 - zak.kmin) / DZIEN), "aria-label":"Przesuń zakres wykresu"});
+    const opis = el("div", {class:"small", style:"text-align:center;font-weight:700", text:`${krotko(iso(new Date(zak.x0)))} – ${krotko(iso(new Date(zak.x1)))}`});
+    let raf = 0;
+    sw.oninput = () => { WYK.koniec = zak.kmin + (+sw.value) * DZIEN; zapiszWYK(); cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { rysujWykresy(); const n = $("wykresy").querySelector('input[type=range]'); if(n) n.focus(); }); };
+    box.append(el("div", {class:"przesun"}, el("div", {class:"row small muted", style:"justify-content:space-between"}, el("span", {text:"◀ starsze"}), el("span", {text:"nowsze ▶"})), sw, opis));
+  } else if(WYK.dni) box.append(el("p", {class:"muted small", style:"margin:0", text:"Wszystkie pomiary mieszczą się w tym zakresie, więc nie ma czego przesuwać."}));
+}
+function rysujHistorie(){
+  rysujWykresy();
   const dni = [...new Set([...Object.keys(DANE.wpisy), ...DANE.zdjecia.map(z => z.data)])].sort().reverse();
   const box = $("dni"); box.innerHTML = "";
   if(!dni.length){ box.append(el("p", {class:"muted", text:"Jeszcze nic nie ma. Dodaj pierwszy pomiar w zakładce „Dodaj”."})); return; }

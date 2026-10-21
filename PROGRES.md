@@ -88,3 +88,6 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   ważone (tułów/barki najważniejsze, ręce mało), tryb „Samych rąk” dla biceps/tył+biceps, szkielet też w kadrowaniu
   pojedynczego zdjęcia, automatyczne uzupełnianie punktów. Render na Pi zgodny z podglądem (~1/255).
   Backup `app.py.bak_2026-10-21_szkielety`. `app.js?v=8`.
+- **2026-10-21 (8)**: Historia: zakres wykresów (7 dni, miesiąc, 2/3/6 mies., rok, całość, własna liczba dni) i suwak
+  pod wykresami przesuwający okno w czasie (wspólny dla obu wykresów, zapamiętywany w przeglądarce). Linie wychodzą
+  za krawędź okna (przycięte), oś Y liczona z punktów w oknie. `app.js?v=9`.
