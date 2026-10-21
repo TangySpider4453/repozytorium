@@ -721,7 +721,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:640px){th,td{padding:7px 9px}}
 .zad{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px}
-</style><script src="/strony/zdrowie/zadania.js"></script></head>
+</style><script src="/strony/zdrowie/zadania.js"></script><script src="/strony/zdrowie/obciazenie.js"></script></head>
 <body><div class="wrap">
 <header>
   <div><h1 id="h-title">Serwerek domowy</h1><div class="sub" id="h-sub">Raspberry Pi 4B · ładowanie…</div></div>
@@ -755,7 +755,7 @@ async function getJSON(u){const r=await fetch(u,{cache:'no-store'});if(!r.ok)thr
 function setSub(s){document.getElementById('h-sub').textContent=s.model+' · '+s.system+' · działa od '+dur(s.uptime)}
 
 /* ---------- START ---------- */
-function renderStart(d,zad){
+function renderStart(d,zad,obc){
   const s=d.system;setSub(s);
   const ram=pct(s.ram_uzyte,s.ram_total),disk=pct(s.dysk_uzyte,s.dysk_total),cpu=s.cpu,t=s.temp;
   const tiles=h('div',{class:'tiles'},
@@ -799,6 +799,7 @@ function renderStart(d,zad){
   main.replaceChildren(
     h('section',null,tiles,...alerts),
     zad&&window.Zadania?h('section',null,h('h2',{text:'Kopie zapasowe i zadania w tle'}),h('p',{class:'sec-note',text:'Nocna kopia całego systemu na NAS, render filmów, zdjęcia i logi na NAS, aktualizacje. Procenty są szacunkowe.'}),h('div',{class:'zad'},Zadania.panel(zad))):null,
+    obc&&window.Obciazenie?h('section',null,h('div',{class:'zad'},Obciazenie.panel(obc))):null,
     h('section',null,h('h2',{text:'Strony na tym serwerze'}),h('p',{class:'sec-note',text:'Wszystko, co Pi udostępnia w przeglądarce. Nową stronę dodasz, wrzucając folder z plikiem index.html do ~/portal/sites/.'}),cards),
     h('section',null,h('h2',{text:'Działające programy ('+d.uslugi.length+')'}),h('p',{class:'sec-note',text:'Wszystkie usługi systemd, które teraz działają, pogrupowane według przeznaczenia.'}),...svc),
     h('section',null,h('h2',{text:'Co teraz najbardziej obciąża Pi'}),h('p',{class:'sec-note',text:'CPU mierzone między kolejnymi odświeżeniami strony (100 % = jeden pełny rdzeń).'}),procs)
@@ -883,7 +884,7 @@ function renderTerminal(){
 
 async function tick(){
   try{
-    if(PAGE==='start'){const [d,zad]=await Promise.all([getJSON('/api/status'),getJSON('/api/zadania').catch(()=>null)]);renderStart(d,zad)}
+    if(PAGE==='start'){const [d,zad,obc]=await Promise.all([getJSON('/api/status'),getJSON('/api/zadania').catch(()=>null),getJSON('/api/obciazenie').catch(()=>null)]);renderStart(d,zad,obc)}
     else if(PAGE==='siec'){const [n,s]=await Promise.all([getJSON('/api/siec'),getJSON('/api/status?lekki=1')]);lastSys=s.system;renderSiec(n)}
   }catch(e){main.replaceChildren(h('div',{class:'err',text:'Nie udało się pobrać danych z serwera ('+e.message+'). Ponawiam…'}))}
 }
@@ -1878,6 +1879,184 @@ def api_zdrowie_dziennik():
     return jsonify(linie[::-1])
 
 
+# ---------- Obciazenie: kazdy przedzial czasu z CPU > 60 %, temperatura > 55 °C, RAM > 60 % ----------
+# Watek co 5 s. Przedzial zaczyna sie po 2 kolejnych pomiarach ponad progiem (>= 10 s), konczy po 3 ponizej (15 s).
+# Zapis: dane/zdrowie/obciazenie.json (lista przedzialow) + czytelne logi cpu.log, temperatura.log, ram.log
+# (START od razu, KONIEC z maksimum, srednia i glownymi „zjadaczami”), kopiowane na NAS do Logi/ przez nas_petla.
+# Progi: config.json "obciazenie": {"cpu": 60, "temp": 55, "ram": 60}.
+OBC_PROGI = {"cpu": 60, "temp": 55, "ram": 60}
+OBC_TYPY = {"cpu": ("cpu.log", "CPU", "%"), "temp": ("temperatura.log", "Temperatura", " °C"), "ram": ("ram.log", "RAM", "%")}
+OBC_LOCK = threading.Lock()
+OBC_STAN = {"trwa": {}, "licz": {}, "pomiar": {}}
+
+
+def obc_progi():
+    p = dict(OBC_PROGI)
+    p.update(config().get("obciazenie") or {})
+    return p
+
+
+def obc_epizody():
+    try:
+        return json.loads((ZDROWIE / "obciazenie.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def obc_procesy(prev):
+    """czas CPU (tiki) i RAM kazdego procesu; nazwa = program (usluga)"""
+    cur = {}
+    for d in os.listdir("/proc"):
+        if not d.isdigit():
+            continue
+        try:
+            st = Path(f"/proc/{d}/stat").read_text()
+            rp = st.rfind(")")
+            f = st[rp + 2:].split()
+            klucz = (int(d), f[19])                     # pid + czas startu (pid moze zostac uzyty ponownie)
+            nazwa = prev[klucz][2] if klucz in prev else st[st.find("(") + 1:rp]
+            if klucz not in prev:
+                u = unit_of(d)
+                nazwa = f"{nazwa} ({u})" if u and u != nazwa else nazwa
+            cur[klucz] = (int(f[11]) + int(f[12]), int(f[21]) * PAGE_SIZE, nazwa)
+        except (OSError, ValueError, IndexError):
+            continue
+    return cur
+
+
+def obc_czas(sek):
+    sek = int(round(sek))
+    return f"{sek} s" if sek < 60 else f"{sek // 60} min {sek % 60} s" if sek < 3600 else f"{sek // 3600} h {sek % 3600 // 60} min"
+
+
+def obc_top(e, n=5):
+    if e["typ"] == "ram":
+        lista = sorted(e["ram_max"].items(), key=lambda x: -x[1])[:n]
+        return [{"nazwa": k, "mb": round(v / 1048576)} for k, v in lista]
+    dl = max(1.0, e["sek"])
+    lista = sorted(e["cpu_s"].items(), key=lambda x: -x[1])[:n]
+    return [{"nazwa": k, "cpu": round(v / dl * 100)} for k, v in lista if v > 0]
+
+
+def obc_opis_top(top):
+    return ", ".join(f"{t['nazwa']} {t['mb']} MB" if "mb" in t else f"{t['nazwa']} {t['cpu']}%" for t in top) or "–"
+
+
+def obc_log(typ, linia):
+    ZDROWIE.mkdir(parents=True, exist_ok=True)
+    with open(ZDROWIE / OBC_TYPY[typ][0], "a", encoding="utf-8") as f:
+        f.write(linia + "\n")
+    NAS_BUDZIK.set()
+
+
+def obc_dodaj(e, v, procesy, teraz):
+    e["suma"] += v
+    e["n"] += 1
+    if v >= e["max"]:
+        e["max"], e["max_czas"] = v, time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(teraz))
+    for nazwa, (cpu_s, rss) in procesy.items():
+        if cpu_s > 0:
+            e["cpu_s"][nazwa] = e["cpu_s"].get(nazwa, 0) + cpu_s
+        if rss > e["ram_max"].get(nazwa, 0):
+            e["ram_max"][nazwa] = rss
+
+
+def obc_krok(wart, procesy, dt, teraz):
+    """jeden pomiar: wart = {"cpu": %, "temp": °C, "ram": %}, procesy = {nazwa: (sekundy CPU w ostatnich dt, RAM)}"""
+    prog = obc_progi()
+    with OBC_LOCK:
+        poprz = OBC_STAN.get("poprz") or {}
+        for typ, v in wart.items():
+            if v is None:
+                continue
+            licz, e = OBC_STAN["licz"], OBC_STAN["trwa"].get(typ)
+            if v > prog[typ]:
+                licz[typ] = max(0, licz.get(typ, 0)) + 1
+                if e is None and licz[typ] >= 2:
+                    t0 = teraz - 2 * dt         # przedzial zaczal sie przy poprzednim pomiarze
+                    e = OBC_STAN["trwa"][typ] = {"typ": typ, "od": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(t0)), "t0": t0,
+                                                 "max": 0, "max_czas": None, "suma": 0.0, "n": 0, "prog": prog[typ], "sek": 0.0,
+                                                 "cpu_s": {}, "ram_max": {}, "ponizej": 0, "ostatnio": teraz}
+                    if typ in poprz:
+                        obc_dodaj(e, poprz[typ][0], poprz[typ][1], teraz - dt)
+                    _, nazwa, jedn = OBC_TYPY[typ]
+                    obc_log(typ, f"{e['od'].replace('T', ' ')} START {nazwa} > {prog[typ]}{jedn} (teraz {v:.0f}{jedn})")
+                if e:
+                    e["ponizej"], e["ostatnio"] = 0, teraz
+                    obc_dodaj(e, v, procesy, teraz)
+                    e["sek"] = teraz - e["t0"]
+            else:
+                licz[typ] = min(0, licz.get(typ, 0)) - 1
+                if e:
+                    e["ponizej"] += 1
+                    if e["ponizej"] >= 3:
+                        obc_zakoncz(e, e["ostatnio"])
+                        del OBC_STAN["trwa"][typ]
+        OBC_STAN["poprz"] = {typ: (v, procesy) for typ, v in wart.items() if v is not None}
+
+
+def obc_zakoncz(e, koniec):
+    _, nazwa, jedn = OBC_TYPY[e["typ"]]
+    e["sek"] = max(0, koniec - e["t0"])
+    rek = {"typ": e["typ"], "od": e["od"], "do": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(koniec)),
+           "sek": round(e["sek"]), "max": round(e["max"], 1), "max_czas": e["max_czas"],
+           "srednia": round(e["suma"] / max(1, e["n"]), 1), "prog": e["prog"], "top": obc_top(e)}
+    obc_log(e["typ"], f"{rek['od'].replace('T', ' ')} – {rek['do'][11:]} ({obc_czas(rek['sek'])}) {nazwa} max {rek['max']:.0f}{jedn}"
+                      f" o {(rek['max_czas'] or '')[11:]}, średnio {rek['srednia']:.0f}{jedn} · najwięcej: {obc_opis_top(rek['top'])}")
+    lista = obc_epizody()
+    lista.append(rek)
+    zapisz_json(ZDROWIE / "obciazenie.json", lista[-3000:], indent=None)
+
+
+def obc_petla():
+    prev_cpu, prev_proc, t_prev = None, {}, None
+    while True:
+        try:
+            teraz = time.time()
+            vals = [int(x) for x in read("/proc/stat").splitlines()[0].split()[1:]]
+            cur_cpu = (vals[3] + vals[4], sum(vals))
+            cur_proc = obc_procesy(prev_proc)
+            if prev_cpu and t_prev and cur_cpu[1] > prev_cpu[1]:
+                dt = teraz - t_prev
+                cpu = 100.0 * (1 - (cur_cpu[0] - prev_cpu[0]) / (cur_cpu[1] - prev_cpu[1]))
+                try:
+                    temp = int(read("/sys/class/thermal/thermal_zone0/temp", "0")) / 1000 or None
+                except ValueError:
+                    temp = None
+                mi = meminfo()
+                ram = (mi["MemTotal"] - mi.get("MemAvailable", 0)) / mi["MemTotal"] * 100 if mi.get("MemTotal") else None
+                procesy = {}
+                for k, (tiki, rss, nazwa) in cur_proc.items():
+                    cpu_s = (tiki - prev_proc[k][0]) / HZ if k in prev_proc else 0.0
+                    a = procesy.get(nazwa, (0.0, 0))
+                    procesy[nazwa] = (a[0] + cpu_s, a[1] + rss)
+                OBC_STAN["pomiar"] = {"cpu": round(cpu, 1), "temp": temp and round(temp, 1), "ram": ram and round(ram, 1),
+                                      "czas": time.strftime("%Y-%m-%dT%H:%M:%S")}
+                obc_krok({"cpu": cpu, "temp": temp, "ram": ram}, procesy, dt, teraz)
+            prev_cpu, prev_proc, t_prev = cur_cpu, cur_proc, teraz
+        except Exception as e:      # pomiar nie moze zatrzymac portalu
+            try:
+                zdrowie_log(f"BLAD OBCIAZENIA {type(e).__name__}: {e}")
+            except OSError:
+                pass
+            time.sleep(55)
+        time.sleep(5)
+
+
+@app.route("/api/obciazenie")
+def api_obciazenie():
+    with OBC_LOCK:
+        trwa = [{"typ": e["typ"], "od": e["od"], "sek": round(e["sek"]), "max": round(e["max"], 1), "max_czas": e["max_czas"],
+                 "srednia": round(e["suma"] / max(1, e["n"]), 1), "prog": e["prog"], "top": obc_top(e)} for e in OBC_STAN["trwa"].values()]
+    lista = obc_epizody()
+    granica = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(time.time() - 86400))
+    doba = {}
+    for typ in OBC_TYPY:
+        ep = [e for e in lista if e["typ"] == typ and e["do"] >= granica]
+        doba[typ] = {"ile": len(ep), "sek": sum(e["sek"] for e in ep), "max": max((e["max"] for e in ep), default=None)}
+    return jsonify({"progi": obc_progi(), "teraz": OBC_STAN["pomiar"], "trwa": trwa, "doba": doba, "przedzialy": lista[::-1][:150]})
+
+
 # ---------- Zadania w tle: kopia systemu, render, NAS, logi, aktualizacje (panel na /strony/zdrowie/) ----------
 ZADANIA = [   # (usluga, timer, nazwa, opis)
     ("kopia-pi", "kopia-pi.timer", "Kopia całego systemu na NAS", "Co noc o 02:00, tylko zmiany, do NAS → Raspberry/Kopia-systemu"),
@@ -1998,6 +2177,8 @@ def nas_krok(sprzatanie=False):
         nas_lustro(ZDROWIE / "dziennik.log", NAS_LOGI / "zdrowie-dziennik.log")
         nas_lustro(ZDROWIE / "incydenty.json", NAS_LOGI / "zdrowie-incydenty.json")
         nas_lustro(PROGRES / "dane.json", NAS_ZDJ / "dane.json")
+        for plik, _, _ in OBC_TYPY.values():
+            nas_lustro(ZDROWIE / plik, NAS_LOGI / plik)
         if sprzatanie:      # pliki usuniete na stronie, gdy NAS byl niedostepny (starsze niz 10 min: nie w trakcie dodawania)
             znane = {z["id"] for z in progres_dane()["zdjecia"]}
             filmy = {p.stem for p in PROGRES_FILMY.glob("*.json")}
@@ -2032,6 +2213,7 @@ def nas_petla():
 if not os.environ.get("PORTAL_TEST"):
     threading.Thread(target=zdrowie_petla, name="zdrowie", daemon=True).start()
     threading.Thread(target=nas_petla, name="nas", daemon=True).start()
+    threading.Thread(target=obc_petla, name="obciazenie", daemon=True).start()
 
 
 def tailscale_ipv4():

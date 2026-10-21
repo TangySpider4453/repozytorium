@@ -300,3 +300,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (panel)**: Panel „Kopie zapasowe i zadania w tle” (strona główna portalu i Zdrowie): stan i procenty
   kopii systemu, renderu, zdjęć na NAS, logów i aktualizacji. Pierwsza kopia systemu zrobiona (17 GB, 8,5 min),
   przyrostowa 31 s, sprawdzona: właściciele i uprawnienia zachowane. Backup `app.py.bak_2026-10-22_zadania`.
+- **2026-10-22 (obciążenie)**: Raport obciążenia: przedziały CPU > 60 %, temperatura > 55 °C, RAM > 60 % z maksimum
+  i głównymi procesami, logi `cpu.log`/`temperatura.log`/`ram.log` na NAS, wysuwany panel z „!” na stronie głównej
+  i Zdrowie. Test na Pi (25 s obciążenia) zapisany poprawnie. Backup `app.py.bak_2026-10-22_obciazenie`.

@@ -37,6 +37,13 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   procent = większy z bajtów i sprawdzonych plików), render filmów (procent, kolejka), bufor zdjęć, logi na NAS,
   połączenie z NAS, aktualizacja Minecrafta, aktualizacje systemu (ostatnio/następnie z `systemctl list-timers
   --output=json`). Strona Zdrowie odświeża panel co 5 s, gdy coś trwa. Pierwsza pełna kopia: 17 GB w 511 s, kolejne ~30 s.
+- **Raport obciążenia** (wątek `obc_petla` w `app.py`, pomiar co 5 s): każdy przedział z CPU > 60 %, temperaturą
+  > 55 °C, RAM > 60 % (progi: `config.json` → `"obciazenie"`). Start po 2 pomiarach ponad progiem (≥ 10 s), koniec po
+  3 poniżej. Zapis: `dane/zdrowie/obciazenie.json` (ostatnie 3000) i logi `cpu.log`, `temperatura.log`, `ram.log`
+  (START od razu, potem linia z czasem, max, średnią i 5 procesami, które najwięcej zjadały: CPU w % jednego rdzenia,
+  RAM w MB; nazwa = program (usługa)), kopiowane od razu na NAS `Logi/`. API `GET /api/obciazenie`. Na stronie głównej
+  i Zdrowie wysuwany panel `zdrowie/obciazenie.js` (domyślnie zwinięty, pamięta stan); zwinięty pokazuje tylko „!”,
+  gdy przedział trwa teraz.
 - **Bezpieczne wyłączenie**: komenda `raspiproszewylaczsie` (`/usr/local/bin`, repo `pi/nas/`): pyta o potwierdzenie
   (`-t` bez pytania), czeka na trwającą kopię (`--teraz` przerywa ją), Minecraft `save-all` + `stop` przez
   `~/powernukkitx/console.fifo`, zatrzymuje playit i portal, wpis w dzienniku zdrowia, ostatnie logi na NAS, odmontowanie
