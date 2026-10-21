@@ -1,0 +1,72 @@
+KOMENDY RASPBERRY PI (serwerek domowy)
+======================================
+Wpisuj w terminalu na Pi: portal -> Terminal (http://100.108.241.58/terminal), ssh tonyg@raspberrypi albo VNC.
+Ten plik jest aktualizowany automatycznie przez Pi (kopia z /usr/local/lib/kopia-pi/komendy.txt).
+
+
+WYLACZANIE
+----------
+raspiproszewylaczsie
+    Bezpieczne wylaczenie Pi: pyta o potwierdzenie (t), czeka na trwajaca kopie, zapisuje swiat Minecraft,
+    zatrzymuje serwer i portal, wysyla ostatnie logi na NAS i wylacza Pi.
+    Odlacz zasilanie dopiero, gdy zielona dioda na plytce przestanie migac. Wlaczenie: podlacz zasilanie ponownie.
+raspiproszewylaczsie --teraz
+    To samo, ale nie czeka na kopie (przerywa ja, dokonczy sie przy nastepnej).
+raspiproszewylaczsie -t
+    Bez pytania o potwierdzenie.
+
+sudo reboot
+    Zwykly restart Pi (wszystko wlaczy sie samo). Najpierw uprzedz graczy Minecrafta.
+
+
+KOPIA ZAPASOWA CALEGO SYSTEMU (co noc o 02:00, sama)
+----------------------------------------------------
+sudo systemctl start kopia-pi
+    Zrob kopie teraz (trwa ok. pol minuty, pierwsza ok. 9 min). Postep: strona glowna portalu -> panel
+    "Kopie zapasowe i zadania w tle".
+sudo cat /var/lib/kopia-pi/ostatni-przebieg.log
+    Co sie dzialo przy ostatniej kopii (to samo jest na NAS w Logi/kopia-systemu.log).
+systemctl list-timers kopia-pi
+    Kiedy nastepna kopia.
+
+Odzyskanie jednego pliku z kopii:
+    sudo mkdir -p /mnt/kopia
+    sudo mount -o ro,loop /mnt/nas/Raspberry/Kopia-systemu/raspberry-system.img /mnt/kopia
+    ls /mnt/kopia/home/tonyg            (skopiuj, co potrzebne, np. cp /mnt/kopia/sciezka/plik ~/)
+    sudo umount /mnt/kopia
+
+Odtworzenie calej karty SD: Kopia-systemu/JAK-PRZYWROCIC.txt  (sudo bash przywroc.sh /dev/sdX)
+
+
+NAS
+---
+mountpoint /mnt/nas
+    Czy NAS jest podlaczony.
+sudo nas-montuj
+    Podlacz NAS od razu (Pi i tak probuje samo co 2 minuty).
+ls /mnt/nas/Raspberry
+    Folder na NAS widziany z Pi (Tony-Folder/Raspberry).
+
+
+LOGI
+----
+Na NAS w Raspberry/Logi/:
+    zdrowie-dziennik.log    problemy serwera (dioda)
+    cpu.log, temperatura.log, ram.log    okresy duzego obciazenia i co je powodowalo
+    kopia-systemu.log       kazda kopia
+    system/RRRR-MM-DD.log   caly dziennik systemu
+Na Pi:
+journalctl -b -p warning
+    Ostrzezenia i bledy od ostatniego uruchomienia.
+journalctl -u powernukkitx -n 100
+    Ostatnie 100 linii serwera Minecraft (zamiast powernukkitx: home-portal, playit, kopia-pi ...).
+
+
+USLUGI (nazwy: home-portal, powernukkitx, playit, pi-dashboard, tailscaled)
+-------------------------------------------------------------------------
+systemctl status home-portal
+    Czy dziala i ostatnie wpisy.
+sudo systemctl restart home-portal
+    Restart portalu (strony, dioda). Bezpieczny, trwa kilka sekund.
+sudo systemctl restart powernukkitx
+    Restart serwera Minecraft (rozlacza graczy).

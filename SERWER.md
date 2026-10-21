@@ -52,6 +52,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Po zaniku prądu** wszystko startuje samo: usługi `enabled` (portal, Minecraft, playit, tailscale, dashboard, terminal,
   ollama, smbd, wayvnc), timery NAS/logów/kopii; NAS z fstab (`nofail`) + `nas-montuj` co 2 min; kopia z
   `Persistent=true` nadrabia pominiętą 02:00 zaraz po starcie, a przerwaną naprawia `e2fsck` przy następnym przebiegu.
+- **`Raspberry/komendy.txt` na NAS**: lista komend projektu dla użytkownika (źródło `pi/nas/komendy.txt` →
+  `/usr/local/lib/kopia-pi/komendy.txt`, `nas-montuj` kopiuje na NAS, gdy się różni). **Każdą nową komendę lub skrypt
+  dla użytkownika dopisz tam** i zainstaluj plik na Pi.
 - **Pliki w repo**: `pi/nas/` (skrypty, jednostki systemd, instrukcje, `instaluj.sh`; instalacja: skopiuj folder na Pi
   i `sudo bash instaluj.sh`).
 

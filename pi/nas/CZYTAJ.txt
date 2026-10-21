@@ -1,4 +1,5 @@
 RASPBERRY PI: co tu jest
+  komendy.txt         komendy do wpisania w terminalu Pi (wylaczanie, kopia, NAS, logi, uslugi)
   Logi/               logi zapisywane od razu:
      zdrowie-dziennik.log     problemy serwera (dioda): start, pogorszenie, koniec, "przejrzane"
      zdrowie-incydenty.json   te same problemy ze szczegolami

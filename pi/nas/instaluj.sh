@@ -9,7 +9,7 @@ apt-get install -y -qq cifs-utils rsync dosfstools e2fsprogs > /dev/null
 install -m 755 nas-montuj kopia-pi logi-na-nas /usr/local/sbin/
 install -m 755 raspiproszewylaczsie /usr/local/bin/
 install -d /usr/local/lib/kopia-pi /var/lib/kopia-pi /mnt/nas
-install -m 644 JAK-PRZYWROCIC.txt CZYTAJ.txt /usr/local/lib/kopia-pi/
+install -m 644 JAK-PRZYWROCIC.txt CZYTAJ.txt komendy.txt /usr/local/lib/kopia-pi/
 install -m 755 przywroc.sh /usr/local/lib/kopia-pi/
 install -m 644 nas-montuj.service nas-montuj.timer logi-na-nas.service logi-na-nas.timer kopia-pi.service kopia-pi.timer /etc/systemd/system/
 install -d /etc/systemd/journald.conf.d
