@@ -720,7 +720,8 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 .term iframe{width:100%;height:100%;border:0;display:block}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:640px){th,td{padding:7px 9px}}
-</style></head>
+.zad{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px}
+</style><script src="/strony/zdrowie/zadania.js"></script></head>
 <body><div class="wrap">
 <header>
   <div><h1 id="h-title">Serwerek domowy</h1><div class="sub" id="h-sub">Raspberry Pi 4B · ładowanie…</div></div>
@@ -754,7 +755,7 @@ async function getJSON(u){const r=await fetch(u,{cache:'no-store'});if(!r.ok)thr
 function setSub(s){document.getElementById('h-sub').textContent=s.model+' · '+s.system+' · działa od '+dur(s.uptime)}
 
 /* ---------- START ---------- */
-function renderStart(d){
+function renderStart(d,zad){
   const s=d.system;setSub(s);
   const ram=pct(s.ram_uzyte,s.ram_total),disk=pct(s.dysk_uzyte,s.dysk_total),cpu=s.cpu,t=s.temp;
   const tiles=h('div',{class:'tiles'},
@@ -797,6 +798,7 @@ function renderStart(d){
   const au=s.autoupdate;
   main.replaceChildren(
     h('section',null,tiles,...alerts),
+    zad&&window.Zadania?h('section',null,h('h2',{text:'Kopie zapasowe i zadania w tle'}),h('p',{class:'sec-note',text:'Nocna kopia całego systemu na NAS, render filmów, zdjęcia i logi na NAS, aktualizacje. Procenty są szacunkowe.'}),h('div',{class:'zad'},Zadania.panel(zad))):null,
     h('section',null,h('h2',{text:'Strony na tym serwerze'}),h('p',{class:'sec-note',text:'Wszystko, co Pi udostępnia w przeglądarce. Nową stronę dodasz, wrzucając folder z plikiem index.html do ~/portal/sites/.'}),cards),
     h('section',null,h('h2',{text:'Działające programy ('+d.uslugi.length+')'}),h('p',{class:'sec-note',text:'Wszystkie usługi systemd, które teraz działają, pogrupowane według przeznaczenia.'}),...svc),
     h('section',null,h('h2',{text:'Co teraz najbardziej obciąża Pi'}),h('p',{class:'sec-note',text:'CPU mierzone między kolejnymi odświeżeniami strony (100 % = jeden pełny rdzeń).'}),procs)
@@ -881,7 +883,7 @@ function renderTerminal(){
 
 async function tick(){
   try{
-    if(PAGE==='start'){renderStart(await getJSON('/api/status'))}
+    if(PAGE==='start'){const [d,zad]=await Promise.all([getJSON('/api/status'),getJSON('/api/zadania').catch(()=>null)]);renderStart(d,zad)}
     else if(PAGE==='siec'){const [n,s]=await Promise.all([getJSON('/api/siec'),getJSON('/api/status?lekki=1')]);lastSys=s.system;renderSiec(n)}
   }catch(e){main.replaceChildren(h('div',{class:'err',text:'Nie udało się pobrać danych z serwera ('+e.message+'). Ponawiam…'}))}
 }
@@ -1874,6 +1876,98 @@ def api_zdrowie_dziennik():
     except OSError:
         linie = []
     return jsonify(linie[::-1])
+
+
+# ---------- Zadania w tle: kopia systemu, render, NAS, logi, aktualizacje (panel na /strony/zdrowie/) ----------
+ZADANIA = [   # (usluga, timer, nazwa, opis)
+    ("kopia-pi", "kopia-pi.timer", "Kopia całego systemu na NAS", "Co noc o 02:00, tylko zmiany, do NAS → Raspberry/Kopia-systemu"),
+    ("logi-na-nas", "logi-na-nas.timer", "Dziennik systemu na NAS", "Co minutę do NAS → Raspberry/Logi/system"),
+    ("nas-montuj", "nas-montuj.timer", "Połączenie z NAS", "Sprawdzane co 2 minuty, po zerwaniu łączy od nowa"),
+    ("mc-autoupdate", "mc-autoupdate.timer", "Aktualizacja serwera Minecraft", "Automatyczna aktualizacja PowerNukkitX"),
+    ("apt-daily-upgrade", "apt-daily-upgrade.timer", "Aktualizacje systemu", "Automatyczne poprawki bezpieczeństwa (apt)"),
+]
+
+
+def zadania_timery():
+    try:
+        return {t["unit"]: t for t in json.loads(sh(["systemctl", "list-timers", "--all", "--output=json", "--no-pager"]) or "[]")}
+    except ValueError:
+        return {}
+
+
+def usec_iso(v):
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(v / 1e6)) if isinstance(v, (int, float)) and v > 0 else None
+
+
+def kopia_postep():
+    """postep trwajacej kopii: z postep.json skryptu, a gdy go nie ma, szacunek z zajetosci pliku kopii"""
+    try:
+        p = json.loads((KOPIA_STAN / "postep.json").read_text(encoding="utf-8"))
+        return {"faza": p.get("faza"), "procent": p.get("procent"), "pliki": p.get("pliki"), "start": p.get("start")}
+    except (OSError, ValueError):
+        pass
+    try:
+        kopia = shutil.disk_usage("/mnt/pi-kopia")
+        if not os.path.ismount("/mnt/pi-kopia"):
+            return {"faza": "przygotowanie", "procent": None}
+        zrodlo = shutil.disk_usage("/").used + shutil.disk_usage("/boot/firmware").used - 2 * 1024 ** 3
+        return {"faza": "kopiowanie", "procent": min(99, round(kopia.used / max(1, zrodlo) * 100)), "szacunek": True}
+    except OSError:
+        return {"faza": "przygotowanie", "procent": None}
+
+
+def zadania_lista():
+    timery, lista = zadania_timery(), []
+    for usluga, timer, nazwa, opis in ZADANIA:
+        st = usluga_stan(usluga)
+        if st.get("LoadState") != "loaded":
+            continue
+        t = timery.get(timer, {})
+        z = {"id": usluga, "nazwa": nazwa, "opis": opis, "trwa": st.get("ActiveState") in ("activating", "active", "deactivating"),
+             "wynik": st.get("Result") or None, "ostatnio": usec_iso(t.get("last")), "nastepnie": usec_iso(t.get("next"))}
+        if usluga == "kopia-pi":
+            for plik, klucz in (("stan.json", "ostatni"), ("ostatnia-udana.json", "udana")):
+                try:
+                    z[klucz] = json.loads((KOPIA_STAN / plik).read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    z[klucz] = None
+            if z["trwa"]:
+                z.update(kopia_postep())
+                if not z.get("start"):
+                    m = re.search(r"@(\d+)", sh(["systemctl", "show", "--timestamp=unix", "-p", "ExecMainStartTimestamp", "--value", "kopia-pi"]))
+                    z["start"] = usec_iso(int(m.group(1)) * 1e6) if m else z["ostatnio"]
+        lista.append(z)
+    filmy = [m for m in (film_meta(p.stem) for p in PROGRES_FILMY.glob("*.json") if not p.name.endswith(".wejscie.json")) if m]
+    trwa = next((m for m in filmy if m.get("status") == "renderuje"), None)
+    render = {"id": "render", "nazwa": "Render filmów (Progres)", "opis": "Filmy z postępu sylwetki, jeden naraz, niski priorytet",
+              "trwa": bool(trwa), "kolejka": sum(m.get("status") == "oczekuje" for m in filmy)}
+    if trwa:
+        try:
+            render["procent"] = int((PROGRES_FILMY / f"{trwa['id']}.postep").read_text())
+        except (OSError, ValueError):
+            render["procent"] = 0
+        render.update(faza="renderuje", start=trwa.get("start"), cel=trwa.get("opis") or "")
+    gotowe = [m for m in filmy if m.get("status") in ("gotowe", "blad")]
+    if gotowe:
+        ost = max(gotowe, key=lambda m: m["utworzono"])
+        render.update(ostatnio=ost.get("start") or ost["utworzono"], wynik="success" if ost["status"] == "gotowe" else "blad")
+    lista.insert(1, render)
+    bufor = [p for p in list(PROGRES_ZDJ.glob("*.jpg")) + list(PROGRES_FILMY.glob("*.mp4")) if not p.name.endswith(".tmp.mp4")]
+    lista.insert(2, {"id": "nas-bufor", "nazwa": "Zdjęcia i filmy na NAS", "opis": "Zapis od razu na NAS; gdy był niedostępny, Pi przenosi zaległe co 30 s",
+                     "trwa": bool(bufor) and nas_ok(), "czeka": len(bufor), "wynik": "success" if not bufor else None})
+    nas = {"ok": nas_ok()}
+    if nas["ok"]:
+        try:
+            du = shutil.disk_usage("/mnt/nas")
+            nas.update(wolne_gb=round(du.free / 1e9), razem_gb=round(du.total / 1e9))
+        except OSError:
+            pass
+    return {"zadania": lista, "nas": nas, "teraz": time.strftime("%Y-%m-%dT%H:%M:%S")}
+
+
+@app.route("/api/zadania")
+def api_zadania():
+    return jsonify(zadania_lista())
 
 
 # ---------- NAS: przenoszenie bufora z Pi i kopie logow (co 30 s albo od razu po zmianie) ----------

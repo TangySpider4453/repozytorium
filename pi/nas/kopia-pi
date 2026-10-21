@@ -20,6 +20,8 @@ ROZMIAR=64G            # pojemnosc pliku z kopia (plik rzadki: zajmuje na NAS ty
 mkdir -p "$STAN"
 TMPLOG=$STAN/ostatni-przebieg.log
 : > "$TMPLOG"
+POSTEP=$STAN/postep.json      # dla panelu w portalu: faza, procent, pliki
+faza() { printf '{"faza": "%s", "procent": %s, "pliki": "%s", "start": "%s", "czas": "%s"}\n' "$1" "${2:-null}" "${3:-}" "$START" "$(date '+%Y-%m-%dT%H:%M:%S')" > "$POSTEP.tmp" && mv "$POSTEP.tmp" "$POSTEP"; }
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" | tee -a "$TMPLOG"; }
 koniec() {        # dopisz przebieg do logu na NAS (albo zostaw lokalnie, gdy NAS niedostepny)
     local wynik=$1
@@ -34,6 +36,7 @@ koniec() {        # dopisz przebieg do logu na NAS (albo zostaw lokalnie, gdy NA
     fi
 }
 sprzataj() {
+    rm -f "$POSTEP"
     mountpoint -q "$MNT" && { sync; umount "$MNT" || umount -l "$MNT"; }
     [ -n "${LOOP:-}" ] && losetup -d "$LOOP" 2>/dev/null
 }
@@ -41,6 +44,7 @@ trap sprzataj EXIT
 
 START=$(date '+%Y-%m-%dT%H:%M:%S'); START_S=$(date +%s)
 log "START kopii systemu"
+faza "przygotowanie"
 
 # NAS: zamontowany i to naprawde nasz udzial (znacznik), a nie pusty katalog na karcie
 mountpoint -q "$NAS" || /usr/local/sbin/nas-montuj
@@ -67,13 +71,31 @@ mkdir -p "$MNT"
 mount -o noatime "$LOOP" "$MNT" || { log "BLAD: nie da sie zamontowac kopii"; koniec blad; exit 1; }
 
 log "rsync / -> kopia"
-rsync -aAXH --numeric-ids --delete --delete-excluded --stats \
+faza "liczenie plikow" 0
+# postep: rsync --info=progress2 (procent w bajtach, to-chk = pliki jeszcze do sprawdzenia), co 5 s do postep.json
+rsync -aAXH --numeric-ids --delete --delete-excluded --stats --info=progress2 --no-inc-recursive \
     --exclude='/proc/*' --exclude='/sys/*' --exclude='/dev/*' --exclude='/run/*' --exclude='/tmp/*' \
     --exclude='/mnt/*' --exclude='/media/*' --exclude='/lost+found' --exclude='/var/swap' --exclude='/swapfile' \
     --exclude='/var/tmp/*' --exclude='/var/cache/apt/archives/*.deb' --exclude='/var/lib/kopia-pi/ostatni-przebieg.log' \
     --exclude='/home/*/.cache/*' --exclude='/root/.cache/*' \
-    / "$MNT/" > "$STAN/rsync.log" 2>&1
-rc=$?
+    / "$MNT/" 2>&1 | tr '\r' '\n' | {
+        : > "$STAN/rsync.log"; ost=0
+        while IFS= read -r l; do
+            if [[ $l =~ ([0-9]+)%.*to-chk=([0-9]+)/([0-9]+) ]]; then
+                teraz=$(date +%s)
+                if (( teraz - ost >= 5 )); then
+                    ost=$teraz
+                    # procent: wiekszy z dwoch (bajty: pierwsza kopia; sprawdzone pliki: kolejne, gdy malo sie zmienia)
+                    pb=${BASH_REMATCH[1]}; zr=$(( BASH_REMATCH[3] - BASH_REMATCH[2] )); pp=$(( zr * 100 / BASH_REMATCH[3] ))
+                    faza "kopiowanie" "$(( pb > pp ? pb : pp ))" "$zr/${BASH_REMATCH[3]}"
+                fi
+            elif [[ -n $l && ! $l =~ ^\ +[0-9,]+\ +[0-9]+% ]]; then
+                echo "$l" >> "$STAN/rsync.log"
+            fi
+        done
+    }
+rc=${PIPESTATUS[0]}
+faza "zamykanie" 100
 grep -E '^(Number of (regular )?files|Number of created|Number of deleted|Total transferred file size|Total file size)' "$STAN/rsync.log" \
     | sed 's/^/    /' | tee -a "$TMPLOG" > /dev/null
 # 24 = pliki zniknely w trakcie kopiowania (normalne na dzialajacym systemie)

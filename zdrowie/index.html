@@ -72,6 +72,7 @@ pre{white-space:pre-wrap;font-size:13px;line-height:1.45;background:var(--bg);bo
 </div></header>
 <main><div class="wrap">
   <div class="card"><h2>Teraz</h2><div id="teraz"></div></div>
+  <div class="card"><h2>Kopie zapasowe i zadania w tle</h2><div id="zadania"><p class="muted" style="margin:0">Ładowanie…</p></div></div>
   <div class="card"><h2>Do przejrzenia <span class="muted small" id="ileDP"></span></h2>
     <p class="muted small" style="margin:0 0 6px">Problemy, które już minęły. Dioda świeci na żółto, dopóki ich nie przejrzysz, żeby nic nie zniknęło bez śladu.</p>
     <div id="dp"></div></div>
@@ -79,6 +80,7 @@ pre{white-space:pre-wrap;font-size:13px;line-height:1.45;background:var(--bg);bo
   <div class="card"><h2>Historia</h2><div id="historia"></div></div>
   <div class="card"><details><summary>Dziennik zdarzeń (ostatnie 300 wpisów)</summary><pre id="dziennik">…</pre></details></div>
 </div></main>
+<script src="/strony/zdrowie/zadania.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const el = (t, a = {}, ...k) => { const e = document.createElement(t); for(const [n, v] of Object.entries(a)){ if(v == null) continue; if(n === "text") e.textContent = v; else if(n === "class") e.className = v; else if(n.startsWith("on")) e[n] = v; else e.setAttribute(n, v); } e.append(...k.filter(x => x != null)); return e; };
@@ -127,6 +129,17 @@ async function odswiez(){
   try{ $("dziennik").textContent = (await (await fetch("/api/zdrowie/dziennik", {cache:"no-store"})).json()).join("\n") || "Pusto."; }catch(e){}
 }
 odswiez(); setInterval(odswiez, 30000);
+// zadania w tle: co 5 s, gdy coś trwa (procenty), inaczej co 30 s
+async function odswiezZadania(){
+  let co = 30000;
+  try{
+    const d = await (await fetch("/api/zadania", {cache:"no-store"})).json();
+    $("zadania").replaceChildren(Zadania.panel(d));
+    if(Zadania.trwa(d)) co = 5000;
+  }catch(e){ $("zadania").replaceChildren(el("p", {class:"err", text:"Nie udało się pobrać stanu zadań."})); }
+  setTimeout(odswiezZadania, co);
+}
+odswiezZadania();
 </script>
 </body>
 </html>

@@ -297,3 +297,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   Gdy NAS niedostępny: dioda czerwona. Skrypty w `pi/nas/`, opis w `SERWER.md`. Backup `app.py.bak_2026-10-22_nas`.
 - **2026-10-22 (wyłączanie)**: Komenda `raspiproszewylaczsie` do bezpiecznego wyłączenia Pi (zapis świata Minecraft,
   czekanie na kopię, logi na NAS, poweroff). Sprawdzone: wszystkie usługi i timery startują same po zaniku prądu.
+- **2026-10-22 (panel)**: Panel „Kopie zapasowe i zadania w tle” (strona główna portalu i Zdrowie): stan i procenty
+  kopii systemu, renderu, zdjęć na NAS, logów i aktualizacji. Pierwsza kopia systemu zrobiona (17 GB, 8,5 min),
+  przyrostowa 31 s, sprawdzona: właściciele i uprawnienia zachowane. Backup `app.py.bak_2026-10-22_zadania`.
