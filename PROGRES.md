@@ -12,8 +12,12 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   `~/portal/sites/progres/mp/` (pobiera je `narzedzia/progres_pobierz_mediapipe.sh`, nie są w repo).
   Z barków (11, 12) i bioder (23, 24) liczone jest `pose = {cx, cy, s, ok}`: środek tułowia (ułamek szer./wys.)
   i długość tułowia (ułamek wysokości).
-- **Wyrównanie w filmie:** każda klatka jest skalowana tak, by tułów miał 26% wysokości kadru, a jego środek był
-  w poziomie na środku i na 44% wysokości (`CEL` w `app.js`). Ręczna korekta per zdjęcie: `reczne = {dx, dy, z}`
+- **Wyrównanie w filmie:** każda klatka jest skalowana tak, by tułów miał `celS` wysokości kadru (domyślnie 26%),
+  a jego środek był w poziomie na środku i na `celY` wysokości (domyślnie 44%). Oba ustawia się w karcie „Kadr filmu”
+  (suwaki „Przybliżenie” i „Wysokość”, podgląd ze szkieletem); zapis w `ustawienia.film`.
+- **Przycięcie:** `przytnij` (domyślnie tak) = automatyczna ramka o proporcjach kadru w części wspólnej wszystkich
+  klatek (bez krawędzi zdjęć), skalowana wokół punktu tułowia; albo ręczna `ramka {x, y, w}` (ułamki kadru, h = w),
+  rysowana i przesuwana palcem na podglądzie. Ramka ręczna ma pierwszeństwo. Ręczna korekta per zdjęcie: `reczne = {dx, dy, z}`
   (przesunięcie w długościach tułowia i zoom), ustawiana w oknie „Kadrowanie” z półprzezroczystym poprzednim
   zdjęciem tego samego typu.
 - **Historia:** wykres masy (kg) i osobno składu ciała (%), lista dni z miniaturami, edycja typu/daty, kosz.
@@ -56,3 +60,5 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   **Przy zmianie `app.js` podbijaj `?v=` w `progres/index.html`.**
 - **2026-10-21 (4)**: Film: czas przejścia w sekundach (0 = cięcie, maks. czas klatki), „Eksportuj film” → „Pobierz plik”
   i „Udostępnij / Zapisz w Zdjęciach” (Web Share API z plikiem, iOS/iPadOS). Nazwa pliku z zakresem dat. `app.js?v=4`.
+- **2026-10-21 (5)**: Karta „Kadr filmu”: przybliżenie i wysokość sylwetki, szkielet-wzór, krawędzie zdjęć na podglądzie,
+  automatyczne przycięcie do części wspólnej (test: czarne brzegi 35–100% → 0%), własna ramka. `app.js?v=5`.

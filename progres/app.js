@@ -265,9 +265,13 @@ function rysujHistorie(){
 }
 
 /* ---------- wyrównanie klatki ---------- */
-const CEL = {y:0.44, s:0.26};   // środek tułowia na 44% wysokości kadru, tułów = 26% wysokości kadru
-function rysujKlatke(g, img, z, W, H, alfa = 1){
-  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+/* CEL = szablon kadru: tułów ma CEL.s wysokości kadru, jego środek jest w poziomie na środku i na CEL.y wysokości.
+   Ustawiany suwakami „Przybliżenie” i „Wysokość” (FM.celS, FM.celY); po zmianie sylwetka i tak jest centrowana. */
+const CEL = {y:0.44, s:0.26};
+function synchCEL(){ CEL.s = FM.celS || 0.26; CEL.y = FM.celY || 0.44; }
+/* położenie zdjęcia w kadrze W×H: skala k i lewy górny róg (ox, oy) */
+function geom(z, W, H, iw, ih){
+  iw = iw || z.w; ih = ih || z.h;
   const r = z.reczne || {}, p = z.pose;
   let k, ox, oy;
   if(p && p.s > 0){
@@ -279,8 +283,33 @@ function rysujKlatke(g, img, z, W, H, alfa = 1){
     ox = (W - iw * k) / 2 + (r.dx || 0) * CEL.s * H;
     oy = (H - ih * k) / 2 + (r.dy || 0) * CEL.s * H;
   }
-  g.globalAlpha = alfa; g.drawImage(img, ox, oy, iw * k, ih * k); g.globalAlpha = 1;
+  return {k, ox, oy, w:iw * k, h:ih * k};
 }
+function rysujKlatke(g, img, z, W, H, alfa = 1){
+  const q = geom(z, W, H, img.naturalWidth || img.width, img.naturalHeight || img.height);
+  g.globalAlpha = alfa; g.drawImage(img, q.ox, q.oy, q.w, q.h); g.globalAlpha = 1;
+}
+/* ramka końcowa (co trafia do filmu), w pikselach kadru; zawsze ma proporcje kadru.
+   ręczna (FM.ramka, ułamki kadru) > automatyczna (część wspólna wszystkich klatek, bez krawędzi zdjęć) > cały kadr */
+function ramkaAuto(kl, W, H){
+  if(!kl.length) return null;
+  let x0 = 0, y0 = 0, x1 = W, y1 = H;
+  kl.forEach(z => { const q = geom(z, W, H); x0 = Math.max(x0, q.ox); y0 = Math.max(y0, q.oy); x1 = Math.min(x1, q.ox + q.w); y1 = Math.min(y1, q.oy + q.h); });
+  const w = Math.min(x1 - x0, (y1 - y0) * W / H), h = w * H / W;
+  if(!(w > W * 0.2)) return null;                       // części wspólnej prawie nie ma: nie przycinamy
+  const ax = W / 2, ay = CEL.y * H;                      // przycinamy „wokół tułowia”, żeby został w tym samym miejscu kadru
+  let x = ax - ax / W * w, y = ay - ay / H * h;
+  x = Math.min(Math.max(x, x0), x1 - w); y = Math.min(Math.max(y, y0), y1 - h);
+  return {x, y, w, h};
+}
+function ramkaKoncowa(kl, W, H){
+  const m = FM.ramka;
+  if(m && m.w > 0) return {x:m.x * W, y:m.y * H, w:m.w * W, h:m.w * H};
+  if(FM.przytnij !== false){ const a = ramkaAuto(kl, W, H); if(a) return a; }
+  return {x:0, y:0, w:W, h:H};
+}
+/* rysuj z przycięciem: ramka r rozciągnięta na cały kadr */
+function wRamce(g, r, W, rysuj){ const sc = W / r.w; g.save(); g.setTransform(sc, 0, 0, sc, -r.x * sc, -r.y * sc); rysuj(); g.restore(); }
 const CACHE = new Map();
 function obraz(z){
   if(!CACHE.has(z.id)) CACHE.set(z.id, new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = plik(z); }));
@@ -305,7 +334,7 @@ function otworzZdjecie(z){
       el("button", {class:"btn", text:"Zamknij", onclick:zamknij})));
 }
 async function kadruj(z, poZapisie){
-  Object.assign(FM, DANE.ustawienia.film || {});
+  Object.assign(FM, DANE.ustawienia.film || {}); synchCEL();
   const box = $("modalBox"); box.innerHTML = ""; $("modal").hidden = false;
   const [Wf, Hf] = formatWH();
   const c = el("canvas", {width:Wf / 2, height:Hf / 2}), g = c.getContext("2d");
@@ -376,6 +405,7 @@ function filmUstaw(){
   const kl = $("fmKlatki"); kl.innerHTML = "";
   k.forEach(z => kl.append(el("button", {class:z.pose || z.reczne ? "" : "bez", onclick:() => kadruj(z, filmUstaw)}, el("img", {src:plik(z, true), alt:"", loading:"lazy"}), krotko(z.data).replace(/ \d{4}$/, ""))));
   if(k.length) pokazKlatke(0);
+  rysujSzablon();
 }
 function zapiszFM(){ post(API + "/ustawienia", {film:FM}).catch(() => {}); DANE.ustawienia.film = Object.assign({}, FM); }
 ["fmOd", "fmDo", "fmCo", "fmSek", "fmFormat", "fmPrzejscie", "fmNapisy"].forEach(id => $(id).onchange = () => {
@@ -396,15 +426,18 @@ function napis(g, z, W, H){
   g.fillStyle = "#fff"; g.fillText(t, W / 2, y);
 }
 async function pokazKlatke(i){
-  const k = klatki(); if(!k[i]) return; const c = $("fmCanvas"), g = c.getContext("2d");
-  const img = await obraz(k[i]); g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height); rysujKlatke(g, img, k[i], c.width, c.height); napis(g, k[i], c.width, c.height);
+  synchCEL();
+  const k = klatki(); if(!k[i]) return; const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, r = ramkaKoncowa(k, W, H);
+  const img = await obraz(k[i]); g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+  wRamce(g, r, W, () => rysujKlatke(g, img, k[i], W, H)); napis(g, k[i], W, H);
 }
 /* odtwarzanie w czasie rzeczywistym (podgląd i nagrywanie używają tego samego) */
 async function odtworz(onKoniec){
   const k = klatki(); if(!k.length) return;
   $("fmStatus").textContent = "Wczytuję zdjęcia…";
   const imgs = await Promise.all(k.map(obraz));
-  const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, sek = Math.max(0.1, FM.sek), fade = Math.min(FM.przejscie, sek);
+  synchCEL();
+  const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, sek = Math.max(0.1, FM.sek), fade = Math.min(FM.przejscie, sek), rk = ramkaKoncowa(k, W, H);
   const total = k.length * sek + 0.6; let start = null;
   $("fmStatus").textContent = "";
   return new Promise(res => {
@@ -412,8 +445,10 @@ async function odtworz(onKoniec){
       if(start == null) start = t;
       const el_ = (t - start) / 1000, i = Math.min(Math.floor(el_ / sek), k.length - 1), wKlatce = el_ - i * sek;
       g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
-      rysujKlatke(g, imgs[i], k[i], W, H);
-      if(fade > 0 && i + 1 < k.length && wKlatce > sek - fade) rysujKlatke(g, imgs[i + 1], k[i + 1], W, H, (wKlatce - (sek - fade)) / fade);
+      wRamce(g, rk, W, () => {
+        rysujKlatke(g, imgs[i], k[i], W, H);
+        if(fade > 0 && i + 1 < k.length && wKlatce > sek - fade) rysujKlatke(g, imgs[i + 1], k[i + 1], W, H, (wKlatce - (sek - fade)) / fade);
+      });
       napis(g, k[i], W, H);
       if(el_ < total) requestAnimationFrame(krok); else { res(); if(onKoniec) onKoniec(); }
     };
@@ -447,7 +482,87 @@ $("fmNagraj").onclick = async () => {
   $("fmNagraj").disabled = $("fmPlay").disabled = false;
 };
 
-window.__progres = {pokazKlatke, klatki};   // do testów automatycznych
+/* ---------- szablon kadru: przybliżenie, wysokość, szkielet, ramka przycięcia ---------- */
+let szNr = 0, szTryb = null;   // szTryb: "rysuj" (nowa ramka) albo {start, ramka} przy przesuwaniu
+function szkielet(g, W, H){
+  const cx = W / 2, cy = CEL.y * H, L = CEL.s * H;
+  const ram = cy - L / 2, bio = cy + L / 2;
+  g.save(); g.strokeStyle = "rgba(77,183,201,.95)"; g.lineWidth = Math.max(2, W / 200); g.lineCap = "round";
+  const linia = (...p) => { g.beginPath(); g.moveTo(p[0], p[1]); for(let i = 2; i < p.length; i += 2) g.lineTo(p[i], p[i + 1]); g.stroke(); };
+  g.beginPath(); g.arc(cx, ram - L * 0.42, L * 0.2, 0, Math.PI * 2); g.stroke();          // głowa
+  linia(cx, ram - L * 0.22, cx, ram);                                                         // szyja
+  linia(cx - L * 0.45, ram, cx + L * 0.45, ram);                                              // barki
+  linia(cx - L * 0.3, bio, cx + L * 0.3, bio);                                                // biodra
+  linia(cx - L * 0.45, ram, cx - L * 0.3, bio); linia(cx + L * 0.45, ram, cx + L * 0.3, bio); // tułów
+  linia(cx - L * 0.45, ram, cx - L * 0.55, ram + L * 0.6, cx - L * 0.58, ram + L * 1.15);     // ręce
+  linia(cx + L * 0.45, ram, cx + L * 0.55, ram + L * 0.6, cx + L * 0.58, ram + L * 1.15);
+  linia(cx - L * 0.2, bio, cx - L * 0.25, bio + L * 0.85, cx - L * 0.27, bio + L * 1.7);      // nogi
+  linia(cx + L * 0.2, bio, cx + L * 0.25, bio + L * 0.85, cx + L * 0.27, bio + L * 1.7);
+  g.setLineDash([6, 6]); g.globalAlpha = .6; linia(0, cy, W, cy); g.restore();
+}
+async function rysujSzablon(){
+  const c = $("szCanvas"); if(!c) return;
+  synchCEL();
+  const [Wf, Hf] = formatWH(); if(c.width !== Wf / 2 || c.height !== Hf / 2){ c.width = Wf / 2; c.height = Hf / 2; }
+  const g = c.getContext("2d"), W = c.width, H = c.height, kl = klatki();
+  $("szS").value = CEL.s; $("szY").value = CEL.y; $("szSv").textContent = `(tułów = ${Math.round(CEL.s * 100)}% wysokości)`; $("szYv").textContent = `(${Math.round(CEL.y * 100)}% od góry)`;
+  $("szPrzytnij").checked = FM.przytnij !== false;
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+  szNr = Math.min(Math.max(szNr, 0), Math.max(kl.length - 1, 0));
+  $("szNr").textContent = kl.length ? `zdjęcie ${szNr + 1} z ${kl.length} · ${krotko(kl[szNr].data)}` : "brak zdjęć";
+  if(kl.length) rysujKlatke(g, await obraz(kl[szNr]), kl[szNr], W, H);
+  g.save(); g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 1;                         // krawędzie wszystkich zdjęć
+  kl.forEach(z => { const q = geom(z, W, H); g.strokeRect(q.ox, q.oy, q.w, q.h); }); g.restore();
+  const r = ramkaKoncowa(kl, W, H);
+  g.save(); g.fillStyle = "rgba(0,0,0,.55)"; g.beginPath(); g.rect(0, 0, W, H); g.rect(r.x, r.y, r.w, r.h); g.fill("evenodd");
+  g.strokeStyle = "#34C759"; g.lineWidth = 3; g.strokeRect(r.x, r.y, r.w, r.h); g.restore();
+  if($("szSzkielet").checked) szkielet(g, W, H);
+  const reczna = FM.ramka && FM.ramka.w > 0, auto = !reczna && FM.przytnij !== false && ramkaAuto(kl, W, H);
+  $("szInfo").textContent = reczna ? "Film używa Twojej ramki. Przeciągnij ją palcem, żeby przesunąć." :
+    auto ? `Przycięte automatycznie do części wspólnej wszystkich ${kl.length} zdjęć: w filmie nie będzie widać krawędzi.` :
+    FM.przytnij !== false && kl.length ? "Zdjęcia za bardzo się różnią, żeby przyciąć automatycznie: popraw kadry pojedynczych zdjęć albo narysuj ramkę." : "Bez przycięcia.";
+  $("szRysuj").setAttribute("aria-pressed", String(szTryb === "rysuj")); $("szRysuj").textContent = szTryb === "rysuj" ? "▭ Przeciągnij po podglądzie…" : "▭ Narysuj własną ramkę";
+}
+function szZmiana(){ zapiszFM(); rysujSzablon(); pokazKlatke(0); }
+$("szS").oninput = () => { FM.celS = +$("szS").value; rysujSzablon(); };
+$("szY").oninput = () => { FM.celY = +$("szY").value; rysujSzablon(); };
+$("szS").onchange = $("szY").onchange = szZmiana;
+$("szSzkielet").onchange = () => rysujSzablon();
+$("szPrzytnij").onchange = () => { FM.przytnij = $("szPrzytnij").checked; szZmiana(); };
+$("szPoprz").onclick = () => { szNr--; rysujSzablon(); };
+$("szNast").onclick = () => { szNr++; rysujSzablon(); };
+$("szUsun").onclick = () => { FM.ramka = null; szTryb = null; szZmiana(); };
+$("szReset").onclick = () => { FM.celS = 0.26; FM.celY = 0.44; FM.ramka = null; FM.przytnij = true; szTryb = null; szZmiana(); };
+$("szRysuj").onclick = () => { szTryb = szTryb === "rysuj" ? null : "rysuj"; rysujSzablon(); };
+(() => {
+  const c = $("szCanvas"); if(!c) return;
+  const pkt = e => { const b = c.getBoundingClientRect(); return {x:(e.clientX - b.left) / b.width, y:(e.clientY - b.top) / b.height}; };
+  let akcja = null;
+  c.addEventListener("pointerdown", e => {
+    const p = pkt(e), m = FM.ramka;
+    if(szTryb === "rysuj") akcja = {typ:"nowa", p0:p};
+    else if(m && m.w > 0 && p.x >= m.x && p.x <= m.x + m.w && p.y >= m.y && p.y <= m.y + m.w * 1) akcja = {typ:"ruch", p0:p, m0:Object.assign({}, m)};
+    else return;
+    c.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  c.addEventListener("pointermove", e => {
+    if(!akcja) return; const p = pkt(e);
+    // ramka ma proporcje kadru: w ułamkach szerokości i wysokości jej „w” jest wspólne (h = w w ułamkach wysokości)
+    if(akcja.typ === "nowa"){
+      const w = Math.min(1, Math.max(0.15, Math.max(Math.abs(p.x - akcja.p0.x), Math.abs(p.y - akcja.p0.y))));
+      const x = p.x < akcja.p0.x ? akcja.p0.x - w : akcja.p0.x, y = p.y < akcja.p0.y ? akcja.p0.y - w : akcja.p0.y;
+      FM.ramka = {x:Math.min(Math.max(x, 0), 1 - w), y:Math.min(Math.max(y, 0), 1 - w), w};
+    } else {
+      const m = akcja.m0; FM.ramka = {x:Math.min(Math.max(m.x + p.x - akcja.p0.x, 0), 1 - m.w), y:Math.min(Math.max(m.y + p.y - akcja.p0.y, 0), 1 - m.w), w:m.w};
+    }
+    FM.ramka = {x:+FM.ramka.x.toFixed(4), y:+FM.ramka.y.toFixed(4), w:+FM.ramka.w.toFixed(4)};
+    rysujSzablon();
+  });
+  const koniec = () => { if(!akcja) return; akcja = null; szTryb = null; szZmiana(); };
+  c.addEventListener("pointerup", koniec); c.addEventListener("pointercancel", koniec);
+})();
+
+window.__progres = {pokazKlatke, klatki, ramkaKoncowa, geom, FM:() => FM};   // do testów automatycznych
 
 /* ---------- start ---------- */
 (async () => {

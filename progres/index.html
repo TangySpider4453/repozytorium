@@ -173,6 +173,18 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
     <div class="klatki" id="fmKlatki"></div>
     <p class="muted small" style="margin:0">Dotknij klatki, żeby poprawić jej kadrowanie. Żółta ramka = sylwetka nierozpoznana.</p>
   </div>
+  <div class="card">
+    <h2>Kadr filmu</h2>
+    <p class="muted small" style="margin:0 0 8px">Ustaw, jak blisko ma być sylwetka i na jakiej wysokości. Każde zdjęcie i tak zostanie wycentrowane według tułowia. Cienkie linie to krawędzie zdjęć po wyrównaniu, a zielona ramka to to, co trafi do filmu.</p>
+    <div class="stage" style="margin-top:4px"><canvas id="szCanvas" width="540" height="675"></canvas></div>
+    <div class="row" style="justify-content:center;margin-bottom:6px"><button class="btn" id="szPoprz">◀</button><span class="small" id="szNr"></span><button class="btn" id="szNast">▶</button></div>
+    <label class="f"><span>Przybliżenie <span class="u" id="szSv"></span></span><input type="range" id="szS" min="0.12" max="0.55" step="0.01"></label>
+    <label class="f" style="margin-top:6px"><span>Wysokość sylwetki w kadrze <span class="u" id="szYv"></span></span><input type="range" id="szY" min="0.25" max="0.70" step="0.01"></label>
+    <label class="row" style="margin-top:10px;font-weight:700"><input type="checkbox" id="szSzkielet" checked> Pokaż szkielet (wzór ustawienia)</label>
+    <label class="row" style="margin-top:4px;font-weight:700"><input type="checkbox" id="szPrzytnij" checked> Przytnij automatycznie do części wspólnej (bez krawędzi zdjęć)</label>
+    <div class="row" style="margin-top:10px"><button class="btn" id="szRysuj">▭ Narysuj własną ramkę</button><button class="btn" id="szUsun">Usuń własną ramkę</button><button class="btn" id="szReset">Domyślne</button></div>
+    <p class="hint small" id="szInfo"></p>
+  </div>
   <div class="stage"><canvas id="fmCanvas" width="1080" height="1350"></canvas></div>
   <div class="row" style="justify-content:center"><button class="btn" id="fmPlay">▶ Podgląd</button><button class="btn primary" id="fmNagraj">⬇ Eksportuj film</button></div>
   <p class="small" id="fmStatus" style="text-align:center"></p>
@@ -185,6 +197,6 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <!-- podgląd zdjęcia: typ, data, usuń, kadrowanie -->
 <div class="modal" id="modal" hidden><div class="box" id="modalBox"></div></div>
 
-<script type="module" src="app.js?v=4"></script>
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>
