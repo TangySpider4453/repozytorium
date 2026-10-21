@@ -12,6 +12,7 @@
 :root{
   --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
   --nav:#1F3A5F; --navInk:#FFFFFF; --ok:#2F7D4F; --warn:#B26A00; --bad:#B23A48;
+  --swOn:#34C759; --swOff:#E9E9EA;
   --serif:"Alegreya",Georgia,serif;
   --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   color-scheme:light;
@@ -19,12 +20,12 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
-    --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+    --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; --swOn:#30D158; --swOff:#39393D; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
-  --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+  --nav:#0B1420; --navInk:#E7ECF2; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; --swOn:#30D158; --swOff:#39393D; color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
@@ -56,6 +57,20 @@ main{padding:20px 0 60px}
 .datebox button{font:inherit;font-weight:700;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
 .datebox button.save{background:var(--nav);border-color:var(--nav);color:#fff}
 .datebox .err{color:var(--bad);font-size:14px;width:100%}
+/* przełącznik jak w ustawieniach iPhone'a */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+.sw{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:16px;cursor:pointer;user-select:none}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw-track{position:relative;width:51px;height:31px;border-radius:999px;background:var(--swOff);transition:background .2s ease;flex:none}
+.sw-track::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.25);transition:transform .2s ease}
+.sw input:checked+.sw-track{background:var(--swOn)}
+.sw input:checked+.sw-track::after{transform:translateX(20px)}
+.sw input:focus-visible+.sw-track{outline:3px solid #4DB7C9;outline-offset:2px}
+.star{position:absolute!important;top:8px;right:8px;font:inherit;font-size:24px;line-height:1;border:0;background:none;color:var(--muted);cursor:pointer;padding:4px 6px}
+.card .meta{padding-right:34px}
+.star.on{color:#E0A100}
+.card.wazne{box-shadow:0 0 0 2px #E0A10055}
+.badge.imp{background:#E0A100;color:#fff}
 .prog{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:14px;color:var(--muted)}
 .prog b{color:var(--ink)}
 .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px;color:var(--muted)}
@@ -81,6 +96,7 @@ main{padding:20px 0 60px}
 </div></header>
 <main><div class="wrap">
   <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="nad">Nadchodzące</button><button role="tab" aria-selected="false" data-tab="arch">Archiwalne</button></div>
+  <div class="toolbar"><label class="sw"><input type="checkbox" id="swWazne" role="switch"><span class="sw-track"></span>Najpierw ważne</label></div>
   <div class="filters" id="filters" hidden></div>
   <div class="list" id="list"><div class="empty">Ładowanie…</div></div>
   <p class="hint">Postępy (fiszki i wyniki quizów) zapisują się na Raspberry Pi, więc telefon, iPad i komputer widzą to samo. Gdy nauczyciel przesunie termin, kliknij „zmień datę” przy karcie. Sprawdziany po terminie trafiają do zakładki „Archiwalne”.</p>
@@ -101,7 +117,7 @@ function countdown(d){
   if(n<=7)return{t:`za ${n} dni`,c:"week"};
   return{t:`za ${n} dni`,c:""};
 }
-let ALL=[],subjColor={},filter="all",tab="nad",POSTEP={};
+let ALL=[],subjColor={},filter="all",tab="nad",POSTEP={},najpierwWazne=false;
 const isPast=x=>{const d=parse(x.data);return !!d&&d<today()};
 function progress(x){
   const p=POSTEP[x.id],box=el("div",{class:"prog"});
@@ -135,7 +151,8 @@ function draw(){
   const arch=ALL.filter(isPast);
   document.querySelector('.tabs [data-tab="arch"]').textContent=`Archiwalne (${arch.length})`;
   // nadchodzące: najbliższy termin na górze, bez daty na końcu (nowsze wyżej); archiwum: najświeższy termin na górze
-  const nad=(a,b)=>(a.data||"9999").localeCompare(b.data||"9999")||(b.dodano||"").localeCompare(a.dodano||"");
+  // z włączonym „Najpierw ważne”: ważne na górze (między sobą wg daty), potem reszta wg daty
+  const nad=(a,b)=>(najpierwWazne?(b.wazne?1:0)-(a.wazne?1:0):0)||(a.data||"9999").localeCompare(b.data||"9999")||(b.dodano||"").localeCompare(a.dodano||"");
   let items=(tab==="arch"?arch.slice().sort((a,b)=>b.data.localeCompare(a.data)):ALL.filter(x=>!isPast(x)).sort(nad))
     .filter(x=>filter==="all"||x.przedmiot===filter);
   if(!items.length){box.append(el("div",{class:"empty",text:tab==="arch"?"W archiwum jeszcze nic nie ma. Sprawdziany trafiają tu same dzień po terminie.":"Na razie nic tu nie ma. Nowe notatki pojawią się, gdy przygotujemy je razem."}));return}
@@ -147,19 +164,28 @@ function draw(){
     else meta.append(el("span",{class:"badge",text:"data jeszcze nieznana"}));
     const added=parse(x.dodano);
     if(!past&&added&&(today()-added)/86400000<=3)meta.append(el("span",{class:"badge new",text:"nowe"}));
+    if(x.wazne)meta.append(el("span",{class:"badge imp",text:"ważne"}));
     const db=el("button",{class:"datebtn",text:"📅 zmień datę"});
-    meta.append(db);
+    const star=el("button",{class:"star"+(x.wazne?" on":""),title:x.wazne?"Odznacz jako ważne":"Oznacz jako ważne","aria-pressed":String(!!x.wazne),text:x.wazne?"★":"☆"});
+    star.onclick=e=>{e.preventDefault();const v=!x.wazne;star.disabled=true;
+      fetch("/api/nauka/wazne/"+encodeURIComponent(x.id),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({wazne:v})})
+        .then(r=>{if(!r.ok)throw new Error(r.status);x.wazne=v;draw()}).catch(()=>{star.disabled=false;alert("Nie udało się zapisać. Spróbuj jeszcze raz.")})};
+    meta.append(db,star);
     const foot=el("div",{class:"foot"});
     if(x.zawiera&&x.zawiera.length)foot.append(el("span",{text:x.zawiera.join(" · ")}));
     if(added)foot.append(el("span",{text:"dodano "+added.getDate()+" "+MONTHS[added.getMonth()]}));
-    const card=el("div",{class:"card",style:"--c:"+c},meta,el("h2",{},el("a",{class:"open",href:x.folder+"/",text:x.tytul})),x.opis?el("p",{text:x.opis}):null,progress(x),foot);
+    const card=el("div",{class:"card"+(x.wazne?" wazne":""),style:"--c:"+c},meta,el("h2",{},el("a",{class:"open",href:x.folder+"/",text:x.tytul})),x.opis?el("p",{text:x.opis}):null,progress(x),foot);
     db.onclick=e=>{e.preventDefault();dateEditor(x,card)};
     box.append(card);
   }
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));draw()});
+const sw=document.getElementById("swWazne");
+sw.onchange=()=>{najpierwWazne=sw.checked;draw();
+  fetch("/api/nauka/ustawienia",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({najpierw_wazne:najpierwWazne})}).catch(()=>{})};
+const ustawienia=fetch("/api/nauka/ustawienia",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(u=>{najpierwWazne=!!u.najpierw_wazne;sw.checked=najpierwWazne}).catch(()=>{});
 const postep=fetch("/api/nauka/postep",{cache:"no-store"}).then(r=>r.ok?r.json():{}).then(d=>{POSTEP=d}).catch(()=>{});
-Promise.all([fetch("sprawdziany.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}),postep]).then(([list])=>{
+Promise.all([fetch("sprawdziany.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}),postep,ustawienia]).then(([list])=>{
   ALL=list.slice(); // kolejność liczy draw() przy każdym rysowaniu, więc zmiana daty od razu przestawia kartę
   [...new Set(ALL.map(x=>x.przedmiot))].forEach((s,i)=>subjColor[s]=COLORS[i%COLORS.length]);
   const subjects=Object.keys(subjColor);

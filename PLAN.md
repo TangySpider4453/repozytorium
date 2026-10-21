@@ -103,6 +103,10 @@ Co zmieniono w `app.py` dla tego projektu:
   po przeładowaniu (localStorage, na danym urządzeniu). Wymaga standardowego kodu fiszek/quizu z szablonu.
 - **Lista:** zakładki „Nadchodzące” / „Archiwalne” (data < dzisiaj → archiwum, sort malejąco po dacie), przy karcie
   postępy i przycisk „📅 zmień datę”.
+- **Ważne i przełącznik „Najpierw ważne”** (od 2026-10-21): gwiazdka na karcie → `POST /api/nauka/wazne/<id>`
+  `{"wazne":bool}` (pole `"wazne": true` w `sprawdziany.json`, usuwane przy false). Przełącznik (styl iOS, zielony/szary)
+  → `/api/nauka/ustawienia` `{"najpierw_wazne":bool}`, plik `~/portal/dane/nauka-ustawienia.json`. Włączony: ważne na
+  górze wg daty, potem reszta wg daty; wyłączony: sama data. Dotyczy zakładki „Nadchodzące”.
 - **Zakładka „Licz”** (zadania rachunkowe z losowymi liczbami): silnik `strona/licz.js`, generatory
   `narzedzia/licz/<id>.js` → instalacja `python3 narzedzia/dodaj_licz.py <id>` (kopiuje do `strona/<id>/licz-zadania.js`,
   dodaje zakładkę po „Wzory”). Generator: `{id, temat, nazwa, gen()}` → `{tresc, pola:[{etykieta, jednostka, odp, tol,
@@ -284,3 +288,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   z Pi i tylko uzupełniony (daty użytkownika bez zmian). Backup `*.bak_2026-10-21*`.
 - **2026-10-21 (2)**: Lista „Nadchodzące” sortuje się po dacie (najbliższy termin na górze, bez daty na końcu), liczone
   przy każdym rysowaniu, więc zmiana daty od razu przestawia kartę. Archiwum: najświeższy termin na górze.
+- **2026-10-21 (3)**: Gwiazdka „ważne” na kartach i przełącznik „Najpierw ważne” (nowe API w `app.py`, restart tylko
+  `home-portal`, wszystko `active`). Backup `app.py.bak_2026-10-21_wazne`, poprzednia wersja w repo `pi/app.py.przed_waznymi`.

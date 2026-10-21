@@ -7,7 +7,7 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
   /terminal          terminal w przegladarce (osadza usluge home-terminal z portu 7681)
   /strony/<nazwa>/   strony statyczne z katalogu sites/<nazwa>/ (wystarczy wrzucic folder z index.html)
   /api/status, /api/siec   dane w JSON dla powyzszych stron
-  /api/nauka/...     postepy nauki (fiszki, quizy) i zmiana daty sprawdzianu dla /strony/nauka/
+  /api/nauka/...     postepy nauki (fiszki, quizy), zmiana daty, „wazne” i ustawienia listy dla /strony/nauka/
 
 Nasluch tylko na adresie Tailscale (port 80) - strona nie jest widoczna w sieci domowej ani w internecie.
 Uruchamiane przez systemd: home-portal.service (uzytkownik tonyg, CAP_NET_BIND_SERVICE dla portu 80).
@@ -1054,6 +1054,46 @@ def api_nauka_data(nid):
         wpis["data"] = data
         zapisz_json(NAUKA / "sprawdziany.json", spis, indent=2)
     return jsonify({"ok": True, "id": nid, "data": data})
+
+
+@app.route("/api/nauka/wazne/<nid>", methods=["POST"])
+def api_nauka_wazne(nid):
+    from flask import request
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("wazne"), bool):
+        abort(400)
+    with NAUKA_LOCK:
+        spis = nauka_spis()
+        wpis = next((x for x in spis if x.get("id") == nid), None)
+        if wpis is None:
+            abort(404)
+        if body["wazne"]:
+            wpis["wazne"] = True
+        else:
+            wpis.pop("wazne", None)
+        zapisz_json(NAUKA / "sprawdziany.json", spis, indent=2)
+    return jsonify({"ok": True, "id": nid, "wazne": body["wazne"]})
+
+
+NAUKA_USTAWIENIA = BASE / "dane" / "nauka-ustawienia.json"
+
+
+@app.route("/api/nauka/ustawienia", methods=["GET", "POST"])
+def api_nauka_ustawienia():
+    from flask import request
+    try:
+        u = json.loads(NAUKA_USTAWIENIA.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        u = {}
+    if request.method == "GET":
+        return jsonify(u)
+    body = request.get_json(silent=True)
+    if not (isinstance(body, dict) and body and all(k == "najpierw_wazne" and isinstance(v, bool) for k, v in body.items())):
+        abort(400)
+    with NAUKA_LOCK:
+        u.update(body)
+        zapisz_json(NAUKA_USTAWIENIA, u)
+    return jsonify(u)
 
 
 def tailscale_ipv4():
