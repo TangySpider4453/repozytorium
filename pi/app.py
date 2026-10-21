@@ -8,6 +8,7 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
   /strony/<nazwa>/   strony statyczne z katalogu sites/<nazwa>/ (wystarczy wrzucic folder z index.html)
   /api/status, /api/siec   dane w JSON dla powyzszych stron
   /api/nauka/...     postepy nauki (fiszki, quizy), zmiana daty, „wazne” i ustawienia listy dla /strony/nauka/
+  /api/progres/...   dziennik sylwetki: pomiary z wagi i zdjecia (tylko na Pi, dane/progres/) dla /strony/progres/
 
 Nasluch tylko na adresie Tailscale (port 80) - strona nie jest widoczna w sieci domowej ani w internecie.
 Uruchamiane przez systemd: home-portal.service (uzytkownik tonyg, CAP_NET_BIND_SERVICE dla portu 80).
@@ -717,6 +718,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <a href="/terminal" data-p="terminal">Terminal</a>
     <a href="/strony/lazik/" data-p="lazik">Łazik</a>
     <a href="/strony/nauka/" data-p="nauka">Nauka</a>
+    <a href="/strony/progres/" data-p="progres">Progres</a>
   </nav>
 </header>
 <main id="main" class="wrap" style="padding:0;width:100%"></main>
@@ -949,7 +951,15 @@ def site_files(site, path):
 NAUKA = SITES / "nauka"
 NAUKA_DANE = BASE / "dane" / "nauka"
 NAUKA_LOCK = threading.Lock()
-app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # zdjecia w /api/progres; reszta API ma limit 64 KB ponizej
+
+
+@app.before_request
+def limit_malych_zapytan():
+    from flask import request
+    if request.path.startswith("/api/") and not request.path.startswith("/api/progres/zdjecie"):
+        if (request.content_length or 0) > 64 * 1024:
+            abort(413)
 
 
 def zapisz_json(path, obj, indent=1):
@@ -1094,6 +1104,186 @@ def api_nauka_ustawienia():
         u.update(body)
         zapisz_json(NAUKA_USTAWIENIA, u)
     return jsonify(u)
+
+
+# ---------- Progres: dziennik sylwetki (pomiary z wagi i zdjecia) ----------
+# Wszystko tylko na Pi: dane/progres/dane.json + dane/progres/zdjecia/<id>.jpg i <id>_m.jpg (miniatura).
+# Usuniete zdjecia trafiaja do dane/progres/kosz/ (nie sa kasowane od razu).
+PROGRES = BASE / "dane" / "progres"
+PROGRES_ZDJ = PROGRES / "zdjecia"
+PROGRES_LOCK = threading.Lock()
+PROGRES_TYPY = ("przod", "bok", "biceps", "tyl", "inne")
+
+
+def progres_dane():
+    try:
+        d = json.loads((PROGRES / "dane.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        d = {}
+    for k, v in (("wpisy", {}), ("zdjecia", []), ("ustawienia", {})):
+        d.setdefault(k, v)
+    return d
+
+
+def progres_data_ok(v):
+    if not (isinstance(v, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", v)):
+        return False
+    try:
+        time.strptime(v, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
+def progres_pose_ok(p):
+    return p is None or (isinstance(p, dict) and len(p) <= 8 and all(
+        k in ("cx", "cy", "s", "ok") and (isinstance(v, (int, float)) and not isinstance(v, bool) and -10 <= v <= 10 or isinstance(v, bool))
+        for k, v in p.items()))
+
+
+def progres_reczne_ok(p):
+    return p is None or (isinstance(p, dict) and all(
+        k in ("dx", "dy", "z") and isinstance(v, (int, float)) and not isinstance(v, bool) and -10 <= v <= 10 for k, v in p.items()))
+
+
+@app.route("/api/progres")
+def api_progres():
+    return jsonify(progres_dane())
+
+
+@app.route("/api/progres/wpis", methods=["POST"])
+def api_progres_wpis():
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not progres_data_ok(b.get("data")):
+        abort(400)
+    wpis = {}
+    for k, lo, hi in (("masa", 20, 400), ("fat", 0, 80), ("muscle", 0, 100)):
+        v = b.get(k)
+        if v is None:
+            continue
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or not lo <= v <= hi:
+            abort(400)
+        wpis[k] = round(float(v), 2)
+    n = b.get("notatka")
+    if n:
+        if not isinstance(n, str) or len(n) > 1000:
+            abort(400)
+        wpis["notatka"] = n
+    with PROGRES_LOCK:
+        d = progres_dane()
+        if wpis:
+            d["wpisy"][b["data"]] = wpis
+        else:
+            d["wpisy"].pop(b["data"], None)
+        zapisz_json(PROGRES / "dane.json", d)
+    return jsonify(d)
+
+
+@app.route("/api/progres/zdjecie", methods=["POST"])
+def api_progres_zdjecie_nowe():
+    from flask import request
+    from PIL import Image
+    import io
+    import uuid
+    f, m = request.files.get("plik"), request.files.get("miniatura")
+    data, typ = request.form.get("data"), request.form.get("typ")
+    if not f or not m or not progres_data_ok(data) or typ not in PROGRES_TYPY:
+        abort(400)
+    try:
+        pose = json.loads(request.form.get("pose") or "null")
+    except ValueError:
+        abort(400)
+    if not progres_pose_ok(pose):
+        abort(400)
+    duze, male = f.read(), m.read()
+    if len(male) > 2 * 1024 * 1024:
+        abort(413)
+    try:
+        with Image.open(io.BytesIO(duze)) as im:
+            if im.format != "JPEG":
+                abort(400)
+            w, h = im.size
+        with Image.open(io.BytesIO(male)) as im:
+            if im.format != "JPEG":
+                abort(400)
+    except OSError:
+        abort(400)
+    zid = uuid.uuid4().hex
+    PROGRES_ZDJ.mkdir(parents=True, exist_ok=True)
+    (PROGRES_ZDJ / f"{zid}.jpg").write_bytes(duze)
+    (PROGRES_ZDJ / f"{zid}_m.jpg").write_bytes(male)
+    rec = {"id": zid, "data": data, "typ": typ, "w": w, "h": h, "dodano": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    if pose:
+        rec["pose"] = pose
+    with PROGRES_LOCK:
+        d = progres_dane()
+        d["zdjecia"].append(rec)
+        zapisz_json(PROGRES / "dane.json", d)
+    return jsonify(rec)
+
+
+@app.route("/api/progres/zdjecie/<zid>", methods=["POST"])
+def api_progres_zdjecie_zmien(zid):
+    from flask import request
+    if not re.fullmatch(r"[0-9a-f]{32}", zid):
+        abort(404)
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict):
+        abort(400)
+    with PROGRES_LOCK:
+        d = progres_dane()
+        rec = next((z for z in d["zdjecia"] if z["id"] == zid), None)
+        if rec is None:
+            abort(404)
+        if b.get("usun") is True:
+            kosz = PROGRES / "kosz"
+            kosz.mkdir(parents=True, exist_ok=True)
+            for nazwa in (f"{zid}.jpg", f"{zid}_m.jpg"):
+                if (PROGRES_ZDJ / nazwa).exists():
+                    os.replace(PROGRES_ZDJ / nazwa, kosz / nazwa)
+            d["zdjecia"] = [z for z in d["zdjecia"] if z["id"] != zid]
+        else:
+            if "data" in b:
+                if not progres_data_ok(b["data"]):
+                    abort(400)
+                rec["data"] = b["data"]
+            if "typ" in b:
+                if b["typ"] not in PROGRES_TYPY:
+                    abort(400)
+                rec["typ"] = b["typ"]
+            for k, ok in (("pose", progres_pose_ok), ("reczne", progres_reczne_ok)):
+                if k in b:
+                    if not ok(b[k]):
+                        abort(400)
+                    if b[k]:
+                        rec[k] = b[k]
+                    else:
+                        rec.pop(k, None)
+        zapisz_json(PROGRES / "dane.json", d)
+    return jsonify(d)
+
+
+@app.route("/api/progres/plik/<nazwa>")
+def api_progres_plik(nazwa):
+    if not re.fullmatch(r"[0-9a-f]{32}(_m)?\.jpg", nazwa):
+        abort(404)
+    resp = send_from_directory(PROGRES_ZDJ, nazwa, mimetype="image/jpeg")
+    resp.headers["Cache-Control"] = "private, max-age=31536000, immutable"
+    return resp
+
+
+@app.route("/api/progres/ustawienia", methods=["POST"])
+def api_progres_ustawienia():
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or len(json.dumps(b)) > 4000:
+        abort(400)
+    with PROGRES_LOCK:
+        d = progres_dane()
+        d["ustawienia"].update(b)
+        zapisz_json(PROGRES / "dane.json", d)
+    return jsonify(d["ustawienia"])
 
 
 def tailscale_ipv4():
