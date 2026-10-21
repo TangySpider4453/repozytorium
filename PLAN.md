@@ -30,6 +30,7 @@ Zasady od użytkownika:
 | Kafelek „Nauka: notatki i quizy” na stronie startowej portalu | ✅ pojawia się automatycznie |
 | Historia: *Od kongresu wiedeńskiego do Wiosny Ludów* (Ślady czasu 3, dział 1, tematy 1–6) | ✅ na Pi, 58 fiszek, 58 pytań quizu, 14 pytań otwartych |
 | Zapis postępów, archiwum, zmiana daty, wznawianie quizu | ✅ na Pi od 2026-10-20 (szczegóły w sekcji 4a) |
+| Niemiecki: *Czasowniki nieregularne 1–23* (kartkówka **2026-10-28**, podręcznik s. 130, bez Präteritum) | ✅ na Pi, `niemiecki-czasowniki-nieregularne-1-23`, budowana skryptem `narzedzia/buduj_niemiecki_czasowniki.py` (dane ze zdjęcia strony); Tabela z zasłanianiem, „Wpisz” (Licz z odpowiedziami tekstowymi), 48 fiszek, 81 pytań. Typ „kartkówka” przyjęty bez potwierdzenia |
 | Zakładka „Najważniejsze” | ✅ na wszystkich 4 stronach, pierwsza i domyślnie otwarta |
 | Data sprawdzianu z historii | ✅ **2026-10-20**, cały dział: tematy 1–6 (użytkownik potwierdził, że temat 4 też obowiązuje, mimo że dziennik podawał 1, 2, 3, 5, 6) |
 | Fizyka: *Siły, pole i napięcie elektryczne* (kartkówka **2026-10-23**) | ✅ na Pi, 34 fiszki, 35 pytań quizu, 11 zadań, zakładka „Wzory” zamiast osi czasu. Treść z typowego programu liceum (bez zdjęć od użytkownika) |
@@ -277,3 +278,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-20 (4)**: Zakładka „Licz” w fizyce i matematyce: zadania z losowymi liczbami, sprawdzanie wyniku (przecinek,
   10ⁿ, e-notacja, ułamki, zbiory pierwiastków), rozwiązanie krok po kroku (w matmie z tabelą Hornera), serie po 10
   zapisywane w wynikach, wznawianie po przeładowaniu. 22 generatory × 2000 losowań sprawdzone automatycznie.
+- **2026-10-21**: Niemiecki: czasowniki nieregularne 1–23 ze zdjęcia s. 130. `licz.js` obsługuje odpowiedzi tekstowe
+  (`rodzaj:"tekst"`), `dodaj_licz.py` bierze nazwę zakładki z generatora. Wgrane po zatwierdzeniu „check”; spis pobrany
+  z Pi i tylko uzupełniony (daty użytkownika bez zmian). Backup `*.bak_2026-10-21*`.
