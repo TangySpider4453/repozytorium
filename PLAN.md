@@ -303,3 +303,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (obciążenie)**: Raport obciążenia: przedziały CPU > 60 %, temperatura > 55 °C, RAM > 60 % z maksimum
   i głównymi procesami, logi `cpu.log`/`temperatura.log`/`ram.log` na NAS, wysuwany panel z „!” na stronie głównej
   i Zdrowie. Test na Pi (25 s obciążenia) zapisany poprawnie. Backup `app.py.bak_2026-10-22_obciazenie`.
+- **2026-10-22 (zwijane)**: Panel „Kopie zapasowe i zadania w tle” też wysuwany (zwinięty: „!” przy błędzie lub braku
+  NAS, niebieskie znaczniki z procentem tego, co trwa, data ostatniej kopii). Kafelki raportu poprawione w trybie ciemnym.

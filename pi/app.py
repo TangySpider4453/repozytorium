@@ -720,7 +720,8 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 .term iframe{width:100%;height:100%;border:0;display:block}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:640px){th,td{padding:7px 9px}}
-.zad{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px}
+.zad{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+.zad-sek{display:flex;flex-direction:column;gap:10px}
 </style><script src="/strony/zdrowie/zadania.js"></script><script src="/strony/zdrowie/obciazenie.js"></script></head>
 <body><div class="wrap">
 <header>
@@ -798,8 +799,7 @@ function renderStart(d,zad,obc){
   const au=s.autoupdate;
   main.replaceChildren(
     h('section',null,tiles,...alerts),
-    zad&&window.Zadania?h('section',null,h('h2',{text:'Kopie zapasowe i zadania w tle'}),h('p',{class:'sec-note',text:'Nocna kopia całego systemu na NAS, render filmów, zdjęcia i logi na NAS, aktualizacje. Procenty są szacunkowe.'}),h('div',{class:'zad'},Zadania.panel(zad))):null,
-    obc&&window.Obciazenie?h('section',null,h('div',{class:'zad'},Obciazenie.panel(obc))):null,
+    zad&&window.Zadania||obc&&window.Obciazenie?h('section',{class:'zad-sek'},zad&&window.Zadania?h('div',{class:'zad'},Zadania.panel(zad)):null,obc&&window.Obciazenie?h('div',{class:'zad'},Obciazenie.panel(obc)):null):null,
     h('section',null,h('h2',{text:'Strony na tym serwerze'}),h('p',{class:'sec-note',text:'Wszystko, co Pi udostępnia w przeglądarce. Nową stronę dodasz, wrzucając folder z plikiem index.html do ~/portal/sites/.'}),cards),
     h('section',null,h('h2',{text:'Działające programy ('+d.uslugi.length+')'}),h('p',{class:'sec-note',text:'Wszystkie usługi systemd, które teraz działają, pogrupowane według przeznaczenia.'}),...svc),
     h('section',null,h('h2',{text:'Co teraz najbardziej obciąża Pi'}),h('p',{class:'sec-note',text:'CPU mierzone między kolejnymi odświeżeniami strony (100 % = jeden pełny rdzeń).'}),procs)

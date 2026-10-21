@@ -36,7 +36,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   czas, szacowany koniec; `kopia-pi` zapisuje `/var/lib/kopia-pi/postep.json` co 5 s z `rsync --info=progress2`,
   procent = większy z bajtów i sprawdzonych plików), render filmów (procent, kolejka), bufor zdjęć, logi na NAS,
   połączenie z NAS, aktualizacja Minecrafta, aktualizacje systemu (ostatnio/następnie z `systemctl list-timers
-  --output=json`). Strona Zdrowie odświeża panel co 5 s, gdy coś trwa. Pierwsza pełna kopia: 17 GB w 511 s, kolejne ~30 s.
+  --output=json`). Panel jest wysuwany (domyślnie zwinięty: „!” przy błędzie lub braku NAS, znaczniki z procentem
+  tego, co trwa, data ostatniej kopii). Strona Zdrowie odświeża panel co 5 s, gdy coś trwa. Pierwsza pełna kopia: 17 GB w 511 s, kolejne ~30 s.
 - **Raport obciążenia** (wątek `obc_petla` w `app.py`, pomiar co 5 s): każdy przedział z CPU > 60 %, temperaturą
   > 55 °C, RAM > 60 % (progi: `config.json` → `"obciazenie"`). Start po 2 pomiarach ponad progiem (≥ 10 s), koniec po
   3 poniżej. Zapis: `dane/zdrowie/obciazenie.json` (ostatnie 3000) i logi `cpu.log`, `temperatura.log`, `ram.log`
