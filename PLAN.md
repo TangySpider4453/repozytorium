@@ -307,3 +307,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   NAS, niebieskie znaczniki z procentem tego, co trwa, data ostatniej kopii). Kafelki raportu poprawione w trybie ciemnym.
 - **2026-10-22 (komendy)**: Na NAS `Tony-Folder/Raspberry/komendy.txt`: komendy projektu (wyłączanie, kopia, NAS, logi,
   usługi), aktualizowany automatycznie z Pi. Nowe komendy dopisywać w `pi/nas/komendy.txt`.
+- **2026-10-22 (hasło)**: Portal dostępny też z sieci domowej (`http://172.23.0.20`) po zalogowaniu hasłem; ciasteczko
+  na rok, Tailscale bez hasła. Komenda `portal-haslo` (zmiana hasła). Sprawdzone curl z Pi: bez hasła 302/401,
+  złe hasło 401, dobre → strony, API i zdjęcia 200. Backup `app.py.bak_2026-10-22_haslo`.

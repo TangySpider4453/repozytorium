@@ -14,7 +14,8 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
 NAS (Tony-Folder/Raspberry w /mnt/nas, montuje go nas-montuj.timer): zdjecia i filmy Progres oraz logi zdrowia ida tam
 od razu. Gdy NAS niedostepny, zostaja na Pi (czerwona dioda) i przenosza sie same po jego powrocie (watek nas_petla).
 
-Nasluch tylko na adresie Tailscale (port 80) - strona nie jest widoczna w sieci domowej ani w internecie.
+Nasluch na porcie 80 wszystkich adresow Pi: przez Tailscale bez hasla, z sieci domowej (172.23.0.x) po zalogowaniu
+haslem (ciasteczko na rok, sekcja „Dostep z sieci domowej”). Z internetu strona nie jest widoczna (brak publicznego IP).
 Uruchamiane przez systemd: home-portal.service (uzytkownik tonyg, CAP_NET_BIND_SERVICE dla portu 80).
 Konfiguracja (adres tunelu Minecraft, dodatkowe linki): config.json obok tego pliku.
 """
@@ -737,11 +738,12 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
   </nav>
 </header>
 <main id="main" class="wrap" style="padding:0;width:100%"></main>
-<footer id="foot">Strona dostępna tylko przez Tailscale. Dane odświeżają się same.</footer>
+<footer id="foot">Przez Tailscale bez hasła, z sieci domowej po zalogowaniu. Dane odświeżają się same.</footer>
 </div>
 <script>
 const PAGE="%%PAGE%%", PORT=%%PORT%%, TERMINAL_PORT=%%TPORT%%;
 document.querySelectorAll('nav a').forEach(a=>{if(a.dataset.p===PAGE)a.classList.add('on')});
+fetch('/api/dostep').then(r=>r.json()).then(d=>{if(d.siec==='domowa'){const a=document.createElement('a');a.href='/wyloguj';a.textContent='Wyloguj';a.title='Zapomnij to urządzenie (wejście z sieci domowej)';document.querySelector('nav').append(a)}}).catch(()=>{});
 function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v] of Object.entries(attrs||{})){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v)}for(const k of kids.flat(9)){if(k==null||k===false)continue;e.append(k instanceof Node?k:document.createTextNode(String(k)))}return e}
 const main=document.getElementById('main');
 function dur(s){if(s==null)return'–';s=Math.floor(s);const d=Math.floor(s/86400),g=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);if(d)return d+' d '+g+' h';if(g)return g+' h '+m+' min';if(m)return m+' min';return s+' s'}
@@ -804,7 +806,7 @@ function renderStart(d,zad,obc){
     h('section',null,h('h2',{text:'Działające programy ('+d.uslugi.length+')'}),h('p',{class:'sec-note',text:'Wszystkie usługi systemd, które teraz działają, pogrupowane według przeznaczenia.'}),...svc),
     h('section',null,h('h2',{text:'Co teraz najbardziej obciąża Pi'}),h('p',{class:'sec-note',text:'CPU mierzone między kolejnymi odświeżeniami strony (100 % = jeden pełny rdzeń).'}),procs)
   );
-  document.getElementById('foot').textContent='Auto-aktualizacja serwera MC: następna '+(au.nastepne||'–')+', ostatnia '+(au.ostatnie||'–')+'. Strona dostępna tylko przez Tailscale, odświeża się co 5 s.';
+  document.getElementById('foot').textContent='Auto-aktualizacja serwera MC: następna '+(au.nastepne||'–')+', ostatnia '+(au.ostatnie||'–')+'. Przez Tailscale bez hasła, z sieci domowej po zalogowaniu; odświeża się co 5 s.';
 }
 
 /* ---------- SIEC ---------- */
@@ -917,7 +919,7 @@ DIODA_TAG = b'<script src="/strony/zdrowie/dioda.js" defer></script>'
 def wstaw_diode(resp):
     """dioda stanu serwera na kazdej stronie HTML (portal i /strony/*): skrypt doklejany przed </body>"""
     from flask import request
-    if resp.mimetype != "text/html" or resp.status_code != 200 or request.path.startswith("/api/"):
+    if resp.mimetype != "text/html" or resp.status_code != 200 or request.path.startswith("/api/") or request.path == "/logowanie":
         return resp
     resp.direct_passthrough = False
     body = resp.get_data()
@@ -925,6 +927,159 @@ def wstaw_diode(resp):
         i = body.rfind(b"</body>")
         resp.set_data(body[:i] + DIODA_TAG + body[i:])
     return resp
+
+
+# ---------- Dostep z sieci domowej: haslo + ciasteczko (Tailscale i samo Pi bez hasla) ----------
+# dane/dostep.json (600, tylko na Pi): {"hash": skrot hasla (werkzeug, scrypt), "klucz": klucz podpisu ciasteczek,
+# "wersja": n}. Zmiana hasla (komenda portal-haslo) podbija wersje, co wylogowuje wszystkie urzadzenia.
+# Ciasteczko „portal_sesja”: podpisane, HttpOnly, SameSite=Lax, wazne rok. Po 5 zlych haslach z jednego adresu: 5 min blokady.
+import ipaddress
+
+DOSTEP = BASE / "dane" / "dostep.json"
+SESJA = "portal_sesja"
+SESJA_DNI = 365
+ZAUFANE_SIECI = [ipaddress.ip_network(n) for n in ("100.64.0.0/10", "fd7a:115c:a1e0::/48", "127.0.0.0/8", "::1/128")]
+LOGOWANIE_PROBY = {}
+LOGOWANIE_LOCK = threading.Lock()
+
+
+def dostep_dane():
+    return cached("dostep", 5, lambda: json.loads(DOSTEP.read_text(encoding="utf-8")) if DOSTEP.exists() else None)
+
+
+def przez_tailscale():
+    """Tailscale (100.64.0.0/10; nftables Tailscale odrzuca takie adresy spoza tailscale0) albo samo Pi"""
+    from flask import request
+    try:
+        ip = ipaddress.ip_address(request.remote_addr or "")
+    except ValueError:
+        return False
+    return any(ip in n for n in ZAUFANE_SIECI)
+
+
+def sesja_podpis():
+    from itsdangerous import URLSafeTimedSerializer
+    d = dostep_dane()
+    return URLSafeTimedSerializer(d["klucz"], salt="portal-sesja") if d else None
+
+
+def zalogowany():
+    from flask import request
+    from itsdangerous import BadData
+    s, d = sesja_podpis(), dostep_dane()
+    tok = request.cookies.get(SESJA)
+    if not (s and tok):
+        return False
+    try:
+        return s.loads(tok, max_age=SESJA_DNI * 86400).get("w") == d.get("wersja", 1)
+    except BadData:
+        return False
+
+
+@app.before_request
+def wymagaj_hasla():
+    from flask import request
+    if przez_tailscale() or request.path in ("/logowanie", "/wyloguj") or zalogowany():
+        return None
+    if request.path.startswith("/api/"):
+        return jsonify({"blad": "zaloguj się", "logowanie": "/logowanie"}), 401
+    if request.method != "GET":
+        abort(401)
+    nast = request.full_path.rstrip("?") if request.query_string else request.path
+    from urllib.parse import quote
+    return redirect("/logowanie?nast=" + quote(nast, safe="/"))
+
+
+LOGOWANIE_HTML = """<!doctype html><html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Serwerek: logowanie</title>
+<style>
+:root{--bg:#EEF1EF;--card:#FAFBFA;--ink:#17201C;--muted:#5B6862;--line:#D0D8D3;--acc:#1f7a4d;--accInk:#fff;--bad:#b42335;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0E1412;--card:#151D1A;--ink:#E2EAE6;--muted:#93A39B;--line:#26322D;--acc:#3fae74;--accInk:#06140c;--bad:#ef6b7b;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);
+  font:17px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+form{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 22px}
+h1{margin:0 0 4px;font-size:26px} p{margin:0 0 18px;color:var(--muted);font-size:15px}
+label{display:block;font-weight:600;margin-bottom:6px}
+input{width:100%;font:inherit;font-size:18px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input:focus{outline:3px solid color-mix(in srgb,var(--acc) 45%,transparent);border-color:var(--acc)}
+button{width:100%;margin-top:14px;font:inherit;font-weight:700;padding:12px;border:0;border-radius:10px;background:var(--acc);color:var(--accInk);cursor:pointer}
+.err{color:var(--bad);font-weight:600;margin:12px 0 0}
+small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
+</style></head><body>
+<form method="post" action="/logowanie">
+  <h1>Serwerek domowy</h1>
+  <p>Wejście z sieci domowej. Hasło wpisujesz raz: to urządzenie zostanie zapamiętane na rok.</p>
+  <input type="hidden" name="nast" value="%%NAST%%">
+  <input type="text" name="username" value="serwerek" autocomplete="username" hidden>
+  <label for="h">Hasło</label>
+  <input id="h" name="haslo" type="password" autocomplete="current-password" autofocus required>
+  <button type="submit">Wejdź</button>
+  %%BLAD%%
+  <small>Przez Tailscale hasło nie jest potrzebne.</small>
+</form></body></html>"""
+
+
+def logowanie_strona(blad="", nast="/", kod=200):
+    from html import escape
+    html = LOGOWANIE_HTML.replace("%%NAST%%", escape(nast)).replace("%%BLAD%%", f'<p class="err">{escape(blad)}</p>' if blad else "")
+    return Response(html, status=kod, mimetype="text/html")
+
+
+def nast_ok(n):
+    return n if isinstance(n, str) and n.startswith("/") and not n.startswith("//") and "\\" not in n and n != "/logowanie" else "/"
+
+
+@app.route("/logowanie", methods=["GET", "POST"])
+def logowanie():
+    from flask import request
+    from werkzeug.security import check_password_hash
+    nast = nast_ok(request.values.get("nast"))
+    if przez_tailscale() or (request.method == "GET" and zalogowany()):
+        return redirect(nast)
+    d = dostep_dane()
+    if d is None:
+        return logowanie_strona("Hasło nie jest jeszcze ustawione (komenda portal-haslo na Pi).", nast, 503)
+    if request.method == "GET":
+        return logowanie_strona(nast=nast)
+    ip, teraz = request.remote_addr or "?", time.time()
+    with LOGOWANIE_LOCK:
+        proby = [t for t in LOGOWANIE_PROBY.get(ip, []) if t > teraz - 300]
+        LOGOWANIE_PROBY[ip] = proby
+        if len(proby) >= 5:
+            return logowanie_strona(f"Za dużo złych haseł. Spróbuj za {int(300 - (teraz - proby[0])) // 60 + 1} min.", nast, 429)
+    haslo = request.form.get("haslo", "")
+    if not (0 < len(haslo) <= 200 and check_password_hash(d["hash"], haslo)):
+        with LOGOWANIE_LOCK:
+            LOGOWANIE_PROBY.setdefault(ip, []).append(teraz)
+        try:
+            zdrowie_log(f"LOGOWANIE zle haslo z {ip}")
+        except OSError:
+            pass
+        time.sleep(1)
+        return logowanie_strona("Złe hasło.", nast, 401)
+    with LOGOWANIE_LOCK:
+        LOGOWANIE_PROBY.pop(ip, None)
+    try:
+        zdrowie_log(f"LOGOWANIE ok z {ip} ({(request.user_agent.string or '')[:80]})")
+    except OSError:
+        pass
+    resp = redirect(nast)
+    resp.set_cookie(SESJA, sesja_podpis().dumps({"w": d.get("wersja", 1)}), max_age=SESJA_DNI * 86400,
+                    httponly=True, samesite="Lax", path="/")
+    return resp
+
+
+@app.route("/wyloguj")
+def wyloguj():
+    resp = redirect("/logowanie")
+    resp.delete_cookie(SESJA, path="/")
+    return resp
+
+
+@app.route("/api/dostep")
+def api_dostep():
+    return jsonify({"siec": "tailscale" if przez_tailscale() else "domowa"})
 
 
 @app.route("/")
@@ -939,6 +1094,12 @@ def siec():
 
 @app.route("/terminal")
 def terminal():
+    if not przez_tailscale():
+        return Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+                        '<title>Terminal</title><body style="font:17px system-ui;padding:24px;max-width:520px;margin:auto">'
+                        '<h1>Terminal tylko przez Tailscale</h1><p>Ze względów bezpieczeństwa terminal nie działa z sieci domowej. '
+                        'Włącz Tailscale na tym urządzeniu i wejdź na <b>http://100.108.241.58/terminal</b>.</p>'
+                        '<p><a href="/">← Strona główna</a></p></body>', mimetype="text/html")
     return page("terminal")
 
 
@@ -2216,14 +2377,5 @@ if not os.environ.get("PORTAL_TEST"):
     threading.Thread(target=obc_petla, name="obciazenie", daemon=True).start()
 
 
-def tailscale_ipv4():
-    for _ in range(120):
-        m = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", sh(["ip", "-4", "-o", "addr", "show", "dev", "tailscale0"]))
-        if m:
-            return m.group(1)
-        time.sleep(5)
-    raise SystemExit("Brak adresu Tailscale - portal nie startuje (nie bedzie nasluchiwal w LAN).")
-
-
 if __name__ == "__main__":
-    app.run(host=tailscale_ipv4(), port=PORT, threaded=True)
+    app.run(host="0.0.0.0", port=PORT, threaded=True)

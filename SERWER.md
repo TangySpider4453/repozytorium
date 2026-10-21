@@ -1,6 +1,6 @@
 # Serwer domowy (Raspberry Pi 4B): opis dla kolejnych sesji
 
-Portal: **http://100.108.241.58/** (tylko Tailscale), `~/portal/app.py` (kopia w repo: `pi/app.py`), usługa
+Portal: **http://100.108.241.58/** (Tailscale, bez hasła) i **http://172.23.0.20/** (sieć domowa, z hasłem), `~/portal/app.py` (kopia w repo: `pi/app.py`), usługa
 `home-portal`. Na Pi działa też **serwer Minecraft, na którym grają znajomi** (`powernukkitx`, `playit`,
 `pi-dashboard`): nie restartuj ich i nie rób rebootu bez pytania. Po każdej zmianie portalu sprawdź
 `systemctl is-active home-portal powernukkitx playit pi-dashboard`.
@@ -57,6 +57,20 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   dla użytkownika dopisz tam** i zainstaluj plik na Pi.
 - **Pliki w repo**: `pi/nas/` (skrypty, jednostki systemd, instrukcje, `instaluj.sh`; instalacja: skopiuj folder na Pi
   i `sudo bash instaluj.sh`).
+
+## Dostęp z sieci domowej: hasło i ciasteczko (od 2026-10-22)
+- Portal słucha na `0.0.0.0:80`. Adres z `100.64.0.0/10` (Tailscale; nftables Tailscale odrzuca takie adresy spoza
+  `tailscale0`) albo `127.0.0.1` wchodzi bez hasła. Inne adresy (sieć domowa) muszą się zalogować (`before_request`
+  `wymagaj_hasla`): strony → przekierowanie na `/logowanie?nast=…`, `/api/*` → 401.
+- `/logowanie`: hasło sprawdzane ze skrótem w `~/portal/dane/dostep.json` (600: `hash` werkzeug/scrypt, `klucz`
+  podpisu, `wersja`). Ciasteczko `portal_sesja` (itsdangerous, HttpOnly, SameSite=Lax, 365 dni) zawiera `wersja`.
+  5 złych haseł z jednego adresu = 5 min blokady; każda próba w dzienniku zdrowia (`LOGOWANIE …`). `/wyloguj` usuwa
+  ciasteczko; w menu portalu link „Wyloguj” pojawia się tylko z sieci domowej (`/api/dostep`).
+- `portal-haslo` (`/usr/local/bin`, repo `pi/portal-haslo`) zmienia hasło i podbija `wersja` (wylogowuje wszystkie
+  urządzenia). Hasła nie ma w repozytorium.
+- Ciasteczko jest przypisane do adresu: `172.23.0.20` (eth0) i `172.23.0.24` (wlan0) to osobne logowania; używaj `.20`.
+  `/terminal` z sieci domowej pokazuje tylko informację (terminal na porcie 7681 słucha wyłącznie na Tailscale).
+  Panel Minecraft `pi-dashboard` (8090) był i jest dostępny w sieci domowej bez hasła (osobna usługa).
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

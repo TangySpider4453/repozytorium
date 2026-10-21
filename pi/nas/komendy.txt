@@ -62,6 +62,17 @@ journalctl -u powernukkitx -n 100
     Ostatnie 100 linii serwera Minecraft (zamiast powernukkitx: home-portal, playit, kopia-pi ...).
 
 
+PORTAL Z SIECI DOMOWEJ (haslo)
+------------------------------
+Adres w domu: http://172.23.0.20  (przez Tailscale: http://100.108.241.58, bez hasla)
+Haslo wpisujesz raz na kazdym urzadzeniu, potem pamieta je przez rok (ciasteczko w przegladarce).
+Wylogowanie urzadzenia: przycisk "Wyloguj" w menu portalu albo adres http://172.23.0.20/wyloguj
+portal-haslo
+    Zmiana hasla (wpisujesz dwa razy, nie widac znakow). Wylogowuje wszystkie urzadzenia w sieci domowej.
+    Po 5 zlych haslach z jednego urzadzenia: 5 minut blokady. Proby logowania widac w Logi/zdrowie-dziennik.log.
+Terminal w przegladarce dziala tylko przez Tailscale.
+
+
 USLUGI (nazwy: home-portal, powernukkitx, playit, pi-dashboard, tailscaled)
 -------------------------------------------------------------------------
 systemctl status home-portal
