@@ -1,7 +1,9 @@
 # Dodaje zakładkę „Licz” (zadania rachunkowe z losowymi liczbami) do strony sprawdzianu.
 # Generatory: narzedzia/licz/<id>.js -> kopiowane do strona/<id>/licz-zadania.js; silnik: strona/licz.js.
 # Użycie: python3 narzedzia/dodaj_licz.py <id> [<id> ...]   (z katalogu repozytorium; strona musi mieć już postep.js)
-import shutil, sys
+# Nazwa zakładki: pierwsza linia generatora „// zakladka: Wpisz” (domyślnie „Licz”). Zakładka trafia za „Wzory”,
+# a gdy ich nie ma, za „Tabela” albo „Notatka”.
+import re, shutil, sys
 
 CSS = """
 /* zakładka Licz */
@@ -36,7 +38,11 @@ def add(pid):
         s = s.replace(a, b)
     rep("</style>", CSS + "</style>")
     rep('<script src="../postep.js"></script>', '<script src="../postep.js"></script>\n<script src="../licz.js"></script>')
-    rep('data-tab="wzory">Wzory</button>', 'data-tab="wzory">Wzory</button>\n  <button role="tab" aria-selected="false" data-tab="licz">Licz</button>')
+    first = open(f"narzedzia/licz/{pid}.js", encoding="utf-8").readline()
+    nazwa = first.split("zakladka:", 1)[1].strip() if "zakladka:" in first else "Licz"
+    m = re.search(r'data-tab="(wzory|tabela|notatka)">[^<]*</button>', s)
+    assert m, "brak zakładki, za którą można wstawić"
+    rep(m.group(0), m.group(0) + f'\n  <button role="tab" aria-selected="false" data-tab="licz">{nazwa}</button>')
     rep("<!-- ============ FISZKI ============ -->",
         '<!-- ============ LICZ ============ -->\n<section class="tab" id="licz" hidden><div id="liczBox"></div></section>\n\n<!-- ============ FISZKI ============ -->')
     rep("</body>", '<script src="licz-zadania.js"></script>\n</body>')

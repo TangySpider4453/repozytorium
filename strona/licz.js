@@ -1,7 +1,9 @@
 /* Zakładka „Licz”: zadania rachunkowe z losowymi liczbami, sprawdzanie wyniku i rozwiązanie krok po kroku.
    Strona woła Licz.init({el, typy, kolor}), gdzie typy = [{id, temat, nazwa, gen}] i gen() zwraca:
      {tresc: "HTML", pola: [{etykieta, jednostka, odp, tol, rodzaj}], rozw: ["krok HTML", ...]}
-   rodzaj: "liczba" (domyślnie; tol = względna tolerancja, np. 0.02) albo "zbior" (liczby całkowite w dowolnej kolejności).
+   rodzaj: "liczba" (domyślnie; tol = względna tolerancja, np. 0.02), "zbior" (liczby całkowite w dowolnej kolejności)
+   albo "tekst" (odp = lista poprawnych napisów; wielkość liter, nadmiarowe spacje i kropki nie mają znaczenia).
+   Opcjonalnie cfg.intro zastępuje tekst wprowadzenia.
    Seria 10 zadań zapisuje się w wynikach (Postep.quiz, filtr „Licz: …”), a przerwana seria wraca po przeładowaniu. */
 (function(){
   const SUP = {"⁰":"0","¹":"1","²":"2","³":"3","⁴":"4","⁵":"5","⁶":"6","⁷":"7","⁸":"8","⁹":"9","⁻":"-","⁺":"+"};
@@ -21,7 +23,9 @@
     const nums = parts.map(Number);
     return nums.some(n => !Number.isFinite(n)) ? null : nums.sort((a, b) => a - b);
   }
+  const norm = t => String(t).toLowerCase().replace(/[.,!?;:]/g, " ").replace(/\s+/g, " ").trim();
   function ok(pole, txt){
+    if(pole.rodzaj === "tekst") return pole.odp.some(w => norm(w) === norm(txt));
     if(pole.rodzaj === "zbior"){
       const z = parseZbior(txt), w = pole.odp.slice().sort((a, b) => a - b);
       return !!z && z.length === w.length && z.every((v, i) => v === w[i]);
@@ -61,7 +65,7 @@
     const czysc = () => { try{ localStorage.removeItem(KEY); }catch(e){} };
     const etykieta = () => wybor === "all" ? "wszystko" : (typy.find(t => t.id === wybor) || {}).nazwa;
 
-    root.innerHTML = `<p class="intro">Za każdym razem inne liczby. Wpisz wynik (przecinek albo kropka; potęgi jako 1,8·10⁻³, 1,8e-3 albo 1,8*10^-3). Seria ma ${SERIA} zadań i zapisuje się w wynikach.</p>
+    root.innerHTML = `<p class="intro">${cfg.intro || `Za każdym razem inne liczby. Wpisz wynik (przecinek albo kropka; potęgi jako 1,8·10⁻³, 1,8e-3 albo 1,8*10^-3). Seria ma ${SERIA} zadań i zapisuje się w wynikach.`}</p>
       <details class="lz-wybor"><summary>Rodzaj zadań: <b class="lz-akt"></b> <span>(zmień)</span></summary><div class="filters lz-typy"></div></details><div class="lz-licznik"></div><div class="lz-karta"></div>`;
     const fBox = root.querySelector(".lz-typy"), licznik = root.querySelector(".lz-licznik"), karta = root.querySelector(".lz-karta");
 
@@ -90,8 +94,9 @@
       const inputs = zad.pola.map((p, i) => {
         const row = document.createElement("label"); row.className = "lz-pole";
         const lab = document.createElement("span"); lab.innerHTML = p.etykieta; row.append(lab);
-        const inp = document.createElement("input"); inp.type = "text"; inp.inputMode = p.rodzaj === "zbior" ? "text" : "decimal"; inp.autocomplete = "off";
-        inp.placeholder = p.rodzaj === "zbior" ? "np. -2; 1; 3" : "wynik"; if(wpisane) inp.value = wpisane[i] || "";
+        const inp = document.createElement("input"); inp.type = "text"; inp.inputMode = p.rodzaj === "zbior" || p.rodzaj === "tekst" ? "text" : "decimal"; inp.autocomplete = "off";
+        if(p.rodzaj === "tekst"){ inp.autocapitalize = "off"; inp.spellcheck = false; inp.setAttribute("autocorrect", "off"); inp.lang = cfg.lang || ""; }
+        inp.placeholder = p.rodzaj === "zbior" ? "np. -2; 1; 3" : p.rodzaj === "tekst" ? "wpisz" : "wynik"; if(wpisane) inp.value = wpisane[i] || "";
         inp.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); sprawdz(false); } });
         row.append(inp);
         if(p.jednostka){ const u = document.createElement("span"); u.className = "lz-j"; u.innerHTML = p.jednostka; row.append(u); }
@@ -104,7 +109,7 @@
         akcje.append(btn("Sprawdź", "primary", () => sprawdz(false)), btn("Nie wiem, pokaż rozwiązanie", "", () => sprawdz(true)));
       } else {
         const wszystkie = wynikiPol && wynikiPol.every(Boolean);
-        out.innerHTML = `<div class="expl"><b>${wynikiPol ? (wszystkie ? "Dobrze!" : "Źle.") : "Rozwiązanie"}</b> Poprawnie: ${zad.pola.map(p => (p.rodzaj === "zbior" ? p.odp.slice().sort((a,b)=>a-b).map(v => fmt(v)).join("; ") : fmt(p.odp, 4)) + (p.jednostka ? " " + p.jednostka : "")).join(" · ")}
+        out.innerHTML = `<div class="expl"><b>${wynikiPol ? (wszystkie ? "Dobrze!" : "Źle.") : "Rozwiązanie"}</b> Poprawnie: ${zad.pola.map(p => (p.rodzaj === "tekst" ? p.odp[0] : p.rodzaj === "zbior" ? p.odp.slice().sort((a,b)=>a-b).map(v => fmt(v)).join("; ") : fmt(p.odp, 4)) + (p.jednostka ? " " + p.jednostka : "")).join(" · ")}
           <ol class="lz-kroki">${zad.rozw.map(x => "<li>" + x + "</li>").join("")}</ol></div>`;
         akcje.append(btn(ile >= SERIA ? "Nowa seria" : "Następne zadanie", "primary", dalej));
       }
@@ -118,7 +123,7 @@
         sprawdzone = true; ile++; if(dobrze) dobre++;
         zad.wpisane = vals; zad.wyniki = poddaj ? null : wyn;
         if(ile >= SERIA){
-          if(window.Postep) Postep.quiz({filtr:"Licz: " + etykieta(), dobre, wszystkie:ile}, [], []).then(() => { if(typeof window.qHistDraw === "function") window.qHistDraw(); });
+          if(window.Postep) Postep.quiz({filtr:(cfg.nazwa || "Licz") + ": " + etykieta(), dobre, wszystkie:ile}, [], []).then(() => { if(typeof window.qHistDraw === "function") window.qHistDraw(); });
         }
         zapisz(); rysuj(vals, poddaj ? null : wyn);
       }

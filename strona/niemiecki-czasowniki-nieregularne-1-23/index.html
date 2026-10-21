@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pl" data-nauka="niemiecki-czasowniki-nieregularne-1-23">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Niemiecki – czasowniki nieregularne 1–23</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF;
+  --t1:#A8841A; --t2:#4D5B68; --t3:#6B4C9A; --t4:#B23A48; --t5:#2F7D4F; --t6:#16788A;
+  --ok:#2F7D4F; --bad:#B23A48;
+  --serif:"Alegreya",Georgia,"Times New Roman",serif;
+  --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2;
+    --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+    --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2;
+  --t1:#D9B44A; --t2:#9DADBD; --t3:#A88BD6; --t4:#E06C79; --t5:#5BBE83; --t6:#4DB7C9;
+  --ok:#5BBE83; --bad:#E06C79; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--nav)}
+body{font-variant-numeric:lining-nums}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--t6);outline-offset:2px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* top */
+header.top{background:var(--nav);color:var(--navInk);padding:22px 0 18px}
+header.top h1{font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;opacity:.8;font-size:15px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--nav);border-top:1px solid rgba(255,255,255,.12)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
+nav.tabs button{flex:1 0 auto;background:transparent;border:0;color:var(--navInk);opacity:.7;padding:9px 12px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:20px 0 60px}
+section.tab[hidden]{display:none}
+
+/* ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px;margin-bottom:22px}
+.ribbon h2{font-size:20px;margin-bottom:4px}
+.ribbon .hint{color:var(--muted);font-size:14px;margin:0 0 10px}
+.rb-scroll{overflow-x:auto}
+.rb{position:relative}
+.rb-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:8px;padding:5px 0;text-decoration:none;border-radius:8px}
+.rb-row:hover .rb-name{text-decoration:underline}
+.rb-name{font-weight:700;font-size:14px;line-height:1.2}
+.rb-track{position:relative;height:18px;background:var(--soft);border-radius:4px}
+.rb-bar{position:absolute;top:0;bottom:0;border-radius:4px}
+.rb-bar span{position:absolute;left:4px;top:0;font-size:11px;line-height:18px;color:#fff;font-weight:700;white-space:nowrap}
+.rb-axis{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:4px}
+.rb-axis div{position:relative;height:16px;font-size:12px;color:var(--muted)}
+.rb-axis i{position:absolute;transform:translateX(-50%);font-style:normal}
+
+/* topic */
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:0 0 26px;overflow:hidden}
+.topic>header{padding:16px 16px 14px;border-left:8px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.topic>header .num{font-family:var(--serif);font-weight:800;color:var(--c);font-size:15px}
+.topic>header h2{font-size:clamp(23px,5vw,30px);margin-top:2px}
+.topic>header .span{color:var(--muted);font-size:15px;margin-top:4px}
+.tbody{padding:4px 16px 18px}
+.tbody h3{font-size:19px;margin:18px 0 8px;color:var(--c)}
+.tbody p{margin:6px 0}
+ul.dots{margin:6px 0;padding-left:20px}
+ul.dots li{margin:4px 0}
+.k{font-weight:700}
+.date{font-weight:700;color:var(--c);white-space:nowrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.box{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.box h4{margin:0 0 4px;font-family:var(--serif);font-size:17px}
+.box p,.box ul{margin:0;font-size:15.5px}
+.box ul{padding-left:18px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr{flex:1 1 200px;border-radius:10px;padding:10px 12px;color:#fff;background:var(--c)}
+.pr b{display:block;font-family:var(--serif);font-size:18px}
+.pr span{font-size:15px;opacity:.95}
+.warn{border-left:4px solid var(--bad);background:color-mix(in srgb,var(--bad) 9%,transparent);padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0 0;font-size:15.5px}
+.warn b{color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--soft);font-family:var(--serif);font-size:15.5px}
+tr:last-child td{border-bottom:0}
+dl.terms{margin:0;display:grid;gap:6px}
+dl.terms div{padding:7px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+dl.terms dt{font-weight:700;display:inline}
+dl.terms dd{display:inline;margin:0}
+dl.terms dd::before{content:" – "}
+
+/* pyramid */
+.pyr{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.pyr div{border-radius:6px;padding:6px 8px;text-align:center;font-size:14.5px;color:#fff;background:var(--c)}
+.pyr small{display:block;opacity:.9;font-size:12.5px}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:68px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:22px;padding:8px 0;position:relative}
+.tl li::after{content:"";position:absolute;left:62px;top:15px;width:14px;height:14px;border-radius:50%;background:var(--c);border:3px solid var(--bg)}
+.tl .y{font-family:var(--serif);font-weight:800;font-size:18px;text-align:right;color:var(--c)}
+.tl .e{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.tl .e small{display:block;color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.filters button{border:2px solid var(--c,var(--line));background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--c,var(--ink));color:#fff;border-color:var(--c,var(--ink))}
+.filters button[data-t="all"]{--c:var(--nav)}
+
+/* flashcards */
+.fc-stage{perspective:1200px;margin:6px 0 12px}
+.fc{position:relative;width:100%;min-height:250px;cursor:pointer;transform-style:preserve-3d;transition:transform .45s ease;border:0;padding:0;background:none;text-align:center}
+.fc.flip{transform:rotateY(180deg)}
+.fc .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;border:1px solid var(--line);background:var(--surface)}
+.fc .front{border-top:8px solid var(--c)}
+.fc .front b{font-family:var(--serif);font-size:clamp(24px,6vw,32px);line-height:1.2}
+.fc .front small{color:var(--muted);margin-top:10px;font-size:14px}
+.fc .back{transform:rotateY(180deg);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:18px;line-height:1.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:15.5px}
+.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}
+.btn.good{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn.badb{background:var(--bad);color:#fff;border-color:var(--bad)}
+.counter{color:var(--muted);font-size:15px;margin-left:auto}
+
+/* quiz */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;border-top:6px solid var(--c)}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:6px}
+.progress{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--c)}
+.qcard h3{font-family:var(--sans);font-weight:700;font-size:19px;line-height:1.35;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:16.5px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.opt:disabled{cursor:default}
+.expl{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:15.5px}
+.result{text-align:center;padding:24px 16px}
+.result .big{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1}
+.result p{color:var(--muted)}
+
+/* open questions */
+details.oq{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;margin:0 0 10px}
+details.oq summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}
+details.oq summary::-webkit-details-marker{display:none}
+details.oq summary::after{content:"Pokaż odpowiedź";display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:2px}
+details.oq[open] summary::after{content:"Ukryj odpowiedź"}
+details.oq .ans{padding:0 14px 12px;font-size:16px}
+details.oq .ans ul{margin:0;padding-left:20px}
+.intro{color:var(--muted);margin:0 0 14px}
+@media (prefers-reduced-motion: reduce){.fc{transition:none}}
+@media (max-width:520px){.rb-row,.rb-axis{grid-template-columns:96px 1fr}.rb-name{font-size:13px}.tl::before{left:58px}.tl li{grid-template-columns:48px 1fr}.tl li::after{left:52px}}
+/* wzory */
+.f{font-family:var(--serif);font-size:20px;font-weight:700;text-align:center;padding:10px 12px;margin:8px 0;border-radius:10px;background:color-mix(in srgb,var(--c) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 35%,var(--line))}
+.f small{display:block;font-family:var(--sans);font-weight:400;font-size:14px;color:var(--muted);margin-top:2px}
+.ex{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:15.5px}
+.ex b:first-child{color:var(--c)}
+.fl{display:grid;gap:10px}
+.fl .row2{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:10px 12px}
+.fl .row2 .f{margin:0;font-size:19px}
+.fl .row2 p{margin:0;font-size:15.5px}
+@media (max-width:520px){.fl .row2{grid-template-columns:1fr}}
+.fieldpic{display:flex;justify-content:center;margin:8px 0}
+.fieldpic svg{max-width:100%;height:auto}
+
+/* najważniejsze */
+.key{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--c);border-radius:14px;padding:12px 16px 10px;margin:0 0 14px}
+.key h2{font-size:21px;color:var(--c);margin-bottom:4px}
+.key ol{margin:4px 0;padding-left:22px}
+.key li{margin:5px 0}
+.key li::marker{color:var(--c);font-weight:700}
+.top3{background:var(--nav);color:var(--navInk);border-radius:14px;padding:14px 16px;margin:0 0 18px}
+.top3 h2{font-size:21px;margin-bottom:6px}
+.top3 ol{margin:0;padding-left:22px}
+.top3 li{margin:5px 0}
+
+/* tabela czasowników */
+table.czas{min-width:0}
+table.czas td.c-inf,table.czas td.c-pp{font-weight:700}
+table.czas td.zakryte span{visibility:hidden}
+table.czas td.zakryte{background:var(--soft);cursor:pointer}
+
+/* postępy */
+.fcopt{margin:0 0 10px}
+.chk{display:flex;align-items:center;gap:6px;font-size:15px;cursor:pointer}
+.chk input{width:18px;height:18px}
+.qhist{display:grid;gap:8px;margin:0 0 14px}
+.qh{font-size:14px;color:var(--muted)}
+.qh b{color:var(--ink)}
+.qh span{display:block}
+.fcmem{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px}
+.fcm-top{display:flex;justify-content:space-between;font-size:15px}
+.fcm-bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin:6px 0}
+.fcm-bar i{display:block;height:100%;background:var(--ok)}
+.fcm-row{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--muted)}
+.fcm-row b{color:var(--ink)}
+
+/* zakładka Licz */
+.lz-tresc{font-size:17.5px;line-height:1.5;margin:4px 0 12px}
+.lz-pole{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;font-weight:700}
+.lz-pole input{font:inherit;font-weight:400;font-size:18px;width:min(220px,60vw);padding:8px 10px;border:2px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.lz-pole input:focus{border-color:var(--c);outline:none}
+.lz-pole.lz-ok input{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--surface))}
+.lz-pole.lz-zle input{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--surface))}
+.lz-j{font-weight:400;color:var(--muted)}
+.lz-kroki{margin:8px 0 0;padding-left:20px}
+.lz-kroki li{margin:5px 0}
+.lz-pasek{display:flex;justify-content:space-between;font-size:15px;color:var(--muted);margin:0 0 10px}
+.lz-pasek b{color:var(--ink)}
+.lz-wybor{margin:0 0 12px}
+.lz-wybor summary{cursor:pointer;font-size:15.5px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);list-style:none}
+.lz-wybor summary::-webkit-details-marker{display:none}
+.lz-wybor summary span{color:var(--muted)}
+.lz-wybor[open] summary{margin-bottom:10px}
+</style>
+<script src="../postep.js"></script>
+<script src="../licz.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>
+  <h1>Czasowniki nieregularne 1–23</h1>
+  <p>Niemiecki, kartkówka śr. 28 października. Podręcznik s. 130: Infinitiv, Partizip Perfekt, znaczenie</p>
+</div></header>
+<nav class="tabs" aria-label="Sekcje"><div class="wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="najwazniejsze">Najważniejsze</button>
+  <button role="tab" aria-selected="false" data-tab="tabela">Tabela</button>
+  <button role="tab" aria-selected="false" data-tab="licz">Wpisz</button>
+  <button role="tab" aria-selected="false" data-tab="fiszki">Fiszki</button>
+  <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+  <button role="tab" aria-selected="false" data-tab="otwarte">Pytania</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ NAJWAŻNIEJSZE ============ -->
+<section class="tab" id="najwazniejsze">
+  <p class="intro">Kartkówka 28 października: podręcznik s. 130, czasowniki 1–23. Uczysz się <b>bezokolicznika, Partizip Perfekt (z haben/sein) i znaczenia</b>. Präteritum nie obowiązuje.</p>
+  <div class="top3"><h2>Jeśli zapamiętasz tylko tyle</h2><ol><li>Zwykle: <b>ge- + zmieniony rdzeń + -en</b>: binden → gebunden, bitten → gebeten, brechen → gebrochen.</li><li>Przedrostek <b>be-, emp-, er-</b> → <b>bez ge-</b>: begonnen, empfohlen, erschrocken (empfangen = empfangen).</li><li>Z <b>sein</b>: bleiben, erschrecken, fahren (jechać), biegen (skręcać). Reszta z <b>haben</b>.</li></ol></div>
+  <div class="key" style="--c:var(--t6)"><h2>1. ge- … -en</h2><ol><li>a zostaje: backen → gebacken, braten → gebraten, fahren → gefahren</li><li>ie → o: biegen → gebogen, bieten → geboten; e → o: brechen → gebrochen</li><li>i → u: binden → gebunden; i → e: bitten → gebeten; ei → ie: bleiben → geblieben</li><li>ei → i: beißen → gebi<b>ss</b>en (po krótkim i piszemy ss)</li><li><b>essen → gegessen</b> – dodatkowe g w środku!</li></ol></div>
+  <div class="key" style="--c:var(--t3)"><h2>2. bez ge- (be-, emp-, er-)</h2><ol><li>befehlen → befohlen, empfehlen → empfohlen (e → o)</li><li>beginnen → begonnen (i → o)</li><li>besitzen → besessen (i → e)</li><li>betrügen → betrogen (ü → o)</li><li>empfinden → empfunden (i → u), empfangen → empfangen (bez zmian)</li><li>erschrecken → <b>ist</b> erschrocken (przestraszyć się)</li></ol></div>
+  <div class="key" style="--c:var(--t4)"><h2>3. mieszane: ge- … -t</h2><ol><li>brennen → gebrannt (palić się)</li><li>bringen → gebracht (przynosić)</li><li>denken → gedacht (myśleć)</li><li>dürfen → gedurft (móc)</li><li>Końcówka -t jak w regularnych, ale rdzeń się zmienia.</li></ol></div>
+  <div class="key" style="--c:var(--nav)"><h2>Uważaj na pary</h2><ol><li><b>bitten</b> (prosić) → gebeten ≠ <b>bieten</b> (oferować) → geboten</li><li><b>brechen</b> (łamać) → gebrochen ≠ <b>bringen</b> (przynosić) → gebracht</li><li><b>fahren</b>: ich <b>bin</b> nach Berlin gefahren (jechałem), ich <b>habe</b> sie gefahren (wiozłem ją)</li><li><b>biegen</b>: das Auto <b>ist</b> um die Ecke gebogen (skręciło), er <b>hat</b> das Rohr gebogen (wygiął)</li></ol></div>
+</section>
+
+<!-- ============ TABELA ============ -->
+<section class="tab" id="tabela" hidden>
+  <p class="intro">Zasłoń kolumnę i odpowiadaj z pamięci. Dotknięcie zasłoniętej komórki ją odsłania. „ist” = Perfekt z sein, „hat” = z haben.</p>
+  <div class="row" style="margin-bottom:10px"><button class="btn" data-hide="c-inf">Zasłoń bezokolicznik</button><button class="btn" data-hide="c-pp">Zasłoń Partizip</button><button class="btn" data-hide="c-pl">Zasłoń znaczenie</button><button class="btn" data-hide="">Pokaż wszystko</button></div>
+  <div class="tablewrap"><table class="czas"><tr><th>nr</th><th>Infinitiv</th><th>Partizip Perfekt</th><th>znaczenie</th></tr><tr><td>1.</td><td class="c-inf"><span>backen</span></td><td class="c-pp"><span>hat gebacken</span></td><td class="c-pl"><span>piec</span></td></tr><tr><td>2.</td><td class="c-inf"><span>befehlen</span></td><td class="c-pp"><span>hat befohlen</span></td><td class="c-pl"><span>rozkazywać</span></td></tr><tr><td>3.</td><td class="c-inf"><span>beginnen</span></td><td class="c-pp"><span>hat begonnen</span></td><td class="c-pl"><span>zaczynać</span></td></tr><tr><td>4.</td><td class="c-inf"><span>beißen</span></td><td class="c-pp"><span>hat gebissen</span></td><td class="c-pl"><span>gryźć</span></td></tr><tr><td>5.</td><td class="c-inf"><span>besitzen</span></td><td class="c-pp"><span>hat besessen</span></td><td class="c-pl"><span>posiadać</span></td></tr><tr><td>6.</td><td class="c-inf"><span>betrügen</span></td><td class="c-pp"><span>hat betrogen</span></td><td class="c-pl"><span>oszukiwać</span></td></tr><tr><td>7.</td><td class="c-inf"><span>biegen</span></td><td class="c-pp"><span>hat gebogen</span></td><td class="c-pl"><span>giąć</span></td></tr><tr><td>7.</td><td class="c-inf"><span>biegen</span></td><td class="c-pp"><span>ist gebogen</span></td><td class="c-pl"><span>skręcać (w kierunku)</span></td></tr><tr><td>8.</td><td class="c-inf"><span>bieten</span></td><td class="c-pp"><span>hat geboten</span></td><td class="c-pl"><span>ofiarowywać, oferować</span></td></tr><tr><td>9.</td><td class="c-inf"><span>binden</span></td><td class="c-pp"><span>hat gebunden</span></td><td class="c-pl"><span>wiązać</span></td></tr><tr><td>10.</td><td class="c-inf"><span>bitten</span></td><td class="c-pp"><span>hat gebeten</span></td><td class="c-pl"><span>prosić</span></td></tr><tr><td>11.</td><td class="c-inf"><span>bleiben</span></td><td class="c-pp"><span>ist geblieben</span></td><td class="c-pl"><span>zostawać</span></td></tr><tr><td>12.</td><td class="c-inf"><span>braten</span></td><td class="c-pp"><span>hat gebraten</span></td><td class="c-pl"><span>smażyć</span></td></tr><tr><td>13.</td><td class="c-inf"><span>brechen</span></td><td class="c-pp"><span>hat gebrochen</span></td><td class="c-pl"><span>łamać</span></td></tr><tr><td>14.</td><td class="c-inf"><span>brennen</span></td><td class="c-pp"><span>hat gebrannt</span></td><td class="c-pl"><span>palić się, płonąć</span></td></tr><tr><td>15.</td><td class="c-inf"><span>bringen</span></td><td class="c-pp"><span>hat gebracht</span></td><td class="c-pl"><span>przynosić</span></td></tr><tr><td>16.</td><td class="c-inf"><span>denken</span></td><td class="c-pp"><span>hat gedacht</span></td><td class="c-pl"><span>myśleć</span></td></tr><tr><td>17.</td><td class="c-inf"><span>dürfen</span></td><td class="c-pp"><span>hat gedurft</span></td><td class="c-pl"><span>móc, mieć pozwolenie</span></td></tr><tr><td>18.</td><td class="c-inf"><span>empfangen</span></td><td class="c-pp"><span>hat empfangen</span></td><td class="c-pl"><span>przyjmować</span></td></tr><tr><td>19.</td><td class="c-inf"><span>empfehlen</span></td><td class="c-pp"><span>hat empfohlen</span></td><td class="c-pl"><span>polecać</span></td></tr><tr><td>20.</td><td class="c-inf"><span>empfinden</span></td><td class="c-pp"><span>hat empfunden</span></td><td class="c-pl"><span>czuć, odczuwać</span></td></tr><tr><td>21.</td><td class="c-inf"><span>erschrecken</span></td><td class="c-pp"><span>ist erschrocken</span></td><td class="c-pl"><span>przestraszyć się</span></td></tr><tr><td>22.</td><td class="c-inf"><span>essen</span></td><td class="c-pp"><span>hat gegessen</span></td><td class="c-pl"><span>jeść</span></td></tr><tr><td>23.</td><td class="c-inf"><span>fahren</span></td><td class="c-pp"><span>ist gefahren</span></td><td class="c-pl"><span>jechać</span></td></tr><tr><td>23.</td><td class="c-inf"><span>fahren</span></td><td class="c-pp"><span>hat gefahren</span></td><td class="c-pl"><span>wieźć</span></td></tr></table></div>
+</section>
+
+<!-- ============ LICZ ============ -->
+<section class="tab" id="licz" hidden><div id="liczBox"></div></section>
+
+<!-- ============ FISZKI ============ -->
+<section class="tab" id="fiszki" hidden>
+  <p class="intro">Dotknij karty, żeby ją odwrócić. Oznacz, czy umiesz. Karty „jeszcze nie” wracają na koniec talii.</p>
+  <div class="filters" id="fcFilters"></div>
+  <div class="row fcopt"><label class="chk"><input type="checkbox" id="fcSkip" checked> Pomiń karty, które już umiem</label><button class="btn" id="fcReset">Wyzeruj fiszki</button></div>
+  <div class="fcmem" id="fcStat"></div>
+  <div class="fc-stage"><button class="fc" id="fc" aria-live="polite"><div class="face front" id="fcFront"></div><div class="face back" id="fcBack"></div></button></div>
+  <div class="row">
+    <button class="btn badb" id="fcNo">Jeszcze nie</button>
+    <button class="btn good" id="fcYes">Umiem</button>
+    <button class="btn" id="fcShuffle">Przetasuj</button>
+    <span class="counter" id="fcCount"></span>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="tab" id="quiz" hidden>
+  <p class="intro">Wybierz temat albo wszystko naraz. Po każdej odpowiedzi zobaczysz krótkie wyjaśnienie.</p>
+  <div class="filters" id="qFilters"></div>
+  <div class="qhist" id="qHist"></div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ ZADANIA ============ -->
+<section class="tab" id="otwarte" hidden>
+  <p class="intro">Pytania podsumowujące. Najpierw odpowiedz sam(a), potem rozwiń odpowiedź.</p>
+  <div id="oqList"></div>
+</section>
+
+</div></main>
+
+<script>
+const T = {"1": "ge- … -en", "2": "bez ge- (be-, emp-, er-)", "3": "mieszane: ge- … -t"};
+const COL = {"1": 6, "2": 3, "3": 4};
+const C = n => "var(--t"+COL[n]+")";
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav.tabs button")];
+function showTab(id){try{localStorage.setItem(tabLS(),JSON.stringify({id,czas:Date.now()}))}catch(e){}
+  tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===id));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!==id);
+  window.scrollTo({top:0});
+}
+tabs.forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+function makeFilters(el,onPick){
+  let h=`<button data-t="all" aria-pressed="true">Wszystko</button>`;
+  for(const i of Object.keys(T)) h+=`<button data-t="${i}" style="--c:${C(i)}" aria-pressed="false">${i}. ${T[i]}</button>`;
+  el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.t);
+  }));
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- flashcards ---------- */
+const FC=[[1, "backen", "hat gebacken – piec"], [2, "befehlen", "hat befohlen – rozkazywać"], [2, "beginnen", "hat begonnen – zaczynać"], [1, "beißen", "hat gebissen – gryźć"], [2, "besitzen", "hat besessen – posiadać"], [2, "betrügen", "hat betrogen – oszukiwać"], [1, "biegen", "hat gebogen – giąć · ist gebogen – skręcać (w kierunku)"], [1, "bieten", "hat geboten – ofiarowywać, oferować"], [1, "binden", "hat gebunden – wiązać"], [1, "bitten", "hat gebeten – prosić"], [1, "bleiben", "ist geblieben – zostawać"], [1, "braten", "hat gebraten – smażyć"], [1, "brechen", "hat gebrochen – łamać"], [3, "brennen", "hat gebrannt – palić się, płonąć"], [3, "bringen", "hat gebracht – przynosić"], [3, "denken", "hat gedacht – myśleć"], [3, "dürfen", "hat gedurft – móc, mieć pozwolenie"], [2, "empfangen", "hat empfangen – przyjmować"], [2, "empfehlen", "hat empfohlen – polecać"], [2, "empfinden", "hat empfunden – czuć, odczuwać"], [2, "erschrecken", "ist erschrocken – przestraszyć się"], [1, "essen", "hat gegessen – jeść"], [1, "fahren", "ist gefahren – jechać · hat gefahren – wieźć"], [1, "piec", "backen – hat gebacken"], [2, "rozkazywać", "befehlen – hat befohlen"], [2, "zaczynać", "beginnen – hat begonnen"], [1, "gryźć", "beißen – hat gebissen"], [2, "posiadać", "besitzen – hat besessen"], [2, "oszukiwać", "betrügen – hat betrogen"], [1, "giąć", "biegen – hat gebogen"], [1, "skręcać (w kierunku)", "biegen – ist gebogen"], [1, "ofiarowywać, oferować", "bieten – hat geboten"], [1, "wiązać", "binden – hat gebunden"], [1, "prosić", "bitten – hat gebeten"], [1, "zostawać", "bleiben – ist geblieben"], [1, "smażyć", "braten – hat gebraten"], [1, "łamać", "brechen – hat gebrochen"], [3, "palić się, płonąć", "brennen – hat gebrannt"], [3, "przynosić", "bringen – hat gebracht"], [3, "myśleć", "denken – hat gedacht"], [3, "móc, mieć pozwolenie", "dürfen – hat gedurft"], [2, "przyjmować", "empfangen – hat empfangen"], [2, "polecać", "empfehlen – hat empfohlen"], [2, "czuć, odczuwać", "empfinden – hat empfunden"], [2, "przestraszyć się", "erschrecken – ist erschrocken"], [1, "jeść", "essen – hat gegessen"], [1, "jechać", "fahren – ist gefahren"], [1, "wieźć", "fahren – hat gefahren"]];
+let deck=[],fcIdx=0,known=0;
+const fcEl=document.getElementById("fc");
+function buildDeck(f){const all=FC.filter(c=>f==="all"||c[0]==f),st=c=>Postep.stan(fcKey(c)),skip=document.getElementById("fcSkip").checked;deck=[...shuffle(all.filter(c=>st(c)===0)),...shuffle(all.filter(c=>st(c)===undefined)),...(skip?[]:shuffle(all.filter(c=>st(c)===1)))];fcIdx=0;known=0;drawFC();fcStatDraw();}
+function drawFC(){
+  fcEl.classList.remove("flip");
+  const cnt=document.getElementById("fcCount");
+  if(!deck.length){
+    fcEl.style.setProperty("--c","var(--ok)");
+    const fc0=fcCounts();document.getElementById("fcFront").innerHTML=`<b>Talia przerobiona!</b><small>W tym zestawie umiesz ${fc0.k} z ${fc0.n} kart (zapisane na stałe). Przetasuj, żeby powtórzyć te, których jeszcze nie umiesz, albo odznacz „Pomiń karty, które już umiem”.</small>`;
+    document.getElementById("fcBack").innerHTML="";cnt.textContent="";return;
+  }
+  const [n,f,b]=deck[0];
+  fcEl.style.setProperty("--c",C(n));
+  setTimeout(()=>{document.getElementById("fcBack").textContent=b;},150);
+  document.getElementById("fcFront").innerHTML=`<b></b><small>${n}. ${T[n]} · ${fcTag(deck[0])}</small>`;
+  document.querySelector("#fcFront b").textContent=f;
+  cnt.textContent=`w talii: ${deck.length}`;
+}
+fcEl.addEventListener("click",()=>{if(deck.length)fcEl.classList.toggle("flip")});
+document.getElementById("fcYes").addEventListener("click",()=>{if(!deck.length)return;Postep.fiszka(fcKey(deck[0]),true);deck.shift();known++;drawFC();fcStatDraw();});
+document.getElementById("fcNo").addEventListener("click",()=>{if(!deck.length)return;Postep.fiszka(fcKey(deck[0]),false);deck.push(deck.shift());drawFC();fcStatDraw();});
+let fcFilter="all";
+document.getElementById("fcShuffle").addEventListener("click",()=>buildDeck(fcFilter));
+makeFilters(document.getElementById("fcFilters"),f=>{fcFilter=f;buildDeck(f)}); Postep.ready.then(()=>buildDeck(fcFilter));
+
+/* ---------- quiz ---------- */
+const Q=[[1, "Partizip Perfekt od „backen” to:", ["gebacken", "gebackt", "gebucken", "backen"], 0, "backen → gebacken. a zostaje: backen → gebacken."], [2, "Partizip Perfekt od „befehlen” to:", ["befohlen", "gebefohlen", "befehlt", "befahlen"], 0, "befehlen → befohlen. e → o, bez ge- (be-)."], [2, "Partizip Perfekt od „beginnen” to:", ["begonnen", "gebeginnt", "gebegonnen", "begann"], 0, "beginnen → begonnen. i → o, bez ge- (be-)."], [1, "Partizip Perfekt od „beißen” to:", ["gebissen", "gebeißt", "gebeißen", "gebisst"], 0, "beißen → gebissen. ei → i, ß → ss (krótkie i)."], [2, "Partizip Perfekt od „besitzen” to:", ["besessen", "gebesessen", "besitzt", "gesessen"], 0, "besitzen → besessen. i → e, bez ge- (be-)."], [2, "Partizip Perfekt od „betrügen” to:", ["betrogen", "gebetrogen", "betrügt", "betrugen"], 0, "betrügen → betrogen. ü → o, bez ge- (be-)."], [1, "Partizip Perfekt od „biegen” to:", ["gebogen", "gebiegt", "gebiegen", "gebogt"], 0, "biegen → gebogen. ie → o."], [1, "Partizip Perfekt od „bieten” to:", ["geboten", "gebietet", "gebieten", "gebotet"], 0, "bieten → geboten. ie → o."], [1, "Partizip Perfekt od „binden” to:", ["gebunden", "gebindet", "gebinden", "gebandet"], 0, "binden → gebunden. i → u."], [1, "Partizip Perfekt od „bitten” to:", ["gebeten", "gebittet", "gebitten", "gebatten"], 0, "bitten → gebeten. i → e."], [1, "Partizip Perfekt od „bleiben” to:", ["geblieben", "gebleibt", "gebleiben", "geblibt"], 0, "bleiben → geblieben. ei → ie, z sein."], [1, "Partizip Perfekt od „braten” to:", ["gebraten", "gebratet", "gebrieten", "gebrotten"], 0, "braten → gebraten. a zostaje."], [1, "Partizip Perfekt od „brechen” to:", ["gebrochen", "gebrecht", "gebrechen", "gebracht"], 0, "brechen → gebrochen. e → o."], [3, "Partizip Perfekt od „brennen” to:", ["gebrannt", "gebrennt", "gebrannen", "gebronnen"], 0, "brennen → gebrannt. mieszany: e → a, końcówka -t."], [3, "Partizip Perfekt od „bringen” to:", ["gebracht", "gebringt", "gebrungen", "gebrangen"], 0, "bringen → gebracht. mieszany: zupełnie inny rdzeń (brach-)."], [3, "Partizip Perfekt od „denken” to:", ["gedacht", "gedenkt", "gedachen", "gedunken"], 0, "denken → gedacht. mieszany: dach-, końcówka -t."], [3, "Partizip Perfekt od „dürfen” to:", ["gedurft", "gedürft", "gedurfen", "gedarft"], 0, "dürfen → gedurft. mieszany: bez umlautu, -t."], [2, "Partizip Perfekt od „empfangen” to:", ["empfangen", "geempfangen", "empfangt", "empfingen"], 0, "empfangen → empfangen. Partizip = bezokolicznik (emp-, bez ge-)."], [2, "Partizip Perfekt od „empfehlen” to:", ["empfohlen", "geempfohlen", "empfehlt", "empfahlen"], 0, "empfehlen → empfohlen. e → o, bez ge- (emp-)."], [2, "Partizip Perfekt od „empfinden” to:", ["empfunden", "geempfunden", "empfindet", "empfanden"], 0, "empfinden → empfunden. i → u, bez ge- (emp-)."], [2, "Partizip Perfekt od „erschrecken” to:", ["erschrocken", "geerschrocken", "erschrecken", "erschracken"], 0, "erschrecken → erschrocken. e → o, bez ge- (er-), z sein."], [1, "Partizip Perfekt od „essen” to:", ["gegessen", "geessen", "gegesst", "gessen"], 0, "essen → gegessen. uwaga: ge-g-essen (dodatkowe g!)."], [1, "Partizip Perfekt od „fahren” to:", ["gefahren", "gefahrt", "gefuhren", "gefohren"], 0, "fahren → gefahren. a zostaje; jechać = ist, wieźć = hat."], [1, "Co znaczy „backen”?", ["piec", "móc, mieć pozwolenie", "palić się, płonąć", "wiązać"], 0, "backen – piec."], [2, "Co znaczy „befehlen”?", ["rozkazywać", "wieźć", "jeść", "przynosić"], 0, "befehlen – rozkazywać."], [2, "Co znaczy „beginnen”?", ["zaczynać", "przestraszyć się", "przynosić", "piec"], 0, "beginnen – zaczynać."], [1, "Co znaczy „beißen”?", ["gryźć", "smażyć", "ofiarowywać, oferować", "polecać"], 0, "beißen – gryźć."], [2, "Co znaczy „besitzen”?", ["posiadać", "zostawać", "ofiarowywać, oferować", "jeść"], 0, "besitzen – posiadać."], [2, "Co znaczy „betrügen”?", ["oszukiwać", "móc, mieć pozwolenie", "jeść", "wieźć"], 0, "betrügen – oszukiwać."], [1, "Co znaczy „biegen”?", ["giąć / skręcać (w kierunku)", "gryźć", "polecać", "jechać"], 0, "biegen – giąć / skręcać (w kierunku)."], [1, "Co znaczy „bieten”?", ["ofiarowywać, oferować", "przestraszyć się", "giąć", "smażyć"], 0, "bieten – ofiarowywać, oferować."], [1, "Co znaczy „binden”?", ["wiązać", "piec", "palić się, płonąć", "smażyć"], 0, "binden – wiązać."], [1, "Co znaczy „bitten”?", ["prosić", "posiadać", "piec", "przestraszyć się"], 0, "bitten – prosić."], [1, "Co znaczy „bleiben”?", ["zostawać", "myśleć", "palić się, płonąć", "prosić"], 0, "bleiben – zostawać."], [1, "Co znaczy „braten”?", ["smażyć", "myśleć", "wieźć", "łamać"], 0, "braten – smażyć."], [1, "Co znaczy „brechen”?", ["łamać", "smażyć", "zaczynać", "jeść"], 0, "brechen – łamać."], [3, "Co znaczy „brennen”?", ["palić się, płonąć", "rozkazywać", "przyjmować", "móc, mieć pozwolenie"], 0, "brennen – palić się, płonąć."], [3, "Co znaczy „bringen”?", ["przynosić", "przyjmować", "przestraszyć się", "posiadać"], 0, "bringen – przynosić."], [3, "Co znaczy „denken”?", ["myśleć", "móc, mieć pozwolenie", "jechać", "posiadać"], 0, "denken – myśleć."], [3, "Co znaczy „dürfen”?", ["móc, mieć pozwolenie", "czuć, odczuwać", "wiązać", "gryźć"], 0, "dürfen – móc, mieć pozwolenie."], [2, "Co znaczy „empfangen”?", ["przyjmować", "posiadać", "zaczynać", "palić się, płonąć"], 0, "empfangen – przyjmować."], [2, "Co znaczy „empfehlen”?", ["polecać", "smażyć", "gryźć", "wiązać"], 0, "empfehlen – polecać."], [2, "Co znaczy „empfinden”?", ["czuć, odczuwać", "łamać", "zaczynać", "zostawać"], 0, "empfinden – czuć, odczuwać."], [2, "Co znaczy „erschrecken”?", ["przestraszyć się", "myśleć", "oszukiwać", "posiadać"], 0, "erschrecken – przestraszyć się."], [1, "Co znaczy „essen”?", ["jeść", "prosić", "gryźć", "ofiarowywać, oferować"], 0, "essen – jeść."], [1, "Co znaczy „fahren”?", ["jechać / wieźć", "łamać", "móc, mieć pozwolenie", "polecać"], 0, "fahren – jechać / wieźć."], [1, "Jak po niemiecku „piec”?", ["backen", "brennen", "biegen", "bringen"], 0, "piec – backen, Partizip: hat gebacken."], [2, "Jak po niemiecku „rozkazywać”?", ["befehlen", "bitten", "bringen", "essen"], 0, "rozkazywać – befehlen, Partizip: hat befohlen."], [2, "Jak po niemiecku „zaczynać”?", ["beginnen", "binden", "bieten", "betrügen"], 0, "zaczynać – beginnen, Partizip: hat begonnen."], [1, "Jak po niemiecku „gryźć”?", ["beißen", "betrügen", "empfangen", "braten"], 0, "gryźć – beißen, Partizip: hat gebissen."], [2, "Jak po niemiecku „posiadać”?", ["besitzen", "empfehlen", "denken", "erschrecken"], 0, "posiadać – besitzen, Partizip: hat besessen."], [2, "Jak po niemiecku „oszukiwać”?", ["betrügen", "binden", "empfangen", "besitzen"], 0, "oszukiwać – betrügen, Partizip: hat betrogen."], [1, "Jak po niemiecku „giąć”?", ["biegen", "empfinden", "bleiben", "befehlen"], 0, "giąć – biegen, Partizip: hat gebogen."], [1, "Jak po niemiecku „skręcać (w kierunku)”?", ["biegen", "brechen", "empfangen", "befehlen"], 0, "skręcać (w kierunku) – biegen, Partizip: ist gebogen."], [1, "Jak po niemiecku „ofiarowywać, oferować”?", ["bieten", "befehlen", "erschrecken", "bringen"], 0, "ofiarowywać, oferować – bieten, Partizip: hat geboten."], [1, "Jak po niemiecku „wiązać”?", ["binden", "braten", "dürfen", "denken"], 0, "wiązać – binden, Partizip: hat gebunden."], [1, "Jak po niemiecku „prosić”?", ["bitten", "empfehlen", "beginnen", "empfinden"], 0, "prosić – bitten, Partizip: hat gebeten."], [1, "Jak po niemiecku „zostawać”?", ["bleiben", "fahren", "beißen", "binden"], 0, "zostawać – bleiben, Partizip: ist geblieben."], [1, "Jak po niemiecku „smażyć”?", ["braten", "befehlen", "brechen", "denken"], 0, "smażyć – braten, Partizip: hat gebraten."], [1, "Jak po niemiecku „łamać”?", ["brechen", "binden", "betrügen", "braten"], 0, "łamać – brechen, Partizip: hat gebrochen."], [3, "Jak po niemiecku „palić się, płonąć”?", ["brennen", "dürfen", "betrügen", "empfinden"], 0, "palić się, płonąć – brennen, Partizip: hat gebrannt."], [3, "Jak po niemiecku „przynosić”?", ["bringen", "bieten", "brechen", "besitzen"], 0, "przynosić – bringen, Partizip: hat gebracht."], [3, "Jak po niemiecku „myśleć”?", ["denken", "betrügen", "braten", "beginnen"], 0, "myśleć – denken, Partizip: hat gedacht."], [3, "Jak po niemiecku „móc, mieć pozwolenie”?", ["dürfen", "empfinden", "brechen", "betrügen"], 0, "móc, mieć pozwolenie – dürfen, Partizip: hat gedurft."], [2, "Jak po niemiecku „przyjmować”?", ["empfangen", "betrügen", "bitten", "binden"], 0, "przyjmować – empfangen, Partizip: hat empfangen."], [2, "Jak po niemiecku „polecać”?", ["empfehlen", "bitten", "biegen", "fahren"], 0, "polecać – empfehlen, Partizip: hat empfohlen."], [2, "Jak po niemiecku „czuć, odczuwać”?", ["empfinden", "essen", "empfangen", "beginnen"], 0, "czuć, odczuwać – empfinden, Partizip: hat empfunden."], [2, "Jak po niemiecku „przestraszyć się”?", ["erschrecken", "betrügen", "biegen", "brennen"], 0, "przestraszyć się – erschrecken, Partizip: ist erschrocken."], [1, "Jak po niemiecku „jeść”?", ["essen", "bitten", "brennen", "beißen"], 0, "jeść – essen, Partizip: hat gegessen."], [1, "Jak po niemiecku „jechać”?", ["fahren", "bringen", "bleiben", "erschrecken"], 0, "jechać – fahren, Partizip: ist gefahren."], [1, "Jak po niemiecku „wieźć”?", ["fahren", "binden", "betrügen", "essen"], 0, "wieźć – fahren, Partizip: hat gefahren."], [1, "Uzupełnij (haben czy sein?): Ich ___ zu Hause geblieben.", ["bin", "habe", "ist", "hat"], 0, "bleiben łączy się z sein: ich bin geblieben."], [1, "Uzupełnij (haben czy sein?): Wir ___ mit dem Bus nach Krakau gefahren.", ["sind", "haben", "seid", "habt"], 0, "fahren = jechać → sein: wir sind gefahren."], [1, "Uzupełnij (haben czy sein?): Er ___ seine Freundin nach Hause gefahren.", ["hat", "ist", "habt", "sind"], 0, "fahren = wieźć kogoś → haben: er hat … gefahren."], [2, "Uzupełnij (haben czy sein?): Sie ___ sehr erschrocken.", ["ist", "hat", "sind", "haben"], 0, "erschrecken (przestraszyć się) → sein: sie ist erschrocken."], [1, "Uzupełnij (haben czy sein?): Das Auto ___ um die Ecke gebogen.", ["ist", "hat", "sind", "haben"], 0, "biegen = skręcać → sein."], [1, "Uzupełnij (haben czy sein?): Der Mechaniker ___ das Rohr gebogen.", ["hat", "ist", "haben", "sind"], 0, "biegen = giąć coś → haben."], [1, "Uzupełnij (haben czy sein?): Wir ___ Pizza gegessen.", ["haben", "sind", "hat", "ist"], 0, "essen → haben: wir haben gegessen."], [2, "Uzupełnij (haben czy sein?): Der Film ___ um acht Uhr begonnen.", ["hat", "ist", "haben", "sind"], 0, "beginnen → haben (mimo że to „zaczynać się”)."], [1, "Uzupełnij (haben czy sein?): Ich ___ einen Kuchen gebacken.", ["habe", "bin", "hat", "ist"], 0, "backen → haben."], [3, "Uzupełnij (haben czy sein?): Du ___ mir Blumen gebracht.", ["hast", "bist", "hat", "ist"], 0, "bringen → haben: du hast gebracht."]];
+let qs=[],qi=0,score=0,wrong=[],qFilter="all";
+function startQuiz(list,powt){qPowt=!!powt;const r=document.getElementById("qResume");if(r)r.remove();qs=shuffle(list).map(q=>{const order=shuffle([0,1,2,3]);return{n:q[0],t:q[1],o:order.map(i=>q[2][i]),a:order.indexOf(q[3]),e:q[4],src:q}});qi=0;score=0;wrong=[];drawQ();}
+function drawQ(){
+  const A=document.getElementById("qArea");
+  if(qi>=qs.length){
+    qClear();
+    const pct=Math.round(score/qs.length*100);
+    if(qs.length)Postep.quiz({filtr:qPowt?"błędne":qFilter,dobre:score,wszystkie:qs.length},wrong.map(q=>q[1]),qs.filter(q=>!wrong.includes(q.src)).map(q=>q.t)).then(qHistDraw);
+    let best=0;try{best=+localStorage.getItem("nauka:niemiecki-czasowniki-nieregularne-1-23:best_"+qFilter)||0;if(pct>best)localStorage.setItem("nauka:niemiecki-czasowniki-nieregularne-1-23:best_"+qFilter,pct)}catch(e){}
+    const msg=pct>=90?"Świetnie, jesteś gotowy(-a) na kartkówkę.":pct>=70?"Dobrze! Powtórz jeszcze błędne pytania.":pct>=50?"Nieźle, ale wróć do notatki z tematów, w których się mylisz.":"Przeczytaj jeszcze raz notatkę i przerób fiszki, potem spróbuj ponownie.";
+    A.innerHTML=`<div class="qcard result" style="--c:var(--nav)"><div class="big">${score}/${qs.length}</div><h3 style="margin-top:10px">${pct}%</h3><p>${msg}${best?` Poprzedni najlepszy wynik: ${best}%.`:""}</p><div class="row" style="justify-content:center">${wrong.length?`<button class="btn badb" id="qRetryWrong">Powtórz błędne (${wrong.length})</button>`:""}<button class="btn primary" id="qAgain">Nowy quiz</button></div></div>`;
+    document.getElementById("qAgain").onclick=()=>startQuiz(filtered());
+    const rw=document.getElementById("qRetryWrong"); if(rw) rw.onclick=()=>startQuiz(wrong,true);
+    return;
+  }
+  const q=qs[qi];qSave(null);
+  A.innerHTML=`<div class="qcard" style="--c:${C(q.n)}"><div class="qmeta"><span>${q.n}. ${T[q.n]}</span><span>${qi+1} / ${qs.length}</span></div><div class="progress"><i style="width:${qi/qs.length*100}%"></i></div><h3></h3><div class="opts"></div><div id="qx"></div></div>`;
+  A.querySelector("h3").textContent=q.t;
+  const box=A.querySelector(".opts");
+  q.o.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>answer(i);box.appendChild(b)});
+}
+function answer(i,odtw){
+  const q=qs[qi],btns=[...document.querySelectorAll(".opt")];
+  btns.forEach(b=>b.disabled=true);
+  btns[q.a].classList.add("right");
+  if(i===q.a){if(!odtw)score++}else{btns[i].classList.add("wrong");if(!odtw)wrong.push(q.src)}
+  const x=document.getElementById("qx");
+  x.innerHTML=`<div class="expl"><b>${i===q.a?"Dobrze!":"Źle."}</b> <span></span></div><div class="row" style="margin-top:12px"><button class="btn primary" id="qNext">${qi+1<qs.length?"Dalej":"Zobacz wynik"}</button></div>`;
+  x.querySelector(".expl span").textContent=q.e;
+  document.getElementById("qNext").onclick=()=>{qi++;drawQ();};
+  document.getElementById("qNext").focus();
+  if(!odtw)qSave(i);
+}
+const filtered=()=>Q.filter(q=>qFilter==="all"||q[0]==qFilter);
+makeFilters(document.getElementById("qFilters"),f=>{qFilter=f;startQuiz(filtered())});
+if(!qRestore())startQuiz(filtered());
+
+/* ---------- open questions ---------- */
+const OQ=[[2, "Wymień czasowniki z tej listy, które w Partizip Perfekt NIE mają ge-. Dlaczego?", ["befehlen → befohlen, beginnen → begonnen, besitzen → besessen, betrügen → betrogen", "empfangen → empfangen, empfehlen → empfohlen, empfinden → empfunden, erschrecken → erschrocken", "Mają nieakcentowany przedrostek <b>be-, emp-, er-</b>. Takie czasowniki nigdy nie dostają ge-."]], [1, "Które czasowniki z listy tworzą Perfekt z <b>sein</b>?", ["<b>bleiben</b> → ist geblieben", "<b>erschrecken</b> (przestraszyć się) → ist erschrocken", "<b>fahren</b> (jechać) → ist gefahren, ale wieźć kogoś → hat gefahren", "<b>biegen</b> (skręcać) → ist gebogen, ale giąć coś → hat gebogen", "Wszystkie pozostałe: <b>haben</b>."]], [3, "Które czasowniki są „mieszane” (ge- … -t, ale ze zmianą rdzenia)?", ["brennen → gebrannt", "bringen → gebracht", "denken → gedacht", "dürfen → gedurft"]], [1, "Podaj Partizip Perfekt i znaczenie: bitten, bieten, binden, beißen.", ["bitten → gebeten (prosić)", "bieten → geboten (oferować)", "binden → gebunden (wiązać)", "beißen → gebissen (gryźć)", "Uważaj, żeby ich nie pomylić: bitten/bieten, gebeten/geboten."]], [1, "Podaj Partizip Perfekt: essen, brechen, braten, backen.", ["essen → <b>gegessen</b> (z dodatkowym g!)", "brechen → gebrochen", "braten → gebraten", "backen → gebacken"]], [2, "Przetłumacz i podaj Partizip: polecać, przyjmować, czuć, posiadać.", ["polecać – empfehlen – hat empfohlen", "przyjmować – empfangen – hat empfangen", "czuć – empfinden – hat empfunden", "posiadać – besitzen – hat besessen"]]];
+document.getElementById("oqList").innerHTML=OQ.map(([n,q,a])=>`<details class="oq" style="--c:${C(n)}"><summary>${q}<br><small style="color:${C(n)};font-weight:700">${n}. ${T[n]}</small></summary><div class="ans"><ul>${a.map(x=>`<li>${x}</li>`).join("")}</ul></div></details>`).join("");
+
+/* ---------- tabela: zasłanianie kolumn ---------- */
+document.querySelectorAll("[data-hide]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("table.czas td").forEach(td=>td.classList.toggle("zakryte",!!b.dataset.hide&&td.classList.contains(b.dataset.hide)));
+}));
+document.querySelector("table.czas").addEventListener("click",e=>{const td=e.target.closest("td.zakryte");if(td)td.classList.remove("zakryte")});
+
+/* ---------- zapis postępów (../postep.js, dane na Raspberry Pi) ---------- */
+var qPowt;
+function fcKey(c){return c[0]+"|"+c[1]}
+function fcCounts(){
+  const all=FC.filter(c=>fcFilter==="all"||c[0]==fcFilter),st=c=>Postep.stan(fcKey(c));
+  return{n:all.length,k:all.filter(c=>st(c)===1).length,z:all.filter(c=>st(c)===0).length};
+}
+function fcStatDraw(){
+  const e=document.getElementById("fcStat");if(!e||typeof FC==="undefined")return;
+  const c=fcCounts(),pct=c.n?Math.round(c.k/c.n*100):0;
+  e.innerHTML=`<div class="fcm-top"><b>Zapamiętane na stałe</b><span>${pct}%</span></div><div class="fcm-bar"><i style="width:${pct}%"></i></div>`+
+    `<div class="fcm-row"><span>✅ umiesz <b>${c.k}</b></span><span>🔁 do powtórki <b>${c.z}</b></span><span>🆕 nowe <b>${c.n-c.k-c.z}</b></span><span>z ${c.n} kart</span></div>`;
+}
+function fcTag(c){const v=Postep.stan(fcKey(c));return v===1?"✅ umiesz":v===0?"🔁 jeszcze nie umiesz":"🆕 nowa"}
+function qLabel(f){return f==="all"?"wszystko":(T[f]?f+". "+T[f]:f)}
+function qHistDraw(){
+  const box=document.getElementById("qHist");if(!box)return;box.innerHTML="";
+  const bl=Postep.bledne().filter(t=>Q.some(q=>q[1]===t));
+  if(bl.length){const b=document.createElement("button");b.className="btn badb";b.textContent=`Powtórz pytania, w których się myliłeś (${bl.length})`;b.onclick=()=>startQuiz(Q.filter(q=>bl.includes(q[1])),true);box.append(b)}
+  const hist=Postep.quizy().slice(-5).reverse();
+  if(hist.length){
+    const h=document.createElement("div");h.className="qh";const t=document.createElement("b");t.textContent="Ostatnie wyniki";h.append(t);
+    hist.forEach(r=>{const d=new Date(r.czas),s=document.createElement("span"),p=r.wszystkie?Math.round(r.dobre/r.wszystkie*100):0;
+      s.textContent=`${p}% (${r.dobre}/${r.wszystkie}) · ${d.getDate()}.${String(d.getMonth()+1).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} · ${qLabel(r.filtr)}`;h.append(s)});
+    box.append(h);
+  }
+}
+(function(){
+  const sk=document.getElementById("fcSkip"),rs=document.getElementById("fcReset");
+  if(sk)sk.addEventListener("change",()=>buildDeck(fcFilter));
+  if(rs)rs.addEventListener("click",()=>{if(confirm("Wyzerować zapamiętane fiszki? Wszystkie karty wrócą do nauki."))Postep.zerujFiszki().then(()=>buildDeck(fcFilter))});
+  Postep.ready.then(()=>{qHistDraw();Postep.ile(typeof FC!=="undefined"?{fiszki:FC.length,quiz:Q.length}:{quiz:Q.length})});
+})();
+
+/* ---------- wznawianie: przerwany quiz i ostatnia zakładka po przeładowaniu ---------- */
+function qLS(){return "nauka:"+document.documentElement.dataset.nauka+":quiz_w_toku"}
+function tabLS(){return "nauka:"+document.documentElement.dataset.nauka+":zakladka"}
+function qSave(ans){try{localStorage.setItem(qLS(),JSON.stringify({qs:qs.map(q=>({n:q.n,t:q.t,o:q.o,a:q.a,e:q.e,i:Q.indexOf(q.src)})),qi,score,wrong:wrong.map(w=>Q.indexOf(w)),qFilter,qPowt:!!qPowt,ans:ans==null?null:ans}))}catch(e){}}
+function qClear(){try{localStorage.removeItem(qLS())}catch(e){}const r=document.getElementById("qResume");if(r)r.remove()}
+function qRestore(){
+  let s=null;try{s=JSON.parse(localStorage.getItem(qLS())||"null")}catch(e){}
+  if(!s||!Array.isArray(s.qs)||!s.qs.length||s.qi>=s.qs.length||(s.qi===0&&s.ans==null))return false;
+  if(s.qs.some(q=>!Q[q.i]||Q[q.i][1]!==q.t)){qClear();return false}
+  qs=s.qs.map(q=>({n:q.n,t:q.t,o:q.o,a:q.a,e:q.e,src:Q[q.i]}));qi=s.qi;score=s.score;wrong=s.wrong.map(i=>Q[i]).filter(Boolean);qFilter=s.qFilter;qPowt=s.qPowt;
+  document.querySelectorAll("#qFilters button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===String(qFilter))));
+  drawQ();if(s.ans!=null)answer(s.ans,true);
+  const r=document.createElement("div");r.id="qResume";r.className="expl";r.style.margin="0 0 12px";
+  r.append(`Wróciłeś do przerwanego quizu: pytanie ${Math.min(qi+1,qs.length)} z ${qs.length}, dobrze ${score}. `);
+  const b=document.createElement("button");b.className="btn";b.textContent="Zacznij od nowa";b.onclick=()=>startQuiz(filtered());r.append(b);
+  document.getElementById("qArea").before(r);
+  return true;
+}
+(function(){
+  let t=null;try{t=JSON.parse(localStorage.getItem(tabLS())||"null")}catch(e){}
+  if(t&&Date.now()-t.czas<3*3600*1000&&document.getElementById(t.id))showTab(t.id);
+})();
+</script>
+<script src="licz-zadania.js"></script>
+</body>
+</html>
