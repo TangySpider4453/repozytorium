@@ -54,3 +54,5 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   zdjęcia = pierwszy, który ma zdjęcia. Safari/iPad: pola daty nie wypychają siatki (`min-width:0`), `app.js?v=3`.
   Portal: JS/CSS stron z `Cache-Control: no-cache` (backup `app.py.bak_2026-10-21_cache`).
   **Przy zmianie `app.js` podbijaj `?v=` w `progres/index.html`.**
+- **2026-10-21 (4)**: Film: czas przejścia w sekundach (0 = cięcie, maks. czas klatki), „Eksportuj film” → „Pobierz plik”
+  i „Udostępnij / Zapisz w Zdjęciach” (Web Share API z plikiem, iOS/iPadOS). Nazwa pliku z zakresem dat. `app.js?v=4`.

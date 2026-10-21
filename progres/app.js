@@ -368,10 +368,11 @@ function filmUstaw(){
   TYPY.forEach(([k, n]) => { const ile = DANE.zdjecia.filter(z => z.typ === k).length; if(!ile && k !== FM.typ) return;
     ch.append(el("button", {"aria-pressed":String(FM.typ === k), text:`${n} (${ile})`, onclick:() => { FM.typ = k; zapiszFM(); filmUstaw(); }})); });
   $("fmOd").value = FM.od; $("fmDo").value = FM.do; $("fmCo").value = FM.co; $("fmSek").value = String(FM.sek).replace(".", ",");
-  $("fmFormat").value = FM.format; $("fmPrzejscie").value = String(FM.przejscie); $("fmNapisy").checked = !!FM.napisy;
+  $("fmFormat").value = FM.format; $("fmPrzejscie").value = String(FM.przejscie).replace(".", ","); $("fmNapisy").checked = !!FM.napisy;
   const [W, H] = formatWH(); const c = $("fmCanvas"); if(c.width !== W || c.height !== H){ c.width = W; c.height = H; }
   const k = klatki(), sek = Math.max(0.1, FM.sek);
-  $("fmInfo").textContent = k.length ? `${k.length} klatek (${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)}), film ok. ${pl(k.length * sek, 1)} s.` : "Brak zdjęć tego rodzaju w wybranym zakresie.";
+  const przej = FM.przejscie > 0 ? `przejście ${pl(Math.min(FM.przejscie, sek), 2)} s` + (FM.przejscie > sek ? " (skrócone do czasu klatki)" : "") : "cięcie bez przejścia";
+  $("fmInfo").textContent = k.length ? `${k.length} klatek (${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)}), film ok. ${pl(k.length * sek, 1)} s, ${przej}.` : "Brak zdjęć tego rodzaju w wybranym zakresie.";
   const kl = $("fmKlatki"); kl.innerHTML = "";
   k.forEach(z => kl.append(el("button", {class:z.pose || z.reczne ? "" : "bez", onclick:() => kadruj(z, filmUstaw)}, el("img", {src:plik(z, true), alt:"", loading:"lazy"}), krotko(z.data).replace(/ \d{4}$/, ""))));
   if(k.length) pokazKlatke(0);
@@ -380,7 +381,7 @@ function zapiszFM(){ post(API + "/ustawienia", {film:FM}).catch(() => {}); DANE.
 ["fmOd", "fmDo", "fmCo", "fmSek", "fmFormat", "fmPrzejscie", "fmNapisy"].forEach(id => $(id).onchange = () => {
   FM.od = $("fmOd").value; FM.do = $("fmDo").value; FM.co = Math.max(1, parseInt($("fmCo").value) || 1);
   const s = num($("fmSek").value); FM.sek = Number.isFinite(s) && s > 0 ? Math.min(s, 10) : 0.5;
-  FM.format = $("fmFormat").value; FM.przejscie = +$("fmPrzejscie").value; FM.napisy = $("fmNapisy").checked;
+  FM.format = $("fmFormat").value; const pz = num($("fmPrzejscie").value); FM.przejscie = Number.isFinite(pz) && pz > 0 ? Math.min(pz, 10) : 0; FM.napisy = $("fmNapisy").checked;
   zapiszFM(); filmUstaw();
 });
 $("fmCaly").onclick = () => { FM.od = ""; FM.do = ""; zapiszFM(); filmUstaw(); };
@@ -403,7 +404,7 @@ async function odtworz(onKoniec){
   const k = klatki(); if(!k.length) return;
   $("fmStatus").textContent = "Wczytuję zdjęcia…";
   const imgs = await Promise.all(k.map(obraz));
-  const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, sek = Math.max(0.1, FM.sek), fade = Math.min(FM.przejscie, sek / 2);
+  const c = $("fmCanvas"), g = c.getContext("2d"), W = c.width, H = c.height, sek = Math.max(0.1, FM.sek), fade = Math.min(FM.przejscie, sek);
   const total = k.length * sek + 0.6; let start = null;
   $("fmStatus").textContent = "";
   return new Promise(res => {
@@ -433,9 +434,16 @@ $("fmNagraj").onclick = async () => {
   await odtworz(); rec.stop(); await gotowe;
   const blob = new Blob(czesci, {type:rec.mimeType || mime || "video/webm"}), ext = (rec.mimeType || mime).includes("mp4") ? "mp4" : "webm";
   const url = URL.createObjectURL(blob), v = $("fmVideo"); v.src = url; v.hidden = false;
-  const nazwa = `progres-${FM.typ}-${(klatki()[0] || {}).data || ""}.${ext}`;
-  $("fmPobierz").innerHTML = ""; $("fmPobierz").append(el("a", {class:"btn primary", href:url, download:nazwa, text:"⬇ Zapisz film (" + (blob.size / 1e6).toFixed(1).replace(".", ",") + " MB)"}));
-  $("fmStatus").textContent = "Gotowe. Na iPhonie/iPadzie możesz też przytrzymać film i wybrać „Zapisz”.";
+  const kl = klatki(), nazwa = `progres-${FM.typ}-${(kl[0] || {}).data || ""}_${(kl[kl.length - 1] || {}).data || ""}.${ext}`;
+  const plikFilmu = new File([blob], nazwa, {type:blob.type}), mb = (blob.size / 1e6).toFixed(1).replace(".", ",");
+  const box = $("fmPobierz"); box.innerHTML = "";
+  // eksport: pobranie pliku albo systemowe „Udostępnij” (na iPhonie/iPadzie: Zapisz wideo w Zdjęciach, AirDrop, komunikatory)
+  const wiersz = el("div", {class:"row", style:"justify-content:center"},
+    el("a", {class:"btn primary", href:url, download:nazwa, text:`⬇ Pobierz plik (${ext.toUpperCase()}, ${mb} MB)`}));
+  if(navigator.canShare && navigator.canShare({files:[plikFilmu]}))
+    wiersz.append(el("button", {class:"btn", text:"📤 Udostępnij / Zapisz w Zdjęciach", onclick:() => navigator.share({files:[plikFilmu], title:"Progres"}).catch(() => {})}));
+  box.append(wiersz);
+  $("fmStatus").textContent = "Gotowe. Film możesz pobrać albo udostępnić. Na iPhonie/iPadzie „Udostępnij” → „Zapisz wideo” zapisze go w Zdjęciach.";
   $("fmNagraj").disabled = $("fmPlay").disabled = false;
 };
 
