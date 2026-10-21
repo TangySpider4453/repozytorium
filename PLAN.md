@@ -13,7 +13,8 @@ sprawdzianu powstaje **jedna strona HTML** z notatką, fiszkami, quizem i pytani
 na jego **Raspberry Pi** i dostępne przez **Tailscale**, żeby mógł powtarzać przed lekcją (telefon i komputer).
 
 Zasady od użytkownika:
-- **Najnowsza notatka ma być na górze listy.**
+- **Na górze listy ma być NAJBLIŻSZY termin** (zmiana 2026-10-21; wcześniej „najnowsza notatka”). Kolejność liczy się sama
+  przy każdym wyświetleniu, także po zmianie daty. Bez daty → na końcu nadchodzących.
 - Po wejściu w kartę widać notatkę i quiz do **tego konkretnego** sprawdzianu lub kartkówki.
 - Materiały przygotowujemy **razem z użytkownikiem**, na podstawie tego, co poda (temat, strony w podręczniku,
   zdjęcia zeszytu lub podręcznika, data).
@@ -168,7 +169,7 @@ Tablica obiektów. Przykład (stan obecny):
 | `przedmiot` | np. „Historia”, „Biologia”. Kolor karty i filtr są liczone z przedmiotu automatycznie |
 | `typ` | `sprawdzian` albo `kartkówka` |
 | `data` | dzień sprawdzianu `RRRR-MM-DD` albo `null` („data jeszcze nieznana”) |
-| `dodano` | data dodania notatki `RRRR-MM-DD`. **Po tym sortuje się lista, najnowsze na górze.** Przy tej samej dacie wyżej jest bliższy sprawdzian |
+| `dodano` | data dodania notatki `RRRR-MM-DD`. Lista sortuje się po `data` (najbliższy na górze); `dodano` rozstrzyga tylko remis i kolejność wpisów bez daty. Daje też etykietę „nowe” przez 3 dni |
 | `zawiera` | krótkie etykiety pod kartą |
 
 Lista sama pokazuje odliczanie (dzisiaj, jutro, za N dni), wyszarza minione sprawdziany, daje etykietę „nowe” przez
@@ -281,3 +282,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-21**: Niemiecki: czasowniki nieregularne 1–23 ze zdjęcia s. 130. `licz.js` obsługuje odpowiedzi tekstowe
   (`rodzaj:"tekst"`), `dodaj_licz.py` bierze nazwę zakładki z generatora. Wgrane po zatwierdzeniu „check”; spis pobrany
   z Pi i tylko uzupełniony (daty użytkownika bez zmian). Backup `*.bak_2026-10-21*`.
+- **2026-10-21 (2)**: Lista „Nadchodzące” sortuje się po dacie (najbliższy termin na górze, bez daty na końcu), liczone
+  przy każdym rysowaniu, więc zmiana daty od razu przestawia kartę. Archiwum: najświeższy termin na górze.
