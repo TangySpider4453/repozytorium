@@ -151,7 +151,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `restart portalu`, `zadzwoń`, `nowa rozmowa`, `zaufane`; akcje (też proponowane przez Claude) potwierdza się
   odpisując „tak” w ciągu 2 min (`CZAT_AKCJA`), „nie” anuluje. Telegram: `pomoc`/`help`/`/pomoc` → pełna lista.
   **Głosówki w Linphone**: przychodzą jako `application/vnd.gsma.rcs-ft-http+xml` (adres pliku na
-  files.linphone.org) → pobranie → whisper → „🎙 tekst”; odpowiedź głosem: Piper → WAV → upload na
+  files.linphone.org; Linphone wysyła `.mka` (Matroska), czasem pusty – wtedy grzeczny komunikat) → pobranie → whisper;
+  odpowiedź głosem: Piper → WAV → `.mka` z Opusem 48 kHz (jak Linphone) → upload na
   `files.linphone.org/http-file-transfer-server/hft.php` (link ważny 7 dni) → wiadomość z XML
   (`voice-recording=yes`, `am:playing-length`).
 - **Głos czy tekst** (`tryb_odpowiedzi` w bocie): prośba o tekst („wypisz / napisz / odpisz / tekstem / w punktach /

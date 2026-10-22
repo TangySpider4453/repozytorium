@@ -9,7 +9,7 @@ rozpoznanie mowy whisper.cpp na Pi -> Claude (ta sama sesja i pamięć co czat, 
 mowa Piper na Pi -> odtworzenie w rozmowie. Wszystkie wywołania pjsua2 tylko w głównym wątku (kolejka AKCJE).
 Czat Linphone (wiadomości SIP MESSAGE, także w kopercie message/cpim): Antek pisze jak w Telegramie; proste komendy
 (stan, sprawdziany, zadania, ścieżka, minecraft, „todo …”) i reszta do Claude (ta sama sesja i pamięć, kanał „linphone”).
-Bot może też wysłać wiadomość na Linphone: plik JSON {"tekst": …} w ~/bot/telefon/czat/.
+Bot może też wysłać wiadomość na Linphone: plik JSON {"tekst": …, "glos": true|false} w ~/bot/telefon/czat/.
 Konfiguracja: /etc/serwerek-bot/sip.env (SIP_UZYTKOWNIK, SIP_HASLO, SIP_DOMENA, SIP_WLASCICIEL), podawana przez systemd.
 Bez konfiguracji usługa czeka i odpowiada na zlecenia wynikiem „brak_konfiguracji”.
 """
@@ -339,22 +339,28 @@ def wyslij_glosowke(tekst):
     """odpowiedź jako głosówka w Linphone: Piper -> WAV -> serwer plików Linphone (link ważny 7 dni) -> wiadomość z plikiem"""
     import uuid
     import urllib.request
+    import subprocess
     wav = Path(tempfile.mkdtemp(prefix="czat-", dir="/tmp")) / "odpowiedz.wav"
     glos.powiedz(tekst[:4000], wav, czestotliwosc=HZ)
     ms = int(czas_wav(wav) * 1000)
+    # Linphone nagrywa i odtwarza głosówki jako Matroska audio (.mka) z Opusem, opisane jako audio/wav;voice-recording=yes
+    mka = wav.with_suffix(".mka")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", "32k", "-ar", "48000", "-ac", "1",
+                    str(mka)], check=True, timeout=60)
     g = uuid.uuid4().hex
-    cialo = (f"--{g}\r\nContent-Disposition: form-data; name=\"File\"; filename=\"glosowka.wav\"\r\n"
-             f"Content-Type: audio/wav\r\n\r\n").encode() + wav.read_bytes() + f"\r\n--{g}--\r\n".encode()
+    cialo = (f"--{g}\r\nContent-Disposition: form-data; name=\"File\"; filename=\"voice-recording-{int(time.time())}.mka\"\r\n"
+             f"Content-Type: audio/wav;voice-recording=yes\r\n\r\n").encode() + mka.read_bytes() + f"\r\n--{g}--\r\n".encode()
     req = urllib.request.Request(FT_SERWER, data=cialo, headers={"Content-Type": f"multipart/form-data; boundary={g}"})
     with urllib.request.urlopen(req, timeout=60) as r:
         xml = r.read().decode("utf-8")
     import shutil
     shutil.rmtree(wav.parent, ignore_errors=True)
     # znaczniki głosówki Linphone: typ z voice-recording=yes i długość nagrania
-    xml = xml.replace("<content-type>audio/wav</content-type>", "<content-type>audio/wav;voice-recording=yes</content-type>")
+    import re
+    xml = re.sub(r"<content-type>[^<]*</content-type>", "<content-type>audio/wav;voice-recording=yes</content-type>", xml)
     xml = xml.replace('<file xmlns="urn:gsma:params:xml:ns:rcs:rcs:fthttp">',
                       '<file xmlns="urn:gsma:params:xml:ns:rcs:rcs:fthttp" xmlns:am="urn:gsma:params:xml:ns:rcs:rcs:rram">')
-    xml = xml.replace("</file-info>", f"<am:playing-length>{ms}</am:playing-length></file-info>", 1)
+    xml = xml.replace("</content-type>", f"</content-type><am:playing-length>{ms}</am:playing-length>", 1)   # kolejność jak w Linphone
     return xml
 
 
@@ -386,11 +392,15 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
         if wejscie == "glos":                   # tekst = adres pliku głosówki
             AKCJE.put((wyslij_czat, ("…", True)))
             plik = pobierz_glosowke(tekst)
-            tekst = glos.rozpoznaj(plik, dokladnie=True)
+            try:
+                tekst = glos.rozpoznaj(plik, dokladnie=True)
+            except Exception as ex:             # pusty albo uszkodzony plik (Linphone czasem wysyła sam nagłówek)
+                log(f"głosówka nieczytelna: {type(ex).__name__}")
+                tekst = ""
             import shutil
             shutil.rmtree(plik.parent, ignore_errors=True)
             if not tekst:
-                AKCJE.put((wyslij_czat, ("🎙 Nic nie usłyszałem, spróbuj jeszcze raz.",)))
+                AKCJE.put((wyslij_czat, ("🎙 Ta głosówka dotarła pusta albo nic nie słychać. Nagraj jeszcze raz albo napisz.",)))
                 return
         t = tekst.strip()
         sl = t.lower().split()
@@ -597,12 +607,16 @@ def main():
                 rozlacz(p)
         for p in sorted(CZAT.glob("*.json")):             # wiadomości od bota na Linphone
             try:
-                tekst = json.loads(p.read_text(encoding="utf-8")).get("tekst", "")
+                zl = json.loads(p.read_text(encoding="utf-8"))
             except (OSError, ValueError):
-                tekst = ""
+                zl = {}
             p.unlink(missing_ok=True)
-            if tekst and WLASCICIEL and konto.zarejestrowane:
-                wyslij_czat(tekst)
+            if zl.get("tekst") and WLASCICIEL and konto.zarejestrowane:
+                if zl.get("glos"):          # głosówka: synteza i wysyłka w wątku, potem wiadomość z plikiem w głównym
+                    threading.Thread(target=lambda t=zl["tekst"]: AKCJE.put((wyslij_czat, (wyslij_glosowke(t), False, FT_TYP))),
+                                     daemon=True).start()
+                else:
+                    wyslij_czat(zl["tekst"])
         if not AKTYWNE:
             for p in sorted(KOLEJKA.glob("*.json")):
                 try:

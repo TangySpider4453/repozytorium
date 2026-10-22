@@ -360,3 +360,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   w Telegramie, z potwierdzeniem „tak”.
 - **2026-10-22 (poprawki czatu)**: „Napisz” zawsze daje tekst; w Linphone odpowiedzi tekstem (głosówka tylko na prośbę);
   bez echa rozpoznanego tekstu; Claude może listować usługi i czytać /proc/meminfo (pojedyncze polecenia, bez potoków).
+- **2026-10-22 (głosówki Linphone)**: Błąd przy pustej głosówce z Linphone (sam nagłówek .mka) obsłużony komunikatem;
+  głosówki od Pi w formacie Linphone (.mka/Opus); wysłana głosówka testowa do sprawdzenia na iPhonie.
