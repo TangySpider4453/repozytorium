@@ -336,3 +336,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   powiadomień; przycisk „To moje urządzenie” i komenda `zaufane` w bocie.
 - **2026-10-22 (zadania)**: Zadania z przypomnieniami: strona `/strony/todo/` (📝 w menu), API `/api/todo`, bot dodaje
   z polskiego tekstu („todo jutro 17:00 trening”), wysyła przypomnienia z przyciskami zrobione/odłóż. Repo `todo/`.
+- **2026-10-22 (głos)**: Wspólna pamięć rozmów bota (SQLite), wiadomości głosowe (whisper + Piper na Pi), usługa
+  telefonu SIP przez Linphone (czeka na konta Linphone), dzwonienie przy 🔴 bez reakcji i przy zadaniach „zadzwoń”.

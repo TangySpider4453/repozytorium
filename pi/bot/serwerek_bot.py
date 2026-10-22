@@ -20,6 +20,7 @@ Tokeny tylko w /etc/serwerek-bot/*.env (root, 600), podawane przez systemd (serw
 """
 import html
 import json
+import re
 import os
 import random
 import subprocess
@@ -30,6 +31,8 @@ import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
+
+import pamiec
 
 KATALOG = Path(__file__).resolve().parent
 STAN = KATALOG / "stan.json"
@@ -55,7 +58,8 @@ AKCJE = {   # nazwa: (opis dla przycisku, polecenie)
     "restart_minecrafta": ("Zrestartować serwer Minecraft (rozłączy graczy)", None),
     "przejrzane": ("Oznaczyć wszystkie problemy jako przejrzane", None),
 }
-KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "📝 Zadania"], ["💾 Kopia", "✅ Przejrzane", "🔄 Restart"], ["🧭 Ścieżka", "🆕 Nowa rozmowa"]],
+KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "📝 Zadania"], ["💾 Kopia", "✅ Przejrzane", "🔄 Restart"],
+                           ["🧭 Ścieżka", "📞 Zadzwoń", "🆕 Nowa rozmowa"]],
               "resize_keyboard": True, "is_persistent": True}
 
 LOCK = threading.RLock()
@@ -95,7 +99,8 @@ def tg(metoda, timeout=70, **dane):
     return None
 
 
-def wyslij(tekst, html_=False, przyciski=None, chat=None):
+def wyslij(tekst, html_=False, przyciski=None, chat=None, kto="bot"):
+    """wiadomosc do wlasciciela; kazda trafia do wspolnej pamieci (kto: bot = sam z siebie, claude = odpowiedz)"""
     chat = chat or stan()["wlasciciel"]
     if not chat:
         return
@@ -112,6 +117,11 @@ def wyslij(tekst, html_=False, przyciski=None, chat=None):
             dane.pop("parse_mode")
             wynik = tg("sendMessage", **dane)
         print(("wysłano: " if wynik else "NIE wysłano: ") + c[:80].replace("\n", " "), flush=True)
+        if wynik:
+            try:
+                pamiec.zapisz(kto, "telegram", html.unescape(re.sub(r"<[^>]+>", "", c)) if html_ else c, wynik.get("message_id"))
+            except Exception as ex:
+                print(f"pamiec: {ex}", flush=True)
 
 
 def portal(sciezka, dane=None):
@@ -243,35 +253,47 @@ def kontekst_sesji(sid):
     return 0
 
 
-def claude(tekst):
+TELEFON_PODPOWIEDZ = ("[To rozmowa TELEFONICZNA: Twoja odpowiedź zostanie przeczytana na głos. Mów krótko (1–3 zdania), "
+                      "naturalnie, bez emotek, list, Markdown i adresów. Gdy coś sprawdzasz, zrób to szybko.]")
+
+
+def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True):
+    """jedna wiadomosc do Claude (wspolna sesja dla czatu, glosowek i telefonu) -> (odpowiedz, akcje) albo wyjatek RuntimeError"""
     with LOCK:
         s = stan()
         ses = s["sesja"]
         if ses.get("id") and time.time() - ses.get("ostatnio", 0) > KONTEKST_CISZA:
-            nowa_sesja(s, "godzina bez wiadomości")
+            nowa_sesja(s, "godzina bez wiadomości" if kanal != "telefon" else None)
             ses = s["sesja"]
         if ses.get("id") and ses.get("kontekst", 0) >= KONTEKST_MAX:
-            nowa_sesja(s, f"kontekst przekroczył {KONTEKST_MAX // 1000} tys. tokenów")
+            nowa_sesja(s, f"kontekst przekroczył {KONTEKST_MAX // 1000} tys. tokenów" if kanal != "telefon" else None)
             ses = s["sesja"]
-    cmd = [str(CLAUDE), "-p", tekst, "--output-format", "json", "--permission-mode", "dontAsk",
-           "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"),
-           "--allowedTools", *json.loads((KATALOG / "uprawnienia.json").read_text())["allow"],
-           "--disallowedTools", *json.loads((KATALOG / "uprawnienia.json").read_text())["deny"]]
+    pam = pamiec.kontekst(nowa_sesja=not ses.get("id"), odpowiedz_na=odpowiedz_na)
+    if kanal not in ("telegram", "glosowka_zapisana"):      # czat i glosowki zapisuje juz obsluz()/glosowka()
+        pamiec.zapisz("antek", kanal, tekst)
+    prompt = (pam + "\n\nNowa wiadomość od Antka" + {"telefon": " (mówi przez telefon)", "glosowka_zapisana": " (wiadomość głosowa)"}.get(kanal, "")
+              + ":\n" + tekst) if pam else tekst
+    if kanal == "telefon":
+        prompt = TELEFON_PODPOWIEDZ + "\n\n" + prompt
+    u = json.loads((KATALOG / "uprawnienia.json").read_text())
+    cmd = [str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
+           "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"]]
     if ses.get("id"):
         cmd += ["--resume", ses["id"]]
-    env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY")}
+    env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")}
     stop = threading.Event()
 
-    def pisze():
+    def pisze_():
         while not stop.is_set():
             tg("sendChatAction", timeout=10, chat_id=stan()["wlasciciel"], action="typing")
             stop.wait(5)
-    threading.Thread(target=pisze, daemon=True).start()
+    if pisze:
+        threading.Thread(target=pisze_, daemon=True).start()
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, cwd="/home/tonyg", env=env)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=600 if kanal == "telefon" else 1800, cwd="/home/tonyg", env=env)
         d = json.loads(r.stdout or "{}")
     except subprocess.TimeoutExpired:
-        d = {"is_error": True, "result": "Przekroczony czas (30 min)."}
+        d = {"is_error": True, "result": "Przekroczony czas."}
     except ValueError:
         d = {"is_error": True, "result": (r.stderr or r.stdout or "brak odpowiedzi")[-500:]}
     finally:
@@ -281,8 +303,7 @@ def claude(tekst):
         if ses.get("id"):           # np. sesja wygasla po stronie Claude: zacznij od nowa przy nastepnej wiadomosci
             with LOCK:
                 nowa_sesja(stan())
-        wyslij("⚠️ Claude: " + (odp or "błąd") + "\nSpróbuj jeszcze raz.")
-        return
+        raise RuntimeError(odp or "błąd")
     kontekst = kontekst_sesji(d["session_id"])
     with LOCK:
         s = stan()
@@ -291,7 +312,18 @@ def claude(tekst):
     akcje = [a for a in AKCJE if f"[[AKCJA: {a}]]" in odp]
     for a in AKCJE:
         odp = odp.replace(f"[[AKCJA: {a}]]", "")
-    wyslij(odp)
+    return odp.strip(), akcje
+
+
+def claude(tekst, kanal="telegram", odpowiedz_na=None, glosem=False):
+    try:
+        odp, akcje = claude_odpowiedz(tekst, kanal, odpowiedz_na)
+    except RuntimeError as ex:
+        wyslij(f"⚠️ Claude: {ex}\nSpróbuj jeszcze raz.")
+        return
+    wyslij(odp, kto="claude")
+    if glosem:
+        wyslij_glos(odp)
     for a in akcje:
         zapytaj(a, " (proponuje Claude)")
 
@@ -317,8 +349,14 @@ def powiadomienia():
         for i in wszystkie:
             k, poziom = "inc:" + i["id"], i.get("teraz", i["poziom"]) if not i.get("do") else i["poziom"]
             if not i.get("do") and poziom == "crit" and w.get(k) != "crit":
-                wyslij(f"🔴 <b>{e(i['tytul'])}</b>\n{e(i['opis'])}\n\n{LINK_DOM}/strony/zdrowie/", html_=True)
+                wyslij(f"🔴 <b>{e(i['tytul'])}</b>\n{e(i['opis'])}\n\n{LINK_DOM}/strony/zdrowie/", html_=True,
+                       przyciski={"inline_keyboard": [[{"text": "👀 Widzę (nie dzwoń)", "callback_data": f"widze:{i['id']}"}]]})
                 w[k] = "crit"
+                w["dzwon:" + i["id"]] = time.time()
+            elif not i.get("do") and poziom == "crit" and isinstance(w.get("dzwon:" + i["id"]), float) \
+                    and time.time() - w["dzwon:" + i["id"]] > 600:
+                zadzwon(f"Uwaga, problem na serwerze: {i['tytul']}. {i['opis']}", "czerwony alarm bez reakcji przez 10 minut")
+                w["dzwon:" + i["id"]] = "zadzwoniono"
             elif i.get("do") and w.get(k) == "crit":
                 wyslij(f"✅ Minęło: <b>{e(i['tytul'])}</b> (od {i['od'][11:16]} do {i['do'][11:16]})", html_=True)
                 w[k] = "koniec"
@@ -331,7 +369,7 @@ def powiadomienia():
             for i in zolte:
                 w["inc:" + i["id"]] = "warn"
         aktualne = {"inc:" + i["id"] for i in wszystkie}
-        for k in [k for k in w if k.startswith("inc:") and k not in aktualne]:
+        for k in [k for k in w if (k.startswith("inc:") and k not in aktualne) or (k.startswith("dzwon:") and "inc:" + k[6:] not in aktualne)]:
             del w[k]
     dzis, us = date.today(), s["ustawienia"]
     for x in sprawdziany():
@@ -792,13 +830,16 @@ def kiedy_tekst(termin):
 
 
 def dodaj_zadanie(tekst):
+    dzwon = bool(re.search(r"\b(zadzwoń|zadzwon|dzwoń|dzwon)\b", tekst, re.I))
+    tekst = re.sub(r"\s*\b(i\s+)?(zadzwoń|zadzwon|dzwoń|dzwon)\b", "", tekst, flags=re.I)
     opis, termin, powt = parsuj_zadanie(tekst)
     if not opis:
         wyslij("Napisz, co dodać, np. „todo jutro 17:00 trening” albo „przypomnij za 20 min pranie”.")
         return
-    z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt})
+    z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon and bool(termin)})
     powt_t = {"dzien": " · 🔁 codziennie", "tydzien": " · 🔁 co tydzień", "miesiac": " · 🔁 co miesiąc"}.get(powt, "")
-    wyslij(f"📝 Dodane: <b>{e(opis)}</b>\n⏰ {kiedy_tekst(termin) if termin else 'bez terminu (bez przypomnienia)'}{powt_t}", html_=True,
+    wyslij(f"📝 Dodane: <b>{e(opis)}</b>\n⏰ {kiedy_tekst(termin) if termin else 'bez terminu (bez przypomnienia)'}{powt_t}"
+           + (" · 📞 zadzwonię" if dzwon and termin else ""), html_=True,
            przyciski={"inline_keyboard": [[{"text": "🗑 Cofnij", "callback_data": f"todo_usun:{z['id']}"}]]})
 
 
@@ -825,6 +866,8 @@ def przypomnienia():
     for z in portal("/api/todo")["zadania"]:
         if z.get("zrobione") or not z.get("termin") or z.get("wyslano") or z["termin"] > teraz:
             continue
+        if z.get("dzwon"):
+            zadzwon(f"Przypomnienie: {z['tekst']}", "przypomnienie z telefonem")
         powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
         wyslij(f"⏰ <b>{e(z['tekst'])}</b>\n{kiedy_tekst(z['termin'])}{powt}", html_=True, przyciski={"inline_keyboard": [
             [{"text": "✅ Zrobione", "callback_data": f"todo_ok:{z['id']}"}],
@@ -864,6 +907,112 @@ def callback_zadania(dane):
     return "?"
 
 
+# ---------------------------------------------------------------- glos (wiadomosci glosowe) i telefon
+import sys
+sys.path.insert(0, "/home/tonyg/glos")
+TELEFON = KATALOG / "telefon"           # kolejka polaczen dla uslugi serwerek-telefon (telefon.py)
+
+
+def glos():
+    try:
+        import glos as g
+    except ImportError:
+        return None
+    return g if g.gotowe() else None
+
+
+def tg_plik(metoda, pole, sciezka, **dane):
+    """wysylka pliku (multipart/form-data), np. sendVoice"""
+    import uuid
+    granica = uuid.uuid4().hex
+    czesci = []
+    for k, v in dane.items():
+        czesci.append(f"--{granica}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v if isinstance(v, str) else json.dumps(v)}\r\n".encode())
+    czesci.append(f"--{granica}\r\nContent-Disposition: form-data; name=\"{pole}\"; filename=\"{Path(sciezka).name}\"\r\n"
+                  f"Content-Type: application/octet-stream\r\n\r\n".encode() + Path(sciezka).read_bytes() + b"\r\n")
+    czesci.append(f"--{granica}--\r\n".encode())
+    req = urllib.request.Request(API + metoda, data=b"".join(czesci), headers={"Content-Type": f"multipart/form-data; boundary={granica}"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.loads(r.read()).get("result")
+    except (urllib.error.URLError, OSError, ValueError) as ex:
+        print(f"Telegram {metoda}: {ex}", flush=True)
+        return None
+
+
+def wyslij_glos(tekst):
+    """odpowiedz Claude takze jako wiadomosc glosowa (Piper na Pi)"""
+    g = glos()
+    if not g or not tekst.strip():
+        return
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            wav, ogg = Path(tmp) / "odp.wav", Path(tmp) / "odp.ogg"
+            g.powiedz(tekst[:3000], wav)
+            g.do_ogg(wav, ogg)
+            tg("sendChatAction", timeout=10, chat_id=stan()["wlasciciel"], action="record_voice")
+            tg_plik("sendVoice", "voice", ogg, chat_id=str(stan()["wlasciciel"]))
+        except (OSError, subprocess.SubprocessError) as ex:
+            print(f"glos: {ex}", flush=True)
+
+
+def glosowka(m):
+    """wiadomosc glosowa od wlasciciela: rozpoznanie na Pi (whisper) -> Claude -> odpowiedz tekstem i glosem"""
+    g = glos()
+    if not g:
+        wyslij("🎙 Rozpoznawanie mowy jeszcze się instaluje na Pi. Napisz tekstem albo spróbuj za chwilę.")
+        return
+    v = m.get("voice") or m.get("audio")
+    plik = pobierz_plik(v["file_id"], "glos.ogg")
+    if not plik:
+        wyslij("⚠️ Nie udało się pobrać wiadomości głosowej.")
+        return
+    tg("sendChatAction", timeout=10, chat_id=stan()["wlasciciel"], action="typing")
+    try:
+        tekst = g.rozpoznaj(plik)
+    except (OSError, subprocess.SubprocessError) as ex:
+        wyslij(f"⚠️ Nie udało się rozpoznać mowy: {ex}")
+        return
+    if not tekst:
+        wyslij("🎙 Nic nie usłyszałem. Spróbuj jeszcze raz.")
+        return
+    wyslij(f"🎙 „{tekst}”")
+    pamiec.zapisz("antek", "glosowka", tekst, m.get("message_id"))
+    KOLEJKA.append({"tekst": tekst, "kanal": "glosowka_zapisana", "glosem": True})
+    KOLEJKA_BUDZIK.set()
+
+
+def zadzwon(tekst, powod="prośba"):
+    """zlecenie polaczenia do wlasciciela dla uslugi serwerek-telefon (Linphone); wynik wraca przez petla_telefonu"""
+    (TELEFON / "kolejka").mkdir(parents=True, exist_ok=True)
+    nazwa = f"{time.time():.3f}.json"
+    (TELEFON / "kolejka" / (nazwa + ".tmp")).write_text(json.dumps({"tekst": tekst, "powod": powod}, ensure_ascii=False), encoding="utf-8")
+    os.replace(TELEFON / "kolejka" / (nazwa + ".tmp"), TELEFON / "kolejka" / nazwa)
+
+
+def petla_telefonu():
+    """wyniki polaczen i rozmow z uslugi telefonu -> wiadomosci w Telegramie"""
+    while True:
+        time.sleep(3)
+        try:
+            for p in sorted((TELEFON / "wyniki").glob("*.json")):
+                w = json.loads(p.read_text(encoding="utf-8"))
+                p.unlink()
+                if w.get("stan") == "brak_konfiguracji":
+                    wyslij(f"📞 Chciałem zadzwonić ({w.get('powod')}), ale telefon nie jest jeszcze skonfigurowany (konto Linphone).\n{w.get('tekst', '')}")
+                elif w.get("stan") == "nieodebrane":
+                    wyslij(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}")
+                elif w.get("stan") == "rozmowa":
+                    wyslij(f"📞 Rozmowa ({w.get('kierunek')}, {w.get('czas')}):\n{w.get('zapis', '')}"[:3900])
+                elif w.get("stan") == "obcy":
+                    wyslij(f"📞 Ktoś obcy próbował zadzwonić do Pi: {w.get('od')}. Odrzuciłem.")
+                elif w.get("stan") == "blad":
+                    wyslij(f"📞 Nie udało się zadzwonić: {w.get('opis')}")
+        except Exception as ex:
+            print(f"telefon: {type(ex).__name__}: {ex}", flush=True)
+
+
 # ---------------------------------------------------------------- odbieranie wiadomosci
 KOLEJKA = []
 KOLEJKA_BUDZIK = threading.Event()
@@ -874,9 +1023,9 @@ def petla_claude():
         KOLEJKA_BUDZIK.wait()
         KOLEJKA_BUDZIK.clear()
         while KOLEJKA:
-            tekst = KOLEJKA.pop(0)
+            z = KOLEJKA.pop(0)
             try:
-                claude(tekst)
+                claude(z["tekst"], z.get("kanal", "telegram"), z.get("odpowiedz_na"), z.get("glosem", False))
             except Exception as ex:
                 wyslij(f"⚠️ Błąd: {type(ex).__name__}: {ex}")
 
@@ -900,11 +1049,11 @@ def pobierz_plik(file_id, nazwa):
     return cel
 
 
-def do_claude(pliki, podpis):
+def do_claude(pliki, podpis, kanal="telegram", odpowiedz_na=None, glosem=False):
     tekst = podpis or "Przysłałem materiały."
     if pliki:
         tekst += "\n\n[Załączone pliki (otwórz narzędziem Read): " + ", ".join(str(p) for p in pliki) + "]"
-    KOLEJKA.append(tekst)
+    KOLEJKA.append({"tekst": tekst, "kanal": kanal, "odpowiedz_na": odpowiedz_na, "glosem": glosem})
     KOLEJKA_BUDZIK.set()
     if len(KOLEJKA) > 1:
         wyslij("⏳ Claude jeszcze pracuje nad poprzednią wiadomością, ta poczeka w kolejce.")
@@ -941,6 +1090,13 @@ def obsluz(u):
             return
         tg("editMessageReplyMarkup", chat_id=s["wlasciciel"], message_id=q["message"]["message_id"], reply_markup={"inline_keyboard": []})
         dane = q.get("data", "")
+        if dane.startswith("widze:"):
+            with LOCK:
+                s2 = stan()
+                s2["wyslane"]["dzwon:" + dane[6:]] = "widze"
+                zapisz(s2)
+            wyslij("👀 OK, nie będę dzwonić w tej sprawie.")
+            return
         if dane.startswith("todo_"):
             try:
                 wyslij(callback_zadania(dane))
@@ -971,6 +1127,9 @@ def obsluz(u):
         return
     m = u.get("message") or {}
     chat, tekst = (m.get("chat") or {}).get("id"), (m.get("text") or "").strip()
+    if chat and chat == s["wlasciciel"] and (m.get("voice") or m.get("audio")):
+        threading.Thread(target=glosowka, args=(m,), daemon=True).start()
+        return
     if chat and chat == s["wlasciciel"] and (m.get("photo") or m.get("document")):
         plik = plik_z_wiadomosci(m)
         if plik is None:
@@ -1001,7 +1160,12 @@ def obsluz(u):
         return
     if chat != s["wlasciciel"]:
         return
-    if tekst in ("📊 Stan", "/stan"):
+    pamiec.zapisz("antek", "telegram", tekst, m.get("message_id"))
+    odp_na = pamiec.po_tg_id(m["reply_to_message"]["message_id"]) if m.get("reply_to_message") else None
+    if tekst in ("📞 Zadzwoń", "/zadzwon") or tekst.lower() in ("zadzwoń", "zadzwon", "zadzwoń do mnie", "zadzwon do mnie"):
+        zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś. W czym mogę pomóc?", "na Twoją prośbę")
+        wyslij("📞 Dzwonię przez Linphone…")
+    elif tekst in ("📊 Stan", "/stan"):
         wyslij(tekst_stanu(), html_=True)
     elif tekst.split()[0].lower() in ("🧭", "ścieżka", "sciezka", "/sciezka"):
         slowa = tekst.split()
@@ -1038,7 +1202,7 @@ def obsluz(u):
     elif tekst in ("/start", "/pomoc"):
         wyslij("Przyciski na dole. Każdą inną wiadomość przekazuję do Claude na Pi.")
     else:
-        do_claude([], tekst)
+        do_claude([], tekst, odpowiedz_na=odp_na)
 
 
 def main():
@@ -1048,7 +1212,7 @@ def main():
         s = stan()
         zapisz(s)
     tg("setMyCommands", commands=[{"command": c, "description": d} for c, d in (
-        ("zadania", "Lista zadań (dodawanie: todo jutro 17:00 trening)"), ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
+        ("zadania", "Lista zadań (dodawanie: todo jutro 17:00 trening)"), ("zadzwon", "Pi zadzwoni do Ciebie (Linphone)"), ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
         ("przejrzane", "Zgaś żółtą diodę"), ("restart", "Restart portalu lub Minecrafta"), ("nowa", "Nowa rozmowa z Claude"))])
     threading.Thread(target=petla_powiadomien, daemon=True).start()
     threading.Thread(target=petla_claude, daemon=True).start()
@@ -1056,6 +1220,7 @@ def main():
     threading.Thread(target=petla_dziennika, daemon=True).start()
     threading.Thread(target=petla_wizyt, daemon=True).start()
     threading.Thread(target=petla_przypomnien, daemon=True).start()
+    threading.Thread(target=petla_telefonu, daemon=True).start()
     offset = None
     while True:
         wyn = tg_updates(offset)

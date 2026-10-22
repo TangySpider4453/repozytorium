@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+"""
+Telefon serwerka (usługa serwerek-telefon): rozmowy głosowe z właścicielem przez Linphone (SIP, sip.linphone.org).
+  - Antek dzwoni do Pi (adres SIP konta Pi) -> Pi odbiera, słucha, odpowiada głosem.
+  - Pi dzwoni do Antka: zlecenia z ~/bot/telefon/kolejka/*.json (bot: przycisk 📞, czerwony alarm bez reakcji,
+    przypomnienie z telefonem); wynik do ~/bot/telefon/wyniki/*.json (bot pisze o nim w Telegramie).
+Rozmowa: nagrywanie rozmowy do pliku (AudioMediaRecorder), wykrywanie końca wypowiedzi po energii dźwięku (VAD),
+rozpoznanie mowy whisper.cpp na Pi -> Claude (ta sama sesja i pamięć co czat, bot serwerek_bot.claude_odpowiedz) ->
+mowa Piper na Pi -> odtworzenie w rozmowie. Wszystkie wywołania pjsua2 tylko w głównym wątku (kolejka AKCJE).
+Konfiguracja: /etc/serwerek-bot/sip.env (SIP_UZYTKOWNIK, SIP_HASLO, SIP_DOMENA, SIP_WLASCICIEL), podawana przez systemd.
+Bez konfiguracji usługa czeka i odpowiada na zlecenia wynikiem „brak_konfiguracji”.
+"""
+import json
+import os
+import queue
+import sys
+import tempfile
+import threading
+import time
+import wave
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "/home/tonyg/bot")
+sys.path.insert(0, "/home/tonyg/glos")
+import glos                     # noqa: E402
+import pamiec                   # noqa: E402
+
+KAT = Path("/home/tonyg/bot/telefon")
+KOLEJKA, WYNIKI = KAT / "kolejka", KAT / "wyniki"
+UZYT, HASLO = os.environ.get("SIP_UZYTKOWNIK", ""), os.environ.get("SIP_HASLO", "")
+DOMENA = os.environ.get("SIP_DOMENA", "sip.linphone.org")
+WLASCICIEL = os.environ.get("SIP_WLASCICIEL", "")       # np. sip:antek@sip.linphone.org
+HZ = 16000
+RAMKA = HZ * 2 // 50                                    # 20 ms, 16 bit mono
+CZAS_DZWONIENIA = 45                                    # s: potem „nie odebrał”
+MAX_ROZMOWA = 20 * 60
+CISZA_KONIEC = 90                                       # s ciszy: rozłącz
+POZEGNANIA = ("do widzenia", "rozłącz", "rozlacz", "koniec rozmowy", "na razie", "pa pa", "cześć to wszystko")
+
+AKCJE = queue.Queue()        # (funkcja, argumenty) do wykonania w głównym wątku pjsua2
+
+
+def log(t):
+    print(time.strftime("%H:%M:%S ") + t, flush=True)
+
+
+def wynik(**dane):
+    WYNIKI.mkdir(parents=True, exist_ok=True)
+    p = WYNIKI / f"{time.time():.3f}.json"
+    p.with_suffix(".tmp").write_text(json.dumps(dane, ensure_ascii=False), encoding="utf-8")
+    os.replace(p.with_suffix(".tmp"), p)
+
+
+def czas_wav(p):
+    with wave.open(str(p)) as w:
+        return w.getnframes() / w.getframerate()
+
+
+# ---------------------------------------------------------------- wykrywanie wypowiedzi (energia dźwięku)
+class Sluchacz:
+    """czyta rosnący plik nagrania rozmowy i oddaje kolejne wypowiedzi (bytes PCM 16 kHz)"""
+
+    def __init__(self, plik):
+        self.plik, self.poz, self.tlo = Path(plik), 44, 300.0
+
+    def pomin_do_konca(self):
+        try:
+            self.poz = max(44, self.plik.stat().st_size // 2 * 2)
+        except OSError:
+            pass
+
+    def czytaj(self):
+        try:
+            with open(self.plik, "rb") as f:
+                f.seek(self.poz)
+                d = f.read()
+        except OSError:
+            return b""
+        d = d[:len(d) // RAMKA * RAMKA]
+        self.poz += len(d)
+        return d
+
+    def wypowiedz(self, koniec_rozmowy, limit_ciszy):
+        """czeka na wypowiedź: start po 3 głośnych ramkach, koniec po 0,9 s ciszy; None = cisza za długo / koniec"""
+        mowa, cisza, glosne, start = bytearray(), 0, 0, time.time()
+        while not koniec_rozmowy.is_set():
+            d = self.czytaj()
+            if not d:
+                time.sleep(0.1)
+                if not mowa and time.time() - start > limit_ciszy:
+                    return None
+                continue
+            for i in range(0, len(d), RAMKA):
+                r = np.frombuffer(d[i:i + RAMKA], dtype=np.int16).astype(np.float32)
+                rms = float(np.sqrt(np.mean(r * r))) if len(r) else 0.0
+                prog = max(500.0, self.tlo * 3)
+                if not mowa:
+                    self.tlo = 0.97 * self.tlo + 0.03 * rms if rms < prog else self.tlo
+                    glosne = glosne + 1 if rms > prog else 0
+                    if glosne >= 3:
+                        mowa.extend(d[max(0, i - 10 * RAMKA):i + RAMKA])
+                    continue
+                mowa.extend(d[i:i + RAMKA])
+                cisza = cisza + 1 if rms < prog * 0.7 else 0
+                if cisza >= 45 or len(mowa) > HZ * 2 * 30:          # 0,9 s ciszy albo 30 s mówienia
+                    return bytes(mowa) if len(mowa) > HZ * 2 * 0.4 else self.wypowiedz(koniec_rozmowy, limit_ciszy)
+        return None
+
+
+# ---------------------------------------------------------------- rozmowa (wątek roboczy)
+class Rozmowa:
+    def __init__(self, polaczenie, kierunek, powitanie, zlecenie=None):
+        self.p, self.kierunek, self.powitanie, self.zlecenie = polaczenie, kierunek, powitanie, zlecenie or {}
+        self.koniec = threading.Event()
+        self.start = time.time()
+        self.zapis = []
+        self.tmp = Path(tempfile.mkdtemp(prefix="rozmowa-", dir="/tmp"))
+        self.nagranie = self.tmp / "rozmowa.wav"
+
+    def mow(self, tekst):
+        """synteza (Piper) i odtworzenie w rozmowie; czeka do końca wypowiedzi"""
+        self.zapis.append(f"Pi: {tekst}")
+        wav = self.tmp / f"mowa-{time.time():.3f}.wav"
+        try:
+            glos.powiedz(tekst, wav, czestotliwosc=HZ)
+        except Exception as ex:
+            log(f"Piper: {ex}")
+            return
+        gotowe = threading.Event()
+        AKCJE.put((graj, (self.p, wav, gotowe)))
+        gotowe.wait(10)
+        self.koniec.wait(czas_wav(wav) + 0.3)
+
+    def praca(self):
+        try:
+            import serwerek_bot as bot
+            s = Sluchacz(self.nagranie)
+            self.mow(self.powitanie)
+            s.pomin_do_konca()
+            while not self.koniec.is_set() and time.time() - self.start < MAX_ROZMOWA:
+                pcm = s.wypowiedz(self.koniec, CISZA_KONIEC)
+                if self.koniec.is_set():
+                    break
+                if pcm is None:
+                    self.mow("Nic nie słyszę, więc się rozłączam. Napisz albo zadzwoń, gdy będziesz potrzebować.")
+                    break
+                wav = self.tmp / "wypowiedz.wav"
+                with wave.open(str(wav), "wb") as w:
+                    w.setnchannels(1)
+                    w.setsampwidth(2)
+                    w.setframerate(HZ)
+                    w.writeframes(pcm)
+                AKCJE.put((graj, (self.p, CHWILA, threading.Event())))         # „mhm”, żeby było wiadomo, że słucha
+                tekst = glos.rozpoznaj(wav, dokladnie=False, limit=60)
+                if not tekst:
+                    s.pomin_do_konca()
+                    continue
+                self.zapis.append(f"Ty: {tekst}")
+                log(f"Antek: {tekst}")
+                if any(x in tekst.lower() for x in POZEGNANIA):
+                    pamiec.zapisz("antek", "telefon", tekst)
+                    self.mow("Na razie, trzymaj się!")
+                    break
+                try:
+                    odp, akcje = bot.claude_odpowiedz(tekst, "telefon", pisze=False)
+                except Exception as ex:
+                    odp, akcje = f"Coś poszło nie tak po mojej stronie: {ex}. Spróbuj powtórzyć.", []
+                pamiec.zapisz("claude", "telefon", odp)
+                for a in akcje:
+                    bot.zapytaj(a, " (proponuje Claude podczas rozmowy)")
+                if akcje:
+                    odp += " Wysłałem Ci też przycisk do potwierdzenia w Telegramie."
+                self.mow(odp)
+                s.pomin_do_konca()
+        except Exception as ex:
+            log(f"rozmowa: {type(ex).__name__}: {ex}")
+        finally:
+            AKCJE.put((rozlacz, (self.p,)))
+
+    def zakonczona(self):
+        self.koniec.set()
+        trwala = int(time.time() - self.start)
+        if self.zapis:
+            wynik(stan="rozmowa", kierunek=self.kierunek, czas=f"{trwala // 60} min {trwala % 60} s", zapis="\n".join(self.zapis))
+        import shutil
+        threading.Timer(30, shutil.rmtree, args=(self.tmp, True)).start()
+
+
+# ---------------------------------------------------------------- pjsua2 (tylko w głównym wątku)
+import pjsua2 as pj         # noqa: E402
+
+AKTYWNE = {}                # id połączenia -> obiekt Polaczenie (trzymamy referencje, inaczej Python je usunie)
+GRACZE = []                 # odtwarzacze (też muszą żyć do końca odtwarzania)
+
+
+class Polaczenie(pj.Call):
+    def __init__(self, konto, call_id=pj.PJSUA_INVALID_ID, kierunek="do Pi", powitanie="", zlecenie=None):
+        super().__init__(konto, call_id)
+        self.rozmowa = Rozmowa(self, kierunek, powitanie, zlecenie)
+        self.media = None
+        self.rec = None
+        self.utworzone = time.time()
+        self.odebrane = False
+
+    def onCallState(self, prm):
+        ci = self.getInfo()
+        log(f"połączenie {ci.id}: {ci.stateText}")
+        if ci.state == pj.PJSIP_INV_STATE_CONFIRMED:
+            self.odebrane = True
+        if ci.state == pj.PJSIP_INV_STATE_DISCONNECTED:
+            if not self.odebrane and self.rozmowa.kierunek == "od Pi":
+                z = self.rozmowa.zlecenie
+                wynik(stan="nieodebrane", tekst=z.get("tekst", ""), powod=z.get("powod", ""))
+            self.rozmowa.zakonczona()
+            AKTYWNE.pop(ci.id, None)
+
+    def onCallMediaState(self, prm):
+        ci = self.getInfo()
+        for mi in ci.media:
+            if mi.type == pj.PJMEDIA_TYPE_AUDIO and mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE and self.media is None:
+                self.media = self.getAudioMedia(mi.index)
+                self.rec = pj.AudioMediaRecorder()
+                self.rec.createRecorder(str(self.rozmowa.nagranie))
+                self.media.startTransmit(self.rec)
+                threading.Thread(target=self.rozmowa.praca, daemon=True).start()
+
+
+def graj(p, wav, gotowe):
+    try:
+        if p.media is not None:
+            g = pj.AudioMediaPlayer()
+            g.createPlayer(str(wav), pj.PJMEDIA_FILE_NO_LOOP)
+            g.startTransmit(p.media)
+            GRACZE.append((time.time() + czas_wav(wav) + 2, g))
+    except pj.Error as ex:
+        log(f"graj: {ex.info()}")
+    gotowe.set()
+
+
+def rozlacz(p):
+    try:
+        p.hangup(pj.CallOpParam())
+    except pj.Error:
+        pass
+
+
+class Konto(pj.Account):
+    def __init__(self):
+        super().__init__()
+        self.zarejestrowane = False
+
+    def onRegState(self, prm):
+        ai = self.getInfo()
+        self.zarejestrowane = ai.regIsActive
+        log(f"rejestracja: {ai.regStatus} {ai.regStatusText} (aktywna: {ai.regIsActive})")
+
+    def onIncomingCall(self, prm):
+        p = Polaczenie(self, prm.callId, "do Pi", "Cześć, tu serwerek. Słucham.")
+        ci = p.getInfo()
+        od = ci.remoteUri
+        AKTYWNE[ci.id] = p
+        op = pj.CallOpParam()
+        if WLASCICIEL and WLASCICIEL.split(":")[-1].split("@")[0].lower() in od.lower() and len(AKTYWNE) == 1:
+            op.statusCode = 200
+            p.answer(op)
+            log(f"odbieram od {od}")
+        else:
+            op.statusCode = 603
+            p.hangup(op)
+            wynik(stan="obcy", od=od)
+            log(f"odrzucam {od}")
+
+
+def zadzwon_do_wlasciciela(konto, zl):
+    p = Polaczenie(konto, kierunek="od Pi", powitanie=zl["tekst"] + " Możesz mi odpowiedzieć albo się rozłączyć.", zlecenie=zl)
+    try:
+        p.makeCall(WLASCICIEL, pj.CallOpParam(True))
+        AKTYWNE[p.getId()] = p
+        log(f"dzwonię do {WLASCICIEL}: {zl['tekst']}")
+    except pj.Error as ex:
+        wynik(stan="blad", opis=ex.info())
+
+
+def bez_konfiguracji():
+    log("Brak konfiguracji SIP (/etc/serwerek-bot/sip.env): czekam; zlecenia dostają wynik „brak_konfiguracji”.")
+    while True:
+        for p in sorted(KOLEJKA.glob("*.json")):
+            zl = json.loads(p.read_text(encoding="utf-8"))
+            p.unlink()
+            wynik(stan="brak_konfiguracji", **zl)
+        time.sleep(3)
+
+
+CHWILA = None
+
+
+def main():
+    global CHWILA
+    KOLEJKA.mkdir(parents=True, exist_ok=True)
+    WYNIKI.mkdir(parents=True, exist_ok=True)
+    if not (UZYT and HASLO and WLASCICIEL):
+        bez_konfiguracji()
+    while not glos.gotowe():
+        log("czekam na instalację whisper/Piper")
+        time.sleep(60)
+    CHWILA = KAT / "mhm.wav"
+    if not CHWILA.exists():
+        glos.powiedz("Mhm, chwilka.", CHWILA, czestotliwosc=HZ)
+    ep = pj.Endpoint()
+    ep.libCreate()
+    cfg = pj.EpConfig()
+    cfg.uaConfig.threadCnt = 0
+    cfg.uaConfig.mainThreadOnly = True
+    cfg.uaConfig.userAgent = "serwerek-raspberry"
+    cfg.uaConfig.stunServer.append("stun.linphone.org:3478")
+    cfg.medConfig.clockRate = HZ
+    cfg.medConfig.sndClockRate = HZ
+    cfg.medConfig.ecTailLen = 0
+    cfg.logConfig.level = 3
+    cfg.logConfig.consoleLevel = 2
+    ep.libInit(cfg)
+    tc = pj.TransportConfig()
+    ep.transportCreate(pj.PJSIP_TRANSPORT_TCP, tc)
+    ep.transportCreate(pj.PJSIP_TRANSPORT_UDP, tc)
+    ep.libStart()
+    ep.audDevManager().setNullDev()
+    ac = pj.AccountConfig()
+    ac.idUri = f"sip:{UZYT}@{DOMENA}"
+    ac.regConfig.registrarUri = f"sip:{DOMENA};transport=tcp"
+    ac.sipConfig.proxies.append(f"sip:{DOMENA};transport=tcp;lr")
+    ac.sipConfig.authCreds.append(pj.AuthCredInfo("digest", "*", UZYT, 0, HASLO))
+    ac.natConfig.iceEnabled = True
+    ac.natConfig.sipOutboundUse = 1
+    konto = Konto()
+    konto.create(ac)
+    log(f"telefon startuje jako {ac.idUri}, właściciel {WLASCICIEL}")
+    while True:
+        ep.libHandleEvents(20)
+        while not AKCJE.empty():
+            f, a = AKCJE.get()
+            f(*a)
+        teraz = time.time()
+        GRACZE[:] = [(t, g) for t, g in GRACZE if t > teraz]
+        for p in list(AKTYWNE.values()):         # nikt nie odebrał
+            if p.rozmowa.kierunek == "od Pi" and not p.odebrane and teraz - p.utworzone > CZAS_DZWONIENIA:
+                rozlacz(p)
+        if not AKTYWNE:
+            for p in sorted(KOLEJKA.glob("*.json")):
+                zl = json.loads(p.read_text(encoding="utf-8"))
+                p.unlink()
+                if konto.zarejestrowane:
+                    zadzwon_do_wlasciciela(konto, zl)
+                else:
+                    wynik(stan="blad", opis="Pi nie jest zalogowane do serwera SIP (sprawdź konto Linphone i hasło)", **zl)
+                break
+
+
+if __name__ == "__main__":
+    main()

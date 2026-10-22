@@ -112,6 +112,22 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   albo po 1 h ciszy. Zużycie liczy się do limitów subskrypcji właściciela; bot tylko dla niego (zasady Anthropic).
 - Odnowienie logowania Claude (co rok): `claude setup-token` → token do `/etc/serwerek-bot/claude.env`, restart bota.
 
+## Głos, telefon i wspólna pamięć (od 2026-10-22)
+- **Pamięć** `~/bot/pamiec.db` (SQLite, `pi/bot/pamiec.py`, 90 dni): każda wiadomość (antek / bot sam z siebie /
+  claude; kanał telegram / glosowka / telefon, z `tg_id`). Do Claude dopisywane: na nowej sesji ostatnie 30 wiadomości,
+  zawsze to, co bot wysłał od ostatniej wiadomości Antka, i wiadomość, na którą Antek odpowiada (reply).
+- **Mowa na Pi** (`~/glos/`, repo `pi/glos/`, instalacja `instaluj.sh` przez `systemd-run`): whisper.cpp
+  (`ggml-base` telefon, `ggml-small-q5_1` głosówki, polski, 3 wątki), Piper `pl_PL-gosia-medium`; moduł `glos.py`
+  (`rozpoznaj`, `powiedz`, `do_ogg`).
+- **Głosówki w Telegramie**: rozpoznanie na Pi → „🎙 tekst” → Claude → odpowiedź tekstem i głosem (sendVoice).
+- **Telefon** `serwerek-telefon` (`~/glos/telefon.py`, pjsua2 z pjproject 2.15.1 zbudowanego na Pi): konto SIP Pi na
+  sip.linphone.org (TCP, ICE, STUN stun.linphone.org), konfiguracja `/etc/serwerek-bot/sip.env` (`SIP_UZYTKOWNIK`,
+  `SIP_HASLO`, `SIP_DOMENA`, `SIP_WLASCICIEL`). Przyjmuje połączenia tylko od właściciela (inne odrzuca i zgłasza).
+  Dzwoni sam: zlecenia `~/bot/telefon/kolejka/*.json` (bot: 📞 Zadzwoń, 🔴 bez „👀 Widzę” przez 10 min, zadanie
+  z `dzwon: true`), wyniki `~/bot/telefon/wyniki/*.json` → wiadomość w Telegramie (nieodebrane, zapis rozmowy).
+  Rozmowa: nagrywanie (AudioMediaRecorder) → wykrycie końca wypowiedzi (energia, 0,9 s ciszy) → whisper → Claude
+  (`claude_odpowiedz(kanal="telefon")`, ta sama sesja co czat) → Piper → odtworzenie. Pożegnanie albo 90 s ciszy = koniec.
+
 ## Zadania (todo) z przypomnieniami (od 2026-10-22)
 - Dane `~/portal/dane/todo.json`: `{id, tekst, termin "RRRR-MM-DDTHH:MM"|null, powtarzaj null|dzien|tydzien|miesiac,
   zrobione, wyslano, utworzono}`. API: `GET/POST /api/todo`, `POST /api/todo/<id>` (`zrobione`, `tekst`, `termin`,

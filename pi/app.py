@@ -102,6 +102,7 @@ SERVICE_INFO = {
     "playit": ("Serwer i projekty", "Tunel playit.gg: publiczny adres serwera Minecraft mimo braku publicznego IP"),
     "pi-dashboard": ("Serwer i projekty", "Panel Minecraft: temperatura, gracze, pobór mocy i konsola serwera (port 8090)"),
     "home-portal": ("Serwer i projekty", "Ta strona: stan serwera, adresy i linki (port 80, tylko Tailscale)"),
+    "serwerek-telefon": ("Serwer i projekty", "Telefon serwerka: rozmowy przez Linphone, mowa rozpoznawana i syntezowana na Pi"),
     "serwerek-bot": ("Serwer i projekty", "Bot Telegram @SerwerekAntek_bot: powiadomienia, przyciski i rozmowa z Claude"),
     "home-terminal": ("Serwer i projekty", "Terminal w przeglądarce (port 7681, tylko Tailscale, logowanie hasłem Linuksa)"),
     "ollama": ("Serwer i projekty", "Ollama: lokalne modele językowe AI, API tylko na tym Pi (port 11434)"),
@@ -1176,7 +1177,8 @@ def api_siec():
 
 # ---------- Zadania (todo) z przypomnieniami: strona /strony/todo/ i bot Telegram ----------
 # dane/todo.json: [{id, tekst, termin "RRRR-MM-DDTHH:MM" albo null, powtarzaj null|dzien|tydzien|miesiac, zrobione iso|null,
-#   utworzono, wyslano iso|null (przypomnienie dla obecnego terminu juz poszlo)}]. Przypomnienia wysyla bot (co 30 s).
+#   utworzono, wyslano iso|null (przypomnienie dla obecnego terminu juz poszlo), dzwon (bot dodatkowo dzwoni przez Linphone)}].
+#   Przypomnienia wysyla bot (co 30 s).
 TODO = BASE / "dane" / "todo.json"
 TODO_LOCK = threading.Lock()
 TODO_POWT = (None, "dzien", "tydzien", "miesiac")
@@ -1225,7 +1227,7 @@ def api_todo():
     if not todo_termin_ok(b.get("termin")) or b.get("powtarzaj") not in TODO_POWT or (b.get("powtarzaj") and not b.get("termin")):
         abort(400)
     z = {"id": uuid_hex()[:12], "tekst": b["tekst"].strip(), "termin": b.get("termin"), "powtarzaj": b.get("powtarzaj"),
-         "zrobione": None, "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S"), "wyslano": None}
+         "zrobione": None, "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S"), "wyslano": None, "dzwon": b.get("dzwon") is True}
     with TODO_LOCK:
         lista = todo_lista()
         lista.append(z)
@@ -1256,6 +1258,8 @@ def api_todo_zmien(zid):
             if not todo_termin_ok(b["termin"]):
                 abort(400)
             z["termin"], z["wyslano"] = b["termin"], None
+        if "dzwon" in b:
+            z["dzwon"] = b["dzwon"] is True
         if "powtarzaj" in b:
             if b["powtarzaj"] not in TODO_POWT:
                 abort(400)
@@ -1915,7 +1919,7 @@ ZDROWIE_PROGI = {
     "cpu": [85, 95],             # % sredniego obciazenia: zolta po 10 min, czerwona po 30 min
     "cpu_min": [10, 30],
     "uslugi_kryt": ["powernukkitx", "playit", "tailscaled", "home-portal"],
-    "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama", "serwerek-bot"],
+    "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama", "serwerek-bot", "serwerek-telefon"],
     "zadania": ["mc-autoupdate"],    # usluga uruchamiana timerem: ostatni przebieg zakonczony bledem -> zolta
 }
 ZDROWIE_STAN = {"sprawdzono": None, "pomiary": {}, "liczniki": {}, "cpu": [], "cpu_prev": None}

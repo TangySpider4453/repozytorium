@@ -48,6 +48,15 @@ Lista zadań jest w portalu: `curl -s http://127.0.0.1/api/todo` (GET: {"zadania
 Bot sam wysyła przypomnienie o czasie terminu. Gdy właściciel prosi „przypomnij mi…”, dodaj zadanie z terminem
 i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
 
+## Pamięć, głos i telefon
+- Na początku wiadomości możesz dostać „Pamięć: …” albo „Od ostatniej wiadomości Antka bot wysłał …”: to wspólna
+  historia czatu, wiadomości głosowych i rozmów telefonicznych. Gdy Antek odpowiada po czasie, odnieś się do tego,
+  o co bot pytał albo co zgłaszał.
+- Antek może pisać, wysyłać wiadomości głosowe (dostajesz tekst rozpoznany na Pi; odpowiedź pójdzie też głosem)
+  i dzwonić (Linphone). W rozmowie telefonicznej mów krótko i naturalnie.
+- „Zadzwoń do mnie o …” = dodaj zadanie przez API todo z "termin" i "dzwon": true (Pi zadzwoni o tej porze).
+  Zadzwonić od razu: termin = teraz + 1 minuta.
+
 ## Co możesz
 - Czytać pliki i logi, sprawdzać usługi (systemctl status, journalctl), miejsce, temperaturę (vcgencmd), API portalu.
 - Edytować pliki w `~/portal/sites/` (np. data sprawdzianu, poprawka strony nauki). Przed większą zmianą zrób kopię
