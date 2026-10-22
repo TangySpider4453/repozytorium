@@ -136,7 +136,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (`rozpoznaj`, `powiedz`, `do_ogg`).
 - **Głosówki w Telegramie**: rozpoznanie na Pi → „🎙 tekst” → Claude → odpowiedź tekstem i głosem (sendVoice).
 - **Telefon** `serwerek-telefon` (`~/glos/telefon.py`, pjsua2 z pjproject 2.15.1 zbudowanego na Pi): konto SIP Pi na
-  sip.linphone.org (TCP, ICE, STUN stun.linphone.org), konfiguracja `/etc/serwerek-bot/sip.env` (`SIP_UZYTKOWNIK`,
+  sip.linphone.org (konto Pi `antekserwerrpi4b`, właściciel `za_kolaz`; TCP, ICE, STUN stun.linphone.org), konfiguracja `/etc/serwerek-bot/sip.env` (`SIP_UZYTKOWNIK`,
   `SIP_HASLO`, `SIP_DOMENA`, `SIP_WLASCICIEL`). Przyjmuje połączenia tylko od właściciela (inne odrzuca i zgłasza).
   Dzwoni sam: zlecenia `~/bot/telefon/kolejka/*.json` (bot: 📞 Zadzwoń, 🔴 bez „👀 Widzę” przez 10 min, zadanie
   z `dzwon: true`), wyniki `~/bot/telefon/wyniki/*.json` → wiadomość w Telegramie (nieodebrane, zapis rozmowy).

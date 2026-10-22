@@ -346,3 +346,4 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (Linphone)**: Konto SIP Pi `antekserwerrpi4b@sip.linphone.org` zalogowane (rejestracja 200 OK); hasło tylko
   w `/etc/serwerek-bot/sip.env`. Czeka na adres Linphone właściciela (`SIP_WLASCICIEL`); do tego czasu Pi odrzuca
   połączenia i bot podaje adres dzwoniącego.
+- **2026-10-22 (Linphone 2)**: Właściciel `sip:za_kolaz@sip.linphone.org` wpisany do `sip.env`, telefon zarejestrowany.
