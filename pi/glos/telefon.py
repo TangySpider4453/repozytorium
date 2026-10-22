@@ -38,6 +38,7 @@ DOMENA = os.environ.get("SIP_DOMENA", "sip.linphone.org")
 WLASCICIEL = os.environ.get("SIP_WLASCICIEL", "")       # np. sip:antek@sip.linphone.org
 HZ = 16000
 RAMKA = HZ * 2 // 50                                    # 20 ms, 16 bit mono
+CZEKAJ_PO_ODEBRANIU = 5                                 # s: Pi dzwoni -> Antek odbiera -> 5 s ciszy -> powitanie
 CZAS_DZWONIENIA = 60                                    # s: tyle Pi próbuje dzwonić, potem „nie odebrał”
 PONOW = []          # [(kiedy, zlecenie)]: iPhone czasem od razu odrzuca (603), np. gdy Linphone jest otwarty; dzwonimy znowu
 MAX_ROZMOWA = 20 * 60
@@ -169,6 +170,10 @@ class Rozmowa:
             pj.Endpoint.instance().libRegisterThread("rozmowa")     # wymagane przez pjlib w każdym wątku, który go dotyka
             import serwerek_bot as bot
             s = Sluchacz(self.nagranie)
+            if self.kierunek == "od Pi":        # czas na przełączenie na głośnomówiący, zanim Pi zacznie mówić
+                self.koniec.wait(CZEKAJ_PO_ODEBRANIU)
+                if self.koniec.is_set():
+                    return
             self.mow(self.powitanie)
             s.pomin_do_konca()
             while not self.koniec.is_set() and time.time() - self.start < MAX_ROZMOWA:
