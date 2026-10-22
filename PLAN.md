@@ -316,3 +316,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   i podpowiedź o wielkości liter (bez samego hasła).
 - **2026-10-22 (emotki)**: Menu portalu z emotkami: 🏠 Start, 🌐 Sieć, 💻 Terminal, 🚙 Łazik, 📚 Nauka, 💪 Progres,
   🩺 Zdrowie, 🚪 Wyloguj. Backup `app.py.bak_2026-10-22_emotki`.
+- **2026-10-22 (bot)**: Bot Telegram @SerwerekAntek_bot (usługa `serwerek-bot`, repo `pi/bot/`): alarmy z monitora
+  zdrowia, przypomnienia o sprawdzianach, przyciski (stan, kopia, restart z potwierdzeniem) i rozmowa z Claude Code
+  zalogowanym subskrypcją (ograniczone narzędzia). Tokeny tylko na Pi. Szczegóły w `SERWER.md`.

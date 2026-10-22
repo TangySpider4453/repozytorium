@@ -101,6 +101,7 @@ SERVICE_INFO = {
     "playit": ("Serwer i projekty", "Tunel playit.gg: publiczny adres serwera Minecraft mimo braku publicznego IP"),
     "pi-dashboard": ("Serwer i projekty", "Panel Minecraft: temperatura, gracze, pobór mocy i konsola serwera (port 8090)"),
     "home-portal": ("Serwer i projekty", "Ta strona: stan serwera, adresy i linki (port 80, tylko Tailscale)"),
+    "serwerek-bot": ("Serwer i projekty", "Bot Telegram @SerwerekAntek_bot: powiadomienia, przyciski i rozmowa z Claude"),
     "home-terminal": ("Serwer i projekty", "Terminal w przeglądarce (port 7681, tylko Tailscale, logowanie hasłem Linuksa)"),
     "ollama": ("Serwer i projekty", "Ollama: lokalne modele językowe AI, API tylko na tym Pi (port 11434)"),
     "tailscaled": ("Sieć i zdalny dostęp", "Tailscale: prywatna sieć VPN łącząca Twoje urządzenia"),
@@ -1774,7 +1775,7 @@ ZDROWIE_PROGI = {
     "cpu": [85, 95],             # % sredniego obciazenia: zolta po 10 min, czerwona po 30 min
     "cpu_min": [10, 30],
     "uslugi_kryt": ["powernukkitx", "playit", "tailscaled", "home-portal"],
-    "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama"],
+    "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama", "serwerek-bot"],
     "zadania": ["mc-autoupdate"],    # usluga uruchamiana timerem: ostatni przebieg zakonczony bledem -> zolta
 }
 ZDROWIE_STAN = {"sprawdzono": None, "pomiary": {}, "liczniki": {}, "cpu": [], "cpu_prev": None}

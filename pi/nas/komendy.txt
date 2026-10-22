@@ -73,6 +73,20 @@ portal-haslo
 Terminal w przegladarce dziala tylko przez Tailscale.
 
 
+BOT TELEGRAM (@SerwerekAntek_bot)
+---------------------------------
+Przyciski w Telegramie: Stan, Sprawdziany, Kopia, Przejrzane, Restart, Nowa rozmowa. Inny tekst -> Claude na Pi.
+systemctl status serwerek-bot
+    Czy bot dziala.
+sudo systemctl restart serwerek-bot
+    Restart bota (np. po zmianie tokenu).
+sudo nano /etc/serwerek-bot/token.env
+    Zmiana tokenu bota (po /revoke w BotFather), potem restart bota.
+claude setup-token
+    Nowe logowanie Claude (raz na rok): wynikowy token wpisz do /etc/serwerek-bot/claude.env
+    (CLAUDE_CODE_OAUTH_TOKEN=...), potem restart bota.
+
+
 USLUGI (nazwy: home-portal, powernukkitx, playit, pi-dashboard, tailscaled)
 -------------------------------------------------------------------------
 systemctl status home-portal

@@ -1,0 +1,17 @@
+{
+  "allow": [
+    "Read", "Grep", "Glob", "WebSearch", "WebFetch",
+    "Edit(//home/tonyg/portal/sites/**)", "Write(//home/tonyg/portal/sites/**)",
+    "Bash(systemctl status:*)", "Bash(systemctl is-active:*)", "Bash(systemctl list-timers:*)", "Bash(systemctl --failed:*)",
+    "Bash(journalctl:*)", "Bash(df:*)", "Bash(free:*)", "Bash(uptime)", "Bash(vcgencmd:*)", "Bash(ls:*)", "Bash(du:*)",
+    "Bash(ps:*)", "Bash(ss:*)", "Bash(ping -c:*)", "Bash(curl -s http://127.0.0.1/api/:*)",
+    "Bash(python3 -m json.tool:*)", "Bash(date)"
+  ],
+  "deny": [
+    "Read(//proc/**)", "Read(//etc/serwerek-bot/**)", "Read(//etc/nas-credentials)", "Read(//root/**)",
+    "Read(//home/tonyg/portal/dane/dostep.json)", "Read(//home/tonyg/.claude/**)", "Read(//home/tonyg/bot/stan.json)",
+    "Read(//home/tonyg/.ssh/**)", "Read(//home/tonyg/playit/**)", "Read(//var/lib/tailscale/**)",
+    "Grep(//proc/**)", "Grep(//etc/serwerek-bot/**)", "Grep(//home/tonyg/.claude/**)", "Grep(//home/tonyg/.ssh/**)",
+    "Bash(sudo:*)", "Bash(rm:*)"
+  ]
+}

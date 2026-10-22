@@ -72,6 +72,22 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `/terminal` z sieci domowej pokazuje tylko informację (terminal na porcie 7681 słucha wyłącznie na Tailscale).
   Panel Minecraft `pi-dashboard` (8090) był i jest dostępny w sieci domowej bez hasła (osobna usługa).
 
+## Bot Telegram @SerwerekAntek_bot (od 2026-10-22)
+- Usługa `serwerek-bot` (User=tonyg), kod `~/bot/serwerek_bot.py` (repo `pi/bot/`), stan `~/bot/stan.json` (600:
+  właściciel, kod parowania, wysłane powiadomienia, sesja Claude, ustawienia godzin). Tokeny tylko w
+  `/etc/serwerek-bot/token.env` (TELEGRAM_TOKEN) i `claude.env` (CLAUDE_CODE_OAUTH_TOKEN z `claude setup-token`,
+  ważny rok, subskrypcja właściciela), root 600, podawane przez `EnvironmentFile`. Nigdy w repo.
+- Odpowiada tylko właścicielowi (pierwszy, kto wysłał `/start <kod>`). Przyciski: Stan, Sprawdziany, Kopia, Przejrzane,
+  Restart (portal / Minecraft z `save-all`), Nowa rozmowa. Akcje zmieniające coś tylko po „Tak”.
+- Powiadomienia (co 60 s z `/api/zdrowie` i `sprawdziany.json`): 🔴 od razu o każdej porze + „✅ Minęło”; 🟡 zbiorczo
+  najwyżej co 3 h, nie w ciszy 22–7; nauka: 18:00 dzień przed, 18:00 3 dni przed sprawdzianem, 7:00 w dniu.
+- Inny tekst → `claude -p` (Claude Code 2.1.308 w `~/.local/bin/claude`) z `--permission-mode dontAsk`, narzędzia
+  z `~/bot/uprawnienia.json` (czytanie, diagnostyka, edycja `~/portal/sites/**`, bez sudo/rm, zakaz czytania sekretów),
+  instrukcja `~/bot/instrukcja.md`. Claude prosi o akcje znacznikiem `[[AKCJA: kopia|restart_portalu|restart_minecrafta|przejrzane]]`.
+  Nowa rozmowa po 250 tys. tokenów kontekstu (z ostatniej wiadomości w `~/.claude/projects/*/<sesja>.jsonl`)
+  albo po 1 h ciszy. Zużycie liczy się do limitów subskrypcji właściciela; bot tylko dla niego (zasady Anthropic).
+- Odnowienie logowania Claude (co rok): `claude setup-token` → token do `/etc/serwerek-bot/claude.env`, restart bota.
+
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
   przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem
