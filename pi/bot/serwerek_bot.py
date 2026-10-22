@@ -1122,6 +1122,28 @@ def petla_mc_stanu():
             print(f"minecraft stan: {type(ex).__name__}: {ex}", flush=True)
 
 
+POMOC_WSPOLNE = """📊 stan – temperatura, procesor, RAM, NAS, kopia, maksima dnia i tygodnia
+📚 sprawdziany – najbliższe 2 tygodnie (też: jutro)
+📝 zadania – lista do zrobienia
+📝 todo <kiedy> <co> – dodaj zadanie, np. todo jutro 17:00 trening, todo za 20 min pranie,
+    todo w piątek 8:30 dentysta, todo codziennie 21:00 leki, todo jutro 7:00 zadzwoń pobudka
+🎮 minecraft – stan serwera (włącz / wyłącz)
+💾 kopia – kopia systemu na NAS teraz
+✅ przejrzane – zgaś żółtą diodę
+🧭 ścieżka [wczoraj | RRRR-MM-DD] – kto wchodził na Pi z sieci domowej
+🔐 zaufane – Twoje urządzenia bez powiadomień
+📞 zadzwoń – Pi zadzwoni do Ciebie przez Linphone
+🆕 nowa rozmowa – zacznij rozmowę z Claude od nowa
+❓ pomoc / help – ta lista
+
+Wszystko inne trafia do Claude na Pi (pamięta wspólną rozmowę z Telegrama, Linphone i telefonu).
+„przeczytaj / powiedz / nagraj” → odpowiedź głosówką; „wypisz / napisz” → tekstem; głosówki są rozpoznawane na Pi."""
+
+POMOC_TELEGRAM = ("❓ <b>Pomoc: co umiem</b>\nPrzyciski na dole robią to samo co komendy:\n\n" + html.escape(POMOC_WSPOLNE, quote=False)
+                  + "\n\nZdjęcia i PDF-y (np. strony podręcznika) z podpisem → Claude zrobi z nich zagadnienie w Nauce."
+                  + "\nTelefon: zadzwoń z Linphone na antekserwerrpi4b@sip.linphone.org.")
+
+
 # ---------------------------------------------------------------- odbieranie wiadomosci
 KOLEJKA = []
 KOLEJKA_BUDZIK = threading.Event()
@@ -1324,8 +1346,8 @@ def obsluz(u):
         with LOCK:
             nowa_sesja(stan())
         wyslij("🧹 Zaczynamy nową rozmowę z Claude.")
-    elif tekst in ("/start", "/pomoc"):
-        wyslij("Przyciski na dole. Każdą inną wiadomość przekazuję do Claude na Pi.")
+    elif tekst.lower() in ("/start", "/pomoc", "/help", "pomoc", "help", "?", "❓ pomoc"):
+        wyslij(POMOC_TELEGRAM, html_=True)
     else:
         do_claude([], tekst, odpowiedz_na=odp_na)
 
@@ -1337,7 +1359,7 @@ def main():
         s = stan()
         zapisz(s)
     tg("setMyCommands", commands=[{"command": c, "description": d} for c, d in (
-        ("zadania", "Lista zadań (dodawanie: todo jutro 17:00 trening)"), ("minecraft", "Włącz / wyłącz serwer Minecraft"), ("zadzwon", "Pi zadzwoni do Ciebie (Linphone)"), ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
+        ("pomoc", "Lista komend"), ("zadania", "Lista zadań (dodawanie: todo jutro 17:00 trening)"), ("minecraft", "Włącz / wyłącz serwer Minecraft"), ("zadzwon", "Pi zadzwoni do Ciebie (Linphone)"), ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
         ("przejrzane", "Zgaś żółtą diodę"), ("restart", "Restart portalu lub Minecrafta"), ("nowa", "Nowa rozmowa z Claude"))])
     threading.Thread(target=petla_powiadomien, daemon=True).start()
     threading.Thread(target=petla_claude, daemon=True).start()

@@ -22,7 +22,7 @@ for tekst in sys.argv[1:]:
     b.sendInstantMessage(p)
     print(time.strftime("%H:%M:%S"), "WYSŁANO:", tekst, flush=True)
     t0 = time.time()
-    while time.time() - t0 < 60:
+    while time.time() - t0 < float(__import__("os").environ.get("CZEKAJ", "60")):
         ep.libHandleEvents(50)
 del b, k
 ep.libDestroy()

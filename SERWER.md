@@ -147,6 +147,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   sprawdziany, zadania, ścieżka, minecraft, „todo …”), reszta → `claude_odpowiedz(kanal="linphone")`; odpowiedź przez
   `Buddy.sendInstantMessage` (części po 1500 znaków, wskaźnik „pisze…”). Bot może pisać na Linphone: JSON w
   `~/bot/telefon/czat/`. Test lokalny: `test_czat.py` (także `PLIK:<url>` = głosówka).
+  Komendy czatu: jak w bocie + `pomoc`/`help` (`POMOC_WSPOLNE` w bocie), `kopia`, `przejrzane`, `minecraft włącz|wyłącz`,
+  `restart portalu`, `zadzwoń`, `nowa rozmowa`, `zaufane`; akcje (też proponowane przez Claude) potwierdza się
+  odpisując „tak” w ciągu 2 min (`CZAT_AKCJA`), „nie” anuluje. Telegram: `pomoc`/`help`/`/pomoc` → pełna lista.
   **Głosówki w Linphone**: przychodzą jako `application/vnd.gsma.rcs-ft-http+xml` (adres pliku na
   files.linphone.org) → pobranie → whisper → „🎙 tekst”; odpowiedź głosem: Piper → WAV → upload na
   `files.linphone.org/http-file-transfer-server/hft.php` (link ważny 7 dni) → wiadomość z XML

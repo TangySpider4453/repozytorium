@@ -356,3 +356,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   test w toku. Zabezpieczone czytanie kolejki połączeń. Tymczasowo log SIP (`serwerek-telefon.service.d/diagnostyka.conf`).
 - **2026-10-22 (telefon działa)**: Pierwsza prawdziwa rozmowa przez Linphone (opus, SRTP): pytanie rozpoznane, Claude
   odpowiedział po 7 s. Log diagnostyczny SIP wyłączony.
+- **2026-10-22 (pomoc)**: Komenda `pomoc` / `help` w Telegramie i Linphone; w czacie Linphone komendy jak przyciski
+  w Telegramie, z potwierdzeniem „tak”.

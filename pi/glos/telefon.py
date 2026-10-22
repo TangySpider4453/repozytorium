@@ -361,6 +361,11 @@ def pobierz_glosowke(url):
     return p
 
 
+CZAT_AKCJA = {}     # akcja czekająca na „tak” w czacie Linphone (Linphone nie ma przycisków): {"akcja", "t"}
+POMOC_LINPHONE_KONIEC = ("\n\nW Linphone nie ma przycisków: gdy coś trzeba potwierdzić (kopia, Minecraft, przejrzane), "
+                         "odpisz „tak” w ciągu 2 minut. Zdjęcia i PDF-y wysyłaj w Telegramie.")
+
+
 def odpowiedz_czat(tekst, wejscie="tekst"):
     """komenda albo Claude; odpowiedź wraca na Linphone (wysyłka w głównym wątku). wejscie: "tekst" albo "glos"
     (głosówka: najpierw rozpoznanie na Pi). Głosem albo tekstem: bot.tryb_odpowiedzi („przeczytaj” / „wypisz”…)."""
@@ -385,7 +390,38 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             AKCJE.put((wyslij_czat, (f"🎙 „{tekst}”",)))
         t = tekst.strip()
         sl = t.lower().split()
-        if sl and sl[0] in ("stan", "/stan"):
+        akcja = None
+        if t.lower() in ("pomoc", "help", "/pomoc", "/help", "?"):
+            odp = "❓ Komendy (wpisz słowo):\n\n" + bot.POMOC_WSPOLNE + POMOC_LINPHONE_KONIEC
+        elif t.lower() in ("tak", "tak!", "potwierdzam", "ok tak") and CZAT_AKCJA and time.time() - CZAT_AKCJA["t"] < 120:
+            a = CZAT_AKCJA.pop("akcja")
+            CZAT_AKCJA.clear()
+            odp = bot.wykonaj(a)
+        elif t.lower() in ("nie", "anuluj") and CZAT_AKCJA:
+            CZAT_AKCJA.clear()
+            odp = "Nic nie zrobiłem."
+        elif t.lower() in ("kopia", "/kopia"):
+            akcja = "kopia"
+        elif t.lower() in ("przejrzane", "/przejrzane"):
+            akcja = "przejrzane"
+        elif t.lower() in ("minecraft włącz", "minecraft wlacz", "włącz minecraft", "wlacz minecraft", "mc start"):
+            akcja = "mc_wlacz"
+        elif t.lower() in ("minecraft wyłącz", "minecraft wylacz", "wyłącz minecraft", "wylacz minecraft", "mc stop"):
+            akcja = "mc_wylacz"
+        elif t.lower() in ("restart portalu", "restart portal"):
+            akcja = "restart_portalu"
+        elif t.lower() in ("zadzwoń", "zadzwon", "zadzwoń do mnie", "zadzwon do mnie", "/zadzwon"):
+            bot.zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś na czacie. W czym mogę pomóc?", "prośba z czatu Linphone")
+            odp = "📞 Dzwonię…"
+        elif t.lower() in ("nowa rozmowa", "nowa", "/nowa"):
+            with bot.LOCK:
+                bot.nowa_sesja(bot.stan())
+            odp = "🧹 Zaczynamy nową rozmowę z Claude."
+        elif t.lower() in ("zaufane", "/zaufane"):
+            z = bot.stan().get("zaufane", {})
+            odp = ("🔐 Zaufane urządzenia:\n" + "\n".join(f"• {n}: {m}" for m, n in z.items())) if z else "Nie ma zaufanych urządzeń."
+            odp += "\n(Usuwanie: komenda zaufane w Telegramie.)"
+        elif sl and sl[0] in ("stan", "/stan"):
             odp = czysty(bot.tekst_stanu())
         elif sl and sl[0] in ("sprawdziany", "/sprawdziany", "jutro"):
             odp = czysty(bot.tekst_sprawdzianow())
@@ -393,16 +429,20 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             odp = czysty(bot.tekst_zadan()[0])
         elif sl and sl[0] in ("ścieżka", "sciezka", "/sciezka"):
             odp = czysty(bot.tekst_sciezki(" ".join(sl[1:])))
-        elif t.lower() in ("minecraft", "mc"):
+        elif t.lower() in ("minecraft", "mc", "/minecraft"):
             m = bot.portal("/api/minecraft")
-            odp = (f"Minecraft działa od {(m.get('od') or '')[11:16]}, gracze: {m.get('gracze')}." if m.get("dziala")
-                   else "Minecraft jest wyłączony. Napisz „włącz minecrafta”, a Claude go włączy (potwierdzisz w Telegramie).")
+            odp = (f"🎮 Minecraft działa od {(m.get('od') or '')[11:16]}, gracze: {m.get('gracze')}. Wyłączenie: „minecraft wyłącz”." if m.get("dziala")
+                   else "🎮 Minecraft jest wyłączony. Włączenie: „minecraft włącz”.")
         elif sl and sl[0] in ("todo", "przypomnij", "zadanie") and len(sl) > 1:
             opis, termin, powt = bot.parsuj_zadanie(t.split(None, 1)[1])
             bot.portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt})
             odp = f"Dodane: {opis} ({bot.kiedy_tekst(termin) if termin else 'bez terminu'})."
         else:
             odp = None
+        if akcja:
+            CZAT_AKCJA.clear()
+            CZAT_AKCJA.update(akcja=akcja, t=time.time())
+            odp = f"❓ {bot.AKCJE[akcja][0]}? Odpisz „tak” (w ciągu 2 min) albo „nie”."
         if odp is not None:
             pamiec.zapisz("antek", "linphone", t)
             pamiec.zapisz("bot", "linphone", odp)
@@ -414,10 +454,10 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             except Exception as ex:
                 odp, akcje = f"⚠️ Claude: {ex}. Spróbuj jeszcze raz.", []
             pamiec.zapisz("claude", "linphone", odp)
-            for a in akcje:
-                bot.zapytaj(a, " (proponuje Claude, pisałeś na Linphone)")
             if akcje:
-                odp += "\n\n(Przycisk do potwierdzenia wysłałem w Telegramie.)"
+                CZAT_AKCJA.clear()
+                CZAT_AKCJA.update(akcja=akcje[0], t=time.time())
+                odp += f"\n\n❓ {bot.AKCJE[akcje[0]][0]}? Odpisz „tak” (w ciągu 2 min) albo „nie”."
         if bot.tryb_odpowiedzi(t, wejscie) == "glos":
             try:
                 AKCJE.put((wyslij_czat, (wyslij_glosowke(odp), False, FT_TYP)))

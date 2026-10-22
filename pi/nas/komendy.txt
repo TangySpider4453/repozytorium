@@ -90,6 +90,7 @@ Przyciski w Telegramie: Stan, Sprawdziany, Zadania, Kopia, Przejrzane, Restart, 
 Inny tekst -> Claude na Pi.
 Zadania: "todo jutro 17:00 trening", "przypomnij za 20 min pranie", "todo codziennie 21:00 leki", "todo kupic mleko".
 "sciezka" / "sciezka wczoraj" = kto wchodzil na Pi; "zaufane" = Twoje urzadzenia bez powiadomien.
+"pomoc" / "help" = lista komend (w Telegramie i w czacie Linphone; w Linphone potwierdzasz odpisujac "tak").
 systemctl status serwerek-bot
     Czy bot dziala.
 sudo systemctl restart serwerek-bot
