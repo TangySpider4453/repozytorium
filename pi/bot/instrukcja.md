@@ -15,6 +15,31 @@ bez nagłówków Markdown i tabel; zwykły tekst, wypunktowania „•” i emot
   data RRRR-MM-DD, dodano, zawiera), strony w `~/portal/sites/nauka/<folder>/index.html`, postępy w `~/portal/dane/nauka/`.
   Zmieniając JSON, zachowaj poprawny format (sprawdź go potem narzędziem Read).
 
+## Nowe zagadnienie do Nauki (z wiadomości albo zdjęć/PDF)
+Właściciel przysyła temat, zakres, datę i często zdjęcia stron podręcznika lub zeszytu (ścieżki plików są w wiadomości;
+otwórz je narzędziem Read). Zrób z tego nową stronę w Nauce:
+1. Ustal: przedmiot, typ (sprawdzian/kartkówka), datę (RRRR-MM-DD; brak = null), zakres. Gdy czegoś brakuje albo zdjęcie
+   jest nieczytelne, zapytaj krótko, zanim zaczniesz. Opieraj się na materiałach właściciela, niczego nie zmyślaj.
+2. id = folder: małe litery, cyfry i „-”, np. `biologia-genetyka`. Nie może już istnieć w sprawdziany.json.
+3. Szablon: przeczytaj `~/portal/sites/nauka/fizyka-pole-elektryczne/index.html` (przedmioty ścisłe, z zakładką Licz)
+   albo `~/portal/sites/nauka/historia-3-dzial-1/index.html` (humanistyczne) i zapisz nową stronę
+   `~/portal/sites/nauka/<id>/index.html` z tym samym kodem, podmieniając tylko treść:
+   - `<html ... data-nauka="<id>">`, klucz wyniku `"nauka:<id>:best_"` (w getItem i setItem), tytuł, nagłówek;
+   - zakładka „Najważniejsze” (pierwsza, otwarta domyślnie): ramka „Jeśli zapamiętasz tylko tyle” (3 rzeczy) i karta
+     `.key` na każdy temat z 4–5 punktami; notatka z sekcją „Uważaj” (typowe pomyłki);
+   - `T` (maks. 6 tematów), `FC` = [nrTematu, "przód", "tył"], `Q` = [nrTematu, "pytanie", ["poprawna","zła","zła","zła"], 0,
+     "wyjaśnienie"] (poprawna ZAWSZE pierwsza, złe wiarygodne), `OQ` = [nrTematu, "polecenie", ["punkt", ...]];
+   - oś czasu (TL) tylko dla historii; dla innych usuń zakładkę albo zamień na „Wzory”;
+   - przedmioty ścisłe: zakładka „Licz” z plikiem `~/portal/sites/nauka/<id>/licz-zadania.js` w formacie jak
+     `fizyka-pole-elektryczne/licz-zadania.js` (gen() zwraca {tresc, pola:[{etykieta, jednostka, odp}], rozw:[kroki]};
+     przelicz odpowiedzi starannie).
+   Rozsądna wielkość: 25–60 fiszek, 25–60 pytań quizu, 8–15 pytań otwartych.
+4. Dopisz wpis na KOŃCU tablicy w `~/portal/sites/nauka/sprawdziany.json` (najpierw przeczytaj aktualny plik; nie ruszaj
+   innych wpisów): {"id","folder","przedmiot","typ","tytul","opis","data","dodano": dzisiejsza data,"zawiera":[etykiety]}.
+5. Sprawdź: `node /home/tonyg/bot/sprawdz_strone.js <id>`. Popraw wszystkie ❌ i uruchom ponownie, aż będzie „WSZYSTKO OK”.
+6. Odpowiedz krótko: co powstało (liczby fiszek/pytań), link http://172.23.0.20/strony/nauka/<id>/ i ewentualne wątpliwości.
+   Zapisz na końcu w `~/portal/sites/nauka/DODANE_PRZEZ_BOTA.txt` linię: data, id, tytuł (dla synchronizacji z repozytorium).
+
 ## Co możesz
 - Czytać pliki i logi, sprawdzać usługi (systemctl status, journalctl), miejsce, temperaturę (vcgencmd), API portalu.
 - Edytować pliki w `~/portal/sites/` (np. data sprawdzianu, poprawka strony nauki). Przed większą zmianą zrób kopię

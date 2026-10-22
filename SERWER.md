@@ -79,8 +79,17 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ważny rok, subskrypcja właściciela), root 600, podawane przez `EnvironmentFile`. Nigdy w repo.
 - Odpowiada tylko właścicielowi (pierwszy, kto wysłał `/start <kod>`). Przyciski: Stan, Sprawdziany, Kopia, Przejrzane,
   Restart (portal / Minecraft z `save-all`), Nowa rozmowa. Akcje zmieniające coś tylko po „Tak”.
-- Powiadomienia (co 60 s z `/api/zdrowie` i `sprawdziany.json`): 🔴 od razu o każdej porze + „✅ Minęło”; 🟡 zbiorczo
-  najwyżej co 3 h, nie w ciszy 22–7; nauka: 18:00 dzień przed, 18:00 3 dni przed sprawdzianem, 7:00 w dniu.
+- Powiadomienia (co 60 s z `/api/zdrowie` i `sprawdziany.json`): 🔴 od razu o każdej porze + „✅ Minęło”; 🟡 od razu
+  poza ciszą 22–7 (z nocy jedną wiadomością rano); nauka: 18:00 dzień przed, 18:00 3 dni przed sprawdzianem, 7:00 w dniu.
+- **Wejścia z sieci domowej** (od razu, z IP, MAC z `ip neigh` i nazwą z DNS routera): portal dopisuje do
+  `~/portal/dane/wejscia.jsonl` (`wejscie` = pierwsze zapytanie z IP po 10 min ciszy, `logowanie_ok`, `zle_haslo`
+  z numerem próby, `blokada`); SSH z dziennika `sshd` (udane/nieudane/nieistniejący użytkownik); SSH, Samba (139/445),
+  VNC (5900), panel MC (8090) z logu nftables: tabela `inet serwerek_log` (tylko `log`, nic nie blokuje), plik
+  `/etc/serwerek-bot/serwerek-log-wejsc.nft`, usługa `serwerek-log-wejsc`; to samo IP i port najwyżej co 10 min.
+- **Zdjęcia i PDF-y** wysłane botowi (do 20 MB) zapisują się w `~/bot/pliki/<data>/` i idą do Claude z podpisem;
+  album zdjęć = jedna wiadomość. Claude według `instrukcja.md` robi z nich nową stronę w Nauce (szablon fizyki/historii,
+  wpis w `sprawdziany.json`, kontrola `node ~/bot/sprawdz_strone.js <id>`), zapisuje linię w
+  `~/portal/sites/nauka/DODANE_PRZEZ_BOTA.txt`. Limit czasu jednego zadania: 30 min.
 - Inny tekst → `claude -p` (Claude Code 2.1.308 w `~/.local/bin/claude`) z `--permission-mode dontAsk`, narzędzia
   z `~/bot/uprawnienia.json` (czytanie, diagnostyka, edycja `~/portal/sites/**`, bez sudo/rm, zakaz czytania sekretów),
   instrukcja `~/bot/instrukcja.md`. Claude prosi o akcje znacznikiem `[[AKCJA: kopia|restart_portalu|restart_minecrafta|przejrzane]]`.

@@ -224,6 +224,10 @@ Wszystko musi się zgadzać z notatką. Gotowe narzędzie: `narzedzia/dodaj_najw
 
 ## 7. Procedura: dodanie nowej kartkówki (lokalnie, z SSH)
 
+> **Strony dodane przez bota Telegram (od 2026-10-22):** Claude na Pi może sam dodać zagadnienie (ze zdjęć/PDF
+> przysłanych w Telegramie). Zapisuje je wtedy w `~/portal/sites/nauka/DODANE_PRZEZ_BOTA.txt`. **Na początku każdej
+> sesji** sprawdź ten plik i skopiuj nowe foldery oraz `sprawdziany.json` z Pi do `strona/` (żeby repo było jak Pi).
+
 ```bash
 # 0. pobierz aktualny spis z Pi (użytkownik mógł zmienić daty): scp pi:/home/tonyg/portal/sites/nauka/sprawdziany.json strona/
 # 0b. po zbudowaniu strony: python3 narzedzia/dodaj_postep.py <id>
@@ -319,3 +323,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (bot)**: Bot Telegram @SerwerekAntek_bot (usługa `serwerek-bot`, repo `pi/bot/`): alarmy z monitora
   zdrowia, przypomnienia o sprawdzianach, przyciski (stan, kopia, restart z potwierdzeniem) i rozmowa z Claude Code
   zalogowanym subskrypcją (ograniczone narzędzia). Tokeny tylko na Pi. Szczegóły w `SERWER.md`.
+- **2026-10-22 (bot 2)**: Bot: 🟡 od razu poza ciszą nocną, powiadomienia o każdym wejściu z sieci domowej (portal,
+  SSH, Samba, VNC, panel MC) z IP, zdjęcia/PDF → Claude robi nową stronę w Nauce (kontrola `sprawdz_strone.js`).

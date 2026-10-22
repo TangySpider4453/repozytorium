@@ -1,0 +1,10 @@
+# Tylko zapis (nic nie blokuje): nowe polaczenia z sieci domowej do SSH, Samby, VNC i panelu Minecrafta trafiaja do
+# dziennika jadra z prefiksem SERWEREK-WEJSCIE; bot Telegram wysyla o nich wiadomosc z IP. Portal (80) zglasza sie sam.
+table inet serwerek_log
+delete table inet serwerek_log
+table inet serwerek_log {
+	chain wejscia {
+		type filter hook input priority -5; policy accept;
+		iifname { "eth0", "wlan0" } tcp dport { 22, 139, 445, 5900, 8090 } ct state new limit rate 30/minute log prefix "SERWEREK-WEJSCIE " level info
+	}
+}

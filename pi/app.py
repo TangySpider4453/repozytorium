@@ -943,6 +943,19 @@ SESJA_DNI = 365
 ZAUFANE_SIECI = [ipaddress.ip_network(n) for n in ("100.64.0.0/10", "fd7a:115c:a1e0::/48", "127.0.0.0/8", "::1/128")]
 LOGOWANIE_PROBY = {}
 LOGOWANIE_LOCK = threading.Lock()
+WEJSCIA = BASE / "dane" / "wejscia.jsonl"      # zdarzenia dla bota Telegram (kazde wejscie z sieci domowej)
+WEJSCIA_OSTATNIO = {}
+
+
+def wejscie_zapisz(rodzaj, **dane):
+    from flask import request
+    rek = {"czas": time.strftime("%Y-%m-%dT%H:%M:%S"), "rodzaj": rodzaj, "ip": request.remote_addr,
+           "ua": (request.user_agent.string or "")[:200], **dane}
+    try:
+        with open(WEJSCIA, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rek, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 def dostep_dane():
@@ -981,7 +994,13 @@ def zalogowany():
 @app.before_request
 def wymagaj_hasla():
     from flask import request
-    if przez_tailscale() or request.path in ("/logowanie", "/wyloguj") or zalogowany():
+    if przez_tailscale():
+        return None
+    ip, teraz = request.remote_addr, time.time()
+    if teraz - WEJSCIA_OSTATNIO.get(ip, 0) > 600:        # nowe wejscie = pierwsze zapytanie po 10 min ciszy z tego IP
+        wejscie_zapisz("wejscie", sciezka=request.path[:100], zalogowany=zalogowany())
+    WEJSCIA_OSTATNIO[ip] = teraz
+    if request.path in ("/logowanie", "/wyloguj") or zalogowany():
         return None
     if request.path.startswith("/api/"):
         return jsonify({"blad": "zaloguj się", "logowanie": "/logowanie"}), 401
@@ -1058,6 +1077,9 @@ def logowanie():
         proby = [t for t in LOGOWANIE_PROBY.get(ip, []) if t > teraz - 300]
         LOGOWANIE_PROBY[ip] = proby
         if len(proby) >= 5:
+            if not LOGOWANIE_PROBY.get(ip + ":zgloszone"):
+                LOGOWANIE_PROBY[ip + ":zgloszone"] = [teraz]
+                wejscie_zapisz("blokada")
             return logowanie_strona(f"Za dużo złych haseł. Spróbuj za {int(300 - (teraz - proby[0])) // 60 + 1} min.", nast, 429)
     import unicodedata
     surowe = request.form.get("haslo", "")
@@ -1065,6 +1087,8 @@ def logowanie():
     if not (0 < len(haslo) <= 200 and check_password_hash(d["hash"], haslo)):
         with LOGOWANIE_LOCK:
             LOGOWANIE_PROBY.setdefault(ip, []).append(teraz)
+            LOGOWANIE_PROBY.pop(ip + ":zgloszone", None)
+            wejscie_zapisz("zle_haslo", proba=len(LOGOWANIE_PROBY[ip]))
         # podpowiedz do dziennika bez zapisywania hasla: dlugosc i czy pasowaloby z inna wielkoscia liter
         wl = next((n for n, w in (("odwrocona wielkosc liter", haslo.swapcase()), ("pierwsza litera mala", haslo[:1].lower() + haslo[1:]),
                                   ("pierwsza litera wielka", haslo[:1].upper() + haslo[1:])) if w != haslo and check_password_hash(d["hash"], w)), "")
@@ -1076,6 +1100,7 @@ def logowanie():
         return logowanie_strona("Złe hasło.", nast, 401)
     with LOGOWANIE_LOCK:
         LOGOWANIE_PROBY.pop(ip, None)
+    wejscie_zapisz("logowanie_ok")
     try:
         zdrowie_log(f"LOGOWANIE ok z {ip} ({(request.user_agent.string or '')[:80]})")
     except OSError:
