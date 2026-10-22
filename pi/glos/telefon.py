@@ -597,8 +597,7 @@ def zadzwon_do_wlasciciela(konto, zl):
         wynik(stan="blad", opis="nie znam jeszcze Twojego adresu Linphone (SIP_WLASCICIEL). Zadzwoń raz do Pi z Linphone, to go podam.", **zl)
         return
     zl.setdefault("start", time.time())          # pierwsza próba: przez CZAS_DZWONIENIA dzwonimy (z ponowieniami)
-    p = Polaczenie(konto, kierunek="od Pi", powitanie=zl["tekst"] + ("" if zl["tekst"].rstrip().endswith("?") else " Możesz mi odpowiedzieć albo się rozłączyć."),
-                   zlecenie=zl)
+    p = Polaczenie(konto, kierunek="od Pi", powitanie=zl["tekst"], zlecenie=zl)     # bez formułki na końcu: po powitaniu Pi i tak słucha
     try:
         p.makeCall(WLASCICIEL, pj.CallOpParam(True))
         AKTYWNE[p.getId()] = p

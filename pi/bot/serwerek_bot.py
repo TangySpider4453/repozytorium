@@ -1012,8 +1012,8 @@ def przygotuj_rozmowe(z):
         f"[Za kilka minut, o {z['termin'][11:16]}, Pi dzwoni do Antka przez Linphone z przypomnieniem: „{z['tekst']}”. "
         "Napisz DOKŁADNIE to, co powiesz, gdy odbierze: 1–3 krótkie zdania po polsku, naturalnie, bez emotek, list "
         "i Markdown (zostanie przeczytane na głos). Zinterpretuj przypomnienie: powiedz, o czym pamiętać i co zrobić "
-        "(możesz krótko coś sprawdzić, np. stan serwera, plan, pogodę, jeśli to pomaga). Zakończ krótkim pytaniem albo "
-        "„jeśli chcesz coś jeszcze, powiedz”. Nic poza samą wypowiedzią.]")
+        "(możesz krótko coś sprawdzić, np. stan serwera, plan, pogodę, jeśli to pomaga). Bez pytań i formułek na końcu "
+        "typu „jeśli chcesz coś powiedzieć” (Antek i tak może mówić po Tobie). Nic poza samą wypowiedzią.]")
     PRZYGOTOWANE[z["id"]] = {"termin": z["termin"], "tekst": tekst or None, "gotowe": True}
     print(f"przygotowane przypomnienie {z['id']}: {(tekst or 'brak')[:80]}", flush=True)
 
