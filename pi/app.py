@@ -943,8 +943,7 @@ SESJA_DNI = 365
 ZAUFANE_SIECI = [ipaddress.ip_network(n) for n in ("100.64.0.0/10", "fd7a:115c:a1e0::/48", "127.0.0.0/8", "::1/128")]
 LOGOWANIE_PROBY = {}
 LOGOWANIE_LOCK = threading.Lock()
-WEJSCIA = BASE / "dane" / "wejscia.jsonl"      # zdarzenia dla bota Telegram (kazde wejscie z sieci domowej)
-WEJSCIA_OSTATNIO = {}
+WEJSCIA = BASE / "dane" / "wejscia.jsonl"      # dla bota Telegram: kazde zapytanie z sieci domowej i logowania
 
 
 def wejscie_zapisz(rodzaj, **dane):
@@ -996,10 +995,6 @@ def wymagaj_hasla():
     from flask import request
     if przez_tailscale():
         return None
-    ip, teraz = request.remote_addr, time.time()
-    if teraz - WEJSCIA_OSTATNIO.get(ip, 0) > 600:        # nowe wejscie = pierwsze zapytanie po 10 min ciszy z tego IP
-        wejscie_zapisz("wejscie", sciezka=request.path[:100], zalogowany=zalogowany())
-    WEJSCIA_OSTATNIO[ip] = teraz
     if request.path in ("/logowanie", "/wyloguj") or zalogowany():
         return None
     if request.path.startswith("/api/"):
@@ -1071,6 +1066,7 @@ def logowanie():
     if d is None:
         return logowanie_strona("Hasło nie jest jeszcze ustawione (komenda portal-haslo na Pi).", nast, 503)
     if request.method == "GET":
+        wejscie_zapisz("panel_logowania")
         return logowanie_strona(nast=nast)
     ip, teraz = request.remote_addr or "?", time.time()
     with LOGOWANIE_LOCK:
@@ -1108,6 +1104,16 @@ def logowanie():
     resp = redirect(nast)
     resp.set_cookie(SESJA, sesja_podpis().dumps({"w": d.get("wersja", 1)}), max_age=SESJA_DNI * 86400,
                     httponly=True, samesite="Lax", path="/")
+    return resp
+
+
+@app.after_request
+def wejscia_sciezka(resp):
+    """kazde zapytanie z sieci domowej (sciezka, metoda, wynik) do sladu wizyty w bocie Telegram"""
+    from flask import request
+    if not przez_tailscale():
+        wejscie_zapisz("zapytanie", metoda=request.method, sciezka=request.full_path.rstrip("?")[:200],
+                       wynik=resp.status_code, zalogowany=zalogowany() or SESJA in resp.headers.get("Set-Cookie", ""))
     return resp
 
 

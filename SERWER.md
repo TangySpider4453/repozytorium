@@ -81,11 +81,18 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   Restart (portal / Minecraft z `save-all`), Nowa rozmowa. Akcje zmieniające coś tylko po „Tak”.
 - Powiadomienia (co 60 s z `/api/zdrowie` i `sprawdziany.json`): 🔴 od razu o każdej porze + „✅ Minęło”; 🟡 od razu
   poza ciszą 22–7 (z nocy jedną wiadomością rano); nauka: 18:00 dzień przed, 18:00 3 dni przed sprawdzianem, 7:00 w dniu.
-- **Wejścia z sieci domowej** (od razu, z IP, MAC z `ip neigh` i nazwą z DNS routera): portal dopisuje do
-  `~/portal/dane/wejscia.jsonl` (`wejscie` = pierwsze zapytanie z IP po 10 min ciszy, `logowanie_ok`, `zle_haslo`
-  z numerem próby, `blokada`); SSH z dziennika `sshd` (udane/nieudane/nieistniejący użytkownik); SSH, Samba (139/445),
-  VNC (5900), panel MC (8090) z logu nftables: tabela `inet serwerek_log` (tylko `log`, nic nie blokuje), plik
-  `/etc/serwerek-bot/serwerek-log-wejsc.nft`, usługa `serwerek-log-wejsc`; to samo IP i port najwyżej co 10 min.
+- **Wejścia z sieci domowej** (wszystko spoza Tailscale i adresów samego Pi): każde zdarzenie → wizyta `WIZYTY[ip]`
+  w bocie i od razu linia w logu na NAS `Logi/wejscia/RRRR-MM-DD.log` (gdy NAS padł: `~/bot/wejscia-bufor.log`,
+  dopisywany później; pliki starsze niż 30 dni bot usuwa). Od razu na Telegram: 🚪 nowe wejście (z MAC i nazwą
+  z DNS routera), 🔑 otwarcie panelu logowania (najwyżej co 1 min), 🔓 każde przejście zabezpieczeń (hasło portalu,
+  SSH, Samba, VNC, panel MC), ⛔ nieudane próby, 🕵️ oznaki ataku (≥ 3 złe hasła, 5+ portów w minutę, ścieżki typu
+  `wp-login`/`.env`). Po 10 min ciszy 📋 podsumowanie wizyty (kroki z czasem, powtórzenia jako ×N).
+  Źródła: portal dopisuje do `~/portal/dane/wejscia.jsonl` każde zapytanie (`zapytanie`: metoda, ścieżka, wynik,
+  zalogowany), `panel_logowania`, `logowanie_ok`, `zle_haslo`, `blokada` (bot czyta co 1 s, plik > 5 MB zeruje);
+  dziennik: `sshd`, Samba `smbd` (auth_audit: `log level = 1 auth_audit:3`, `logging = file syslog@3`) i `smbd_audit`
+  (VFS `full_audit` w `[Pelny_System]` i `[homes]`: connect/disconnect/openat/unlinkat/renameat/mkdirat; kopia
+  `smb.conf.przed_audytem_2026-10-22`), jądro: nftables `inet serwerek_log` (tylko log): `SERWEREK-WEJSCIE` (22, 139,
+  445, 5900, 8090) i `SERWEREK-SKAN` (inne porty TCP). Udział `Pelny_System` = cały `/` z `force user = root`.
 - **Zdjęcia i PDF-y** wysłane botowi (do 20 MB) zapisują się w `~/bot/pliki/<data>/` i idą do Claude z podpisem;
   album zdjęć = jedna wiadomość. Claude według `instrukcja.md` robi z nich nową stronę w Nauce (szablon fizyki/historii,
   wpis w `sprawdziany.json`, kontrola `node ~/bot/sprawdz_strone.js <id>`), zapisuje linię w

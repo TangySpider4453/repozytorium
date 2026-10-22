@@ -5,9 +5,8 @@ Bot Telegram serwerka (@SerwerekAntek_bot): powiadomienia, przyciski i rozmowa z
   - Powiadomienia: czerwone problemy z monitora zdrowia od razu (o kazdej porze) i ich koniec; zolte od razu poza
     cisza nocna (22-7; z nocy przychodza rano); nauka: dzien przed sprawdzianem/kartkowka (18:00), 3 dni przed
     sprawdzianem (18:00) i rano w dniu (7:00).
-  - Wejscia z sieci domowej (od razu, z IP, MAC i nazwa urzadzenia): portal (wejscie, logowanie, zle haslo, blokada;
-    zdarzenia z ~/portal/dane/wejscia.jsonl), SSH (dziennik sshd), VNC, Samba i panel Minecrafta (log nftables
-    z prefiksem SERWEREK-WEJSCIE, tabela inet serwerek_log z serwerek-log-wejsc.service).
+  - Wejscia z sieci domowej (sekcja „wejscia”): od razu nowe wejscie, panel logowania, przejscie zabezpieczen,
+    nieudane proby i oznaki ataku; po 10 min ciszy podsumowanie calej wizyty; pelny zapis na NAS (30 dni).
   - Zdjecia i PDF-y (np. strony podrecznika) ida do Claude razem z podpisem: z nich robi nowe zagadnienie w Nauce.
   - Przyciski: Stan, Sprawdziany, Kopia, Przejrzane, Restart, Nowa rozmowa. Akcje zmieniajace cos: zawsze z „Tak”.
   - Inny tekst idzie do Claude Code na Pi (zalogowany subskrypcja wlasciciela), z ograniczonymi narzedziami
@@ -106,9 +105,11 @@ def wyslij(tekst, html_=False, przyciski=None, chat=None):
             dane["parse_mode"] = "HTML"
         if n == len(czesci) - 1:
             dane["reply_markup"] = przyciski or KLAWIATURA
-        if tg("sendMessage", **dane) is None and html_:         # zly HTML: wyslij jako zwykly tekst
+        wynik = tg("sendMessage", **dane)
+        if wynik is None and html_:         # zly HTML: wyslij jako zwykly tekst
             dane.pop("parse_mode")
-            tg("sendMessage", **dane)
+            wynik = tg("sendMessage", **dane)
+        print(("wysłano: " if wynik else "NIE wysłano: ") + c[:80].replace("\n", " "), flush=True)
 
 
 def portal(sciezka, dane=None):
@@ -353,6 +354,60 @@ def petla_powiadomien():
 
 
 # ---------------------------------------------------------------- wejscia z sieci domowej
+# Kazde zdarzenie z IP spoza Tailscale trafia do wizyty (WIZYTY[ip]) i od razu do logu na NAS
+# (Logi/wejscia/RRRR-MM-DD.log, pliki starsze niz 30 dni sa usuwane). Od razu na Telegram: nowe wejscie, otwarcie
+# panelu logowania, kazde przejscie zabezpieczen (haslo portalu, SSH, Samba, VNC, panel MC), nieudane proby i oznaki
+# ataku (zgadywanie hasla, skanowanie portow, szukanie dziur w portalu). Po 10 min ciszy: podsumowanie calej wizyty.
+import re
+
+NAS_WEJSCIA = Path("/mnt/nas/Raspberry/Logi/wejscia")
+BUFOR = KATALOG / "wejscia-bufor.log"
+WIZYTA_KONIEC = 600
+WIZYTY = {}
+WIZYTY_LOCK = threading.Lock()
+PODEJRZANE = re.compile(r"wp-|wordpress|\.env|\.git|phpmyadmin|/admin|cgi-bin|\.php|/etc/passwd|\.\./|shell|/boaform|/HNAP|/actuator|/console|/manager", re.I)
+OPIS_API = [(r"^POST /api/nauka/postep", "Nauka: zapis postępu"), (r"^POST /api/nauka/data", "Nauka: zmiana daty sprawdzianu"),
+            (r"^POST /api/nauka/wazne", "Nauka: oznaczenie „ważne”"), (r"^POST /api/nauka/ustawienia", "Nauka: ustawienia listy"),
+            (r"^POST /api/progres/zdjecie/", "Progres: zmiana lub usunięcie zdjęcia"), (r"^POST /api/progres/zdjecie", "Progres: dodanie zdjęcia"),
+            (r"^POST /api/progres/wpis", "Progres: zapis pomiaru"), (r"^POST /api/progres/render", "Progres: zlecenie filmu"),
+            (r"^POST /api/progres/film/", "Progres: usunięcie filmu"), (r"^POST /api/progres/ustawienia", "Progres: ustawienia"),
+            (r"^POST /api/zdrowie/przejrzane", "Zdrowie: „przejrzane”"), (r"^GET /api/progres/plik/", "Progres: oglądanie zdjęć"),
+            (r"^GET /api/progres/film/", "Progres: oglądanie filmu"), (r"^GET /wyloguj", "wylogowanie"),
+            (r"^POST /logowanie", None), (r"^GET /logowanie", None)]
+STRONY = [(r"^/$", "🏠 Start"), (r"^/siec", "🌐 Sieć"), (r"^/terminal", "💻 Terminal"), (r"^/strony/nauka/([a-z0-9_-]+)/", "📚 Nauka: {0}"),
+          (r"^/strony/nauka/", "📚 Nauka"), (r"^/strony/progres/", "💪 Progres"), (r"^/strony/zdrowie/", "🩺 Zdrowie"),
+          (r"^/strony/lazik/", "🚙 Łazik"), (r"^/strony/([a-z0-9_-]+)/", "strona {0}")]
+
+
+def log_nas(linia):
+    dzien = date.today().isoformat()
+    tekst = f"{dzien} {linia}\n"
+    try:
+        if Path("/mnt/nas/Raspberry/.nas").exists():
+            NAS_WEJSCIA.mkdir(exist_ok=True)
+            if BUFOR.exists() and BUFOR.stat().st_size:
+                with open(NAS_WEJSCIA / f"{dzien}.log", "a", encoding="utf-8") as f:
+                    f.write("[zaległe, NAS był niedostępny]\n" + BUFOR.read_text(encoding="utf-8"))
+                BUFOR.unlink()
+            with open(NAS_WEJSCIA / f"{dzien}.log", "a", encoding="utf-8") as f:
+                f.write(tekst)
+            return
+    except OSError:
+        pass
+    with open(BUFOR, "a", encoding="utf-8") as f:
+        f.write(tekst)
+
+
+def sprzataj_nas():
+    granica = (date.today() - timedelta(days=30)).isoformat()
+    try:
+        for p in NAS_WEJSCIA.glob("*.log"):
+            if p.stem < granica:
+                p.unlink()
+    except OSError:
+        pass
+
+
 def urzadzenie(ip):
     """MAC z tablicy ARP i nazwa z DNS routera (jesli jest)"""
     import socket
@@ -363,8 +418,8 @@ def urzadzenie(ip):
             mac = out.split("lladdr")[1].split()[0]
     except (OSError, subprocess.TimeoutExpired):
         pass
-    nazwa = ""
     wynik = []
+
     def szukaj():
         try:
             wynik.append(socket.gethostbyaddr(ip)[0])
@@ -373,36 +428,119 @@ def urzadzenie(ip):
     t = threading.Thread(target=szukaj, daemon=True)
     t.start()
     t.join(2)
-    if wynik:
-        nazwa = wynik[0]
-    return ", ".join(x for x in (nazwa, f"MAC {mac}" if mac else "") if x)
+    return ", ".join(x for x in (wynik[0] if wynik else "", f"MAC {mac}" if mac else "") if x)
 
 
 def system_z_ua(ua):
     ua = ua or ""
     for klucz, nazwa in (("iPad", "iPad"), ("iPhone", "iPhone"), ("Android", "Android"), ("Windows", "Windows"),
-                         ("Macintosh", "Mac"), ("Linux", "Linux"), ("curl", "curl"), ("python", "skrypt Python")):
+                         ("Macintosh", "Mac/iPad"), ("Linux", "Linux"), ("curl", "curl"), ("python", "skrypt Python"), ("Wget", "wget")):
         if klucz in ua:
             return nazwa
     return ua[:40] or "?"
 
 
-def wejscie_wiadomosc(ikona, co, ip, dodatek=""):
-    u = urzadzenie(ip)
-    wyslij(f"{ikona} <b>{e(co)}</b>\nIP: <code>{e(ip)}</code>" + (f" ({e(u)})" if u else "") + (f"\n{dodatek}" if dodatek else ""), html_=True)
+def zdarzenie(ip, krok, alarm=None, rodzaj_alarmu=None, przerwa=0):
+    """krok: opis do sladu wizyty i logu NAS; alarm: (ikona, tytul, dodatek) do wyslania od razu"""
+    if not ip or ip.startswith("100.") or ip in ("127.0.0.1", "172.23.0.20", "172.23.0.24"):
+        return
+    teraz = time.time()
+    urz_nowe = urzadzenie(ip) if ip not in WIZYTY else None
+    with WIZYTY_LOCK:
+        w = WIZYTY.get(ip)
+        nowa = w is None
+        if nowa:
+            w = WIZYTY[ip] = {"od": teraz, "ostatnio": teraz, "kroki": [], "alarmy": {}, "urz": urz_nowe or "", "liczniki": {}}
+        w["ostatnio"] = teraz
+        if not w["kroki"] or w["kroki"][-1][1] != krok:
+            w["kroki"].append((time.strftime("%H:%M:%S"), krok))
+        else:
+            w["liczniki"][krok] = w["liczniki"].get(krok, 1) + 1
+        wyslac = alarm and (not rodzaj_alarmu or teraz - w["alarmy"].get(rodzaj_alarmu, 0) > przerwa)
+        if wyslac and rodzaj_alarmu:
+            w["alarmy"][rodzaj_alarmu] = teraz
+        urz = w["urz"]
+    log_nas(f"{time.strftime('%H:%M:%S')} {ip} {krok}")
+    if not stan()["wlasciciel"]:
+        return
+    kto = f"IP: <code>{e(ip)}</code>" + (f" ({e(urz)})" if urz else "")
+    if nowa:
+        wyslij(f"🚪 <b>Nowe wejście na Pi z sieci domowej</b>\n{kto}\nPierwszy krok: {e(krok)}", html_=True)
+    if wyslac:
+        ikona, tytul, dodatek = alarm
+        wyslij(f"{ikona} <b>{e(tytul)}</b>\n{kto}" + (f"\n{e(dodatek)}" if dodatek else ""), html_=True)
+
+
+def petla_wizyt():
+    ostatnie_sprzatanie = None
+    while True:
+        time.sleep(30)
+        teraz = time.time()
+        with WIZYTY_LOCK:
+            koniec = [(ip, w) for ip, w in WIZYTY.items() if teraz - w["ostatnio"] > WIZYTA_KONIEC]
+            for ip, _ in koniec:
+                del WIZYTY[ip]
+        for ip, w in koniec:
+            od, do = time.strftime("%H:%M", time.localtime(w["od"])), time.strftime("%H:%M", time.localtime(w["ostatnio"]))
+            kroki = [f"{t[:5]} {k}" + (f" (×{w['liczniki'][k]})" if w["liczniki"].get(k, 1) > 1 else "") for t, k in w["kroki"]]
+            if len(kroki) > 40:
+                kroki = kroki[:20] + [f"… i jeszcze {len(kroki) - 35} kroków (pełna lista w logu na NAS) …"] + kroki[-15:]
+            log_nas(f"{time.strftime('%H:%M:%S')} {ip} KONIEC WIZYTY (od {od})")
+            if stan()["wlasciciel"]:
+                wyslij(f"📋 <b>Koniec wizyty z {e(ip)}</b>" + (f" ({e(w['urz'])})" if w["urz"] else "") + f"\n{od}–{do}, {len(w['kroki'])} kroków:\n"
+                       + "\n".join(e(k) for k in kroki) + f"\n\nPełny zapis: NAS → Raspberry/Logi/wejscia/{date.today().isoformat()}.log", html_=True)
+        if ostatnie_sprzatanie != date.today():
+            ostatnie_sprzatanie = date.today()
+            sprzataj_nas()
+
+
+def krok_portalu(z):
+    """zdarzenie portalu -> (krok, alarm, rodzaj alarmu, przerwa)"""
+    sys_ = system_z_ua(z.get("ua"))
+    sys_ = None if sys_ == "?" else sys_
+    r = z["rodzaj"]
+    if r == "panel_logowania":
+        return "🔑 otworzył panel logowania portalu", ("🔑", "Ktoś otworzył panel logowania portalu", sys_), "panel", 60
+    if r == "logowanie_ok":
+        return "🔓 zalogował się hasłem do portalu", ("🔓", "Przeszedł zabezpieczenie: zalogował się hasłem do portalu", sys_), None, 0
+    if r == "zle_haslo":
+        p = z.get("proba", 1)
+        if p >= 3:
+            return f"⛔ złe hasło (próba {p})", ("🕵️", f"Możliwy atak: zgadywanie hasła ({p} złe próby)", sys_), None, 0
+        return f"⛔ złe hasło (próba {p})", ("⛔", f"Złe hasło do portalu (próba {p} z 5)", sys_), None, 0
+    if r == "blokada":
+        return "🚫 zablokowany na 5 min", ("🚫", "Zablokowano logowanie na 5 min (5 złych haseł)", sys_), None, 0
+    if r == "zapytanie":
+        met, sc, wyn = z.get("metoda", "GET"), z.get("sciezka", ""), z.get("wynik", 0)
+        sciezka = sc.split("?")[0]
+        if PODEJRZANE.search(sc):
+            return f"🕵️ szukał dziur: {met} {sc[:80]} ({wyn})", ("🕵️", "Możliwy atak: ktoś szuka dziur w portalu", f"{met} {sc[:120]}"), "dziury", 300
+        for wzor, opis in OPIS_API:
+            if re.search(wzor, f"{met} {sciezka}"):
+                return (opis + ("" if wyn < 400 else f" (odmowa {wyn})")) if opis else None, None, None, 0
+        if sciezka.startswith("/api/") or re.search(r"\.(js|css|png|jpg|ico|json|svg|woff2?|task|mp4)$", sciezka):
+            return (f"odmowa {wyn}: {met} {sciezka[:60]}" if wyn in (401, 403) else None), None, None, 0
+        for wzor, opis in STRONY:
+            m = re.search(wzor, sciezka)
+            if m:
+                return opis.format(*m.groups()) + ("" if z.get("zalogowany") else " → strona logowania (bez hasła)"), None, None, 0
+        return f"{met} {sciezka[:80]} ({wyn})", None, None, 0
+    return None, None, None, 0
 
 
 def petla_portalu():
-    """zdarzenia logowania i wejsc z portalu (app.py dopisuje linie JSON do dane/wejscia.jsonl)"""
+    """zdarzenia portalu (app.py dopisuje linie JSON do dane/wejscia.jsonl)"""
     poz = WEJSCIA.stat().st_size if WEJSCIA.exists() else 0
     while True:
-        time.sleep(2)
+        time.sleep(1)
         try:
             rozm = WEJSCIA.stat().st_size if WEJSCIA.exists() else 0
             if rozm < poz:
                 poz = 0
-            if rozm == poz or not stan()["wlasciciel"]:
-                poz = rozm
+            if rozm == poz:
+                if rozm > 5 * 1024 * 1024:          # wszystko przeczytane: zacznij plik od nowa
+                    WEJSCIA.write_text("")
+                    poz = 0
                 continue
             with open(WEJSCIA, encoding="utf-8") as f:
                 f.seek(poz)
@@ -410,49 +548,76 @@ def petla_portalu():
                 poz = f.tell()
             for l in linie:
                 z = json.loads(l)
-                sys_ = e(system_z_ua(z.get("ua")))
-                if z["rodzaj"] == "wejscie":
-                    stan_ = "zalogowany" if z.get("zalogowany") else "bez hasła (strona logowania)"
-                    wejscie_wiadomosc("🌐", "Wejście na portal z sieci domowej", z["ip"], f"{sys_} · {stan_} · {e(z.get('sciezka', ''))}")
-                elif z["rodzaj"] == "logowanie_ok":
-                    wejscie_wiadomosc("🔓", "Zalogowano do portalu", z["ip"], sys_)
-                elif z["rodzaj"] == "zle_haslo":
-                    wejscie_wiadomosc("⛔", "Złe hasło do portalu", z["ip"], f"{sys_} · próba {z.get('proba', '?')} z 5")
-                elif z["rodzaj"] == "blokada":
-                    wejscie_wiadomosc("🚫", "Zablokowano logowanie na 5 min (za dużo złych haseł)", z["ip"], sys_)
+                krok, alarm, rodz, przerwa = krok_portalu(z)
+                if krok:
+                    zdarzenie(z.get("ip"), "portal: " + krok, alarm, rodz, przerwa)
         except (OSError, ValueError, KeyError) as ex:
             print(f"wejscia portalu: {ex}", flush=True)
 
 
 def petla_dziennika():
-    """SSH (sshd) i inne uslugi (log nftables SERWEREK-WEJSCIE) z dziennika systemu"""
-    import re
-    ostatnio = {}
+    """SSH (sshd), Samba (auth_audit i full_audit) i log nftables (SERWEREK-WEJSCIE, SERWEREK-SKAN) z dziennika systemu"""
+    porty_ip = {}
+    zle_ssh = {}
     while True:
         try:
             p = subprocess.Popen(["journalctl", "-f", "-n0", "-o", "cat", "_TRANSPORT=kernel", "+", "SYSLOG_IDENTIFIER=sshd",
-                                  "+", "SYSLOG_IDENTIFIER=sshd-session"], stdout=subprocess.PIPE, text=True)
+                                  "+", "SYSLOG_IDENTIFIER=sshd-session", "+", "SYSLOG_IDENTIFIER=smbd_audit", "+", "SYSLOG_IDENTIFIER=smbd"],
+                                 stdout=subprocess.PIPE, text=True)
             for l in p.stdout:
-                if not stan()["wlasciciel"]:
-                    continue
-                m = re.search(r"SERWEREK-WEJSCIE .*SRC=(\S+) .*DPT=(\d+)", l)
-                if m:
+                if m := re.search(r"SERWEREK-WEJSCIE .*SRC=(\S+) .*DPT=(\d+)", l):
                     ip, port = m.group(1), int(m.group(2))
-                    if time.time() - ostatnio.get((ip, port), 0) < WEJSCIE_PRZERWA:
-                        ostatnio[(ip, port)] = time.time()
-                        continue
-                    ostatnio[(ip, port)] = time.time()
-                    wejscie_wiadomosc("🚪", f"Połączenie z sieci domowej: {PORTY.get(port, f'port {port}')}", ip)
-                    continue
-                if m := re.search(r"Accepted (\S+) for (\S+) from (\S+)", l):
-                    if not m.group(3).startswith("100."):
-                        wejscie_wiadomosc("🔓", f"Zalogowano przez SSH jako {m.group(2)} ({m.group(1)})", m.group(3))
+                    nazwa = PORTY.get(port, f"port {port}")
+                    alarm = None
+                    if port == 5900:
+                        alarm = ("🖥️", "Połączenie z pulpitem VNC", "VNC daje pełny dostęp do pulpitu Pi")
+                    elif port == 8090:
+                        alarm = ("🎮", "Wejście na panel Minecrafta (bez hasła)", "konsola serwera Minecraft")
+                    zdarzenie(ip, f"połączenie: {nazwa}", alarm, f"port{port}", WEJSCIE_PRZERWA)
+                elif m := re.search(r"SERWEREK-SKAN .*SRC=(\S+) .*DPT=(\d+)", l):
+                    ip, port, teraz = m.group(1), m.group(2), time.time()
+                    lista = [(t, pp) for t, pp in porty_ip.get(ip, []) if t > teraz - 60] + [(teraz, port)]
+                    porty_ip[ip] = lista
+                    rozne = sorted({pp for _, pp in lista}, key=int)
+                    if len(rozne) >= 5:
+                        zdarzenie(ip, f"🕵️ skanowanie portów ({len(rozne)} portów w minutę)",
+                                  ("🕵️", "Możliwy atak: skanowanie portów", "porty: " + ", ".join(rozne[:15])), "skan", 600)
+                    else:
+                        zdarzenie(ip, f"połączenie na zamknięty port {port}")
+                elif m := re.search(r"Accepted (\S+) for (\S+) from (\S+)", l):
+                    zdarzenie(m.group(3), f"🔓 SSH: zalogował się jako {m.group(2)} ({m.group(1)})",
+                              ("🔓", f"Przeszedł zabezpieczenie: zalogował się przez SSH jako {m.group(2)}", f"metoda: {m.group(1)}"))
                 elif m := re.search(r"Failed (\S+) for (invalid user )?(\S+) from (\S+)", l):
-                    wejscie_wiadomosc("⛔", f"Nieudane logowanie SSH jako {m.group(3)}" + (" (nie ma takiego użytkownika)" if m.group(2) else ""), m.group(4))
+                    ip, teraz = m.group(4), time.time()
+                    zle_ssh[ip] = [t for t in zle_ssh.get(ip, []) if t > teraz - 300] + [teraz]
+                    n = len(zle_ssh[ip])
+                    tytul = (f"Możliwy atak: zgadywanie hasła SSH ({n} prób w 5 min)" if n >= 3
+                             else f"Nieudane logowanie SSH jako {m.group(3)}" + (" (nie ma takiego użytkownika)" if m.group(2) else ""))
+                    zdarzenie(ip, f"⛔ SSH: złe hasło dla {m.group(3)}", ("🕵️" if n >= 3 else "⛔", tytul, None),
+                              "ssh_atak" if n >= 3 else None, 300 if n >= 3 else 0)
                 elif m := re.search(r"Invalid user (\S+) from (\S+)", l):
-                    if time.time() - ostatnio.get((m.group(2), "inv"), 0) > 60:
-                        ostatnio[(m.group(2), "inv")] = time.time()
-                        wejscie_wiadomosc("⛔", f"Próba SSH na nieistniejącego użytkownika {m.group(1)}", m.group(2))
+                    zdarzenie(m.group(2), f"⛔ SSH: nieistniejący użytkownik {m.group(1)}",
+                              ("⛔", f"Próba SSH na nieistniejącego użytkownika {m.group(1)}", None), "ssh_inv", 60)
+                elif m := re.search(r"Disconnected from user (\S+) (\S+) port", l):
+                    zdarzenie(m.group(2), f"SSH: wylogował się ({m.group(1)})")
+                elif m := re.search(r"Auth: .*user \[([^\]]*)\]\\?\[?([^\]]*)\]? .*status \[(NT_STATUS_\w+)\].*remote host \[ipv\d:([^\]]+):\d+\]", l):
+                    uz, status, ip = m.group(2) or m.group(1), m.group(3), m.group(4)
+                    if status == "NT_STATUS_OK":
+                        zdarzenie(ip, f"🔓 Samba: zalogował się jako {uz}", ("🔓", f"Przeszedł zabezpieczenie: udział sieciowy Samba jako {uz}", None), "smb_ok", 600)
+                    else:
+                        zdarzenie(ip, f"⛔ Samba: odmowa dla {uz} ({status})", ("⛔", f"Nieudane logowanie do udziału Samba jako {uz}", status), "smb_zle", 60)
+                elif m := re.search(r"([^|\s]*)\|([\d.:a-f]+)\|([^|]*)\|(\w+)\|(ok|fail)\|?(.*)", l):
+                    uz, ip, udzial, op, wynik, reszta = m.groups()
+                    sciezka = reszta.split("|")[-1][:150]
+                    if op == "connect":
+                        alarm = ("🔓", f"Połączył się z udziałem „{udzial}” jako {uz}",
+                                 "UWAGA: ten udział to cały dysk Pi z prawami roota" if udzial == "Pelny_System" else None) if wynik == "ok" else None
+                        zdarzenie(ip, f"Samba: {'połączył się z' if wynik == 'ok' else 'odmowa dostępu do'} „{udzial}” jako {uz}", alarm, f"smb_{udzial}", 600)
+                    elif op == "disconnect":
+                        zdarzenie(ip, f"Samba: rozłączył się z „{udzial}”")
+                    else:
+                        co = {"openat": "otworzył", "unlinkat": "🗑 usunął", "renameat": "zmienił nazwę", "mkdirat": "utworzył folder"}.get(op, op)
+                        zdarzenie(ip, f"Samba: {co} {sciezka}" + ("" if wynik == "ok" else " (nie udało się)"))
         except Exception as ex:
             print(f"dziennik: {type(ex).__name__}: {ex}", flush=True)
         time.sleep(10)
@@ -608,6 +773,7 @@ def main():
     threading.Thread(target=petla_claude, daemon=True).start()
     threading.Thread(target=petla_portalu, daemon=True).start()
     threading.Thread(target=petla_dziennika, daemon=True).start()
+    threading.Thread(target=petla_wizyt, daemon=True).start()
     offset = None
     while True:
         wyn = tg_updates(offset)
