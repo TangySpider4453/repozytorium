@@ -141,6 +141,26 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   albo po 1 h ciszy. Zużycie liczy się do limitów subskrypcji właściciela; bot tylko dla niego (zasady Anthropic).
 - Odnowienie logowania Claude (co rok): `claude setup-token` → token do `/etc/serwerek-bot/claude.env`, restart bota.
 
+## Budziki, Mobidziennik i poczta (od 2026-10-22)
+- **Budziki**: `/api/alarmy` (portal, `dane/alarmy.json`: godzina + data albo dni tygodnia 0=pon). Bot
+  (`petla_budzikow`, co 15 s): ok. 3 min wcześniej `przygotuj_budzik` zbiera `poranne_dane()` (serwer, poczta, lekcje
+  z Mobidziennika, sprawdziany, zadania) i Claude układa wypowiedź; o czasie `zadzwon(..., budzik=id, proba=1)`;
+  nieodebrany (po minucie dzwonienia z ponowieniami 603) → jeszcze 2 próby co 5 min (`BUDZIK_PONOW`). Komendy
+  (`komenda_budzik`, Telegram, Linphone, rozmowa): „budzik jutro 6:15”, „obudź mnie o 7”, „budzik w dni robocze 6:30”,
+  „budziki”, „usuń budzik 2”. Po odebraniu Pi czeka 2,5 s (`CZEKAJ_PO_ODEBRANIU`).
+- **Mobidziennik** (`pi/bot/mobi.py`, tylko odczyt, jedyny POST = logowanie): co 10 min w 6–22 logowanie i GET
+  `planlekcji?typ=podstawowy&tydzien=<pon>` (ten i następny tydzień; klasy `bx pz` lekcja, `lz` zastępstwo, `lo`
+  odwołana), `zastepstwa`, `sprawdziany`, `zadaniadomowe`. Stan `~/bot/mobi/stan.json`; zmiany → `powiadom()`
+  (zmiana planu, przesunięty termin, nowe zadanie domowe); nowy sprawdzian, którego nie ma w Nauce → Claude
+  (`mobi_nowy_sprawdzian`, do 30 min) robi stronę i 2–3 sesje nauki w todo albo prosi o materiały. Dane logowania:
+  `/etc/serwerek-bot/mobi.env` (MOBI_ADRES/LOGIN/HASLO, root 600; usuwane ze środowiska Claude, strażnik blokuje).
+  Komenda „plan [jutro|w poniedziałek]”. API portalu `/api/mobi` (bez haseł), karta na „Automatyczne”.
+- **Poczta** (`pi/bot/poczta.py`): konta w `/etc/serwerek-bot/poczta.env` (`POCZTA_n=nazwa|imap.serwer|login|hasło do
+  aplikacji`; Gmail: imap.gmail.com, iCloud: imap.mail.me.com). Co 10 min UNSEEN z 3 dni (BODY.PEEK) → Claude BEZ
+  narzędzi (`claude_bez_narzedzi`: `--tools ""`, bez pamięci, maile jako dane) daje kategorię: spam → \Seen,
+  ważne → `powiadom()` i czekanie („przeczytaj mail”, „przeczytany”, „później” = za 3 h; bez reakcji przypomnienie
+  po 30 min; w nocy czeka), inne → poranny przegląd. Nigdy nie wysyła (bez SMTP). `/api/poczta`, komenda „maile”.
+
 ## Kanał: Linphone główny, Telegram zapasowy (od 2026-10-22)
 - Odpowiedź zawsze tam, skąd przyszło pytanie. Powiadomienia bota (`powiadom()`: alarmy, przypomnienia, sprawdziany,
   wyniki połączeń, Minecraft, wejścia z sieci) idą kanałem, którym Antek ostatnio pisał (`stan.json` → `kanal`,

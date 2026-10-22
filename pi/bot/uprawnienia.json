@@ -44,7 +44,10 @@
     "Edit(//home/tonyg/portal/app.py)",
     "Write(//home/tonyg/portal/app.py)",
     "Edit(//home/tonyg/bot/sudo_czeka.json)",
-    "Write(//home/tonyg/bot/sudo_czeka.json)"
+    "Write(//home/tonyg/bot/sudo_czeka.json)",
+    "Read(//home/tonyg/portal/dane/google_cookies.txt)",
+    "Read(//home/tonyg/bot/poczta/**)",
+    "Grep(//home/tonyg/bot/poczta/**)"
   ],
   "hooks": {
     "PreToolUse": [

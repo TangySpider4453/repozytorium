@@ -566,6 +566,8 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
         else:
             odp = zadanie_czat(t, bot)
             if odp is None:
+                odp = bot.komenda_mobi(t)           # plan lekcji
+            if odp is None:
                 odp = bot.poczta.reakcja(t)         # „przeczytaj mail”, „przeczytany”, „później”, „maile”
             if odp is None:
                 odp = bot.komenda_budzik(t)         # budziki

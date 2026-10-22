@@ -80,7 +80,36 @@ const AUTOMATY = [
      return [el("ul", {}, ...l.slice(0, 4).map(x => { const d = dni(x.data);
        return el("li", {}, el("span", {class:d <= 1 ? "dzis" : "", text:d === 0 ? "dziś" : d === 1 ? "jutro" : `za ${d} dni`}), ` · ${x.przedmiot} (${x.typ})`); }))];
    }},
-  {ikona:"📧", nazwa:"Poczta", wkrotce:true, opis:"Twoje skrzynki mailowe: ważne wiadomości w Telegramie, streszczenia, przypomnienia z maili."},
+  {ikona:"⏰", nazwa:"Budziki", link:null,
+   opis:"Pi dzwoni o tej porze i czyta poranny przegląd. Ustawiasz słowami: „budzik jutro 6:15”, „budzik w dni robocze 6:30”, „budziki”, „usuń budzik 2”.",
+   stan: async () => {
+     const l = (await json("/api/alarmy")).alarmy.filter(a => a.aktywny);
+     const DN = ["pon", "wt", "śr", "czw", "pt", "sob", "niedz"];
+     if(!l.length) return ["Brak budzików."];
+     return [el("ul", {}, ...l.map(a => el("li", {text:`${a.godzina} · ${a.data ? a.data.split("-").reverse().join(".") : (a.dni.length === 7 ? "codziennie" : a.dni.map(d => DN[d]).join(", "))}${a.opis ? " · " + a.opis : ""}`})))];
+   }},
+  {ikona:"📅", nazwa:"Mobidziennik", link:null,
+   opis:"Plan lekcji, zastępstwa, odwołane lekcje i sprawdziany, sprawdzane co 10 minut (tylko odczyt). Zmiany przychodzą na Linphone.",
+   stan: async () => {
+     const d = await json("/api/mobi");
+     if(!d.skonfigurowany) return ["Jeszcze nie podłączony."];
+     const dz = new Date(); const iso = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+     const zmiany = d.plan.filter(x => x.status !== "lekcja").slice(0, 5);
+     return [el("div", {class:"opis", style:"margin:0 0 4px", text:`Sprawdzono: ${(d.czas || "").slice(11, 16)}`}),
+       zmiany.length ? el("ul", {}, ...zmiany.map(x => el("li", {}, el("span", {class:x.status === "odwołana" ? "uw" : "dzis", text:x.status}),
+         ` · ${x.data.slice(8)}.${x.data.slice(5, 7)} ${x.od} ${x.zamiast ? x.zamiast + " → " : ""}${x.przedmiot}`)))
+       : el("div", {text:"Brak zmian w planie."})];
+   }},
+  {ikona:"📧", nazwa:"Poczta", link:null,
+   opis:"4 skrzynki: spam oznaczany jako przeczytany, ważne na Linphone (czeka na „przeczytaj mail / przeczytany / później”). Pi nigdy nic nie wysyła.",
+   stan: async () => {
+     const d = await json("/api/poczta");
+     if(!d.skonfigurowana) return ["Czeka na hasła do aplikacji (4 konta)."];
+     const inne = Object.values(d.inne).reduce((a, b) => a + b, 0);
+     return [el("div", {}, el("span", {class:d.wazne.length ? "uw" : "", text:`ważne: ${d.wazne.length}`}), ` · inne nieprzeczytane: ${inne}`),
+       ...d.wazne.slice(0, 3).map(w => el("div", {class:"opis", style:"margin:2px 0 0", text:`${w.konto}: ${w.temat}`})),
+       ...Object.entries(d.bledy).map(([k, b]) => el("div", {class:"uw", text:`${k}: ${b}`}))];
+   }},
   {ikona:"🚌", nazwa:"Komunikacja miejska", link:"/strony/komunikacja/",
    opis:"ZTM Poznań: odjazdy obok Ciebie, trasa do domu, opóźnienia na żywo.",
    stan: async () => {
@@ -93,7 +122,7 @@ const AUTOMATY = [
 
 for(const a of AUTOMATY){
   const stan = el("div", {class:"stan", text:a.wkrotce ? "" : "…"});
-  const k = el(a.wkrotce ? "div" : "a", {class:"karta" + (a.wkrotce ? " wkrotce" : ""), href:a.link},
+  const k = el(a.wkrotce || !a.link ? "div" : "a", {class:"karta" + (a.wkrotce ? " wkrotce" : ""), href:a.link || null},
     el("h2", {}, el("span", {"aria-hidden":"true", text:a.ikona}), a.nazwa, a.wkrotce ? el("span", {class:"znaczek", text:"wkrótce"}) : null),
     el("p", {class:"opis", text:a.opis}), stan);
   $("siatka").append(k);

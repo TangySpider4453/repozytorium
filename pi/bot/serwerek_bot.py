@@ -34,6 +34,7 @@ from pathlib import Path
 
 import pamiec
 import poczta
+import mobi
 
 KATALOG = Path(__file__).resolve().parent
 STAN = KATALOG / "stan.json"
@@ -435,7 +436,8 @@ def claude_polecenie(prompt):
     cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
            "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"],
            "--settings", json.dumps({"hooks": u.get("hooks", {})})]
-    env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")}
+    env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")
+           and not k.startswith(("POCZTA_", "MOBI_"))}            # hasła do poczty i dziennika nie trafiają do Claude
     env["HOME"] = "/home/tonyg"
     return cmd, env
 
@@ -455,8 +457,7 @@ def claude_bez_narzedzi(prompt, limit=180):
     """Claude BEZ żadnych narzędzi i bez pamięci rozmów: do treści z zewnątrz (maile, strony), które mogą zawierać
     podstępne polecenia; może tylko odpowiedzieć tekstem"""
     cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
-           "--disallowedTools", "Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "NotebookEdit",
-           "TodoWrite", "--strict-mcp-config"]
+           "--tools", "", "--strict-mcp-config"]
     env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")
            and not k.startswith("POCZTA_") and not k.startswith("MOBI_")}
     env["HOME"] = "/home/tonyg"
@@ -1272,6 +1273,70 @@ def komenda_budzik(tekst):
     return f"⏰ Budzik ustawiony: {opis_alarmu(a)}. Zadzwonię i przeczytam poranny przegląd."
 
 
+# ---------------------------------------------------------------- Mobidziennik (mobi.py): tylko odczyt, co 10 min 6–22
+def mobi_dzis():
+    if mobi.skonfigurowany() and time.time() - mobi.OSTATNIO["t"] > 300:
+        try:
+            mobi.sprawdz(powiadom, mobi_nowy_sprawdzian)
+        except Exception as ex:
+            print(f"mobi: {type(ex).__name__}: {ex}", flush=True)
+    return mobi.dzis()
+
+
+def mobi_nowy_sprawdzian(x):
+    """nowa zapowiedź w dzienniku: jeśli w Nauce już jest (ten dzień i przedmiot), nic; inaczej Claude przygotowuje
+    stronę i sesje nauki albo prosi o materiały (w osobnym wątku, do 30 min)"""
+    norm = lambda t: re.sub(r"[^a-ząćęłńóśźż]", "", (t or "").lower())[:6]
+    if any(y.get("data") == x["data"] and norm(y.get("przedmiot")) == norm(x["przedmiot"]) for y in sprawdziany()):
+        return
+
+    def praca():
+        odp = claude_jednorazowo(
+            f"[Mobidziennik: nowa zapowiedź. {x['rodzaj']} z przedmiotu „{x['przedmiot']}”, {x['data']} o {x['godzina']}, "
+            f"grupa {x['grupa']}, nauczyciel {x['nauczyciel']}. Tematyka (wpis nauczyciela): „{x['tematyka']}”.\n"
+            "Oceń, czy ten opis wystarcza, żeby przygotować materiały (konkretny dział, temat, zakres albo strony). "
+            "JEŚLI TAK: zrób stronę w Nauce dokładnie według instrukcji (wpis w sprawdziany.json, typ i data jak wyżej, "
+            "kontrola sprawdz_strone.js), potem dodaj przez API todo 2–3 sesje nauki przed terminem (np. o 18:00 w dni "
+            "przed sprawdzianem, ostatnia dzień przed; każda z krótkim opisem, co powtórzyć) i napisz Antkowi KRÓTKO: "
+            "„📚 Dodano: …” (temat, link do strony) i listę dodanych sesji (dzień, godzina, co). "
+            "JEŚLI NIE: niczego nie twórz, napisz krótko, czego brakuje i o co prosisz (np. zdjęcia stron z podręcznika "
+            "albo notatki, do wysłania w Telegramie). Nie pisz do nikogo poza Antkiem.]", limit=1800)
+        powiadom(odp or f"📚 Nowa zapowiedź: {x['rodzaj']} z {x['przedmiot']} {x['data']} ({x['tematyka'][:100]}). "
+                        "Nie udało się przygotować materiałów automatycznie: wyślij mi materiały, to zrobię stronę w Nauce.")
+    threading.Thread(target=praca, daemon=True).start()
+
+
+def petla_mobi():
+    time.sleep(30)
+    while True:
+        try:
+            if mobi.skonfigurowany() and 6 <= datetime.now().hour < 22 and time.time() - mobi.OSTATNIO["t"] >= 590:
+                mobi.sprawdz(powiadom, mobi_nowy_sprawdzian)
+        except Exception as ex:
+            print(f"mobi: {type(ex).__name__}: {ex}", flush=True)
+        time.sleep(60)
+
+
+def komenda_mobi(tekst):
+    """„plan”, „plan jutro”, „lekcje”, „lekcje w poniedziałek” -> plan dnia z Mobidziennika"""
+    t = tekst.lower().strip(" ?.!")
+    m = re.fullmatch(r"(?:📅\s*)?/?(?:plan|lekcje|plan lekcji)(?:\s+(?:na\s+)?(dziś|dzis|jutro|pojutrze|w\s+\S+|\S+))?", t)
+    if not m:
+        return None
+    if not mobi.skonfigurowany():
+        return "Mobidziennik nie jest jeszcze podłączony."
+    kiedy = (m.group(1) or "dziś").replace("w ", "").strip()
+    d = date.today() + timedelta(days={"dziś": 0, "dzis": 0, "jutro": 1, "pojutrze": 2}.get(kiedy, 0))
+    if kiedy in DNI_TYG:
+        d = date.today() + timedelta(days=(DNI_TYG[kiedy] - date.today().weekday()) % 7)
+    if time.time() - mobi.OSTATNIO["t"] > 300:
+        try:
+            mobi.sprawdz(powiadom, mobi_nowy_sprawdzian)
+        except Exception as ex:
+            return f"⚠️ Mobidziennik: {ex}"
+    return f"📅 {DNI_NAZWY[d.weekday()].capitalize()} {d.strftime('%d.%m')}: " + (mobi.dzis(d) or "brak danych")
+
+
 def poczta_podsumowanie():
     return poczta.podsumowanie()
 
@@ -1672,6 +1737,7 @@ POMOC_WSPOLNE = """📊 stan – temperatura, procesor, RAM, NAS, kopia, maksima
 🏠 do domu / trasa do <miejsce|przystanek|adres> – jak dojechać stąd (też: trasa z Junikowo do Rondo Kaponiera)
 📍 ustaw tu jako dom / zapisz szkoła [adres] – zapamiętaj miejsce (bez adresu: tu, gdzie jesteś);
     miejsca – lista; usuń miejsce <nazwa>
+📅 plan / plan jutro / plan w poniedziałek – lekcje z Mobidziennika (zastępstwa, odwołane, sprawdziany)
 ⏰ budzik jutro 6:15 / budzik w dni robocze 6:30 / budziki / usuń budzik 2 – Pi dzwoni i czyta poranny przegląd
 📧 maile – ważne i nieprzeczytane; przy ważnym: przeczytaj mail / przeczytany / później
 🎮 minecraft – stan serwera (włącz / wyłącz)
@@ -1874,6 +1940,8 @@ def obsluz(u):
     elif tekst in ("📝 Zadania", "/zadania", "/todo") or tekst.lower() in ("todo", "zadania", "lista"):
         t, p = tekst_zadan()
         wyslij(t, html_=True, przyciski=p)
+    elif (odp_m := komenda_mobi(tekst)) is not None:
+        wyslij(odp_m)
     elif (odp_p := poczta.reakcja(tekst)) is not None:
         wyslij(odp_p)
     elif (odp_b := komenda_budzik(tekst)) is not None:
@@ -1927,6 +1995,7 @@ def main():
     threading.Thread(target=petla_przypomnien, daemon=True).start()
     threading.Thread(target=petla_budzikow, daemon=True).start()
     threading.Thread(target=petla_poczty, daemon=True).start()
+    threading.Thread(target=petla_mobi, daemon=True).start()
     threading.Thread(target=petla_telefonu, daemon=True).start()
     threading.Thread(target=petla_minecrafta, daemon=True).start()
     threading.Thread(target=petla_mc_stanu, daemon=True).start()

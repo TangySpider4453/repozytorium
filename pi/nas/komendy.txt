@@ -73,6 +73,16 @@ minecraft status
 Serwer NIE startuje sam po wlaczeniu Pi. Automatyczna aktualizacja zostawia go w tym stanie, w jakim byl.
 Wylacza sie sam po 30 min bez graczy (bot pisze o tym w Telegramie).
 
+BUDZIKI, PLAN LEKCJI, POCZTA (bot / Linphone / telefon)
+-------------------------------------------------------
+"budzik jutro 6:15", "obudz mnie o 7", "budzik w dni robocze 6:30", "budziki", "usun budzik 2"
+    Pi dzwoni i czyta poranny przeglad (serwer, poczta, lekcje i zmiany planu, sprawdziany, zadania).
+"plan", "plan jutro", "plan w poniedzialek" - lekcje z Mobidziennika (zastepstwa, odwolane).
+"maile" - wazne i nieprzeczytane; przy waznym: "przeczytaj mail", "przeczytany", "pozniej".
+sudo nano /etc/serwerek-bot/poczta.env   (konta poczty: POCZTA_1=nazwa|imap.gmail.com|adres|haslo do aplikacji)
+sudo nano /etc/serwerek-bot/mobi.env     (Mobidziennik: MOBI_ADRES, MOBI_LOGIN, MOBI_HASLO), potem:
+sudo systemctl restart serwerek-bot serwerek-telefon
+
 KOMUNIKACJA MIEJSKA (ZTM Poznan)
 --------------------------------
 W bocie / Linphone: "odjazdy Junikowo", "odjazdy" (obok Ciebie), "do domu", "trasa z Junikowo do Rondo Kaponiera",

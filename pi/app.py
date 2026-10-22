@@ -1417,6 +1417,32 @@ def api_alarm_zmien(aid):
     return jsonify(a if b.get("usun") is not True else {"ok": True})
 
 
+# ---------- Mobidziennik i poczta: stan z bota (tylko odczyt; hasła zostają w /etc/serwerek-bot) ----------
+BOT_DANE = Path("/home/tonyg/bot")
+
+
+@app.route("/api/mobi")
+def api_mobi():
+    try:
+        st = json.loads((BOT_DANE / "mobi" / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return jsonify({"skonfigurowany": False})
+    dzis = time.strftime("%Y-%m-%d")
+    return jsonify({"skonfigurowany": True, "czas": st.get("czas"), "plan": [x for x in st.get("plan", []) if x["data"] >= dzis],
+                    "sprawdziany": sorted(st.get("sprawdziany", {}).values(), key=lambda x: x["data"]), "zadania": st.get("zadania", [])})
+
+
+@app.route("/api/poczta")
+def api_poczta():
+    try:
+        st = json.loads((BOT_DANE / "poczta" / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return jsonify({"skonfigurowana": False})
+    return jsonify({"skonfigurowana": True,
+                    "wazne": [{k: w.get(k) for k in ("konto", "od", "temat", "s")} for w in st.get("wazne", [])],
+                    "inne": {k: len(v) for k, v in st.get("inne", {}).items()}, "bledy": st.get("bledy", {})})
+
+
 @app.route("/strony/<site>")
 def site_root_redirect(site):
     return redirect(f"/strony/{site}/")
