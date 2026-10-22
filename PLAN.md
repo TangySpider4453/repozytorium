@@ -332,3 +332,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   pokazuje wizyty z dnia. 📊 Stan z maksimum temperatury, CPU i RAM z dziś i z 7 dni.
 - **2026-10-22 (progres kg)**: Progres: tłuszcz i mięśnie przeliczane na kg, przełącznik wykresu %/kg, historia z obiema wartościami.
 - **2026-10-22 (progres film)**: Film: odstęp „co miesiąc”, zdjęcie najbliższe planowanemu dniowi z tego samego miesiąca.
+- **2026-10-22 (zaufane)**: Wejścia przez Tailscale i z zaufanych urządzeń (MAC) tylko zapisywane w ścieżce, bez
+  powiadomień; przycisk „To moje urządzenie” i komenda `zaufane` w bocie.

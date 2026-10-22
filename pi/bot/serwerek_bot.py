@@ -426,6 +426,30 @@ def sprzataj_nas():
             pass
 
 
+def mac_ip(ip):
+    try:
+        out = subprocess.run(["ip", "neigh", "show", ip], capture_output=True, text=True, timeout=5).stdout
+        return out.split("lladdr")[1].split()[0] if "lladdr" in out else ""
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+TS_NAZWY = {"t": 0, "nazwy": {}}
+
+
+def nazwa_tailscale(ip):
+    """nazwa urzadzenia Tailscale po adresie 100.x (lista odswiezana co 5 min)"""
+    if time.time() - TS_NAZWY["t"] > 300:
+        try:
+            d = json.loads(subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, timeout=10).stdout)
+            TS_NAZWY["nazwy"] = {a: p.get("HostName", "?") for p in list((d.get("Peer") or {}).values()) + [d.get("Self") or {}]
+                                 for a in p.get("TailscaleIPs") or []}
+            TS_NAZWY["t"] = time.time()
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            pass
+    return TS_NAZWY["nazwy"].get(ip, "?")
+
+
 def urzadzenie(ip):
     """MAC z tablicy ARP i nazwa z DNS routera (jesli jest)"""
     import socket
@@ -459,16 +483,29 @@ def system_z_ua(ua):
 
 
 def zdarzenie(ip, krok, alarm=None, rodzaj_alarmu=None, przerwa=0):
-    """krok: opis do sladu wizyty i logu NAS; alarm: (ikona, tytul, dodatek) do wyslania od razu"""
-    if not ip or ip.startswith("100.") or ip in ("127.0.0.1", "172.23.0.20", "172.23.0.24"):
+    """krok: opis do sladu wizyty i logu NAS; alarm: (ikona, tytul, dodatek) do wyslania od razu.
+    Ciche (tylko zapis, bez powiadomien): Tailscale (100.x) i zaufane urzadzenia wlasciciela (MAC w stan["zaufane"])."""
+    if not ip or ip in ("127.0.0.1", "172.23.0.20", "172.23.0.24", "100.108.241.58"):      # samo Pi
         return
     teraz = time.time()
-    urz_nowe = urzadzenie(ip) if ip not in WIZYTY else None
+    if ip not in WIZYTY:
+        if ip.startswith("100."):
+            urz_nowe, mac, cichy = f"Tailscale: {nazwa_tailscale(ip)}", "", True
+        else:
+            mac = mac_ip(ip)
+            zaufane = stan().get("zaufane", {})
+            urz_nowe, cichy = urzadzenie(ip), bool(mac) and mac in zaufane
+            if cichy:
+                urz_nowe = f"zaufane: {zaufane[mac]}, " + urz_nowe
+    else:
+        urz_nowe = mac = None
+        cichy = WIZYTY[ip].get("cichy", False)
     with WIZYTY_LOCK:
         w = WIZYTY.get(ip)
         nowa = w is None
         if nowa:
-            w = WIZYTY[ip] = {"od": teraz, "ostatnio": teraz, "kroki": [], "alarmy": {}, "urz": urz_nowe or "", "liczniki": {}}
+            w = WIZYTY[ip] = {"od": teraz, "ostatnio": teraz, "kroki": [], "alarmy": {}, "urz": urz_nowe or "", "liczniki": {},
+                              "cichy": cichy, "mac": mac}
         w["ostatnio"] = teraz
         if not w["kroki"] or w["kroki"][-1][1] != krok:
             w["kroki"].append((time.strftime("%H:%M:%S"), krok))
@@ -481,11 +518,12 @@ def zdarzenie(ip, krok, alarm=None, rodzaj_alarmu=None, przerwa=0):
     if nowa:
         log_nas(f"{time.strftime('%H:%M:%S')} {ip} NOWA WIZYTA" + (f" ({urz})" if urz else ""))
     log_nas(f"{time.strftime('%H:%M:%S')} {ip} {krok}")
-    if not stan()["wlasciciel"]:
+    if not stan()["wlasciciel"] or w.get("cichy"):
         return
     kto = f"IP: <code>{e(ip)}</code>" + (f" ({e(urz)})" if urz else "")
     if nowa:
-        wyslij(f"🚪 <b>Nowe wejście na Pi z sieci domowej</b>\n{kto}\nPierwszy krok: {e(krok)}", html_=True)
+        przyc = {"inline_keyboard": [[{"text": "✅ To moje urządzenie (nie powiadamiaj)", "callback_data": f"zaufaj:{w['mac']}"}]]} if w.get("mac") else None
+        wyslij(f"🚪 <b>Nowe wejście na Pi z sieci domowej</b>\n{kto}\nPierwszy krok: {e(krok)}", html_=True, przyciski=przyc)
     if wyslac:
         ikona, tytul, dodatek = alarm
         wyslij(f"{ikona} <b>{e(tytul)}</b>\n{kto}" + (f"\n{e(dodatek)}" if dodatek else ""), html_=True)
@@ -536,7 +574,7 @@ def krok_portalu(z):
         for wzor, opis in STRONY:
             m = re.search(wzor, sciezka)
             if m:
-                return opis.format(*m.groups()) + ("" if z.get("zalogowany") else " → strona logowania (bez hasła)"), None, None, 0
+                return opis.format(*m.groups()) + ("" if z.get("zalogowany") or z.get("tailscale") else " → strona logowania (bez hasła)"), None, None, 0
         return f"{met} {sciezka[:80]} ({wyn})", None, None, 0
     return None, None, None, 0
 
@@ -758,6 +796,23 @@ def obsluz(u):
             return
         tg("editMessageReplyMarkup", chat_id=s["wlasciciel"], message_id=q["message"]["message_id"], reply_markup={"inline_keyboard": []})
         dane = q.get("data", "")
+        if dane.startswith("zaufaj:") or dane.startswith("nieufaj:"):
+            mac = dane.split(":", 1)[1]
+            with LOCK:
+                s2 = stan()
+                z = s2.setdefault("zaufane", {})
+                if dane.startswith("zaufaj:"):
+                    z[mac] = f"urządzenie {len(z) + 1} ({time.strftime('%d.%m')})"
+                else:
+                    z.pop(mac, None)
+                zapisz(s2)
+            with WIZYTY_LOCK:
+                for w in WIZYTY.values():
+                    if w.get("mac") == mac:
+                        w["cichy"] = dane.startswith("zaufaj:")
+            wyslij(f"✅ Zapamiętane: {mac} to Twoje urządzenie. Jego wejścia będą tylko zapisywane (🧭 Ścieżka), bez powiadomień."
+                   if dane.startswith("zaufaj:") else f"🔔 {mac} usunięte z zaufanych: znów będą powiadomienia.")
+            return
         if dane.startswith("tak:") and dane[4:] in AKCJE:
             wyslij(wykonaj(dane[4:]))
         elif dane == "nie":
@@ -802,6 +857,13 @@ def obsluz(u):
         while slowa and slowa[0].lower() in ("🧭", "ścieżka", "sciezka", "/sciezka"):
             slowa.pop(0)
         wyslij(tekst_sciezki(" ".join(slowa)), html_=True)
+    elif tekst.lower() in ("zaufane", "/zaufane"):
+        z = s.get("zaufane", {})
+        if not z:
+            wyslij("Nie ma zaufanych urządzeń. Dodasz je przyciskiem „✅ To moje urządzenie” przy powiadomieniu o wejściu.")
+        else:
+            wyslij("🔐 <b>Zaufane urządzenia</b> (wejścia tylko zapisywane, bez powiadomień):\n" + "\n".join(f"• {e(n)}: <code>{e(m)}</code>" for m, n in z.items()),
+                   html_=True, przyciski={"inline_keyboard": [[{"text": f"🗑 Usuń {n}", "callback_data": f"nieufaj:{m}"}] for m, n in z.items()]})
     elif tekst in ("📚 Sprawdziany", "/sprawdziany", "/jutro"):
         wyslij(tekst_sprawdzianow(), html_=True)
     elif tekst in ("💾 Kopia", "/kopia"):
@@ -830,7 +892,7 @@ def main():
         s = stan()
         zapisz(s)
     tg("setMyCommands", commands=[{"command": c, "description": d} for c, d in (
-        ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("kopia", "Kopia systemu teraz"),
+        ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
         ("przejrzane", "Zgaś żółtą diodę"), ("restart", "Restart portalu lub Minecrafta"), ("nowa", "Nowa rozmowa z Claude"))])
     threading.Thread(target=petla_powiadomien, daemon=True).start()
     threading.Thread(target=petla_claude, daemon=True).start()

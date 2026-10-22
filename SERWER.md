@@ -89,6 +89,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `wp-login`/`.env`). Pojedynczych przejść stron bot nie wysyła: zapisuje je od razu na Pi (`~/bot/wejscia/`, 30 dni)
   i na NAS; komenda/przycisk **🧭 Ścieżka** (`ścieżka`, `ścieżka wczoraj`, `ścieżka RRRR-MM-DD`) pokazuje wizyty z dnia
   (IP, MAC, od–do, kroki z godziną, powtórzenia ×N; wizyta kończy się po 10 min ciszy).
+- **Bez powiadomień (tylko zapis w ścieżce):** wejścia przez Tailscale (portal loguje też zapytania z 100.x jako
+  `tailscale: true`; w logu „Tailscale: <nazwa urządzenia>”) i **zaufane urządzenia** właściciela w sieci domowej
+  (MAC w `stan.json` → `zaufane`). Przy powiadomieniu 🚪 przycisk „✅ To moje urządzenie”; lista i usuwanie: `zaufane`.
+  Uwaga: iOS/macOS mogą zmieniać prywatny adres Wi-Fi (tryb „rotujący”) – wtedy urządzenie trzeba dodać ponownie.
 - **📊 Stan** pokazuje też maksimum temperatury, CPU i RAM z dziś i z 7 dni (`/api/obciazenie` → `maks`; portal zapisuje
   dzienne maksima z pomiaru co 5 s w `~/portal/dane/zdrowie/maksima.json`, 60 dni).
   Źródła: portal dopisuje do `~/portal/dane/wejscia.jsonl` każde zapytanie (`zapytanie`: metoda, ścieżka, wynik,

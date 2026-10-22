@@ -1109,11 +1109,12 @@ def logowanie():
 
 @app.after_request
 def wejscia_sciezka(resp):
-    """kazde zapytanie z sieci domowej (sciezka, metoda, wynik) do sladu wizyty w bocie Telegram"""
+    """kazde zapytanie (sciezka, metoda, wynik) do sladu wizyt w bocie Telegram; z Tailscale tylko zapis, bez powiadomien"""
     from flask import request
-    if not przez_tailscale():
-        wejscie_zapisz("zapytanie", metoda=request.method, sciezka=request.full_path.rstrip("?")[:200],
-                       wynik=resp.status_code, zalogowany=zalogowany() or SESJA in resp.headers.get("Set-Cookie", ""))
+    if not (request.remote_addr or "").startswith("127."):      # bot i skrypty na samym Pi pomijamy
+        ts = przez_tailscale()
+        wejscie_zapisz("zapytanie", metoda=request.method, sciezka=request.full_path.rstrip("?")[:200], wynik=resp.status_code,
+                       zalogowany=ts or zalogowany() or SESJA in resp.headers.get("Set-Cookie", ""), tailscale=ts)
     return resp
 
 
