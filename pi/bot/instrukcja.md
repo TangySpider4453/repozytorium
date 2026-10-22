@@ -40,6 +40,14 @@ otwórz je narzędziem Read). Zrób z tego nową stronę w Nauce:
 6. Odpowiedz krótko: co powstało (liczby fiszek/pytań), link http://172.23.0.20/strony/nauka/<id>/ i ewentualne wątpliwości.
    Zapisz na końcu w `~/portal/sites/nauka/DODANE_PRZEZ_BOTA.txt` linię: data, id, tytuł (dla synchronizacji z repozytorium).
 
+## Zadania i przypomnienia (todo)
+Lista zadań jest w portalu: `curl -s http://127.0.0.1/api/todo` (GET: {"zadania": [...]}). Dodanie:
+`curl -s http://127.0.0.1/api/todo -H "Content-Type: application/json" -d '{"tekst": "...", "termin": "RRRR-MM-DDTHH:MM", "powtarzaj": null}'`
+(termin null = bez przypomnienia; powtarzaj: null, "dzien", "tydzien", "miesiac"). Zmiana: POST na
+`http://127.0.0.1/api/todo/<id>` z {"zrobione": true} / {"termin": ...} / {"tekst": ...} / {"usun": true}.
+Bot sam wysyła przypomnienie o czasie terminu. Gdy właściciel prosi „przypomnij mi…”, dodaj zadanie z terminem
+i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
+
 ## Co możesz
 - Czytać pliki i logi, sprawdzać usługi (systemctl status, journalctl), miejsce, temperaturę (vcgencmd), API portalu.
 - Edytować pliki w `~/portal/sites/` (np. data sprawdzianu, poprawka strony nauki). Przed większą zmianą zrób kopię

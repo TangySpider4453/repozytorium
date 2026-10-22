@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zadania</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Zadania z przypomnieniami (/api/todo). Przypomnienia o czasie wysyła bot Telegram (@SerwerekAntek_bot). */
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF; --sel:#1d63c4; --ok:#1f8a4c; --warn:#a86b00; --bad:#c03442;
+  --serif:"Alegreya",Georgia,serif; --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5;font-variant-numeric:lining-nums}
+h1,h2{font-family:var(--serif);line-height:1.15;margin:0}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{background:var(--nav);color:var(--navInk);padding:14px 0 18px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+header.top .back{display:inline-block;font-size:14px;opacity:.75;text-decoration:none;color:inherit;margin-bottom:8px}
+header.top h1{font-size:clamp(30px,7vw,42px);font-weight:800}
+header.top p{margin:4px 0 0;opacity:.8;font-size:15px}
+main{padding:18px 0 60px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 14px}
+.card h2{font-size:22px;margin-bottom:8px}
+.muted{color:var(--muted)} .small{font-size:14px}
+.pola{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+@media (max-width:520px){.pola{grid-template-columns:1fr 1fr}.pola .powt{grid-column:1/-1}}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px;min-width:0}
+input,select{width:100%;min-width:0;max-width:100%;height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg)}
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none}
+#tekst{font-size:18px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--sel);border-color:var(--sel);color:#fff}
+.zad{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:start;border-top:1px solid var(--line);padding:10px 0}
+.zad:first-of-type{border-top:0}
+.ok{width:30px;height:30px;border-radius:50%;border:2px solid var(--muted);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ok);padding:0}
+.zad.zrobione .ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.zad.zrobione .t{text-decoration:line-through;color:var(--muted)}
+.t{font-weight:700;overflow-wrap:anywhere}
+.kiedy{font-size:14px;color:var(--muted)} .kiedy.spoz{color:var(--bad);font-weight:700} .kiedy.dzis{color:var(--warn);font-weight:700}
+.akcje{display:flex;gap:4px}
+.akcje button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:15px}
+.pusto{margin:0;color:var(--muted)}
+.err{color:var(--bad);font-weight:700}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="back" href="/">← Serwerek domowy</a>
+  <h1 id="h-title">📝 Zadania</h1>
+  <p>Przypomnienia przychodzą od bota w Telegramie. Zadania dodasz też tam: „todo jutro 17:00 trening”.</p>
+</div></header>
+<main><div class="wrap">
+  <div class="card">
+    <h2 id="formTyt">Nowe zadanie</h2>
+    <form id="form">
+      <input id="tekst" placeholder="Co trzeba zrobić?" maxlength="500" required autocomplete="off">
+      <div class="pola">
+        <label class="f">Dzień<input type="date" id="data"></label>
+        <label class="f">Godzina<input type="time" id="godz"></label>
+        <label class="f powt">Powtarzaj<select id="powt"><option value="">nie</option><option value="dzien">codziennie</option><option value="tydzien">co tydzień</option><option value="miesiac">co miesiąc</option></select></label>
+      </div>
+      <div class="row">
+        <button class="btn primary" type="submit" id="zapisz">Dodaj</button>
+        <button class="btn" type="button" id="anuluj" hidden>Anuluj</button>
+        <span class="small muted" id="info"></span>
+      </div>
+    </form>
+  </div>
+  <div class="card"><h2>Do zrobienia</h2><div id="otwarte"><p class="pusto">Ładowanie…</p></div></div>
+  <div class="card"><h2>Zrobione</h2><div id="zrobione"></div></div>
+</div></main>
+<script>
+const $ = id => document.getElementById(id);
+const el = (t, a = {}, ...k) => { const e = document.createElement(t); for(const [n, v] of Object.entries(a)){ if(v == null) continue; if(n === "text") e.textContent = v; else if(n === "class") e.className = v; else if(n.startsWith("on")) e[n] = v; else e.setAttribute(n, v); } e.append(...k.filter(x => x != null)); return e; };
+const MIES = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"], DNI = ["niedz.", "pon.", "wt.", "śr.", "czw.", "pt.", "sob."];
+const POWT = {dzien:"codziennie", tydzien:"co tydzień", miesiac:"co miesiąc"};
+let LISTA = [], EDYCJA = null;
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+async function api(url, body){
+  const r = await fetch(url, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {cache:"no-store"});
+  if(!r.ok) throw new Error(r.status); return r.json();
+}
+function opisTerminu(z){
+  if(!z.termin) return {t:"bez terminu", k:""};
+  const d = new Date(z.termin), dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+  const dz = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - dzis) / 864e5);
+  const g = z.termin.slice(11, 16);
+  const dzien = dz === 0 ? "dziś" : dz === 1 ? "jutro" : dz === -1 ? "wczoraj" : `${DNI[d.getDay()]} ${d.getDate()} ${MIES[d.getMonth()]}`;
+  const k = !z.zrobione && d < new Date() ? "spoz" : dz === 0 ? "dzis" : "";
+  return {t:`${k === "spoz" ? "spóźnione: " : ""}${dzien}, ${g}${z.powtarzaj ? " · 🔁 " + POWT[z.powtarzaj] : ""}${z.wyslano && !z.zrobione ? " · 🔔 przypomniane" : ""}`, k};
+}
+function wiersz(z){
+  const o = opisTerminu(z);
+  return el("div", {class:"zad" + (z.zrobione ? " zrobione" : "")},
+    el("button", {class:"ok", title:z.zrobione ? "Cofnij" : "Zrobione", "aria-label":z.zrobione ? "Cofnij" : "Oznacz jako zrobione", text:z.zrobione ? "✓" : "",
+      onclick:async () => { await api(`/api/todo/${z.id}`, {zrobione:!z.zrobione}); odswiez(); }}),
+    el("div", {}, el("div", {class:"t", text:z.tekst}), el("div", {class:"kiedy " + o.k, text:z.zrobione ? "zrobione " + z.zrobione.slice(0, 16).replace("T", " ") : o.t})),
+    el("div", {class:"akcje"},
+      z.zrobione ? null : el("button", {title:"Edytuj", "aria-label":"Edytuj", text:"✏️", onclick:() => edytuj(z)}),
+      el("button", {title:"Usuń", "aria-label":"Usuń", text:"🗑", onclick:async () => { if(confirm(`Usunąć „${z.tekst}”?`)){ await api(`/api/todo/${z.id}`, {usun:true}); odswiez(); } }})));
+}
+async function odswiez(){
+  try{ LISTA = (await api("/api/todo")).zadania; }
+  catch(e){ $("otwarte").replaceChildren(el("p", {class:"err", text:"Nie udało się wczytać zadań."})); return; }
+  const otw = LISTA.filter(z => !z.zrobione).sort((a, b) => (a.termin || "9999").localeCompare(b.termin || "9999") || a.utworzono.localeCompare(b.utworzono));
+  const zr = LISTA.filter(z => z.zrobione).sort((a, b) => b.zrobione.localeCompare(a.zrobione)).slice(0, 30);
+  $("otwarte").replaceChildren(...(otw.length ? otw.map(wiersz) : [el("p", {class:"pusto", text:"Nic nie czeka. 🎉"})]));
+  $("zrobione").replaceChildren(...(zr.length ? zr.map(wiersz) : [el("p", {class:"pusto", text:"Jeszcze nic."})]));
+}
+function edytuj(z){
+  EDYCJA = z; $("formTyt").textContent = "Edycja zadania"; $("zapisz").textContent = "Zapisz"; $("anuluj").hidden = false;
+  $("tekst").value = z.tekst; $("data").value = z.termin ? z.termin.slice(0, 10) : ""; $("godz").value = z.termin ? z.termin.slice(11, 16) : "";
+  $("powt").value = z.powtarzaj || ""; window.scrollTo({top:0, behavior:"smooth"}); $("tekst").focus();
+}
+function wyczysc(){ EDYCJA = null; $("form").reset(); $("formTyt").textContent = "Nowe zadanie"; $("zapisz").textContent = "Dodaj"; $("anuluj").hidden = true; }
+$("anuluj").onclick = wyczysc;
+$("form").onsubmit = async ev => {
+  ev.preventDefault();
+  let d = $("data").value, g = $("godz").value;
+  if(g && !d){ const t = new Date(); d = iso(t); if(g <= `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`){ t.setDate(t.getDate() + 1); d = iso(t); } }
+  if(d && !g) g = "09:00";
+  const termin = d ? `${d}T${g}` : null, powtarzaj = $("powt").value || null;
+  if(powtarzaj && !termin){ $("info").textContent = "Powtarzanie wymaga dnia albo godziny."; return; }
+  try{
+    if(EDYCJA) await api(`/api/todo/${EDYCJA.id}`, {tekst:$("tekst").value, termin, powtarzaj});
+    else await api("/api/todo", {tekst:$("tekst").value, termin, powtarzaj});
+    $("info").textContent = termin ? "Zapisane. Przypomnienie przyjdzie w Telegramie." : "Zapisane.";
+    wyczysc(); odswiez();
+  }catch(e){ $("info").textContent = "Nie udało się zapisać."; }
+};
+odswiez(); setInterval(odswiez, 30000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden) odswiez(); });
+</script>
+</body>
+</html>

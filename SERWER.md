@@ -112,6 +112,17 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   albo po 1 h ciszy. Zużycie liczy się do limitów subskrypcji właściciela; bot tylko dla niego (zasady Anthropic).
 - Odnowienie logowania Claude (co rok): `claude setup-token` → token do `/etc/serwerek-bot/claude.env`, restart bota.
 
+## Zadania (todo) z przypomnieniami (od 2026-10-22)
+- Dane `~/portal/dane/todo.json`: `{id, tekst, termin "RRRR-MM-DDTHH:MM"|null, powtarzaj null|dzien|tydzien|miesiac,
+  zrobione, wyslano, utworzono}`. API: `GET/POST /api/todo`, `POST /api/todo/<id>` (`zrobione`, `tekst`, `termin`,
+  `powtarzaj`, `odloz_min`, `wyslano`, `usun`). Zrobienie zadania powtarzanego przesuwa termin (`todo_nastepny`).
+- Strona `/strony/todo/` (repo `todo/`, link „📝 Zadania” w menu): dodawanie (dzień, godzina, powtarzanie), edycja,
+  zrobione/cofnij, usuwanie; sama godzina = dziś albo jutro, sam dzień = 9:00.
+- Bot: przycisk 📝 Zadania (lista + ✅ 1…20), dodawanie „todo …”/„przypomnij …” (`parsuj_zadanie`: dziś/jutro/pojutrze,
+  dni tygodnia, DD.MM[.RRRR], RRRR-MM-DD, „o 17”, „17:30”, „za 20 min / 2 godziny / 3 dni”, codziennie / co tydzień /
+  co miesiąc). Przypomnienia co 30 s, o każdej porze (godzinę wybiera właściciel), przyciski ✅ / +15 min / +1 h / jutro.
+  Claude w bocie też dodaje zadania przez API (`instrukcja.md`).
+
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
   przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem

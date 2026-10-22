@@ -334,3 +334,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (progres film)**: Film: odstęp „co miesiąc”, zdjęcie najbliższe planowanemu dniowi z tego samego miesiąca.
 - **2026-10-22 (zaufane)**: Wejścia przez Tailscale i z zaufanych urządzeń (MAC) tylko zapisywane w ścieżce, bez
   powiadomień; przycisk „To moje urządzenie” i komenda `zaufane` w bocie.
+- **2026-10-22 (zadania)**: Zadania z przypomnieniami: strona `/strony/todo/` (📝 w menu), API `/api/todo`, bot dodaje
+  z polskiego tekstu („todo jutro 17:00 trening”), wysyła przypomnienia z przyciskami zrobione/odłóż. Repo `todo/`.

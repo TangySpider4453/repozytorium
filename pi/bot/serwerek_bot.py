@@ -7,6 +7,8 @@ Bot Telegram serwerka (@SerwerekAntek_bot): powiadomienia, przyciski i rozmowa z
     sprawdzianem (18:00) i rano w dniu (7:00).
   - Wejscia z sieci domowej (sekcja „wejscia”): od razu nowe wejscie, panel logowania, przejscie zabezpieczen,
     nieudane proby i oznaki ataku; po 10 min ciszy podsumowanie calej wizyty; pelny zapis na NAS (30 dni).
+  - Zadania (todo): „todo jutro 17:00 trening”, „przypomnij za 20 min pranie”, przycisk 📝 Zadania; przypomnienia
+    o czasie z przyciskami zrobione / odloz (dane w portalu: /api/todo, strona /strony/todo/).
   - Zdjecia i PDF-y (np. strony podrecznika) ida do Claude razem z podpisem: z nich robi nowe zagadnienie w Nauce.
   - Przyciski: Stan, Sprawdziany, Kopia, Przejrzane, Restart, Nowa rozmowa. Akcje zmieniajace cos: zawsze z „Tak”.
   - Inny tekst idzie do Claude Code na Pi (zalogowany subskrypcja wlasciciela), z ograniczonymi narzedziami
@@ -53,7 +55,7 @@ AKCJE = {   # nazwa: (opis dla przycisku, polecenie)
     "restart_minecrafta": ("Zrestartować serwer Minecraft (rozłączy graczy)", None),
     "przejrzane": ("Oznaczyć wszystkie problemy jako przejrzane", None),
 }
-KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "🧭 Ścieżka"], ["💾 Kopia", "✅ Przejrzane", "🔄 Restart"], ["🆕 Nowa rozmowa"]],
+KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "📝 Zadania"], ["💾 Kopia", "✅ Przejrzane", "🔄 Restart"], ["🧭 Ścieżka", "🆕 Nowa rozmowa"]],
               "resize_keyboard": True, "is_persistent": True}
 
 LOCK = threading.RLock()
@@ -719,6 +721,149 @@ def tekst_sciezki(arg=""):
     return "\n".join(linie)
 
 
+# ---------------------------------------------------------------- zadania (todo) i przypomnienia
+# Dane w portalu (/api/todo, dane/todo.json, strona /strony/todo/). Bot: dodawanie („todo …”, „przypomnij …”),
+# lista (📝 Zadania) i przypomnienia o czasie (co 30 s), z przyciskami: zrobione, +15 min, +1 h, jutro.
+DNI_TYG = {"poniedziałek": 0, "poniedzialek": 0, "wtorek": 1, "środa": 2, "środę": 2, "sroda": 2, "srode": 2, "czwartek": 3,
+           "piątek": 4, "piatek": 4, "sobota": 5, "sobotę": 5, "sobote": 5, "niedziela": 6, "niedzielę": 6, "niedziele": 6}
+
+
+def parsuj_zadanie(tekst):
+    """„jutro o 17 trening”, „za 20 min wyjąć pranie”, „w piątek 8:30 dentysta”, „25.10 18:00 urodziny”,
+    „codziennie 21:00 leki” -> (tekst, termin "RRRR-MM-DDTHH:MM" albo None, powtarzaj)"""
+    import re as r_
+    t = " " + tekst.strip() + " "
+    teraz = datetime.now()
+    dzien = godz = None
+    powt = None
+    for wzor, p in ((r"\s(codziennie|co\s+dzień|co\s+dzien)\s", "dzien"), (r"\sco\s+tydzień\s|\sco\s+tydzien\s", "tydzien"),
+                    (r"\sco\s+miesiąc\s|\sco\s+miesiac\s", "miesiac")):
+        if r_.search(wzor, t, r_.I):
+            powt, t = p, r_.sub(wzor, " ", t, count=1, flags=r_.I)
+    if m := r_.search(r"\sza\s+(\d+)\s*(min|minut|minuty|minutę|h|godz|godzin|godziny|godzinę|dni|dzień|dzien)\b\.?", t, r_.I):
+        n, j = int(m.group(1)), m.group(2).lower()
+        delta = timedelta(minutes=n) if j.startswith("min") else timedelta(days=n) if j.startswith("d") else timedelta(hours=n)
+        kiedy = teraz + delta
+        t = t[:m.start()] + " " + t[m.end():]
+        return " ".join(t.split()), kiedy.strftime("%Y-%m-%dT%H:%M"), powt
+    if m := r_.search(r"\s(dziś|dzis|dzisiaj|jutro|pojutrze)\s", t, r_.I):
+        dzien = teraz.date() + timedelta(days={"jutro": 1, "pojutrze": 2}.get(m.group(1).lower(), 0))
+        t = t[:m.start()] + " " + t[m.end():]
+    elif m := r_.search(r"\s(?:w\s+|we\s+)?(" + "|".join(DNI_TYG) + r")\s", t, r_.I):
+        cel = DNI_TYG[m.group(1).lower()]
+        dzien = teraz.date() + timedelta(days=(cel - teraz.weekday()) % 7 or 7)
+        t = t[:m.start()] + " " + t[m.end():]
+    elif m := r_.search(r"\s(\d{4})-(\d{2})-(\d{2})\s", t):
+        dzien = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        t = t[:m.start()] + " " + t[m.end():]
+    elif m := r_.search(r"\s(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s", t):
+        try:
+            dzien = date(int(m.group(3) or teraz.year), int(m.group(2)), int(m.group(1)))
+            if not m.group(3) and dzien < teraz.date():
+                dzien = dzien.replace(year=dzien.year + 1)
+            t = t[:m.start()] + " " + t[m.end():]
+        except ValueError:
+            dzien = None
+    # godzina: „17:30” zawsze, „17.30” i „17” tylko po „o”/„na”/„godz.” (żeby „3.14 rozdziału” nie było godziną)
+    if m := r_.search(r"\s(?:o\s+|na\s+)?(?:godz\.?\s+)?(\d{1,2}):(\d{2})\s", t, r_.I) or \
+            r_.search(r"\s(?:o|na|godz\.?)\s+(?:godz\.?\s+)?(\d{1,2})(?:\.(\d{2}))?\s", t, r_.I):
+        g, mi = int(m.group(1)), int(m.group(2) or 0)
+        if g < 24 and mi < 60:
+            godz = (g, mi)
+            t = t[:m.start()] + " " + t[m.end():]
+    if dzien is None and godz is None:
+        return " ".join(t.split()), None, None
+    if godz is None:
+        godz = (9, 0)
+    if dzien is None:
+        dzien = teraz.date()
+        if (godz[0], godz[1]) <= (teraz.hour, teraz.minute):
+            dzien += timedelta(days=1)
+    return " ".join(t.split()), f"{dzien.isoformat()}T{godz[0]:02d}:{godz[1]:02d}", powt
+
+
+def kiedy_tekst(termin):
+    if not termin:
+        return "bez terminu"
+    d = datetime.strptime(termin, "%Y-%m-%dT%H:%M")
+    dz = (d.date() - date.today()).days
+    nazwa = {0: "dziś", 1: "jutro", -1: "wczoraj"}.get(dz) or d.strftime("%d.%m")
+    return f"{nazwa} {d.strftime('%H:%M')}"
+
+
+def dodaj_zadanie(tekst):
+    opis, termin, powt = parsuj_zadanie(tekst)
+    if not opis:
+        wyslij("Napisz, co dodać, np. „todo jutro 17:00 trening” albo „przypomnij za 20 min pranie”.")
+        return
+    z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt})
+    powt_t = {"dzien": " · 🔁 codziennie", "tydzien": " · 🔁 co tydzień", "miesiac": " · 🔁 co miesiąc"}.get(powt, "")
+    wyslij(f"📝 Dodane: <b>{e(opis)}</b>\n⏰ {kiedy_tekst(termin) if termin else 'bez terminu (bez przypomnienia)'}{powt_t}", html_=True,
+           przyciski={"inline_keyboard": [[{"text": "🗑 Cofnij", "callback_data": f"todo_usun:{z['id']}"}]]})
+
+
+def tekst_zadan():
+    lista = [z for z in portal("/api/todo")["zadania"] if not z.get("zrobione")]
+    lista.sort(key=lambda z: (z.get("termin") or "9999", z["utworzono"]))
+    if not lista:
+        return "📝 Nic nie czeka. 🎉\nDodaj: „todo jutro 17:00 trening”.", None
+    teraz = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    linie = ["<b>📝 Do zrobienia</b>"]
+    for i, z in enumerate(lista[:20], 1):
+        spoz = " ⚠️" if z.get("termin") and z["termin"] < teraz else ""
+        powt = " 🔁" if z.get("powtarzaj") else ""
+        linie.append(f"{i}. {e(z['tekst'])} · <i>{kiedy_tekst(z.get('termin'))}</i>{spoz}{powt}")
+    linie.append(f"\nWszystkie: {LINK_DOM}/strony/todo/")
+    przyc = [[{"text": f"✅ {i}", "callback_data": f"todo_ok:{z['id']}"} for i, z in list(enumerate(lista[:20], 1))[k:k + 5]] for k in range(0, min(len(lista), 20), 5)]
+    return "\n".join(linie), {"inline_keyboard": przyc}
+
+
+def przypomnienia():
+    if not stan()["wlasciciel"]:
+        return
+    teraz = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    for z in portal("/api/todo")["zadania"]:
+        if z.get("zrobione") or not z.get("termin") or z.get("wyslano") or z["termin"] > teraz:
+            continue
+        powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
+        wyslij(f"⏰ <b>{e(z['tekst'])}</b>\n{kiedy_tekst(z['termin'])}{powt}", html_=True, przyciski={"inline_keyboard": [
+            [{"text": "✅ Zrobione", "callback_data": f"todo_ok:{z['id']}"}],
+            [{"text": "⏰ +15 min", "callback_data": f"todo_odloz:{z['id']}:15"}, {"text": "⏰ +1 h", "callback_data": f"todo_odloz:{z['id']}:60"},
+             {"text": "⏰ Jutro", "callback_data": f"todo_odloz:{z['id']}:jutro"}]]})
+        portal(f"/api/todo/{z['id']}", {"wyslano": True})
+
+
+def petla_przypomnien():
+    while True:
+        try:
+            przypomnienia()
+        except Exception as ex:
+            print(f"przypomnienia: {type(ex).__name__}: {ex}", flush=True)
+        time.sleep(30)
+
+
+def callback_zadania(dane):
+    _, zid, *reszta = dane.split(":")
+    if dane.startswith("todo_ok:"):
+        z = portal(f"/api/todo/{zid}", {"zrobione": True})
+        if z.get("powtarzaj") and not z.get("zrobione"):
+            return f"✅ Zrobione. Następnym razem: {kiedy_tekst(z['termin'])}."
+        return f"✅ Zrobione: {z['tekst']}"
+    if dane.startswith("todo_usun:"):
+        portal(f"/api/todo/{zid}", {"usun": True})
+        return "🗑 Usunięte."
+    if dane.startswith("todo_odloz:"):
+        if reszta[0] == "jutro":
+            z = next(x for x in portal("/api/todo")["zadania"] if x["id"] == zid)
+            stary = datetime.strptime(z["termin"], "%Y-%m-%dT%H:%M") if z.get("termin") else datetime.now()
+            nowy = datetime.combine(date.today() + timedelta(days=1), stary.time()).strftime("%Y-%m-%dT%H:%M")
+            z = portal(f"/api/todo/{zid}", {"termin": nowy})
+        else:
+            z = portal(f"/api/todo/{zid}", {"odloz_min": int(reszta[0])})
+        return f"⏰ Przypomnę {kiedy_tekst(z['termin'])}."
+    return "?"
+
+
 # ---------------------------------------------------------------- odbieranie wiadomosci
 KOLEJKA = []
 KOLEJKA_BUDZIK = threading.Event()
@@ -796,6 +941,12 @@ def obsluz(u):
             return
         tg("editMessageReplyMarkup", chat_id=s["wlasciciel"], message_id=q["message"]["message_id"], reply_markup={"inline_keyboard": []})
         dane = q.get("data", "")
+        if dane.startswith("todo_"):
+            try:
+                wyslij(callback_zadania(dane))
+            except (OSError, ValueError, StopIteration, KeyError):
+                wyslij("⚠️ Nie znalazłem tego zadania (może już usunięte).")
+            return
         if dane.startswith("zaufaj:") or dane.startswith("nieufaj:"):
             mac = dane.split(":", 1)[1]
             with LOCK:
@@ -857,6 +1008,11 @@ def obsluz(u):
         while slowa and slowa[0].lower() in ("🧭", "ścieżka", "sciezka", "/sciezka"):
             slowa.pop(0)
         wyslij(tekst_sciezki(" ".join(slowa)), html_=True)
+    elif tekst in ("📝 Zadania", "/zadania", "/todo") or tekst.lower() in ("todo", "zadania", "lista"):
+        t, p = tekst_zadan()
+        wyslij(t, html_=True, przyciski=p)
+    elif tekst.split()[0].lower() in ("todo", "/todo", "przypomnij", "/przypomnij", "zadanie", "📝"):
+        dodaj_zadanie(tekst.split(None, 1)[1] if len(tekst.split()) > 1 else "")
     elif tekst.lower() in ("zaufane", "/zaufane"):
         z = s.get("zaufane", {})
         if not z:
@@ -892,13 +1048,14 @@ def main():
         s = stan()
         zapisz(s)
     tg("setMyCommands", commands=[{"command": c, "description": d} for c, d in (
-        ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
+        ("zadania", "Lista zadań (dodawanie: todo jutro 17:00 trening)"), ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
         ("przejrzane", "Zgaś żółtą diodę"), ("restart", "Restart portalu lub Minecrafta"), ("nowa", "Nowa rozmowa z Claude"))])
     threading.Thread(target=petla_powiadomien, daemon=True).start()
     threading.Thread(target=petla_claude, daemon=True).start()
     threading.Thread(target=petla_portalu, daemon=True).start()
     threading.Thread(target=petla_dziennika, daemon=True).start()
     threading.Thread(target=petla_wizyt, daemon=True).start()
+    threading.Thread(target=petla_przypomnien, daemon=True).start()
     offset = None
     while True:
         wyn = tg_updates(offset)

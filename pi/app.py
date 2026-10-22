@@ -10,6 +10,7 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
   /api/nauka/...     postepy nauki (fiszki, quizy), zmiana daty, „wazne” i ustawienia listy dla /strony/nauka/
   /api/progres/...   dziennik sylwetki: pomiary z wagi i zdjecia (tylko na Pi, dane/progres/) dla /strony/progres/
   /api/zdrowie       stan serwera dla diody na kazdej stronie i dziennik problemow (dane/zdrowie/), strona /strony/zdrowie/
+  /api/todo          lista zadan z przypomnieniami (dane/todo.json), strona /strony/todo/, przypomnienia wysyla bot Telegram
 
 NAS (Tony-Folder/Raspberry w /mnt/nas, montuje go nas-montuj.timer): zdjecia i filmy Progres oraz logi zdrowia ida tam
 od razu. Gdy NAS niedostepny, zostaja na Pi (czerwona dioda) i przenosza sie same po jego powrocie (watek nas_petla).
@@ -737,6 +738,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <a href="/strony/nauka/" data-p="nauka"><span class="ik" aria-hidden="true">📚</span>Nauka</a>
     <a href="/strony/progres/" data-p="progres"><span class="ik" aria-hidden="true">💪</span>Progres</a>
     <a href="/strony/zdrowie/" data-p="zdrowie"><span class="ik" aria-hidden="true">🩺</span>Zdrowie</a>
+    <a href="/strony/todo/" data-p="todo"><span class="ik" aria-hidden="true">📝</span>Zadania</a>
   </nav>
 </header>
 <main id="main" class="wrap" style="padding:0;width:100%"></main>
@@ -1170,6 +1172,112 @@ def api_status():
 @app.route("/api/siec")
 def api_siec():
     return jsonify(cached("siec", 10, network))
+
+
+# ---------- Zadania (todo) z przypomnieniami: strona /strony/todo/ i bot Telegram ----------
+# dane/todo.json: [{id, tekst, termin "RRRR-MM-DDTHH:MM" albo null, powtarzaj null|dzien|tydzien|miesiac, zrobione iso|null,
+#   utworzono, wyslano iso|null (przypomnienie dla obecnego terminu juz poszlo)}]. Przypomnienia wysyla bot (co 30 s).
+TODO = BASE / "dane" / "todo.json"
+TODO_LOCK = threading.Lock()
+TODO_POWT = (None, "dzien", "tydzien", "miesiac")
+
+
+def todo_lista():
+    try:
+        return json.loads(TODO.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def todo_termin_ok(v):
+    if v is None:
+        return True
+    try:
+        time.strptime(v, "%Y-%m-%dT%H:%M")
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def todo_nastepny(termin, powt):
+    """kolejny termin zadania powtarzanego"""
+    from datetime import datetime, timedelta
+    t = datetime.strptime(termin, "%Y-%m-%dT%H:%M")
+    if powt == "dzien":
+        t += timedelta(days=1)
+    elif powt == "tydzien":
+        t += timedelta(days=7)
+    elif powt == "miesiac":
+        import calendar
+        r, m = (t.year + 1, 1) if t.month == 12 else (t.year, t.month + 1)
+        t = t.replace(year=r, month=m, day=min(t.day, calendar.monthrange(r, m)[1]))
+    return t.strftime("%Y-%m-%dT%H:%M")
+
+
+@app.route("/api/todo", methods=["GET", "POST"])
+def api_todo():
+    from flask import request
+    if request.method == "GET":
+        return jsonify({"zadania": todo_lista()})
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not isinstance(b.get("tekst"), str) or not 0 < len(b["tekst"].strip()) <= 500:
+        abort(400)
+    if not todo_termin_ok(b.get("termin")) or b.get("powtarzaj") not in TODO_POWT or (b.get("powtarzaj") and not b.get("termin")):
+        abort(400)
+    z = {"id": uuid_hex()[:12], "tekst": b["tekst"].strip(), "termin": b.get("termin"), "powtarzaj": b.get("powtarzaj"),
+         "zrobione": None, "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S"), "wyslano": None}
+    with TODO_LOCK:
+        lista = todo_lista()
+        lista.append(z)
+        zapisz_json(TODO, lista)
+    return jsonify(z)
+
+
+@app.route("/api/todo/<zid>", methods=["POST"])
+def api_todo_zmien(zid):
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict):
+        abort(400)
+    with TODO_LOCK:
+        lista = todo_lista()
+        z = next((x for x in lista if x["id"] == zid), None)
+        if z is None:
+            abort(404)
+        if b.get("usun") is True:
+            lista.remove(z)
+            zapisz_json(TODO, lista)
+            return jsonify({"ok": True})
+        if "tekst" in b:
+            if not isinstance(b["tekst"], str) or not 0 < len(b["tekst"].strip()) <= 500:
+                abort(400)
+            z["tekst"] = b["tekst"].strip()
+        if "termin" in b:
+            if not todo_termin_ok(b["termin"]):
+                abort(400)
+            z["termin"], z["wyslano"] = b["termin"], None
+        if "powtarzaj" in b:
+            if b["powtarzaj"] not in TODO_POWT:
+                abort(400)
+            z["powtarzaj"] = b["powtarzaj"]
+        if b.get("odloz_min"):
+            from datetime import datetime, timedelta
+            minuty = int(b["odloz_min"])
+            if not 0 < minuty <= 60 * 24 * 30:
+                abort(400)
+            z["termin"], z["wyslano"] = (datetime.now() + timedelta(minutes=minuty)).strftime("%Y-%m-%dT%H:%M"), None
+        if "wyslano" in b:
+            z["wyslano"] = time.strftime("%Y-%m-%dT%H:%M:%S") if b["wyslano"] else None
+        if "zrobione" in b:
+            if b["zrobione"] and z.get("powtarzaj") and z.get("termin"):
+                z["termin"], z["wyslano"] = todo_nastepny(z["termin"], z["powtarzaj"]), None      # powtarzane: przesun termin
+                z["ostatnio_zrobione"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            else:
+                z["zrobione"] = time.strftime("%Y-%m-%dT%H:%M:%S") if b["zrobione"] else None
+        if z.get("powtarzaj") and not z.get("termin"):
+            z["powtarzaj"] = None
+        zapisz_json(TODO, lista)
+    return jsonify(z)
 
 
 @app.route("/strony/<site>")
