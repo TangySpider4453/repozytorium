@@ -38,7 +38,7 @@ DOMENA = os.environ.get("SIP_DOMENA", "sip.linphone.org")
 WLASCICIEL = os.environ.get("SIP_WLASCICIEL", "")       # np. sip:antek@sip.linphone.org
 HZ = 16000
 RAMKA = HZ * 2 // 50                                    # 20 ms, 16 bit mono
-CZEKAJ_PO_ODEBRANIU = 5                                 # s: Pi dzwoni -> Antek odbiera -> 5 s ciszy -> powitanie
+CZEKAJ_PO_ODEBRANIU = 2.5                               # s: Pi dzwoni -> Antek odbiera -> 2,5 s ciszy -> powitanie
 CZAS_DZWONIENIA = 60                                    # s: tyle Pi próbuje dzwonić, potem „nie odebrał”
 PONOW = []          # [(kiedy, zlecenie)]: iPhone czasem od razu odrzuca (603), np. gdy Linphone jest otwarty; dzwonimy znowu
 MAX_ROZMOWA = 20 * 60
@@ -205,7 +205,7 @@ class Rozmowa:
                     pamiec.zapisz("bot", "telefon", f"Odhaczone przez telefon: {odp}")
                     s.pomin_do_konca()
                     continue
-                if (odp_m := bot.komenda_miejsca(tekst)) is not None:     # „ustaw tu jako szkoła” bez pytania Claude
+                if (odp_m := bot.komenda_miejsca(tekst) or bot.komenda_budzik(tekst) or bot.poczta.reakcja(tekst)) is not None:
                     pamiec.zapisz("antek", "telefon", tekst)
                     pamiec.zapisz("bot", "telefon", odp_m)
                     self.mow(odp_m)
@@ -271,7 +271,8 @@ class Polaczenie(pj.Call):
                     PONOW.append((time.time() + 5, z))
                     log(f"odrzucone od razu ({ci.lastStatusCode}), dzwonię jeszcze raz za 5 s")
                 else:
-                    wynik(stan="nieodebrane", tekst=z.get("tekst", ""), powod=z.get("powod", ""))
+                    wynik(stan="nieodebrane", tekst=z.get("tekst", ""), powod=z.get("powod", ""),
+                          **{k: z[k] for k in ("budzik", "proba", "todo_id") if k in z})
             self.rozmowa.zakonczona()
             ZAKONCZONE.append(AKTYWNE.pop(ci.id, self))
 
@@ -564,6 +565,10 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
                 odp = "Napisz, co dodać, np. „todo jutro 17:00 trening”."
         else:
             odp = zadanie_czat(t, bot)
+            if odp is None:
+                odp = bot.poczta.reakcja(t)         # „przeczytaj mail”, „przeczytany”, „później”, „maile”
+            if odp is None:
+                odp = bot.komenda_budzik(t)         # budziki
             if odp is None:
                 odp = bot.komenda_ztm(t)            # odjazdy, trasa, zapisz miejsce
         if akcja:

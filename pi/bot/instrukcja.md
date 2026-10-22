@@ -63,6 +63,13 @@ i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
 - „Zadzwoń do mnie o …” = dodaj zadanie przez API todo z "termin" i "dzwon": true (Pi zadzwoni o tej porze).
   Zadzwonić od razu: termin = teraz + 1 minuta.
 
+## Budziki
+Budzik = Pi dzwoni o tej porze i czyta poranny przegląd. Ustawianie słowami robi bot sam („budzik jutro 6:15”,
+„budzik w dni robocze 6:30”, „budziki”, „usuń budzik 2”); gdy Antek prosi inaczej, użyj API:
+`curl -s http://127.0.0.1/api/alarmy` (lista), dodanie: `curl -s -X POST http://127.0.0.1/api/alarmy -H 'Content-Type: application/json'
+-d '{"godzina":"06:15","data":"RRRR-MM-DD"}'` (jednorazowy) albo `{"godzina":"06:30","dni":[0,1,2,3,4]}` (0 = poniedziałek),
+usunięcie: `curl -s -X POST http://127.0.0.1/api/alarmy/<id> -H 'Content-Type: application/json' -d '{"usun":true}'`.
+
 ## Komunikacja miejska (ZTM Poznań) i lokalizacja Antka
 Pytania o autobusy, tramwaje, „jak dojechać”, „kiedy wyjść” odpowiadaj przez API portalu (opóźnienia na żywo),
 pole "tekst" jest gotowe do pokazania (skróć je przy telefonie):

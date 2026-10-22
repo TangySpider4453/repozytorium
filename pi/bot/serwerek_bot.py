@@ -33,6 +33,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pamiec
+import poczta
 
 KATALOG = Path(__file__).resolve().parent
 STAN = KATALOG / "stan.json"
@@ -448,6 +449,23 @@ def claude_jednorazowo(prompt, limit=180):
     except (subprocess.TimeoutExpired, ValueError):
         return None
     return None if d.get("is_error") else (d.get("result") or "").strip() or None
+
+
+def claude_bez_narzedzi(prompt, limit=180):
+    """Claude BEZ żadnych narzędzi i bez pamięci rozmów: do treści z zewnątrz (maile, strony), które mogą zawierać
+    podstępne polecenia; może tylko odpowiedzieć tekstem"""
+    cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
+           "--disallowedTools", "Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "NotebookEdit",
+           "TodoWrite", "--strict-mcp-config"]
+    env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")
+           and not k.startswith("POCZTA_") and not k.startswith("MOBI_")}
+    env["HOME"] = "/home/tonyg"
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=limit, cwd="/tmp", env=env)
+        d = json.loads(r.stdout or "{}")
+    except (subprocess.TimeoutExpired, ValueError):
+        return None
+    return None if d.get("is_error") else d.get("result")
 
 
 def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glosem=False):
@@ -1171,6 +1189,189 @@ def callback_zadania(dane):
     return "?"
 
 
+# ---------------------------------------------------------------- budziki (portal: /api/alarmy, dane/alarmy.json)
+# O godzinie budzika Pi dzwoni przez Linphone i czyta poranny przegląd (serwer, poczta, lekcje i zmiany planu,
+# sprawdziany, zadania); tekst układa Claude ok. 3 min wcześniej. Nieodebrany: jeszcze 2 razy co 5 min.
+DNI_NAZWY = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
+BUDZIK_TEKST = {}       # id budzika -> {"na": "RRRR-MM-DDTHH:MM", "tekst": None (Claude jeszcze układa) | str}
+BUDZIK_PONOW = []       # [(kiedy, zlecenie)] nieodebrane budziki
+BUDZIK_PROB = 3
+BUDZIK_CO = 300
+
+
+def nastepny_alarm(a, teraz=None):
+    """najbliższe dzwonienie budzika (datetime) albo None; spóźnienie do 10 min wciąż się liczy"""
+    teraz = teraz or datetime.now()
+    if not a.get("aktywny"):
+        return None
+    h, m = map(int, a["godzina"].split(":"))
+    if a.get("data"):
+        t = datetime.strptime(f"{a['data']} {a['godzina']}", "%Y-%m-%d %H:%M")
+        return t if a.get("ostatnio") != a["data"] and t >= teraz - timedelta(minutes=10) else None
+    for d in range(-1, 8):
+        dz = teraz.date() + timedelta(days=d)
+        t = datetime.combine(dz, datetime.min.time()).replace(hour=h, minute=m)
+        if dz.weekday() in a["dni"] and a.get("ostatnio") != dz.isoformat() and t >= teraz - timedelta(minutes=10):
+            return t
+    return None
+
+
+def opis_alarmu(a):
+    t = nastepny_alarm(a)
+    if a.get("data"):
+        kiedy = kiedy_tekst(f"{a['data']}T{a['godzina']}")
+    elif sorted(a["dni"]) == list(range(7)):
+        kiedy = f"codziennie {a['godzina']}"
+    elif sorted(a["dni"]) == list(range(5)):
+        kiedy = f"w dni robocze {a['godzina']}"
+    elif sorted(a["dni"]) == [5, 6]:
+        kiedy = f"w weekendy {a['godzina']}"
+    else:
+        kiedy = ", ".join(DNI_NAZWY[d][:3] for d in sorted(a["dni"])) + f" {a['godzina']}"
+    return kiedy + ("" if a.get("aktywny") else " (wyłączony)") + (f" · {a['opis']}" if a.get("opis") else "") \
+        + (f" · najbliższy: {kiedy_tekst(t.strftime('%Y-%m-%dT%H:%M'))}" if t and not a.get("data") else "")
+
+
+def komenda_budzik(tekst):
+    """„budzik jutro 6:15”, „obudź mnie o 7”, „budzik w dni robocze 6:30”, „budziki”, „usuń budzik 2” -> odpowiedź albo None"""
+    t = " ".join(re.sub(r"[!?]", " ", tekst).split())
+    tl = t.lower()
+    if tl.strip(" .") in ("budziki", "alarmy", "/budziki", "⏰ budziki", "jakie mam budziki", "pokaż budziki"):
+        lista = sorted(portal("/api/alarmy")["alarmy"], key=lambda a: nastepny_alarm(a) or datetime.max)
+        if not lista:
+            return "⏰ Nie masz budzików. Ustawisz: „budzik jutro 6:15” albo „budzik w dni robocze 6:30”."
+        return "⏰ Budziki:\n" + "\n".join(f"{i}. {opis_alarmu(a)}" for i, a in enumerate(lista, 1)) + "\nUsuniesz: „usuń budzik 1”."
+    if m := re.fullmatch(r"(?:usuń|usun|skasuj|wyłącz|wylacz|anuluj)\s+(?:budzik|alarm)\s*(\d+|wszystkie)?\s*\.?", tl):
+        lista = sorted(portal("/api/alarmy")["alarmy"], key=lambda a: nastepny_alarm(a) or datetime.max)
+        cel = lista if m.group(1) == "wszystkie" else [lista[int(m.group(1)) - 1]] if m.group(1) and 0 < int(m.group(1)) <= len(lista) \
+            else lista[:1] if len(lista) == 1 else None
+        if not cel:
+            return "Który budzik? Napisz „budziki”, a potem np. „usuń budzik 2”."
+        for a in cel:
+            portal(f"/api/alarmy/{a['id']}", {"usun": True})
+        return "🗑 Usunięte: " + "; ".join(opis_alarmu(a) for a in cel)
+    m = re.fullmatch(r"(?:⏰\s*)?(?:ustaw\s+)?(?:budzik|alarm|obudź mnie|obudz mnie|zbudź mnie|zbudz mnie)\s+(?:na\s+)?(.+)", t, re.I)
+    if not m:
+        return None
+    r = " " + m.group(1) + " "
+    dni = None
+    for wzor, d in ((r"\s(codziennie|co\s+dzień|co\s+dzien|każdego\s+dnia)\s", list(range(7))),
+                    (r"\s(w\s+dni\s+robocze|w\s+tygodniu|pon(?:iedziałek)?\s*-\s*pt|od\s+poniedziałku\s+do\s+piątku|w\s+dni\s+szkolne)\s", list(range(5))),
+                    (r"\s(w\s+weekendy?|w\s+soboty?\s+i\s+niedziel[eęa])\s", [5, 6])):
+        if re.search(wzor, r, re.I):
+            dni, r = d, re.sub(wzor, " ", r, count=1, flags=re.I)
+    opis, termin, powt = parsuj_zadanie(r)
+    g = re.search(r"\b(\d{1,2})[:.](\d{2})\b|\bo\s+(\d{1,2})\b", r)
+    if not termin and not g:
+        return "O której? Np. „budzik jutro 6:15” albo „budzik w dni robocze 6:30”."
+    if dni or powt == "dzien":
+        godz = termin[11:16] if termin else f"{int(g.group(1) or g.group(3)):02d}:{int(g.group(2) or 0):02d}"
+        a = portal("/api/alarmy", {"godzina": godz, "dni": dni or list(range(7)), "opis": opis if len(opis) > 2 else ""})
+    else:
+        a = portal("/api/alarmy", {"godzina": termin[11:16], "data": termin[:10], "opis": opis if len(opis) > 2 else ""})
+    return f"⏰ Budzik ustawiony: {opis_alarmu(a)}. Zadzwonię i przeczytam poranny przegląd."
+
+
+def poczta_podsumowanie():
+    return poczta.podsumowanie()
+
+
+def petla_poczty():
+    time.sleep(60)
+    while True:
+        try:
+            if poczta.konta():
+                poczta.sprawdz(powiadom, claude_bez_narzedzi, cisza_nocna(stan()))
+        except Exception as ex:
+            print(f"poczta: {type(ex).__name__}: {ex}", flush=True)
+        time.sleep(poczta.CO)
+
+
+def poranne_dane():
+    """dane do porannego przeglądu (każda część osobno: brak jednej nie psuje reszty)"""
+    czesci = []
+    teraz = datetime.now()
+    czesci.append(f"Teraz: {DNI_NAZWY[teraz.weekday()]}, {teraz.strftime('%d.%m.%Y %H:%M')}.")
+    try:
+        z = portal("/api/zdrowie")
+        p = z.get("pomiary", {})
+        czesci.append(f"Serwer: stan {z['stan']}, {p.get('temp', '?')} °C, CPU {round(p.get('cpu') or 0)}%, RAM {round(p.get('ram') or 0)}%."
+                      + (" Problemy: " + "; ".join(i["tytul"] for i in z["aktywne"]) if z.get("aktywne") else " Bez problemów."))
+    except (OSError, ValueError, KeyError):
+        czesci.append("Serwer: nie udało się sprawdzić stanu.")
+    for nazwa, f in (("Poczta", "poczta_podsumowanie"), ("Lekcje", "mobi_dzis")):
+        fn = globals().get(f)
+        if fn:
+            try:
+                t = fn()
+                if t:
+                    czesci.append(f"{nazwa}: {t}")
+            except Exception as ex:
+                czesci.append(f"{nazwa}: błąd odczytu ({type(ex).__name__}).")
+    try:
+        dzis = date.today().isoformat()
+        zad = [z for z in zadania_do_zrobienia() if not z.get("termin") or z["termin"][:10] <= dzis]
+        if zad:
+            czesci.append("Zadania na dziś i zaległe: " + "; ".join(f"{z['tekst']}" + (f" ({z['termin'][11:16]})" if z.get("termin") and z["termin"][:10] == dzis else
+                                                                                      " (zaległe)" if z.get("termin") else "") for z in zad[:10]))
+        else:
+            czesci.append("Zadania: nic na dziś.")
+    except (OSError, ValueError):
+        pass
+    spr = [x for x in sprawdziany() if x.get("data") and 0 <= (date.fromisoformat(x["data"]) - date.today()).days <= 2]
+    if spr:
+        czesci.append("Sprawdziany i kartkówki: " + "; ".join(
+            f"{x['przedmiot']} ({x['typ']}) {['dziś', 'jutro', 'pojutrze'][(date.fromisoformat(x['data']) - date.today()).days]}" for x in spr))
+    return "\n".join(czesci)
+
+
+def przygotuj_budzik(a, na):
+    dane = poranne_dane()
+    tekst = claude_jednorazowo(
+        f"[Budzik o {a['godzina']}: za chwilę Pi dzwoni do Antka, żeby go obudzić. Ułóż DOKŁADNIE to, co powiesz (czytane "
+        "głosem przez telefon): krótkie „dzień dobry”, dzień tygodnia i godzina, potem po kolei tylko to, co ważne: "
+        "lekcje i zmiany planu, sprawdziany i kartkówki, ważne maile, zadania na dziś, a stan serwera jednym zdaniem "
+        "(tylko gdy coś jest nie tak, powiedz co). 30–60 sekund mówienia, naturalnie i ciepło, bez list, emotek, "
+        "Markdown i adresów. Bez pytań i formułek na końcu. Nic poza samą wypowiedzią.]\n\nDane:\n" + dane, limit=150)
+    if not tekst:
+        tekst = "Dzień dobry! Pora wstawać. " + dane.replace("\n", " ")
+    BUDZIK_TEKST[a["id"]] = {"na": na, "tekst": tekst}
+    print(f"budzik {a['id']} przygotowany: {tekst[:80]}", flush=True)
+
+
+def budziki():
+    teraz = datetime.now()
+    while BUDZIK_PONOW and BUDZIK_PONOW[0][0] <= time.time():
+        _, zl = BUDZIK_PONOW.pop(0)
+        zadzwon(zl["tekst"], "budzik", budzik=zl["budzik"], proba=zl["proba"])
+    for a in portal("/api/alarmy")["alarmy"]:
+        t = nastepny_alarm(a, teraz)
+        if not t:
+            continue
+        na = t.strftime("%Y-%m-%dT%H:%M")
+        if t - teraz <= timedelta(minutes=3) and BUDZIK_TEKST.get(a["id"], {}).get("na") != na:
+            BUDZIK_TEKST[a["id"]] = {"na": na, "tekst": None}
+            threading.Thread(target=przygotuj_budzik, args=(a, na), daemon=True).start()
+        if teraz >= t:
+            gotowy = BUDZIK_TEKST.get(a["id"], {})
+            if gotowy.get("tekst") is None and gotowy.get("na") == na and teraz - t < timedelta(seconds=45):
+                continue                                    # Claude jeszcze układa: poczekaj chwilę (do 45 s)
+            tekst = gotowy.get("tekst") if gotowy.get("na") == na and gotowy.get("tekst") else "Dzień dobry! Pora wstawać. " + poranne_dane().replace("\n", " ")
+            portal(f"/api/alarmy/{a['id']}", {"ostatnio": t.date().isoformat(), **({"aktywny": False} if a.get("data") else {})})
+            BUDZIK_TEKST.pop(a["id"], None)
+            pamiec.zapisz("bot", "telefon", f"Budzik {a['godzina']}: dzwonię i mówię: {tekst}")
+            zadzwon(tekst, "budzik", budzik=a["id"], proba=1)
+
+
+def petla_budzikow():
+    while True:
+        try:
+            budziki()
+        except Exception as ex:
+            print(f"budziki: {type(ex).__name__}: {ex}", flush=True)
+        time.sleep(15)
+
+
 # ---------------------------------------------------------------- glos (wiadomosci glosowe) i telefon
 import sys
 sys.path.insert(0, "/home/tonyg/glos")
@@ -1379,6 +1580,10 @@ def petla_telefonu():
                 p.unlink()
                 if w.get("stan") == "brak_konfiguracji":
                     powiadom(f"📞 Chciałem zadzwonić ({w.get('powod')}), ale telefon nie jest jeszcze skonfigurowany (konto Linphone).\n{w.get('tekst', '')}")
+                elif w.get("stan") == "nieodebrane" and w.get("budzik") and int(w.get("proba", 1)) < BUDZIK_PROB:
+                    BUDZIK_PONOW.append((time.time() + BUDZIK_CO, {"tekst": w.get("tekst", ""), "budzik": w["budzik"],
+                                                                 "proba": int(w.get("proba", 1)) + 1}))
+                    print(f"budzik nieodebrany (próba {w.get('proba')}), ponowię za {BUDZIK_CO // 60} min", flush=True)
                 elif w.get("stan") == "nieodebrane":
                     powiadom(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}")
                 elif w.get("stan") == "rozmowa":
@@ -1467,6 +1672,8 @@ POMOC_WSPOLNE = """📊 stan – temperatura, procesor, RAM, NAS, kopia, maksima
 🏠 do domu / trasa do <miejsce|przystanek|adres> – jak dojechać stąd (też: trasa z Junikowo do Rondo Kaponiera)
 📍 ustaw tu jako dom / zapisz szkoła [adres] – zapamiętaj miejsce (bez adresu: tu, gdzie jesteś);
     miejsca – lista; usuń miejsce <nazwa>
+⏰ budzik jutro 6:15 / budzik w dni robocze 6:30 / budziki / usuń budzik 2 – Pi dzwoni i czyta poranny przegląd
+📧 maile – ważne i nieprzeczytane; przy ważnym: przeczytaj mail / przeczytany / później
 🎮 minecraft – stan serwera (włącz / wyłącz)
 💾 kopia – kopia systemu na NAS teraz
 ✅ przejrzane – zgaś żółtą diodę
@@ -1667,6 +1874,10 @@ def obsluz(u):
     elif tekst in ("📝 Zadania", "/zadania", "/todo") or tekst.lower() in ("todo", "zadania", "lista"):
         t, p = tekst_zadan()
         wyslij(t, html_=True, przyciski=p)
+    elif (odp_p := poczta.reakcja(tekst)) is not None:
+        wyslij(odp_p)
+    elif (odp_b := komenda_budzik(tekst)) is not None:
+        wyslij(odp_b)
     elif (odp_ztm := komenda_ztm(tekst)) is not None:
         wyslij(odp_ztm, przyciski=ZTM_PRZYCISKI if "🚏" in odp_ztm[:3] or odp_ztm.startswith("Najbliżej") else None)
     elif tekst.split()[0].lower() in ("todo", "/todo", "przypomnij", "/przypomnij", "zadanie", "📝"):
@@ -1714,6 +1925,8 @@ def main():
     threading.Thread(target=petla_dziennika, daemon=True).start()
     threading.Thread(target=petla_wizyt, daemon=True).start()
     threading.Thread(target=petla_przypomnien, daemon=True).start()
+    threading.Thread(target=petla_budzikow, daemon=True).start()
+    threading.Thread(target=petla_poczty, daemon=True).start()
     threading.Thread(target=petla_telefonu, daemon=True).start()
     threading.Thread(target=petla_minecrafta, daemon=True).start()
     threading.Thread(target=petla_mc_stanu, daemon=True).start()

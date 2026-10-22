@@ -369,6 +369,10 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (budziki i poczta: kod gotowy, CZEKA NA WDROŻENIE)**: Budziki (`/api/alarmy`, Pi dzwoni z porannym
+  przeglądem, 3 próby co 5 min), poczta (`pi/bot/poczta.py`: IMAP, Claude bez narzędzi kategoryzuje, spam przeczytany,
+  ważne na Linphone z czekaniem na reakcję, nic nie wysyła), 2,5 s ciszy po odebraniu. Wdrożenie wstrzymane: Tailscale
+  SSH wymaga ponownego zatwierdzenia (check co 12 h). Zastępczo na 23.10 06:15 zadanie „Pobudka” z dzwonieniem.
 - **2026-10-22 (lokalizacja jednorazowa)**: Na razie lokalizacja jednorazowo z Telegrama (📍); żółty alarm o braku
   lokalizacji włącza się dopiero, gdy będą ciasteczka Google.
 - **2026-10-22 (lokalizacja z Google Maps)**: Pi samo co 15 min odczytuje lokalizację udostępnioną w Google Maps

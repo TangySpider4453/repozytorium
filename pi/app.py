@@ -1352,6 +1352,71 @@ def api_todo_zmien(zid):
     return jsonify(z)
 
 
+# ---------- Budziki: Pi dzwoni o ustalonej porze i czyta poranny przegląd (bot: petla_budzikow) ----------
+# dane/alarmy.json: [{id, godzina "HH:MM", data "RRRR-MM-DD"|null (jednorazowy), dni [0..6]|null (powtarzany:
+#   0 = poniedziałek), aktywny, opis, ostatnio "RRRR-MM-DD" (kiedy ostatnio zadzwonił)}]
+ALARMY = BASE / "dane" / "alarmy.json"
+ALARMY_LOCK = threading.Lock()
+
+
+def alarmy_lista():
+    try:
+        return json.loads(ALARMY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def alarm_ok(b):
+    if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(b.get("godzina", ""))):
+        return False
+    if b.get("data") is not None and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(b["data"])):
+        return False
+    d = b.get("dni")
+    return d is None or (isinstance(d, list) and 0 < len(d) <= 7 and all(isinstance(x, int) and 0 <= x <= 6 for x in d))
+
+
+@app.route("/api/alarmy", methods=["GET", "POST"])
+def api_alarmy():
+    from flask import request
+    if request.method == "GET":
+        return jsonify({"alarmy": alarmy_lista()})
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not alarm_ok(b) or (b.get("data") is None and not b.get("dni")):
+        abort(400)
+    a = {"id": uuid_hex()[:10], "godzina": b["godzina"], "data": b.get("data"), "dni": b.get("dni") if b.get("data") is None else None,
+         "aktywny": True, "opis": str(b.get("opis") or "")[:100], "ostatnio": None, "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    with ALARMY_LOCK:
+        lista = alarmy_lista()
+        lista.append(a)
+        zapisz_json(ALARMY, lista)
+    return jsonify(a)
+
+
+@app.route("/api/alarmy/<aid>", methods=["POST"])
+def api_alarm_zmien(aid):
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict):
+        abort(400)
+    with ALARMY_LOCK:
+        lista = alarmy_lista()
+        a = next((x for x in lista if x["id"] == aid), None)
+        if a is None:
+            abort(404)
+        if b.get("usun") is True:
+            lista.remove(a)
+        else:
+            for k in ("aktywny", "ostatnio", "opis"):
+                if k in b:
+                    a[k] = b[k]
+            if "godzina" in b:
+                if not alarm_ok({**a, "godzina": b["godzina"]}):
+                    abort(400)
+                a["godzina"] = b["godzina"]
+        zapisz_json(ALARMY, lista)
+    return jsonify(a if b.get("usun") is not True else {"ok": True})
+
+
 @app.route("/strony/<site>")
 def site_root_redirect(site):
     return redirect(f"/strony/{site}/")
