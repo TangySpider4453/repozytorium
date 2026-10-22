@@ -234,7 +234,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (`~/portal/dane/google_cookies.txt`, 600) i wysyła do `/api/lokalizacja` z czasem z Google. Nowe ciasteczka: plik .txt
   do `Tony-Folder/Raspberry/Google/` na NAS (instrukcja `CZYTAJ.txt` tam), skrypt go zabiera i kasuje. Stan/błąd:
   `dane/lokalizacja_google.json`, dopisywany do żółtego alarmu „Brak aktualnej lokalizacji”.
-- Monitor zdrowia: w dzień (7–22) lokalizacja starsza niż 30 min (`LOKALIZACJA_MAX_MIN`) = 🟡 „Brak aktualnej
+- Monitor zdrowia (tylko gdy są ciasteczka Google, czyli działa automatyczne źródło): w dzień (7–22) lokalizacja starsza niż 30 min (`LOKALIZACJA_MAX_MIN`) = 🟡 „Brak aktualnej
   lokalizacji”, chyba że trwa lokalizacja „na żywo” z Telegrama (`na_zywo_do` = wysłanie + live_period).
   iPhone nie pozwala serwerowi samemu pobrać lokalizacji: musi ją wysyłać aplikacja (OwnTracks albo Telegram).
 

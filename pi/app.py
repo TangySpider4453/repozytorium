@@ -2354,7 +2354,8 @@ def zdrowie_problemy(prog):
     if Path("/var/run/reboot-required").exists():
         pr.append(("restart", "warn", "Potrzebny restart Pi", "Po aktualizacji systemu. Zrób go, gdy nikt nie gra.", 1))
     # lokalizacja Antka (komunikacja miejska): w dzień najpóźniej co LOKALIZACJA_MAX_MIN, chyba że trwa „na żywo” z Telegrama
-    if 7 <= time.localtime().tm_hour < 22:
+    # tylko gdy działa automatyczne źródło (Google Maps); przy wysyłaniu jednorazowym z Telegrama alarm nie ma sensu
+    if 7 <= time.localtime().tm_hour < 22 and (BASE / "dane" / "google_cookies.txt").exists():
         l = lokalizacja()
         try:
             wiek_l = (time.time() - time.mktime(time.strptime(l["czas"], "%Y-%m-%dT%H:%M:%S"))) / 60 if l else None
