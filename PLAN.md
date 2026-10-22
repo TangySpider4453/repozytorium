@@ -358,3 +358,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   odpowiedział po 7 s. Log diagnostyczny SIP wyłączony.
 - **2026-10-22 (pomoc)**: Komenda `pomoc` / `help` w Telegramie i Linphone; w czacie Linphone komendy jak przyciski
   w Telegramie, z potwierdzeniem „tak”.
+- **2026-10-22 (poprawki czatu)**: „Napisz” zawsze daje tekst; w Linphone odpowiedzi tekstem (głosówka tylko na prośbę);
+  bez echa rozpoznanego tekstu; Claude może listować usługi i czytać /proc/meminfo (pojedyncze polecenia, bez potoków).

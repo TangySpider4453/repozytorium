@@ -261,9 +261,11 @@ def kontekst_sesji(sid):
     return 0
 
 
-GLOS_SLOWA = re.compile(r"\b(przeczytaj|odczytaj|powiedz mi|powiedz to|nagraj|głosówk\w*|glosowk\w*|głosem|glosem|na głos|na glos|"
-                        r"wiadomość głosow\w*|wiadomosc glosow\w*|posłucham|poslucham|chcę posłuchać|chce posluchac)\b", re.I)
-TEKST_SLOWA = re.compile(r"\b(wypisz|napisz|tekstem|na piśmie|na pismie|pisemnie|bez głosu|bez glosu|w punktach|rozpisz|listę|liste)\b", re.I)
+# prośba o głos: czasowniki i „głosówką/głosem”; samo słowo „głosówki” (np. „nie mogę odsłuchać głosówki”) się nie liczy
+GLOS_SLOWA = re.compile(r"\b(przeczytaj|odczytaj|powiedz mi|powiedz to|nagraj|głosówką|glosowka|głosowo|glosowo|głosem|glosem|na głos|na glos|"
+                        r"wyślij głosówkę|wyslij glosowke|posłucham|poslucham|chcę posłuchać|chce posluchac)\b", re.I)
+TEKST_SLOWA = re.compile(r"\b(wypisz|napisz|odpisz|tekstem|na piśmie|na pismie|pisemnie|bez głosu|bez glosu|w punktach|rozpisz|"
+                         r"nie mogę odsłuchać|nie moge odsluchac|nie mogę słuchać|nie moge sluchac|nie słyszę|nie slysze)\b", re.I)
 GLOS_PODPOWIEDZ = ("[Twoja odpowiedź zostanie zamieniona na WIADOMOŚĆ GŁOSOWĄ i przeczytana na głos: pisz naturalnymi zdaniami, "
                    "bez emotek, tabel, list i Markdown; liczby i skróty tak, żeby dało się je wygodnie przeczytać.]")
 
@@ -271,13 +273,10 @@ GLOS_PODPOWIEDZ = ("[Twoja odpowiedź zostanie zamieniona na WIADOMOŚĆ GŁOSOW
 def tryb_odpowiedzi(tekst, wejscie):
     """„glos” albo „tekst”: prośba w treści („przeczytaj”, „powiedz”, „nagraj” / „wypisz”, „napisz”) wygrywa;
     bez prośby odpowiedź tym samym sposobem, jakim przyszło pytanie"""
-    g, t = GLOS_SLOWA.search(tekst or ""), TEKST_SLOWA.search(tekst or "")
-    if g and not t:
-        return "glos"
-    if t and not g:
+    if TEKST_SLOWA.search(tekst or ""):        # prośba o tekst zawsze wygrywa
         return "tekst"
-    if g and t:                     # oba: liczy się to, co padło później („napisz… a potem przeczytaj”)
-        return "glos" if g.start() > t.start() else "tekst"
+    if GLOS_SLOWA.search(tekst or ""):
+        return "glos"
     return "glos" if wejscie == "glos" else "tekst"
 
 
@@ -1020,7 +1019,6 @@ def glosowka(m):
     if not tekst:
         wyslij("🎙 Nic nie usłyszałem. Spróbuj jeszcze raz.")
         return
-    wyslij(f"🎙 „{tekst}”")
     pamiec.zapisz("antek", "glosowka", tekst, m.get("message_id"))
     KOLEJKA.append({"tekst": tekst, "kanal": "glosowka_zapisana", "glosem": None})
     KOLEJKA_BUDZIK.set()

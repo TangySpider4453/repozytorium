@@ -122,7 +122,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `~/portal/sites/nauka/DODANE_PRZEZ_BOTA.txt`. Limit czasu jednego zadania: 30 min.
 - Inny tekst → `claude -p` (Claude Code 2.1.308 w `~/.local/bin/claude`) z `--permission-mode dontAsk`, narzędzia
   z `~/bot/uprawnienia.json` (czytanie, diagnostyka, edycja `~/portal/sites/**`, bez sudo/rm, zakaz czytania sekretów),
-  instrukcja `~/bot/instrukcja.md`. Claude prosi o akcje znacznikiem `[[AKCJA: kopia|restart_portalu|restart_minecrafta|przejrzane]]`.
+  instrukcja `~/bot/instrukcja.md` (Bash tylko pojedyncze polecenia, bez potoków; odczyt /proc dozwolony poza environ i self). Claude prosi o akcje znacznikiem `[[AKCJA: kopia|restart_portalu|restart_minecrafta|przejrzane]]`.
   Nowa rozmowa po 250 tys. tokenów kontekstu (z ostatniej wiadomości w `~/.claude/projects/*/<sesja>.jsonl`)
   albo po 1 h ciszy. Zużycie liczy się do limitów subskrypcji właściciela; bot tylko dla niego (zasady Anthropic).
 - Odnowienie logowania Claude (co rok): `claude setup-token` → token do `/etc/serwerek-bot/claude.env`, restart bota.
@@ -154,9 +154,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   files.linphone.org) → pobranie → whisper → „🎙 tekst”; odpowiedź głosem: Piper → WAV → upload na
   `files.linphone.org/http-file-transfer-server/hft.php` (link ważny 7 dni) → wiadomość z XML
   (`voice-recording=yes`, `am:playing-length`).
-- **Głos czy tekst** (`tryb_odpowiedzi` w bocie, wspólne dla Telegrama i Linphone): „przeczytaj / powiedz / nagraj /
-  głosówką / na głos” → głosówka; „wypisz / napisz / tekstem / w punktach” → tekst; bez prośby → tak, jak przyszło
-  pytanie. Gdy głosem, Claude dostaje `GLOS_PODPOWIEDZ` (zdania do czytania, bez list i emotek); w Telegramie
+- **Głos czy tekst** (`tryb_odpowiedzi` w bocie): prośba o tekst („wypisz / napisz / odpisz / tekstem / w punktach /
+  nie mogę odsłuchać”) zawsze wygrywa; „przeczytaj / powiedz / nagraj / głosówką / na głos” → głosówka; bez prośby
+  w Telegramie tak, jak przyszło pytanie. **W Linphone zawsze tekst**, głosówka dodatkowo tylko na wyraźną prośbę
+  (odtwarzanie głosówek od Pi w Linphone niepotwierdzone; wzór głosówki z Linphone zapisuje się w
+  `~/bot/telefon/ostatni_plik_z_linphone.txt` do dopasowania formatu). Bez echa „🎙 rozpoznany tekst”. Gdy głosem, Claude dostaje `GLOS_PODPOWIEDZ` (zdania do czytania, bez list i emotek); w Telegramie
   głosówka z tekstem w podpisie.
   **SRTP**: Linphone szyfruje dźwięk, więc konto ma `srtpUse = OPTIONAL`, `srtpSecureSignaling = 0` (inaczej 488).
   Diagnostyka w razie problemów: drop-in `serwerek-telefon.service.d/diagnostyka.conf` z `Environment=TELEFON_LOG=5`

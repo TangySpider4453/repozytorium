@@ -271,6 +271,11 @@ class Konto(pj.Account):
         log(f"rejestracja: {ai.regStatus} {ai.regStatusText} (aktywna: {ai.regIsActive})")
 
     def onInstantMessage(self, prm):
+        if "rcs-ft-http" in (prm.msgBody + prm.contentType):       # wzór głosówki z Linphone (diagnostyka formatu)
+            try:
+                (KAT / "ostatni_plik_z_linphone.txt").write_text(f"{prm.contentType}\n\n{prm.msgBody}", encoding="utf-8")
+            except OSError:
+                pass
         w = tresc_wiadomosci(prm.msgBody, prm.contentType)
         if not w:
             return
@@ -387,7 +392,6 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             if not tekst:
                 AKCJE.put((wyslij_czat, ("🎙 Nic nie usłyszałem, spróbuj jeszcze raz.",)))
                 return
-            AKCJE.put((wyslij_czat, (f"🎙 „{tekst}”",)))
         t = tekst.strip()
         sl = t.lower().split()
         akcja = None
@@ -448,7 +452,7 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             pamiec.zapisz("bot", "linphone", odp)
         else:
             AKCJE.put((wyslij_czat, ("…", True)))           # „pisze…”
-            glosem = bot.tryb_odpowiedzi(t, wejscie) == "glos"
+            glosem = bot.tryb_odpowiedzi(t, "tekst") == "glos"
             try:
                 odp, akcje = bot.claude_odpowiedz(t, "linphone", pisze=False, glosem=glosem)
             except Exception as ex:
@@ -458,13 +462,12 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
                 CZAT_AKCJA.clear()
                 CZAT_AKCJA.update(akcja=akcje[0], t=time.time())
                 odp += f"\n\n❓ {bot.AKCJE[akcje[0]][0]}? Odpisz „tak” (w ciągu 2 min) albo „nie”."
-        if bot.tryb_odpowiedzi(t, wejscie) == "glos":
+        AKCJE.put((wyslij_czat, (odp,)))          # w Linphone zawsze tekst (głosówki od Pi mogą się nie odtwarzać)
+        if bot.tryb_odpowiedzi(t, "tekst") == "glos":     # głosówka tylko na wyraźną prośbę („przeczytaj”, „powiedz”…)
             try:
                 AKCJE.put((wyslij_czat, (wyslij_glosowke(odp), False, FT_TYP)))
-                return
             except Exception as ex:
-                log(f"głosówka: {type(ex).__name__}: {ex}")       # nie wyszło: odpowiedź tekstem
-        AKCJE.put((wyslij_czat, (odp,)))
+                log(f"głosówka: {type(ex).__name__}: {ex}")
     except Exception as ex:
         log(f"czat: {type(ex).__name__}: {ex}")
         AKCJE.put((wyslij_czat, (f"⚠️ Błąd po stronie Pi: {ex}",)))

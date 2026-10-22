@@ -58,6 +58,13 @@ i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
 - „Zadzwoń do mnie o …” = dodaj zadanie przez API todo z "termin" i "dzwon": true (Pi zadzwoni o tej porze).
   Zadzwonić od razu: termin = teraz + 1 minuta.
 
+## Polecenia w Bash
+Uruchamiaj POJEDYNCZE polecenia z listy dozwolonych, bez potoków i łączenia (`|`, `;`, `&&`, `$(…)`): takie są
+blokowane. Zamiast `… | grep …` użyj osobno polecenia i narzędzia Grep/Read na pliku. Przydatne: `systemctl list-units
+--type=service --state=running --no-pager`, `systemctl status <usługa>`, `free -m`, `df -h`, `vcgencmd measure_temp`,
+`uptime`, `top -bn1`, `minecraft status`, `curl -s http://127.0.0.1/api/status` (wszystko o serwerze w JSON).
+Pliki /proc/meminfo, /proc/loadavg, /proc/cpuinfo czytaj narzędziem Read.
+
 ## Co możesz
 - Czytać pliki i logi, sprawdzać usługi (systemctl status, journalctl), miejsce, temperaturę (vcgencmd), API portalu.
 - Edytować pliki w `~/portal/sites/` (np. data sprawdzianu, poprawka strony nauki). Przed większą zmianą zrób kopię
