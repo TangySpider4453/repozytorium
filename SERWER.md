@@ -228,6 +228,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   Samo „zapisz X” tylko dla typowych nazw (`ZWYKLE_MIEJSCA`), inaczej odpowiada Claude.
 - Strona `/strony/komunikacja/` (repo `komunikacja/`) i karta na „⚙️ Automatyczne”.
 - OwnTracks (iPhone, stała lokalizacja): tryb HTTP, URL `http://100.108.241.58/api/lokalizacja` (przez Tailscale).
+- **Google Maps (od 2026-10-22, główne źródło)**: Antek udostępnia lokalizację drugiemu kontu Google; timer
+  `google-lokalizacja.timer` co 15 min uruchamia `~/lokalizacja/google_lokalizacja.py` (venv `~/lokalizacja/venv`,
+  nieoficjalne locationsharinglib, repo `pi/lokalizacja/`), który czyta ją ciasteczkami tego konta
+  (`~/portal/dane/google_cookies.txt`, 600) i wysyła do `/api/lokalizacja` z czasem z Google. Nowe ciasteczka: plik .txt
+  do `Tony-Folder/Raspberry/Google/` na NAS (instrukcja `CZYTAJ.txt` tam), skrypt go zabiera i kasuje. Stan/błąd:
+  `dane/lokalizacja_google.json`, dopisywany do żółtego alarmu „Brak aktualnej lokalizacji”.
 - Monitor zdrowia: w dzień (7–22) lokalizacja starsza niż 30 min (`LOKALIZACJA_MAX_MIN`) = 🟡 „Brak aktualnej
   lokalizacji”, chyba że trwa lokalizacja „na żywo” z Telegrama (`na_zywo_do` = wysłanie + live_period).
   iPhone nie pozwala serwerowi samemu pobrać lokalizacji: musi ją wysyłać aplikacja (OwnTracks albo Telegram).

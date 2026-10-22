@@ -369,6 +369,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (lokalizacja z Google Maps)**: Pi samo co 15 min odczytuje lokalizację udostępnioną w Google Maps
+  drugiemu kontu Google (bez VPN i bez Telegrama na iPhonie); czeka na ciasteczka tego konta (NAS Raspberry/Google).
 - **2026-10-22 (jeden kanał)**: Bot odpowiada tylko tam, gdzie Antek napisał; powiadomienia idą na Linphone (albo do
   Telegrama, gdy tam ostatnio pisał lub gdy Linphone nie działa), bez dublowania.
 - **2026-10-22 (miejsca słowami)**: „ustaw tu jako dom/szkoła/…” w Telegramie, Linphone i przez telefon zapisuje

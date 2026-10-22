@@ -1594,6 +1594,19 @@ def miejsca():
         return {}
 
 
+def lokalizacja_google_blad():
+    """błąd ostatniego odczytu z Google Maps (google_lokalizacja.py) do opisu alarmu"""
+    try:
+        g = json.loads((BASE / "dane" / "lokalizacja_google.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    if g.get("ok"):
+        return ""
+    b = g.get("blad", "")
+    rada = " Ciasteczka konta Google wygasły: trzeba je wgrać ponownie." if "Cookie" in b or "cookie" in b or "401" in b else ""
+    return f" Odczyt z Google: {b[:150]}.{rada}"
+
+
 def lokalizacja():
     try:
         return json.loads(LOKALIZACJA.read_text(encoding="utf-8"))
@@ -2351,7 +2364,8 @@ def zdrowie_problemy(prog):
         if not na_zywo and (wiek_l is None or wiek_l > LOKALIZACJA_MAX_MIN):
             pr.append(("lokalizacja", "warn", "Brak aktualnej lokalizacji",
                        (f"Ostatnia: {l['czas'][11:16]} ({l.get('zrodlo', '?')}). " if l else "Pi jeszcze nie dostało lokalizacji. ")
-                       + "Sprawdź OwnTracks i Tailscale na iPhonie albo kliknij „📍 Odjazdy obok mnie” w Telegramie.", 1))
+                       + "Sprawdź udostępnianie lokalizacji w Google Maps (i czy Google Maps ma lokalizację „Zawsze”)."
+                       + lokalizacja_google_blad(), 1))
     pom["uslugi"] = uslugi
     return pr, pom
 
