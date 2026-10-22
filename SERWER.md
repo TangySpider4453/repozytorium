@@ -197,6 +197,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (adres `sip:<użytkownik>@127.0.0.1:5070`, bez STUN) + `test_dzwoniacy.py`. Uwaga pjsua2 w Pythonie: wynik
   `getInfo()` trzymać w zmiennej (inaczej `.media` wskazuje na zwolnioną pamięć), obiekty pjsua2 zwalniać w głównym wątku.
 
+## Automatyczne (od 2026-10-22)
+- Strona `/strony/automatyczne/` (repo `automatyczne/`, w menu „⚙️ Automatyczne” zamiast „📝 Zadania”): karty automatyzacji
+  ze stanem na żywo: 📝 Zadania (link do `/strony/todo/`, która ma powrót „← Automatyczne”), 📚 Sprawdziany i kartkówki,
+  📧 Poczta i 🚌 Komunikacja miejska („wkrótce”). Nowa automatyzacja = wpis w tablicy `AUTOMATY` w `index.html`.
+
 ## Zadania (todo) z przypomnieniami (od 2026-10-22)
 - Dane `~/portal/dane/todo.json`: `{id, tekst, termin "RRRR-MM-DDTHH:MM"|null, powtarzaj null|dzien|tydzien|miesiac,
   zrobione, wyslano, utworzono}`. API: `GET/POST /api/todo`, `POST /api/todo/<id>` (`zrobione`, `tekst`, `termin`,

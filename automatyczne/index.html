@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Automatyczne</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Automatyczne: wszystko, co Pi robi samo (zadania, sprawdziany, później poczta i komunikacja miejska).
+   Nowa automatyzacja = nowa karta w AUTOMATY poniżej (i jej strona w /strony/<nazwa>/). */
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF; --sel:#1d63c4; --ok:#1f8a4c; --warn:#a86b00; --bad:#c03442;
+  --serif:"Alegreya",Georgia,serif; --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+h1,h2{font-family:var(--serif);line-height:1.15;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{background:var(--nav);color:var(--navInk);padding:14px 0 18px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+header.top .back{display:inline-block;font-size:14px;opacity:.75;text-decoration:none;color:inherit;margin-bottom:8px}
+header.top h1{font-size:clamp(30px,7vw,42px);font-weight:800}
+header.top p{margin:4px 0 0;opacity:.8;font-size:15px}
+main{padding:18px 0 60px}
+.siatka{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+a.karta,div.karta{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;color:inherit;text-decoration:none}
+a.karta:hover{border-color:var(--sel)}
+.karta h2{font-size:23px;display:flex;gap:8px;align-items:center}
+.karta .opis{color:var(--muted);font-size:15px;margin:4px 0 10px}
+.karta .stan{font-weight:700;font-size:15px}
+.karta .stan .uw{color:var(--bad)} .karta .stan .dzis{color:var(--warn)}
+.karta.wkrotce{opacity:.65;border-style:dashed}
+.znaczek{font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:99px;padding:1px 8px;margin-left:auto;font-family:var(--sans)}
+ul{margin:0;padding-left:18px;font-size:15px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="back" href="/">← Serwerek domowy</a>
+  <h1>⚙️ Automatyczne</h1>
+  <p>To, co Pi robi za Ciebie: przypomina, dzwoni, pilnuje terminów. Kolejne automatyzacje pojawią się tutaj.</p>
+</div></header>
+<main><div class="wrap"><div class="siatka" id="siatka"></div></div></main>
+<script>
+const $ = id => document.getElementById(id);
+const el = (t, a = {}, ...k) => { const e = document.createElement(t); for(const [n, v] of Object.entries(a)){ if(v == null) continue; if(n === "text") e.textContent = v; else if(n === "class") e.className = v; else e.setAttribute(n, v); } e.append(...k.filter(x => x != null)); return e; };
+const teraz = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const dni = data => Math.round((new Date(data + "T00:00") - new Date(new Date().toDateString())) / 864e5);
+const json = url => fetch(url, {cache:"no-store"}).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); });
+
+// Każda automatyzacja: karta z linkiem i krótkim stanem (stan() zwraca listę elementów albo tekst).
+const AUTOMATY = [
+  {ikona:"📝", nazwa:"Zadania", link:"/strony/todo/",
+   opis:"Lista do zrobienia z przypomnieniami w Telegramie i Linphone; „📞 Bardzo ważne” = Pi dzwoni.",
+   stan: async () => {
+     const z = (await json("/api/todo")).zadania.filter(x => !x.zrobione).sort((a, b) => (a.termin || "9999").localeCompare(b.termin || "9999"));
+     if(!z.length) return ["Nic nie czeka. 🎉"];
+     const sp = z.filter(x => x.termin && x.termin < teraz()).length, nast = z.find(x => x.termin && x.termin >= teraz());
+     return [el("span", {text:`${z.length} do zrobienia`}), sp ? el("span", {class:"uw", text:` · ${sp} spóźnione`}) : null,
+             nast ? el("div", {class:"opis", style:"margin:4px 0 0", text:`Następne: ${nast.tekst} (${nast.termin.slice(5, 10).split("-").reverse().join(".")} ${nast.termin.slice(11)})`}) : null];
+   }},
+  {ikona:"📚", nazwa:"Sprawdziany i kartkówki", link:"/strony/todo/#sprawdziany-karta",
+   opis:"Przypomnienia: 3 dni i dzień przed sprawdzianem wieczorem oraz rano w dniu.",
+   stan: async () => {
+     const l = (await json("/strony/nauka/sprawdziany.json")).filter(x => x.data && dni(x.data) >= 0).sort((a, b) => a.data.localeCompare(b.data));
+     if(!l.length) return ["Brak zapowiedzianych."];
+     return [el("ul", {}, ...l.slice(0, 4).map(x => { const d = dni(x.data);
+       return el("li", {}, el("span", {class:d <= 1 ? "dzis" : "", text:d === 0 ? "dziś" : d === 1 ? "jutro" : `za ${d} dni`}), ` · ${x.przedmiot} (${x.typ})`); }))];
+   }},
+  {ikona:"📧", nazwa:"Poczta", wkrotce:true, opis:"Twoje skrzynki mailowe: ważne wiadomości w Telegramie, streszczenia, przypomnienia z maili."},
+  {ikona:"🚌", nazwa:"Komunikacja miejska", wkrotce:true, opis:"Odjazdy z Twoich przystanków, opóźnienia i „kiedy wyjść”, żeby zdążyć."},
+];
+
+for(const a of AUTOMATY){
+  const stan = el("div", {class:"stan", text:a.wkrotce ? "" : "…"});
+  const k = el(a.wkrotce ? "div" : "a", {class:"karta" + (a.wkrotce ? " wkrotce" : ""), href:a.link},
+    el("h2", {}, el("span", {"aria-hidden":"true", text:a.ikona}), a.nazwa, a.wkrotce ? el("span", {class:"znaczek", text:"wkrótce"}) : null),
+    el("p", {class:"opis", text:a.opis}), stan);
+  $("siatka").append(k);
+  if(a.stan) a.stan().then(x => stan.replaceChildren(...x.filter(y => y != null))).catch(() => stan.replaceChildren("Nie udało się wczytać."));
+}
+</script>
+</body>
+</html>

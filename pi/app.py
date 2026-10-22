@@ -739,7 +739,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <a href="/strony/nauka/" data-p="nauka"><span class="ik" aria-hidden="true">📚</span>Nauka</a>
     <a href="/strony/progres/" data-p="progres"><span class="ik" aria-hidden="true">💪</span>Progres</a>
     <a href="/strony/zdrowie/" data-p="zdrowie"><span class="ik" aria-hidden="true">🩺</span>Zdrowie</a>
-    <a href="/strony/todo/" data-p="todo"><span class="ik" aria-hidden="true">📝</span>Zadania</a>
+    <a href="/strony/automatyczne/" data-p="automatyczne"><span class="ik" aria-hidden="true">⚙️</span>Automatyczne</a>
     <a href="/strony/zawodowe/" data-p="zawodowe"><span class="ik" aria-hidden="true">🤖</span>Zawodowe</a>
   </nav>
 </header>
