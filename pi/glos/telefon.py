@@ -530,6 +530,10 @@ def main():
         ac.sipConfig.authCreds.append(pj.AuthCredInfo("digest", "*", UZYT, 0, HASLO))
         ac.natConfig.iceEnabled = True
         ac.natConfig.sipOutboundUse = 1
+        # Linphone szyfruje dźwięk (SRTP): bez tego połączenia kończą się „488 Not Acceptable Here”.
+        # Opcjonalnie: oferujemy SRTP, ale przyjmiemy też zwykłe RTP; klucze SDES także przez TCP (secureSignaling 0).
+        ac.mediaConfig.srtpUse = pj.PJMEDIA_SRTP_OPTIONAL
+        ac.mediaConfig.srtpSecureSignaling = 0
     konto = Konto()
     konto.create(ac)
     KONTAKT["konto"] = konto
@@ -558,7 +562,12 @@ def main():
                 wyslij_czat(tekst)
         if not AKTYWNE:
             for p in sorted(KOLEJKA.glob("*.json")):
-                zl = json.loads(p.read_text(encoding="utf-8"))
+                try:
+                    zl = json.loads(p.read_text(encoding="utf-8"))
+                except ValueError:
+                    if time.time() - p.stat().st_mtime > 10:      # zepsuty plik: usuń; świeży: może jeszcze się zapisuje
+                        p.unlink()
+                    continue
                 p.unlink()
                 if konto.zarejestrowane:
                     zadzwon_do_wlasciciela(konto, zl)

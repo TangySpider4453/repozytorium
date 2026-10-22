@@ -351,3 +351,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   test lokalny udany. Poprawione rozpoznawanie właściciela po nazwie SIP.
 - **2026-10-22 (głos/tekst)**: Bot sam wybiera głos albo tekst („przeczytaj” → głosówka, „wypisz” → tekst, inaczej jak
   pytanie). Głosówki działają też w czacie Linphone (rozpoznanie na Pi, odpowiedź głosem przez serwer plików Linphone).
+- **2026-10-22 (telefon SRTP)**: Połączenia z Linphone kończyły się 488 (Linphone wymaga szyfrowania dźwięku): włączone
+  SRTP opcjonalne (`srtpUse` OPTIONAL, `srtpSecureSignaling` 0). Połączenie od Pi dochodzi już do iPhone'a (push),
+  test w toku. Zabezpieczone czytanie kolejki połączeń. Tymczasowo log SIP (`serwerek-telefon.service.d/diagnostyka.conf`).
