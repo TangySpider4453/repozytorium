@@ -1006,6 +1006,9 @@ input:focus{outline:3px solid color-mix(in srgb,var(--acc) 45%,transparent);bord
 button{width:100%;margin-top:14px;font:inherit;font-weight:700;padding:12px;border:0;border-radius:10px;background:var(--acc);color:var(--accInk);cursor:pointer}
 .err{color:var(--bad);font-weight:600;margin:12px 0 0}
 small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
+.pole{position:relative} .pole input{padding-right:84px}
+#pokaz{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:auto;margin:0;padding:6px 12px;font-size:15px;
+  background:transparent;color:var(--acc);border:1.5px solid var(--line);border-radius:8px}
 </style></head><body>
 <form method="post" action="/logowanie">
   <h1>Serwerek domowy</h1>
@@ -1013,11 +1016,17 @@ small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
   <input type="hidden" name="nast" value="%%NAST%%">
   <input type="text" name="username" value="serwerek" autocomplete="username" hidden>
   <label for="h">Hasło</label>
-  <input id="h" name="haslo" type="password" autocomplete="current-password" autofocus required>
+  <div class="pole"><input id="h" name="haslo" type="password" autocomplete="current-password" autofocus required>
+    <button type="button" id="pokaz" aria-controls="h" aria-pressed="false">Pokaż</button></div>
   <button type="submit">Wejdź</button>
   %%BLAD%%
   <small>Przez Tailscale hasło nie jest potrzebne.</small>
-</form></body></html>"""
+</form>
+<script>
+const h = document.getElementById("h"), b = document.getElementById("pokaz");
+b.onclick = () => { const p = h.type === "password"; h.type = p ? "text" : "password"; b.textContent = p ? "Ukryj" : "Pokaż";
+  b.setAttribute("aria-pressed", p); h.focus(); };
+</script></body></html>"""
 
 
 def logowanie_strona(blad="", nast="/", kod=200):
