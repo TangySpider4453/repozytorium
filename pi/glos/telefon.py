@@ -324,6 +324,7 @@ class Konto(pj.Account):
         ai = self.getInfo()
         self.zarejestrowane = ai.regIsActive
         log(f"rejestracja: {ai.regStatus} {ai.regStatusText} (aktywna: {ai.regIsActive})")
+        zapisz_stan(self.zarejestrowane)
 
     def onInstantMessage(self, prm):
         if "rcs-ft-http" in (prm.msgBody + prm.contentType):       # wzór głosówki z Linphone (diagnostyka formatu)
@@ -429,7 +430,9 @@ def pobierz_glosowke(url):
 
 CZAT_AKCJA = {}     # akcja czekająca na „tak” w czacie Linphone (Linphone nie ma przycisków): {"akcja", "t"}
 POMOC_LINPHONE_KONIEC = ("\n\nW Linphone nie ma przycisków: gdy coś trzeba potwierdzić (kopia, Minecraft, przejrzane), "
-                         "odpisz „tak” w ciągu 2 minut. Zdjęcia i PDF-y wysyłaj w Telegramie."
+                         "odpisz „tak” w ciągu 2 minut. Zdjęcia, PDF-y i lokalizację wysyłaj w Telegramie."
+                         "\nPowiadomienia przychodzą tam, gdzie ostatnio pisałeś (gdy Linphone nie działa: Telegram); "
+                         "„widzę” = nie dzwoń w sprawie alarmu, „to moje” = urządzenie z ostatniego powiadomienia o wejściu."
                          "\n\nZadania (przypomnienia przychodzą też tutaj):\n"
                          "✅ zrobione [nr] – ostatnie przypomnienie albo pozycja z listy „zadania”\n"
                          "⏰ +15, +1h, +jutro [nr] – odłóż\n"
@@ -501,6 +504,7 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
         t = tekst.strip()
         sl = t.lower().split()
         akcja = None
+        bot.ustaw_kanal("linphone")         # pisze z Linphone: powiadomienia też tutaj
         if t.lower() in ("pomoc", "help", "/pomoc", "/help", "?"):
             odp = "❓ Komendy (wpisz słowo):\n\n" + bot.POMOC_WSPOLNE + POMOC_LINPHONE_KONIEC
         elif t.lower() in ("tak", "tak!", "potwierdzam", "ok tak") and CZAT_AKCJA and time.time() - CZAT_AKCJA["t"] < 120:
@@ -510,6 +514,10 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
         elif t.lower() in ("nie", "anuluj") and CZAT_AKCJA:
             CZAT_AKCJA.clear()
             odp = "Nic nie zrobiłem."
+        elif t.lower().strip(" .!") in ("widzę", "widze", "widzę alarm", "nie dzwoń", "nie dzwon"):
+            odp = bot.widze_alarmy()
+        elif t.lower().strip(" .!") in ("to moje", "to moje urządzenie", "to moje urzadzenie", "to ja"):
+            odp = bot.zaufaj_ostatnie()
         elif t.lower() in ("kopia", "/kopia"):
             akcja = "kopia"
         elif t.lower() in ("przejrzane", "/przejrzane"):
@@ -615,6 +623,16 @@ def wyslij_czat(tekst, pisze=False, typ="text/plain"):
         log(f"wyślij czat: {ex.info()}")
 
 
+def zapisz_stan(zarejestrowane):
+    """dla bota: czy Linphone działa (powiadomienia idą na Linphone, a gdy nie, do Telegrama)"""
+    try:
+        tmp = KAT / "stan.json.tmp"
+        tmp.write_text(json.dumps({"zarejestrowane": bool(zarejestrowane), "t": time.time()}), encoding="utf-8")
+        os.replace(tmp, KAT / "stan.json")
+    except OSError:
+        pass
+
+
 def zadzwon_do_wlasciciela(konto, zl):
     if not WLASCICIEL:
         wynik(stan="blad", opis="nie znam jeszcze Twojego adresu Linphone (SIP_WLASCICIEL). Zadzwoń raz do Pi z Linphone, to go podam.", **zl)
@@ -705,6 +723,9 @@ def main():
             f, a = AKCJE.get()
             f(*a)
         teraz = time.time()
+        if teraz - KONTAKT.get("stan_t", 0) > 60:
+            KONTAKT["stan_t"] = teraz
+            zapisz_stan(getattr(konto, "zarejestrowane", False))
         GRACZE[:] = [(t, g) for t, g in GRACZE if t > teraz]
         for p in [p for p in ZAKONCZONE if not (p.watek and p.watek.is_alive())]:
             ZAKONCZONE.remove(p)

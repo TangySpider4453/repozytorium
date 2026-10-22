@@ -141,6 +141,14 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   albo po 1 h ciszy. Zużycie liczy się do limitów subskrypcji właściciela; bot tylko dla niego (zasady Anthropic).
 - Odnowienie logowania Claude (co rok): `claude setup-token` → token do `/etc/serwerek-bot/claude.env`, restart bota.
 
+## Kanał: Linphone główny, Telegram zapasowy (od 2026-10-22)
+- Odpowiedź zawsze tam, skąd przyszło pytanie. Powiadomienia bota (`powiadom()`: alarmy, przypomnienia, sprawdziany,
+  wyniki połączeń, Minecraft, wejścia z sieci) idą kanałem, którym Antek ostatnio pisał (`stan.json` → `kanal`,
+  domyślnie Linphone); gdy Linphone nie działa (`~/bot/telefon/stan.json` od telefon.py: rejestracja, odświeżane co
+  minutę, ważne 3 min), do Telegrama. Lokalizacja, zdjęcia i przyciski Telegrama kanału nie zmieniają.
+- W Linphone zamiast przycisków: „widzę” (nie dzwoń w sprawie 🔴), „przejrzane”, „to moje” (urządzenie z ostatniego
+  powiadomienia o wejściu), „zrobione / +15…” przy przypomnieniach.
+
 ## Głos, telefon i wspólna pamięć (od 2026-10-22)
 - **Pamięć** `~/bot/pamiec.db` (SQLite, `pi/bot/pamiec.py`, 90 dni): każda wiadomość (antek / bot sam z siebie /
   claude; kanał telegram / glosowka / telefon, z `tg_id`). Do Claude dopisywane: na nowej sesji ostatnie 30 wiadomości,

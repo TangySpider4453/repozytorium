@@ -263,6 +263,81 @@ def wykonaj_sudo(akcja):
     return wynik + "\n(Napisz „dalej”, jeśli Claude ma kontynuować.)"
 
 
+# ---------------------------------------------------------------- kanał: Linphone (główny) albo Telegram (zapasowy)
+# Odpowiedź idzie tam, skąd przyszło pytanie. Powiadomienia (alarmy, przypomnienia, sprawdziany, telefon, Minecraft,
+# wejścia) idą kanałem, którym Antek ostatnio pisał (domyślnie Linphone); gdy Linphone nie działa, do Telegrama.
+# Wysłanie lokalizacji w Telegramie nie zmienia kanału.
+def ustaw_kanal(k):
+    with LOCK:
+        s = stan()
+        if s.get("kanal") != k:
+            s["kanal"] = k
+            zapisz(s)
+
+
+def linphone_dziala():
+    """usługa telefonu zapisuje stan co minutę (telefon.py: zapisz_stan)"""
+    try:
+        st = json.loads((TELEFON / "stan.json").read_text(encoding="utf-8"))
+        return st.get("zarejestrowane") and time.time() - st.get("t", 0) < 180
+    except (OSError, ValueError):
+        return False
+
+
+def kanal_powiadomien():
+    return "linphone" if stan().get("kanal", "linphone") == "linphone" and linphone_dziala() else "telegram"
+
+
+def powiadom(tekst, html_=False, przyciski=None, linphone=None, **dodatki):
+    """powiadomienie od bota (nie odpowiedź): Linphone albo Telegram, patrz wyżej; linphone = inny tekst dla Linphone
+    (bez przycisków: podpowiedź, co odpisać)"""
+    if kanal_powiadomien() == "linphone":
+        t = linphone or (html.unescape(re.sub(r"<[^>]+>", "", tekst)) if html_ else tekst)
+        try:
+            do_linphone(t, **dodatki)
+            pamiec.zapisz("bot", "linphone", t)
+            return
+        except OSError as ex:
+            print(f"powiadom przez Linphone: {ex}", flush=True)
+    wyslij(tekst, html_=html_, przyciski=przyciski)
+
+
+def zaufaj(mac, tak=True):
+    """urządzenie z sieci domowej jako „moje” (wejścia tylko zapisywane) albo z powrotem z powiadomieniami"""
+    with LOCK:
+        s2 = stan()
+        z = s2.setdefault("zaufane", {})
+        if tak:
+            z[mac] = f"urządzenie {len(z) + 1} ({time.strftime('%d.%m')})"
+        else:
+            z.pop(mac, None)
+        zapisz(s2)
+    with WIZYTY_LOCK:
+        for w in WIZYTY.values():
+            if w.get("mac") == mac:
+                w["cichy"] = tak
+    return (f"✅ Zapamiętane: {mac} to Twoje urządzenie. Jego wejścia będą tylko zapisywane (🧭 Ścieżka), bez powiadomień."
+            if tak else f"🔔 {mac} usunięte z zaufanych: znów będą powiadomienia.")
+
+
+def zaufaj_ostatnie():
+    o = stan().get("ostatnie_urzadzenie")
+    return zaufaj(o["mac"]) if o else "Nie wiem, o które urządzenie chodzi."
+
+
+def widze_alarmy():
+    """„widzę” (Telegram: przycisk, Linphone: tekst): nie dzwoń w sprawie trwających czerwonych alarmów"""
+    with LOCK:
+        s2 = stan()
+        n = 0
+        for k, v in list(s2["wyslane"].items()):
+            if k.startswith("dzwon:") and isinstance(v, float):
+                s2["wyslane"][k] = "widze"
+                n += 1
+        zapisz(s2)
+    return "👀 OK, nie będę dzwonić w sprawie alarmu." if n else "Nie ma alarmu, w którego sprawie miałbym dzwonić."
+
+
 def zapytaj(akcja, dodatek=""):
     opis = opis_akcji(akcja)
     wyslij(f"❓ {opis}?{dodatek}", przyciski={"inline_keyboard": [[{"text": "✅ Tak", "callback_data": f"tak:{akcja}"},
@@ -381,10 +456,10 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
         s = stan()
         ses = s["sesja"]
         if ses.get("id") and time.time() - ses.get("ostatnio", 0) > KONTEKST_CISZA:
-            nowa_sesja(s, "godzina bez wiadomości" if kanal != "telefon" else None)
+            nowa_sesja(s, "godzina bez wiadomości" if kanal in ("telegram", "glosowka_zapisana") else None)
             ses = s["sesja"]
         if ses.get("id") and ses.get("kontekst", 0) >= KONTEKST_MAX:
-            nowa_sesja(s, f"kontekst przekroczył {KONTEKST_MAX // 1000} tys. tokenów" if kanal != "telefon" else None)
+            nowa_sesja(s, f"kontekst przekroczył {KONTEKST_MAX // 1000} tys. tokenów" if kanal in ("telegram", "glosowka_zapisana") else None)
             ses = s["sesja"]
     pam = pamiec.kontekst(nowa_sesja=not ses.get("id"), odpowiedz_na=odpowiedz_na)
     if kanal not in ("telegram", "glosowka_zapisana"):      # czat i glosowki zapisuje juz obsluz()/glosowka()
@@ -473,8 +548,9 @@ def powiadomienia():
         for i in wszystkie:
             k, poziom = "inc:" + i["id"], i.get("teraz", i["poziom"]) if not i.get("do") else i["poziom"]
             if not i.get("do") and poziom == "crit" and w.get(k) != "crit":
-                wyslij(f"🔴 <b>{e(i['tytul'])}</b>\n{e(i['opis'])}\n\n{LINK_DOM}/strony/zdrowie/", html_=True,
-                       przyciski={"inline_keyboard": [[{"text": "👀 Widzę (nie dzwoń)", "callback_data": f"widze:{i['id']}"}]]})
+                powiadom(f"🔴 <b>{e(i['tytul'])}</b>\n{e(i['opis'])}\n\n{LINK_DOM}/strony/zdrowie/", html_=True,
+                         przyciski={"inline_keyboard": [[{"text": "👀 Widzę (nie dzwoń)", "callback_data": f"widze:{i['id']}"}]]},
+                         linphone=f"🔴 {i['tytul']}\n{i['opis']}\n{LINK_DOM}/strony/zdrowie/\nOdpisz „widzę”, to nie zadzwonię za 10 min.")
                 w[k] = "crit"
                 w["dzwon:" + i["id"]] = time.time()
             elif not i.get("do") and poziom == "crit" and isinstance(w.get("dzwon:" + i["id"]), float) \
@@ -482,14 +558,16 @@ def powiadomienia():
                 zadzwon(f"Uwaga, problem na serwerze: {i['tytul']}. {i['opis']}", "czerwony alarm bez reakcji przez 10 minut")
                 w["dzwon:" + i["id"]] = "zadzwoniono"
             elif i.get("do") and w.get(k) == "crit":
-                wyslij(f"✅ Minęło: <b>{e(i['tytul'])}</b> (od {i['od'][11:16]} do {i['do'][11:16]})", html_=True)
+                powiadom(f"✅ Minęło: <b>{e(i['tytul'])}</b> (od {i['od'][11:16]} do {i['do'][11:16]})", html_=True)
                 w[k] = "koniec"
             elif k not in w and poziom == "warn":
                 zolte.append(i)
         if zolte and not cisza_nocna(s):       # w nocy czekaja do rana (wtedy jedna wiadomosc z lista)
             naglowek = "🟡 <b>Do sprawdzenia</b>" if len(zolte) == 1 else f"🟡 <b>Do sprawdzenia ({len(zolte)})</b>"
-            wyslij(naglowek + "\n" + "\n".join(f"• {e(i['tytul'])}: {e(i['opis'])}" + (" (już minęło)" if i.get("do") else "")
-                                                for i in zolte) + "\n\nPo przejrzeniu: ✅ Przejrzane", html_=True)
+            powiadom(naglowek + "\n" + "\n".join(f"• {e(i['tytul'])}: {e(i['opis'])}" + (" (już minęło)" if i.get("do") else "")
+                                                  for i in zolte) + "\n\nPo przejrzeniu: ✅ Przejrzane", html_=True,
+                     linphone="🟡 Do sprawdzenia:\n" + "\n".join(f"• {i['tytul']}: {i['opis']}" + (" (już minęło)" if i.get("do") else "")
+                                                            for i in zolte) + "\nPo przejrzeniu odpisz „przejrzane”.")
             for i in zolte:
                 w["inc:" + i["id"]] = "warn"
         aktualne = {"inc:" + i["id"] for i in wszystkie}
@@ -508,11 +586,7 @@ def powiadomienia():
         elif d == 0 and czas_minal(us["nauka_rano"]) and datetime.now().hour < 12:
             co, tekst = "dzis", f"☀️ <b>Dziś {e(x['typ'])} z {e(x['przedmiot'].lower())}</b>. Powodzenia!"
         if co and w.get(f"nauka:{x['id']}:{x['data']}:{co}") is None:
-            wyslij(f"{tekst}\n{e(x['tytul'])}\nPowtórz zakładkę „Najważniejsze”: {link_sprawdzianu(x)}", html_=True)
-            try:
-                do_linphone(html.unescape(re.sub(r"<[^>]+>", "", tekst)) + f"\n{x['tytul']}\n{link_sprawdzianu(x)}")
-            except OSError:
-                pass
+            powiadom(f"{tekst}\n{e(x['tytul'])}\nPowtórz zakładkę „Najważniejsze”: {link_sprawdzianu(x)}", html_=True)
             w[f"nauka:{x['id']}:{x['data']}:{co}"] = time.time()
     for k in [k for k in w if k.startswith("nauka:") and k.split(":")[-2] < (dzis - timedelta(days=7)).isoformat()]:
         del w[k]
@@ -691,10 +765,17 @@ def zdarzenie(ip, krok, alarm=None, rodzaj_alarmu=None, przerwa=0):
     kto = f"IP: <code>{e(ip)}</code>" + (f" ({e(urz)})" if urz else "")
     if nowa:
         przyc = {"inline_keyboard": [[{"text": "✅ To moje urządzenie (nie powiadamiaj)", "callback_data": f"zaufaj:{w['mac']}"}]]} if w.get("mac") else None
-        wyslij(f"🚪 <b>Nowe wejście na Pi z sieci domowej</b>\n{kto}\nPierwszy krok: {e(krok)}", html_=True, przyciski=przyc)
+        powiadom(f"🚪 <b>Nowe wejście na Pi z sieci domowej</b>\n{kto}\nPierwszy krok: {e(krok)}", html_=True, przyciski=przyc,
+                 linphone=f"🚪 Nowe wejście na Pi z sieci domowej\nIP: {ip}" + (f" ({urz})" if urz else "") + f"\nPierwszy krok: {krok}"
+                 + ("\nTo Twoje urządzenie? Odpisz „to moje”." if w.get("mac") else ""))
+        if w.get("mac"):
+            with LOCK:
+                s2 = stan()
+                s2["ostatnie_urzadzenie"] = {"mac": w["mac"], "nazwa": urz or ip}
+                zapisz(s2)
     if wyslac:
         ikona, tytul, dodatek = alarm
-        wyslij(f"{ikona} <b>{e(tytul)}</b>\n{kto}" + (f"\n{e(dodatek)}" if dodatek else ""), html_=True)
+        powiadom(f"{ikona} <b>{e(tytul)}</b>\n{kto}" + (f"\n{e(dodatek)}" if dodatek else ""), html_=True)
 
 
 def petla_wizyt():
@@ -1048,14 +1129,11 @@ def przypomnienia():
             pamiec.zapisz("bot", "telefon", f"Dzwonię z przypomnieniem „{z['tekst']}” i mówię: {powitanie}")
             zadzwon(powitanie, "przypomnienie z telefonem", todo_id=z["id"])
         powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
-        wyslij(f"⏰ <b>{e(z['tekst'])}</b>\n{kiedy_tekst(z['termin'])}{powt}", html_=True, przyciski={"inline_keyboard": [
+        powiadom(f"⏰ <b>{e(z['tekst'])}</b>\n{kiedy_tekst(z['termin'])}{powt}", html_=True, todo_id=z["id"],
+                 linphone=f"⏰ {z['tekst']}\n{kiedy_tekst(z['termin'])}{powt}\nOdpisz: zrobione, +15, +1h albo +jutro.", przyciski={"inline_keyboard": [
             [{"text": "✅ Zrobione", "callback_data": f"todo_ok:{z['id']}"}],
             [{"text": "⏰ +15 min", "callback_data": f"todo_odloz:{z['id']}:15"}, {"text": "⏰ +1 h", "callback_data": f"todo_odloz:{z['id']}:60"},
              {"text": "⏰ Jutro", "callback_data": f"todo_odloz:{z['id']}:jutro"}]]})
-        try:
-            do_linphone(f"⏰ {z['tekst']}\n{kiedy_tekst(z['termin'])}{powt}\nOdpisz: zrobione, +15, +1h albo +jutro.", todo_id=z["id"])
-        except OSError as ex:
-            print(f"przypomnienie na Linphone: {ex}", flush=True)
         portal(f"/api/todo/{z['id']}", {"wyslano": True})
 
 
@@ -1259,6 +1337,7 @@ def wyslij_glos(tekst):
 
 def glosowka(m):
     """wiadomosc glosowa od wlasciciela: rozpoznanie na Pi (whisper) -> Claude -> odpowiedz tekstem i glosem"""
+    ustaw_kanal("telegram")
     g = glos()
     if not g:
         wyslij("🎙 Rozpoznawanie mowy jeszcze się instaluje na Pi. Napisz tekstem albo spróbuj za chwilę.")
@@ -1299,20 +1378,20 @@ def petla_telefonu():
                 w = json.loads(p.read_text(encoding="utf-8"))
                 p.unlink()
                 if w.get("stan") == "brak_konfiguracji":
-                    wyslij(f"📞 Chciałem zadzwonić ({w.get('powod')}), ale telefon nie jest jeszcze skonfigurowany (konto Linphone).\n{w.get('tekst', '')}")
+                    powiadom(f"📞 Chciałem zadzwonić ({w.get('powod')}), ale telefon nie jest jeszcze skonfigurowany (konto Linphone).\n{w.get('tekst', '')}")
                 elif w.get("stan") == "nieodebrane":
-                    wyslij(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}")
+                    powiadom(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}")
                 elif w.get("stan") == "rozmowa":
-                    wyslij(f"📞 Rozmowa ({w.get('kierunek')}, {w.get('czas')}):\n{w.get('zapis', '')}"[:3900])
+                    powiadom(f"📞 Rozmowa ({w.get('kierunek')}, {w.get('czas')}):\n{w.get('zapis', '')}"[:3900])
                 elif w.get("stan") == "nieznany_wlasciciel":
-                    wyslij(f"📞 Ktoś dzwonił do Pi z adresu {w.get('od')}. Jeśli to Ty, napisz „to mój adres Linphone”, "
+                    powiadom(f"📞 Ktoś dzwonił do Pi z adresu {w.get('od')}. Jeśli to Ty, napisz „to mój adres Linphone”, "
                            "a Claude w sesji w chmurze dopisze go jako Twój (wtedy Pi będzie odbierać i dzwonić).")
                 elif w.get("stan") == "obcy_czat":
-                    wyslij(f"💬 Ktoś obcy napisał do Pi na Linphone ({w.get('od')}): {w.get('tekst')}\nNie odpowiedziałem.")
+                    powiadom(f"💬 Ktoś obcy napisał do Pi na Linphone ({w.get('od')}): {w.get('tekst')}\nNie odpowiedziałem.")
                 elif w.get("stan") == "obcy":
-                    wyslij(f"📞 Ktoś obcy próbował zadzwonić do Pi: {w.get('od')}. Odrzuciłem.")
+                    powiadom(f"📞 Ktoś obcy próbował zadzwonić do Pi: {w.get('od')}. Odrzuciłem.")
                 elif w.get("stan") == "blad":
-                    wyslij(f"📞 Nie udało się zadzwonić: {w.get('opis')}")
+                    powiadom(f"📞 Nie udało się zadzwonić: {w.get('opis')}")
         except Exception as ex:
             print(f"telefon: {type(ex).__name__}: {ex}", flush=True)
 
@@ -1335,7 +1414,7 @@ def petla_minecrafta():
             start = time.mktime(time.strptime(m["od"], "%Y-%m-%dT%H:%M:%S")) if m.get("od") else time.time()
             if time.time() - max(start, ostatnio_gracze) >= limit * 60:
                 wynik = wykonaj("mc_wylacz")
-                wyslij(f"🎮 Wyłączyłem Minecrafta: od {limit} min nikt nie grał (świat zapisany). Włączysz go przyciskiem 🎮 Minecraft.\n{wynik}")
+                powiadom(f"🎮 Wyłączyłem Minecrafta: od {limit} min nikt nie grał (świat zapisany). Włączysz go przyciskiem 🎮 Minecraft.\n{wynik}")
         except Exception as ex:
             print(f"minecraft: {type(ex).__name__}: {ex}", flush=True)
 
@@ -1358,19 +1437,19 @@ def petla_mc_stanu():
             if poprz is not None and stan()["wlasciciel"]:
                 cichy = time.time() - MC_BOT["t"] < 120
                 if teraz["stan"] == "failed" and poprz["stan"] != "failed":
-                    wyslij("🔴 🎮 Serwer Minecraft się wysypał. Włączysz go ponownie przyciskiem 🎮 Minecraft.")
+                    powiadom("🔴 🎮 Serwer Minecraft się wysypał. Włączysz go ponownie przyciskiem 🎮 Minecraft.")
                 elif teraz["dziala"] and not poprz["dziala"] and not cichy:
-                    wyslij(f"🎮 Minecraft <b>włączony</b> ({(teraz['od'] or '')[11:16]}), można grać.", html_=True)
+                    powiadom(f"🎮 Minecraft <b>włączony</b> ({(teraz['od'] or '')[11:16]}), można grać.", html_=True)
                 elif not teraz["dziala"] and poprz["dziala"] and teraz["stan"] != "failed" and not cichy:
-                    wyslij("⏹ Minecraft <b>wyłączony</b> (świat zapisany).", html_=True)
+                    powiadom("⏹ Minecraft <b>wyłączony</b> (świat zapisany).", html_=True)
                 elif teraz["dziala"] and poprz["dziala"] and teraz["od"] != poprz["od"] and not cichy:
-                    wyslij(f"🔄 Minecraft <b>zrestartowany</b> ({(teraz['od'] or '')[11:16]}).", html_=True)
+                    powiadom(f"🔄 Minecraft <b>zrestartowany</b> ({(teraz['od'] or '')[11:16]}).", html_=True)
                 if teraz["dziala"] and poprz["dziala"] and teraz["gracze"] is not None and poprz["gracze"] is not None:
                     if teraz["gracze"] > 0 and poprz["gracze"] == 0:
-                        wyslij(f"👤 Ktoś gra na serwerze Minecraft (graczy: {teraz['gracze']}).")
+                        powiadom(f"👤 Ktoś gra na serwerze Minecraft (graczy: {teraz['gracze']}).")
                     elif teraz["gracze"] == 0 and poprz["gracze"] > 0:
                         auto = stan()["ustawienia"].get("mc_auto_min", USTAWIENIA["mc_auto_min"])
-                        wyslij("👤 Serwer Minecraft opustoszał." + (f" Wyłączy się sam za {auto} min, jeśli nikt nie wejdzie." if auto else ""))
+                        powiadom("👤 Serwer Minecraft opustoszał." + (f" Wyłączy się sam za {auto} min, jeśli nikt nie wejdzie." if auto else ""))
             if teraz["gracze"] is None and poprz:
                 teraz["gracze"] = poprz["gracze"]
             poprz = teraz
@@ -1500,21 +1579,7 @@ def obsluz(u):
                 wyslij("⚠️ Nie znalazłem tego zadania (może już usunięte).")
             return
         if dane.startswith("zaufaj:") or dane.startswith("nieufaj:"):
-            mac = dane.split(":", 1)[1]
-            with LOCK:
-                s2 = stan()
-                z = s2.setdefault("zaufane", {})
-                if dane.startswith("zaufaj:"):
-                    z[mac] = f"urządzenie {len(z) + 1} ({time.strftime('%d.%m')})"
-                else:
-                    z.pop(mac, None)
-                zapisz(s2)
-            with WIZYTY_LOCK:
-                for w in WIZYTY.values():
-                    if w.get("mac") == mac:
-                        w["cichy"] = dane.startswith("zaufaj:")
-            wyslij(f"✅ Zapamiętane: {mac} to Twoje urządzenie. Jego wejścia będą tylko zapisywane (🧭 Ścieżka), bez powiadomień."
-                   if dane.startswith("zaufaj:") else f"🔔 {mac} usunięte z zaufanych: znów będą powiadomienia.")
+            wyslij(zaufaj(dane.split(":", 1)[1], dane.startswith("zaufaj:")))
             return
         if dane.startswith("tak:") and czy_akcja(dane[4:]):
             if dane[4:] in ("mc_wlacz", "mc_wylacz"):
@@ -1573,6 +1638,7 @@ def obsluz(u):
     if chat != s["wlasciciel"]:
         return
     pamiec.zapisz("antek", "telegram", tekst, m.get("message_id"))
+    ustaw_kanal("telegram")                 # pisze z Telegrama: powiadomienia też tutaj, aż znów napisze na Linphone
     odp_na = pamiec.po_tg_id(m["reply_to_message"]["message_id"]) if m.get("reply_to_message") else None
     if tekst in ("📞 Zadzwoń", "/zadzwon") or tekst.lower() in ("zadzwoń", "zadzwon", "zadzwoń do mnie", "zadzwon do mnie"):
         zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś. W czym mogę pomóc?", "na Twoją prośbę")
