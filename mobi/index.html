@@ -66,6 +66,8 @@ pre{white-space:pre-wrap;font-family:var(--sans);font-size:16px;margin:10px 0 0;
 .lek .s{color:var(--muted);font-size:14px;font-weight:400}
 .lek.odwolana .p{text-decoration:line-through;color:var(--muted)}
 .znak{display:inline-block;font-size:12px;font-weight:700;border-radius:99px;padding:0 7px;margin-left:6px;vertical-align:1px}
+.znak.zd{background:var(--ok);color:#fff}
+.lek .zdt{font-size:14px;margin-top:2px}
 .znak.odw{background:var(--bad);color:#fff} .znak.zast{background:var(--warn);color:#fff} .znak.spr{background:var(--sel);color:#fff}
 table{width:100%;border-collapse:collapse;font-size:15px} td,th{text-align:left;padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:700;font-size:13px}
@@ -117,12 +119,15 @@ function rysuj(){
     el("h3", {text:dataPl(data)}),
     ...dni[data].map(x => {
       const s = spr.find(y => y.data === data && y.godzina === x.od);
+      const zd = (D.zadania || []).filter(y => y.termin === data && (y.godzina ? y.godzina === x.od : y.przedmiot === x.przedmiot));
       return el("div", {class:"lek" + (x.status === "odwołana" ? " odwolana" : "")},
         el("div", {class:"g", text:`${x.od}–${x.do}`}),
         el("div", {}, el("span", {class:"p", text:x.przedmiot}),
           x.status === "odwołana" ? el("span", {class:"znak odw", text:"odwołana"}) : x.status === "zastępstwo" ? el("span", {class:"znak zast", text:"zastępstwo"}) : null,
           s ? el("span", {class:"znak spr", text:s.rodzaj}) : null,
-          el("div", {class:"s", text:[x.zamiast ? "zamiast: " + x.zamiast : "", x.nauczyciel, x.sala ? "sala " + x.sala : "", x.status === "odwołana" && x.info ? x.info : ""].filter(Boolean).join(" · ")})));
+          zd.length ? el("span", {class:"znak zd", text:"zadanie domowe"}) : null,
+          el("div", {class:"s", text:[x.zamiast ? "zamiast: " + x.zamiast : "", x.nauczyciel, x.sala ? "sala " + x.sala : "", x.status === "odwołana" && x.info ? x.info : ""].filter(Boolean).join(" · ")}),
+          ...zd.map(y => el("div", {class:"zdt", text:`🏠 ${y.tresc}${y.zrobione ? " ✅" : ""}`}))));
     }))));
   if(!Object.keys(dni).length) $("plan").replaceChildren(el("p", {class:"muted", text:"Brak lekcji w tym tygodniu."}));
   $("spr").replaceChildren(spr.length ? el("table", {}, el("tr", {}, ...["Kiedy", "Przedmiot", "Tematyka"].map(t => el("th", {text:t}))),

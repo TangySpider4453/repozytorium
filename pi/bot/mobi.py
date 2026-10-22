@@ -52,7 +52,19 @@ def pobierz(strony):
     po = r.read().decode("utf-8", "replace")
     if 'name="haslo"' in po and "wyloguj" not in po:
         raise RuntimeError("logowanie do Mobidziennika nie udało się (złe hasło albo zmiana strony)")
-    return {s: op.open(f"{a}/dziennik/{s}", timeout=30).read().decode("utf-8", "replace") for s in strony}
+    pobierz_strone = lambda s: op.open(f"{a}/dziennik/{s}", timeout=30).read().decode("utf-8", "replace")
+    wyn = {s: pobierz_strone(s) for s in strony}
+    wyn["_pobierz"] = pobierz_strone                         # ta sama sesja: dodatkowe strony (szczegóły zadań)
+    return wyn
+
+
+def tresc_zadania(h):
+    """strona szczegółów zadania (GET wyslijzadanie: tylko podgląd; formularza odpowiedzi nie dotykamy)"""
+    m = re.search(r"(?s)Treść zadania:</td>\s*<td[^>]*>(.*?)</td>", h)
+    z = re.search(r"(?s)Załączniki:</td>\s*<td[^>]*>(.*?)</td>", h)
+    t = czysty(m.group(1)) if m else ""
+    zal = czysty(z.group(1)) if z else ""
+    return t + (f" (załączniki: {zal})" if zal and zal != "brak" else "")
 
 
 # ---------------------------------------------------------------- odczyt stron
@@ -108,15 +120,16 @@ def sprawdziany(h):
 
 def zadania_domowe(h):
     wyn = []
-    for idz, w in re.findall(r'(?s)<tr class="podswietl[^"]*"[^>]*id_zadania="(\d+)"[^>]*>(.*?)</tr>', h):
+    for idz, uczen, w in re.findall(r'(?s)<tr class="podswietl[^"]*"[^>]*id_zadania="(\d+)" uczen="(\d+)"[^>]*>(.*?)</tr>', h):
         td = re.findall(r"(?s)<td[^>]*>(.*?)</td>", w)
         if len(td) < 4:
             continue
         m = re.search(r"(\d{1,2}) (\w+) (\d{4})", czysty(td[0]))
         termin = f"{m.group(3)}-{MIES_PELNE.get(m.group(2), 0):02d}-{int(m.group(1)):02d}" if m else ""
         naucz = re.search(r"Wpisał\(a\): <strong>([^<]*)", td[2])
-        wyn.append({"id": idz, "termin": termin, "przedmiot": czysty(td[1]), "nauczyciel": naucz.group(1) if naucz else "",
-                    "tresc": czysty(td[3]), "zrobione": "alt=\"tak\"" in (td[5] if len(td) > 5 else "")})
+        g = re.search(r"(\d\d:\d\d) - \d\d:\d\d", td[0])
+        wyn.append({"id": idz, "termin": termin, "godzina": g.group(1) if g else "", "przedmiot": czysty(td[1]), "nauczyciel": naucz.group(1) if naucz else "",
+                    "tresc": czysty(td[3]), "zrobione": "alt=\"tak\"" in (td[5] if len(td) > 5 else ""), "uczen": uczen})
     return wyn
 
 
@@ -176,6 +189,16 @@ def sprawdz(powiadom, nowy_sprawdzian):
             zz = next((y for y in z if y["data"] == x["data"] and y["od"] == x["od"]), None)
             x["zamiast"] = zz["lekcja"].split(" - ", 1)[-1] if zz else ""
     s, zd = sprawdziany(strony["sprawdziany"]), zadania_domowe(strony["zadaniadomowe"])
+    pelne = {x["id"]: x.get("tresc_pelna") for x in wczytaj("stan", {}).get("zadania", []) if x.get("tresc_pelna")}
+    for x in zd:                                            # pełna treść zadania: raz, ze strony szczegółów
+        x["tresc_pelna"] = pelne.get(x["id"])
+        if not x["tresc_pelna"]:
+            try:
+                x["tresc_pelna"] = tresc_zadania(strony["_pobierz"](f"wyslijzadanie/?id_zadania={x['id']}&uczen={x['uczen']}&o=zadaniadomowe"))
+            except OSError:
+                pass
+        if x.get("tresc_pelna"):
+            x["tresc"] = x["tresc_pelna"]
     with LOCK:
         stary = wczytaj("stan", None)
         pierwszy = stary is None
