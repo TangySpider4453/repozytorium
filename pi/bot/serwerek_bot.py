@@ -56,9 +56,11 @@ AKCJE = {   # nazwa: (opis dla przycisku, polecenie)
     "kopia": ("Zrobić kopię systemu na NAS teraz", ["sudo", "systemctl", "start", "--no-block", "kopia-pi"]),
     "restart_portalu": ("Zrestartować portal (strony, diodę)", ["sudo", "systemctl", "restart", "home-portal"]),
     "restart_minecrafta": ("Zrestartować serwer Minecraft (rozłączy graczy)", None),
+    "mc_wlacz": ("Włączyć serwer Minecraft", ["sudo", "/usr/local/bin/minecraft", "start"]),
+    "mc_wylacz": ("Wyłączyć serwer Minecraft (świat zostanie zapisany)", ["sudo", "/usr/local/bin/minecraft", "stop"]),
     "przejrzane": ("Oznaczyć wszystkie problemy jako przejrzane", None),
 }
-KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "📝 Zadania"], ["💾 Kopia", "✅ Przejrzane", "🔄 Restart"],
+KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "📝 Zadania"], ["🎮 Minecraft", "💾 Kopia", "✅ Przejrzane", "🔄 Restart"],
                            ["🧭 Ścieżka", "📞 Zadzwoń", "🆕 Nowa rozmowa"]],
               "resize_keyboard": True, "is_persistent": True}
 
@@ -150,7 +152,8 @@ def tekst_stanu():
              f"🌡 {p.get('temp', '?')} °C · CPU {round(p.get('cpu') or 0)}% · RAM {round(p.get('ram') or 0)}% · karta {round(p.get('dysk') or 0)}%"]
     us = p.get("uslugi", {})
     if us:
-        linie.append("🎮 Minecraft: " + ("działa" if us.get("powernukkitx") == "active" else "❌ " + str(us.get("powernukkitx"))))
+        mc = us.get("powernukkitx")
+        linie.append("🎮 Minecraft: " + ("działa" if mc == "active" else "⏸ wyłączony (włączysz: 🎮 Minecraft)" if mc == "recznie" else f"❌ {mc}"))
     linie.append("💽 NAS: " + ("połączony" if zad["nas"].get("ok") else "❌ niedostępny"))
     kopia = next((x for x in zad["zadania"] if x["id"] == "kopia-pi"), None)
     if kopia:
@@ -224,9 +227,11 @@ def wykonaj(akcja):
         cmd = ["sudo", "systemctl", "restart", "powernukkitx"]
     else:
         cmd = AKCJE[akcja][1]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
     if r.returncode != 0:
         return f"❌ Nie udało się: {(r.stderr or r.stdout)[-300:]}"
+    if akcja in ("mc_wlacz", "mc_wylacz"):
+        return "🎮 " + (r.stdout.strip().splitlines() or ["Gotowe."])[-1]
     return {"kopia": "💾 Kopia ruszyła. Postęp: 📊 Stan albo panel na stronie.",
             "restart_portalu": "🔄 Portal zrestartowany.",
             "restart_minecrafta": "🎮 Serwer Minecraft zrestartowany (świat zapisany przed restartem)."}[akcja]
@@ -1122,6 +1127,8 @@ def obsluz(u):
                    if dane.startswith("zaufaj:") else f"🔔 {mac} usunięte z zaufanych: znów będą powiadomienia.")
             return
         if dane.startswith("tak:") and dane[4:] in AKCJE:
+            if dane[4:] in ("mc_wlacz", "mc_wylacz"):
+                wyslij("🎮 " + ("Włączam serwer Minecraft… (ok. 30 s)" if dane[4:] == "mc_wlacz" else "Zapisuję świat i wyłączam…"))
             wyslij(wykonaj(dane[4:]))
         elif dane == "nie":
             wyslij("Nic nie zrobiłem.")
@@ -1166,6 +1173,18 @@ def obsluz(u):
     if tekst in ("📞 Zadzwoń", "/zadzwon") or tekst.lower() in ("zadzwoń", "zadzwon", "zadzwoń do mnie", "zadzwon do mnie"):
         zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś. W czym mogę pomóc?", "na Twoją prośbę")
         wyslij("📞 Dzwonię przez Linphone…")
+    elif tekst in ("🎮 Minecraft", "/minecraft") or tekst.lower() in ("minecraft", "mc"):
+        m = portal("/api/minecraft")
+        if m.get("trwa"):
+            wyslij("🎮 Minecraft właśnie się " + ("włącza…" if m["trwa"] == "start" else "wyłącza…"))
+        elif m.get("dziala"):
+            g = m.get("gracze")
+            wyslij(f"🎮 Minecraft <b>działa</b> od {(m.get('od') or '')[11:16]}, RAM {m.get('ram_mb', '?')} MB, gracze: {g if g is not None else '?'}", html_=True,
+                   przyciski={"inline_keyboard": [[{"text": "⏹ Wyłącz", "callback_data": "tak:mc_wylacz"}, {"text": "🔄 Restart", "callback_data": "tak:restart_minecrafta"}],
+                                                  [{"text": "✖ Nic", "callback_data": "nie"}]]})
+        else:
+            wyslij("🎮 Minecraft jest <b>wyłączony</b> (nie zajmuje RAM ani procesora).", html_=True,
+                   przyciski={"inline_keyboard": [[{"text": "▶ Włącz (ok. 30 s)", "callback_data": "tak:mc_wlacz"}, {"text": "✖ Nic", "callback_data": "nie"}]]})
     elif tekst in ("📊 Stan", "/stan"):
         wyslij(tekst_stanu(), html_=True)
     elif tekst.split()[0].lower() in ("🧭", "ścieżka", "sciezka", "/sciezka"):
@@ -1213,7 +1232,7 @@ def main():
         s = stan()
         zapisz(s)
     tg("setMyCommands", commands=[{"command": c, "description": d} for c, d in (
-        ("zadania", "Lista zadań (dodawanie: todo jutro 17:00 trening)"), ("zadzwon", "Pi zadzwoni do Ciebie (Linphone)"), ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
+        ("zadania", "Lista zadań (dodawanie: todo jutro 17:00 trening)"), ("minecraft", "Włącz / wyłącz serwer Minecraft"), ("zadzwon", "Pi zadzwoni do Ciebie (Linphone)"), ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("zaufane", "Twoje urządzenia bez powiadomień"), ("kopia", "Kopia systemu teraz"),
         ("przejrzane", "Zgaś żółtą diodę"), ("restart", "Restart portalu lub Minecrafta"), ("nowa", "Nowa rozmowa z Claude"))])
     threading.Thread(target=petla_powiadomien, daemon=True).start()
     threading.Thread(target=petla_claude, daemon=True).start()

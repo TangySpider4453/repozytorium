@@ -72,6 +72,15 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `/terminal` z sieci domowej pokazuje tylko informację (terminal na porcie 7681 słucha wyłącznie na Tailscale).
   Panel Minecraft `pi-dashboard` (8090) był i jest dostępny w sieci domowej bez hasła (osobna usługa).
 
+## Minecraft włączany ręcznie (od 2026-10-22)
+- `powernukkitx` jest **disabled** (nie startuje z Pi). Komenda `/usr/local/bin/minecraft start|stop|status` (repo
+  `pi/minecraft/minecraft`): start czeka na „Done (” (ok. 30 s), stop = `save-all` + `stop` przez `console.fifo`.
+  `playit` i `pi-dashboard` działają dalej (mało zasobów). Serwer zajmował ok. 1,4 GB RAM i ~11% CPU bez graczy.
+- Portal: `GET/POST /api/minecraft {akcja: start|stop}` (w tle, `MC_STAN.trwa`), karta „🎮 Minecraft” z przyciskiem
+  na stronie głównej. Bot: przycisk 🎮 Minecraft (Włącz / Wyłącz / Restart), akcje `mc_wlacz`/`mc_wylacz` także dla Claude.
+- Monitor: `uslugi_reczne` = wyłączony to OK (⏸ na stronie Zdrowie), 🔴 tylko gdy `failed`.
+- `~/scripts/auto-update.sh` (kopia `.przed_recznym`): po aktualizacji PNX wyłącza serwer, jeśli był wyłączony.
+
 ## Bot Telegram @SerwerekAntek_bot (od 2026-10-22)
 - Usługa `serwerek-bot` (User=tonyg), kod `~/bot/serwerek_bot.py` (repo `pi/bot/`), stan `~/bot/stan.json` (600:
   właściciel, kod parowania, wysłane powiadomienia, sesja Claude, ustawienia godzin). Tokeny tylko w

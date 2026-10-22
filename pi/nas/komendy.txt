@@ -62,6 +62,16 @@ journalctl -u powernukkitx -n 100
     Ostatnie 100 linii serwera Minecraft (zamiast powernukkitx: home-portal, playit, kopia-pi ...).
 
 
+MINECRAFT (wlaczany recznie, zeby nie zajmowal RAM i procesora)
+---------------------------------------------------------------
+minecraft start
+    Wlacz serwer (ok. 30 s). Tez: przycisk na stronie glownej portalu albo 🎮 Minecraft w bocie.
+minecraft stop
+    Zapisz swiat i wylacz serwer.
+minecraft status
+    Czy dziala, od kiedy, ile RAM.
+Serwer NIE startuje sam po wlaczeniu Pi. Automatyczna aktualizacja zostawia go w tym stanie, w jakim byl.
+
 PORTAL Z SIECI DOMOWEJ (haslo)
 ------------------------------
 Adres w domu: http://172.23.0.20  (przez Tailscale: http://100.108.241.58, bez hasla)
@@ -97,4 +107,4 @@ systemctl status home-portal
 sudo systemctl restart home-portal
     Restart portalu (strony, dioda). Bezpieczny, trwa kilka sekund.
 sudo systemctl restart powernukkitx
-    Restart serwera Minecraft (rozlacza graczy).
+    Restart serwera Minecraft, gdy dziala (rozlacza graczy).

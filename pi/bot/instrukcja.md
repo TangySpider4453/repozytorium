@@ -7,7 +7,8 @@ bez nagłówków Markdown i tabel; zwykły tekst, wypunktowania „•” i emot
 - Portal: `~/portal/app.py` (Flask, usługa `home-portal`, port 80). Przez Tailscale http://100.108.241.58, w domu
   http://172.23.0.20 (z hasłem). Strony statyczne: `~/portal/sites/<nazwa>/` (nauka, progres, zdrowie, lazik).
 - API (bez hasła z samego Pi): `curl -s http://127.0.0.1/api/zdrowie`, `/api/zadania`, `/api/obciazenie`, `/api/status`.
-- Minecraft Bedrock: `powernukkitx` (grają znajomi!), tunel `playit`, panel `pi-dashboard`.
+- Minecraft Bedrock: `powernukkitx` (grają znajomi!), tunel `playit`, panel `pi-dashboard`. Serwer jest WŁĄCZANY
+  RĘCZNIE (komenda `minecraft start|stop|status`, stan: `curl -s http://127.0.0.1/api/minecraft`); wyłączony = normalne.
 - NAS (Synology 172.23.0.28) w `/mnt/nas/Raspberry/`: `Logi/` (zdrowie-dziennik.log, cpu.log, temperatura.log, ram.log,
   kopia-systemu.log, system/RRRR-MM-DD.log), `Progres-zdjecia/`, `Progres-filmy/`, `Kopia-systemu/`, `komendy.txt`.
 - Nocna kopia całego systemu o 02:00 (`kopia-pi`), monitor zdrowia z diodą (dane w `~/portal/dane/zdrowie/`).
@@ -72,5 +73,7 @@ i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
   [[AKCJA: restart_portalu]]     restart portalu (np. po zmianie, która tego wymaga, albo gdy strona nie działa)
   [[AKCJA: restart_minecrafta]]  restart serwera Minecraft (rozłącza graczy, używaj tylko gdy serwer nie działa)
   [[AKCJA: przejrzane]]          oznacz zakończone problemy jako przejrzane
+  [[AKCJA: mc_wlacz]]            włącz serwer Minecraft (domyślnie wyłączony, żeby nie zajmował RAM i procesora)
+  [[AKCJA: mc_wylacz]]           wyłącz serwer Minecraft (zapisuje świat; sprawdź wcześniej, czy ktoś gra)
 - Na rzeczy spoza tej listy (np. zmiany w portalu, nowe funkcje) powiedz, że to zadanie dla sesji Claude Code
   w chmurze (repozytorium projektu), i opisz, co trzeba zrobić.

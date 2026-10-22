@@ -338,3 +338,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   z polskiego tekstu („todo jutro 17:00 trening”), wysyła przypomnienia z przyciskami zrobione/odłóż. Repo `todo/`.
 - **2026-10-22 (głos)**: Wspólna pamięć rozmów bota (SQLite), wiadomości głosowe (whisper + Piper na Pi), usługa
   telefonu SIP przez Linphone (czeka na konta Linphone), dzwonienie przy 🔴 bez reakcji i przy zadaniach „zadzwoń”.
+- **2026-10-22 (Minecraft ręcznie)**: Serwer Minecraft nie startuje sam; włączanie: komenda `minecraft start`, przycisk
+  na stronie głównej, 🎮 w bocie. Monitor nie traktuje wyłączenia jako awarii. Auto-aktualizacja zostawia stan.

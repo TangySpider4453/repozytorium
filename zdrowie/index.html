@@ -124,7 +124,8 @@ async function odswiez(){
   if(p.dysk != null) r("Karta SD (/)", `${Math.round(p.dysk)}% zajęte`, pasek(p.dysk, g.dysk));
   if(p.boot != null) r("Partycja rozruchowa", `${Math.round(p.boot)}% zajęte`, pasek(p.boot, g.dysk));
   if(p.throttled) r("Zasilanie i taktowanie", p.throttled === "0x0" ? "✓ bez zastrzeżeń" : `kod ${p.throttled}`);
-  if(p.uslugi) r("Usługi", ...Object.entries(p.uslugi).map(([u, s]) => el("span", {class:"ch " + (s === "active" ? "on" : "off"), text:`${s === "active" ? "✓" : "✕"} ${u}`})));
+  if(p.uslugi) r("Usługi", ...Object.entries(p.uslugi).map(([u, s]) => el("span", {class:"ch " + (s === "active" ? "on" : s === "recznie" ? "" : "off"),
+    text:`${s === "active" ? "✓" : s === "recznie" ? "⏸" : "✕"} ${u}${s === "recznie" ? " (wyłączony, włączany ręcznie)" : ""}`})));
   const h = $("historia"); h.innerHTML = "";
   if(!(z.historia || []).length) h.append(el("p", {class:"muted", style:"margin:0", text:"Brak przejrzanych zdarzeń."}));
   (z.historia || []).slice(0, 100).forEach(i => h.append(wiersz(i)));

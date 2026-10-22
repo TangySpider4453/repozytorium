@@ -763,6 +763,29 @@ async function getJSON(u){const r=await fetch(u,{cache:'no-store'});if(!r.ok)thr
 function setSub(s){document.getElementById('h-sub').textContent=s.model+' · '+s.system+' · działa od '+dur(s.uptime)}
 
 /* ---------- START ---------- */
+/* Minecraft włączany ręcznie: stan i przycisk Włącz/Wyłącz (POST /api/minecraft) */
+let MC=null;
+function mcKarta(){
+  const box=h('section',{class:'zad',id:'mcKarta',style:'display:flex;align-items:center;gap:12px;flex-wrap:wrap'});
+  mcRysuj(box);return box;
+}
+function mcRysuj(box){
+  box=box||document.getElementById('mcKarta');if(!box)return;
+  const m=MC;box.replaceChildren();
+  if(!m){box.append(h('span',{text:'🎮 Minecraft: sprawdzam…'}));return}
+  const opis=m.trwa==='start'?'włącza się (ok. 30 s)…':m.trwa==='stop'?'zapisuje świat i się wyłącza…':m.dziala?
+    `działa${m.od?' od '+m.od.slice(11,16):''}${m.ram_mb?' · '+m.ram_mb+' MB RAM':''}${m.gracze!=null?' · gracze: '+m.gracze:''}`:
+    (m.stan==='failed'?'wysypał się – włącz ponownie':'wyłączony (nie zajmuje RAM ani procesora)');
+  box.append(h('div',{style:'flex:1;min-width:200px'},h('b',{text:'🎮 Minecraft '}),h('span',{class:'s',text:opis})));
+  if(!m.trwa)box.append(h('button',{class:'btn',text:m.dziala?'⏹ Wyłącz':'▶ Włącz',onclick:async()=>{
+    if(m.dziala&&m.gracze>0&&!confirm(`Grają ${m.gracze} osoby. Wyłączyć serwer?`))return;
+    MC=Object.assign({},m,{trwa:m.dziala?'stop':'start'});mcRysuj();
+    try{MC=await(await fetch('/api/minecraft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({akcja:m.dziala?'stop':'start'})})).json()}catch(e){}
+    mcRysuj();mcOdswiez();}}));
+}
+let mcT=0;
+async function mcOdswiez(){clearTimeout(mcT);try{MC=await(await fetch('/api/minecraft',{cache:'no-store'})).json()}catch(e){}mcRysuj();mcT=setTimeout(mcOdswiez,MC&&MC.trwa?3000:15000)}
+if(PAGE==='start')mcOdswiez();
 function renderStart(d,zad,obc){
   const s=d.system;setSub(s);
   const ram=pct(s.ram_uzyte,s.ram_total),disk=pct(s.dysk_uzyte,s.dysk_total),cpu=s.cpu,t=s.temp;
@@ -806,6 +829,7 @@ function renderStart(d,zad,obc){
   const au=s.autoupdate;
   main.replaceChildren(
     h('section',null,tiles,...alerts),
+    mcKarta(),
     zad&&window.Zadania||obc&&window.Obciazenie?h('section',{class:'zad-sek'},zad&&window.Zadania?h('div',{class:'zad'},Zadania.panel(zad)):null,obc&&window.Obciazenie?h('div',{class:'zad'},Obciazenie.panel(obc)):null):null,
     h('section',null,h('h2',{text:'Strony na tym serwerze'}),h('p',{class:'sec-note',text:'Wszystko, co Pi udostępnia w przeglądarce. Nową stronę dodasz, wrzucając folder z plikiem index.html do ~/portal/sites/.'}),cards),
     h('section',null,h('h2',{text:'Działające programy ('+d.uslugi.length+')'}),h('p',{class:'sec-note',text:'Wszystkie usługi systemd, które teraz działają, pogrupowane według przeznaczenia.'}),...svc),
@@ -1173,6 +1197,49 @@ def api_status():
 @app.route("/api/siec")
 def api_siec():
     return jsonify(cached("siec", 10, network))
+
+
+# ---------- Minecraft włączany ręcznie (komenda /usr/local/bin/minecraft, przycisk na stronie głównej i w bocie) ----------
+MC_STAN = {"trwa": None}
+
+
+def mc_stan():
+    st = usluga_stan("powernukkitx")
+    d = {"dziala": st.get("ActiveState") == "active", "stan": st.get("ActiveState"), "trwa": MC_STAN["trwa"]}
+    if d["dziala"]:
+        pid = sh(["systemctl", "show", "-p", "MainPID", "--value", "powernukkitx"]).strip()
+        m = re.search(r"VmRSS:\s+(\d+)", read(f"/proc/{pid}/status"))
+        d["ram_mb"] = int(m.group(1)) // 1024 if m else None
+        m = re.search(r"@(\d+)", sh(["systemctl", "show", "--timestamp=unix", "-p", "ActiveEnterTimestamp", "--value", "powernukkitx"]))
+        d["od"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(int(m.group(1)))) if m else None
+        try:
+            mc = next((x for x in cached("siec", 10, network)["minecraft"] if x.get("status")), None)
+            d["gracze"] = (mc or {}).get("status", {}).get("gracze")
+        except Exception:
+            d["gracze"] = None
+    return d
+
+
+@app.route("/api/minecraft", methods=["GET", "POST"])
+def api_minecraft():
+    from flask import request
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        akcja = b.get("akcja")
+        if akcja not in ("start", "stop"):
+            abort(400)
+        if MC_STAN["trwa"]:
+            return jsonify(mc_stan()), 409
+
+        def wykonaj():
+            MC_STAN["trwa"] = akcja
+            try:
+                subprocess.run(["sudo", "/usr/local/bin/minecraft", akcja], capture_output=True, timeout=240)
+            finally:
+                MC_STAN["trwa"] = None
+        threading.Thread(target=wykonaj, daemon=True).start()
+        time.sleep(0.3)
+    return jsonify(mc_stan())
 
 
 # ---------- Zadania (todo) z przypomnieniami: strona /strony/todo/ i bot Telegram ----------
@@ -1918,7 +1985,8 @@ ZDROWIE_PROGI = {
     "swap": [80, 95],            # % uzycia swap (zram)
     "cpu": [85, 95],             # % sredniego obciazenia: zolta po 10 min, czerwona po 30 min
     "cpu_min": [10, 30],
-    "uslugi_kryt": ["powernukkitx", "playit", "tailscaled", "home-portal"],
+    "uslugi_kryt": ["playit", "tailscaled", "home-portal"],
+    "uslugi_reczne": ["powernukkitx"],      # włączane ręcznie (minecraft start): wyłączone = OK, czerwona tylko po awarii
     "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama", "serwerek-bot", "serwerek-telefon"],
     "zadania": ["mc-autoupdate"],    # usluga uruchamiana timerem: ostatni przebieg zakonczony bledem -> zolta
 }
@@ -2040,6 +2108,13 @@ def zdrowie_problemy(prog):
             if st.get("ActiveState") != "active":
                 opis = SERVICE_INFO.get(u, ("", u))[1]
                 pr.append((f"usluga:{u}", poziom, f"Usługa nie działa: {u}", f"{opis}. Stan: {st.get('ActiveState')}/{st.get('SubState')}.", 1))
+    for u in prog.get("uslugi_reczne", []):
+        st = usluga_stan(u)
+        if st.get("LoadState") != "loaded":
+            continue
+        uslugi[u] = st.get("ActiveState") if st.get("ActiveState") in ("active", "failed") else "recznie"
+        if st.get("ActiveState") == "failed":
+            pr.append((f"usluga:{u}", "crit", f"Usługa się wysypała: {u}", f"{SERVICE_INFO.get(u, ('', u))[1]}. Włącz ponownie: minecraft start.", 1))
     for u in prog["zadania"]:
         st = usluga_stan(u)
         if st.get("LoadState") == "loaded" and st.get("Result") not in (None, "", "success"):
