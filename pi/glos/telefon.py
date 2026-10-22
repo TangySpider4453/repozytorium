@@ -273,11 +273,14 @@ class Konto(pj.Account):
         else:
             op.statusCode = 603
             p.hangup(op)
-            wynik(stan="obcy", od=od)
+            wynik(stan="obcy" if WLASCICIEL else "nieznany_wlasciciel", od=od)
             log(f"odrzucam {od}")
 
 
 def zadzwon_do_wlasciciela(konto, zl):
+    if not WLASCICIEL:
+        wynik(stan="blad", opis="nie znam jeszcze Twojego adresu Linphone (SIP_WLASCICIEL). Zadzwoń raz do Pi z Linphone, to go podam.", **zl)
+        return
     p = Polaczenie(konto, kierunek="od Pi", powitanie=zl["tekst"] + " Możesz mi odpowiedzieć albo się rozłączyć.", zlecenie=zl)
     try:
         p.makeCall(WLASCICIEL, pj.CallOpParam(True))
@@ -304,7 +307,7 @@ def main():
     global CHWILA
     KOLEJKA.mkdir(parents=True, exist_ok=True)
     WYNIKI.mkdir(parents=True, exist_ok=True)
-    if not (UZYT and HASLO and WLASCICIEL):
+    if not (UZYT and HASLO):
         bez_konfiguracji()
     while not glos.gotowe():
         log("czekam na instalację whisper/Piper")

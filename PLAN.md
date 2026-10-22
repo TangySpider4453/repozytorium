@@ -343,3 +343,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (MC auto)**: Minecraft wyłącza się sam po 30 min bez graczy (bot), test z limitem 2 min udany.
 - **2026-10-22 (MC powiadomienia)**: Bot pisze o każdej zmianie stanu Minecrafta (włączony, wyłączony, restart, awaria,
   ktoś gra, serwer opustoszał), także gdy zmianę zrobiono na stronie albo komendą.
+- **2026-10-22 (Linphone)**: Konto SIP Pi `antekserwerrpi4b@sip.linphone.org` zalogowane (rejestracja 200 OK); hasło tylko
+  w `/etc/serwerek-bot/sip.env`. Czeka na adres Linphone właściciela (`SIP_WLASCICIEL`); do tego czasu Pi odrzuca
+  połączenia i bot podaje adres dzwoniącego.

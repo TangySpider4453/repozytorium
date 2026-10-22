@@ -1014,6 +1014,9 @@ def petla_telefonu():
                     wyslij(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}")
                 elif w.get("stan") == "rozmowa":
                     wyslij(f"📞 Rozmowa ({w.get('kierunek')}, {w.get('czas')}):\n{w.get('zapis', '')}"[:3900])
+                elif w.get("stan") == "nieznany_wlasciciel":
+                    wyslij(f"📞 Ktoś dzwonił do Pi z adresu {w.get('od')}. Jeśli to Ty, napisz „to mój adres Linphone”, "
+                           "a Claude w sesji w chmurze dopisze go jako Twój (wtedy Pi będzie odbierać i dzwonić).")
                 elif w.get("stan") == "obcy":
                     wyslij(f"📞 Ktoś obcy próbował zadzwonić do Pi: {w.get('od')}. Odrzuciłem.")
                 elif w.get("stan") == "blad":
