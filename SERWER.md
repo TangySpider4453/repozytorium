@@ -78,6 +78,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `playit` i `pi-dashboard` działają dalej (mało zasobów). Serwer zajmował ok. 1,4 GB RAM i ~11% CPU bez graczy.
 - Portal: `GET/POST /api/minecraft {akcja: start|stop}` (w tle, `MC_STAN.trwa`), karta „🎮 Minecraft” z przyciskiem
   na stronie głównej. Bot: przycisk 🎮 Minecraft (Włącz / Wyłącz / Restart), akcje `mc_wlacz`/`mc_wylacz` także dla Claude.
+- **Auto-wyłączanie**: bot (`petla_minecrafta`, co 60 s) wyłącza serwer (`mc_wylacz`, zapis świata) po
+  `ustawienia.mc_auto_min` (domyślnie 30, 0 = nigdy) minutach bez graczy, licząc od włączenia albo od ostatnich graczy
+  (po restarcie bota od nowa); nieznana liczba graczy nie przybliża wyłączenia. Wiadomość w Telegramie.
 - Monitor: `uslugi_reczne` = wyłączony to OK (⏸ na stronie Zdrowie), 🔴 tylko gdy `failed`.
 - `~/scripts/auto-update.sh` (kopia `.przed_recznym`): po aktualizacji PNX wyłącza serwer, jeśli był wyłączony.
 

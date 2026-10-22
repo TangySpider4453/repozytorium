@@ -71,6 +71,7 @@ minecraft stop
 minecraft status
     Czy dziala, od kiedy, ile RAM.
 Serwer NIE startuje sam po wlaczeniu Pi. Automatyczna aktualizacja zostawia go w tym stanie, w jakim byl.
+Wylacza sie sam po 30 min bez graczy (bot pisze o tym w Telegramie).
 
 PORTAL Z SIECI DOMOWEJ (haslo)
 ------------------------------

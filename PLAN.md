@@ -340,3 +340,4 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   telefonu SIP przez Linphone (czeka na konta Linphone), dzwonienie przy 🔴 bez reakcji i przy zadaniach „zadzwoń”.
 - **2026-10-22 (Minecraft ręcznie)**: Serwer Minecraft nie startuje sam; włączanie: komenda `minecraft start`, przycisk
   na stronie głównej, 🎮 w bocie. Monitor nie traktuje wyłączenia jako awarii. Auto-aktualizacja zostawia stan.
+- **2026-10-22 (MC auto)**: Minecraft wyłącza się sam po 30 min bez graczy (bot), test z limitem 2 min udany.

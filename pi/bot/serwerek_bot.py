@@ -50,7 +50,8 @@ PLIKI = KATALOG / "pliki"
 WEJSCIE_PRZERWA = 600           # s: to samo IP i port nie czesciej niz co 10 min (polaczenia sieciowe)
 PORTY = {22: "SSH", 139: "Samba (udział sieciowy)", 445: "Samba (udział sieciowy)", 5900: "VNC (pulpit)",
          8090: "panel Minecrafta", 80: "portal"}
-USTAWIENIA = {"nauka_wieczor": "18:00", "nauka_rano": "07:00", "cisza_od": 22, "cisza_do": 7}
+USTAWIENIA = {"nauka_wieczor": "18:00", "nauka_rano": "07:00", "cisza_od": 22, "cisza_do": 7,
+              "mc_auto_min": 30}         # Minecraft: wyłącz po tylu minutach bez graczy (0 = nigdy)
 
 AKCJE = {   # nazwa: (opis dla przycisku, polecenie)
     "kopia": ("Zrobić kopię systemu na NAS teraz", ["sudo", "systemctl", "start", "--no-block", "kopia-pi"]),
@@ -1019,6 +1020,29 @@ def petla_telefonu():
             print(f"telefon: {type(ex).__name__}: {ex}", flush=True)
 
 
+# ---------------------------------------------------------------- Minecraft: automatyczne wyłączanie bez graczy
+def petla_minecrafta():
+    """co minutę: gdy serwer działa i przez mc_auto_min minut nikt nie gra, zapisz świat i wyłącz (oszczędza RAM i CPU).
+    Liczy się od włączenia serwera albo od ostatniej chwili, gdy ktoś grał; nieznana liczba graczy nie przybliża wyłączenia."""
+    ostatnio_gracze = time.time()          # po starcie bota nie wiadomo, kto grał przed chwilą: licz od teraz
+    while True:
+        time.sleep(60)
+        try:
+            limit = stan()["ustawienia"].get("mc_auto_min", USTAWIENIA["mc_auto_min"])
+            m = portal("/api/minecraft")
+            if not limit or not m.get("dziala") or m.get("trwa") or m.get("gracze") is None:
+                continue
+            if m["gracze"] > 0:
+                ostatnio_gracze = time.time()
+                continue
+            start = time.mktime(time.strptime(m["od"], "%Y-%m-%dT%H:%M:%S")) if m.get("od") else time.time()
+            if time.time() - max(start, ostatnio_gracze) >= limit * 60:
+                wynik = wykonaj("mc_wylacz")
+                wyslij(f"🎮 Wyłączyłem Minecrafta: od {limit} min nikt nie grał (świat zapisany). Włączysz go przyciskiem 🎮 Minecraft.\n{wynik}")
+        except Exception as ex:
+            print(f"minecraft: {type(ex).__name__}: {ex}", flush=True)
+
+
 # ---------------------------------------------------------------- odbieranie wiadomosci
 KOLEJKA = []
 KOLEJKA_BUDZIK = threading.Event()
@@ -1175,11 +1199,13 @@ def obsluz(u):
         wyslij("📞 Dzwonię przez Linphone…")
     elif tekst in ("🎮 Minecraft", "/minecraft") or tekst.lower() in ("minecraft", "mc"):
         m = portal("/api/minecraft")
+        auto = s["ustawienia"].get("mc_auto_min", USTAWIENIA["mc_auto_min"])
         if m.get("trwa"):
             wyslij("🎮 Minecraft właśnie się " + ("włącza…" if m["trwa"] == "start" else "wyłącza…"))
         elif m.get("dziala"):
             g = m.get("gracze")
-            wyslij(f"🎮 Minecraft <b>działa</b> od {(m.get('od') or '')[11:16]}, RAM {m.get('ram_mb', '?')} MB, gracze: {g if g is not None else '?'}", html_=True,
+            wyslij(f"🎮 Minecraft <b>działa</b> od {(m.get('od') or '')[11:16]}, RAM {m.get('ram_mb', '?')} MB, gracze: {g if g is not None else '?'}"
+                   + (f"\nWyłączy się sam po {auto} min bez graczy." if auto else ""), html_=True,
                    przyciski={"inline_keyboard": [[{"text": "⏹ Wyłącz", "callback_data": "tak:mc_wylacz"}, {"text": "🔄 Restart", "callback_data": "tak:restart_minecrafta"}],
                                                   [{"text": "✖ Nic", "callback_data": "nie"}]]})
         else:
@@ -1241,6 +1267,7 @@ def main():
     threading.Thread(target=petla_wizyt, daemon=True).start()
     threading.Thread(target=petla_przypomnien, daemon=True).start()
     threading.Thread(target=petla_telefonu, daemon=True).start()
+    threading.Thread(target=petla_minecrafta, daemon=True).start()
     offset = None
     while True:
         wyn = tg_updates(offset)
