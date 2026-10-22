@@ -374,7 +374,44 @@ def pobierz_glosowke(url):
 
 CZAT_AKCJA = {}     # akcja czekająca na „tak” w czacie Linphone (Linphone nie ma przycisków): {"akcja", "t"}
 POMOC_LINPHONE_KONIEC = ("\n\nW Linphone nie ma przycisków: gdy coś trzeba potwierdzić (kopia, Minecraft, przejrzane), "
-                         "odpisz „tak” w ciągu 2 minut. Zdjęcia i PDF-y wysyłaj w Telegramie.")
+                         "odpisz „tak” w ciągu 2 minut. Zdjęcia i PDF-y wysyłaj w Telegramie."
+                         "\n\nZadania (przypomnienia przychodzą też tutaj):\n"
+                         "✅ zrobione [nr] – ostatnie przypomnienie albo pozycja z listy „zadania”\n"
+                         "⏰ +15, +1h, +jutro [nr] – odłóż\n"
+                         "🗑 usuń <nr>, cofnij – usuń z listy / ostatnio dodane")
+OSTATNIE_ZADANIE = {}   # id zadania z ostatniego przypomnienia albo ostatnio dodanego (do „zrobione”, „+15”, „cofnij”)
+
+
+def zadanie_czat(t, bot):
+    """komendy zadań w czacie Linphone -> odpowiedź albo None (to nie komenda zadania)"""
+    import re
+    tl = t.lower().strip(" .!")
+
+    def cel(nr):
+        if not nr:
+            return OSTATNIE_ZADANIE.get("id")
+        lista = bot.zadania_do_zrobienia()
+        return lista[int(nr) - 1]["id"] if 0 < int(nr) <= len(lista) else None
+    if m := re.fullmatch(r"(?:✅\s*)?(zrobione|zrobiłem|zrobilem|zrobiłam|gotowe|done)(?:\s+(\d+))?", tl):
+        zid = cel(m.group(2))
+        if not zid:
+            return "Nie wiem, które zadanie. Napisz „zadania”, a potem np. „zrobione 2”."
+        return bot.callback_zadania(f"todo_ok:{zid}")
+    if m := re.fullmatch(r"(?:odłóż|odloz)?\s*\+\s*(?:(\d+)\s*(min|m|minut|h|godz|godzin[ęy]?)?|(jutro))(?:\s+(\d+))?", tl):
+        zid = cel(m.group(4))
+        if not zid:
+            return "Nie wiem, które zadanie. Napisz „zadania”, a potem np. „+1h 2”."
+        if m.group(3):
+            return bot.callback_zadania(f"todo_odloz:{zid}:jutro")
+        n = int(m.group(1)) * (60 if (m.group(2) or "").startswith(("h", "godz")) else 1)
+        return bot.callback_zadania(f"todo_odloz:{zid}:{n}")
+    if m := re.fullmatch(r"(?:usuń|usun)\s+(\d+)", tl):
+        zid = cel(m.group(1))
+        return bot.callback_zadania(f"todo_usun:{zid}") if zid else "Nie ma takiej pozycji. Napisz „zadania”."
+    if tl == "cofnij":
+        zid = OSTATNIE_ZADANIE.pop("dodane", None)
+        return bot.callback_zadania(f"todo_usun:{zid}") if zid else "Nie ma czego cofnąć."
+    return None
 
 
 def odpowiedz_czat(tekst, wejscie="tekst"):
@@ -441,6 +478,8 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             odp = czysty(bot.tekst_sprawdzianow())
         elif t.lower() in ("zadania", "todo", "lista", "/zadania"):
             odp = czysty(bot.tekst_zadan()[0])
+            if not odp.startswith("📝 Nic"):
+                odp += "\nOdpisz np.: zrobione 2, +1h 2, usuń 2."
         elif sl and sl[0] in ("ścieżka", "sciezka", "/sciezka"):
             odp = czysty(bot.tekst_sciezki(" ".join(sl[1:])))
         elif t.lower() in ("minecraft", "mc", "/minecraft"):
@@ -448,11 +487,16 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             odp = (f"🎮 Minecraft działa od {(m.get('od') or '')[11:16]}, gracze: {m.get('gracze')}. Wyłączenie: „minecraft wyłącz”." if m.get("dziala")
                    else "🎮 Minecraft jest wyłączony. Włączenie: „minecraft włącz”.")
         elif sl and sl[0] in ("todo", "przypomnij", "zadanie") and len(sl) > 1:
-            opis, termin, powt = bot.parsuj_zadanie(t.split(None, 1)[1])
-            bot.portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt})
-            odp = f"Dodane: {opis} ({bot.kiedy_tekst(termin) if termin else 'bez terminu'})."
+            w = bot.nowe_zadanie(t.split(None, 1)[1])
+            if w:
+                z, opis, termin, powt, dzwon = w
+                OSTATNIE_ZADANIE.update(id=z["id"], dodane=z["id"])
+                odp = (f"📝 Dodane: {opis}\n⏰ {bot.kiedy_tekst(termin) if termin else 'bez terminu (bez przypomnienia)'}"
+                       f"{bot.POWT_T.get(powt, '')}{' · 📞 zadzwonię' if dzwon else ''}\n(„cofnij” usuwa)")
+            else:
+                odp = "Napisz, co dodać, np. „todo jutro 17:00 trening”."
         else:
-            odp = None
+            odp = zadanie_czat(t, bot)
         if akcja:
             CZAT_AKCJA.clear()
             CZAT_AKCJA.update(akcja=akcja, t=time.time())
@@ -617,6 +661,8 @@ def main():
                                      daemon=True).start()
                 else:
                     wyslij_czat(zl["tekst"])
+                if zl.get("todo_id"):      # przypomnienie: „zrobione” / „+15” w odpowiedzi dotyczy tego zadania
+                    OSTATNIE_ZADANIE["id"] = zl["todo_id"]
         if not AKTYWNE:
             for p in sorted(KOLEJKA.glob("*.json")):
                 try:

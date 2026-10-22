@@ -149,7 +149,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `~/bot/telefon/czat/`. Test lokalny: `test_czat.py` (także `PLIK:<url>` = głosówka).
   Komendy czatu: jak w bocie + `pomoc`/`help` (`POMOC_WSPOLNE` w bocie), `kopia`, `przejrzane`, `minecraft włącz|wyłącz`,
   `restart portalu`, `zadzwoń`, `nowa rozmowa`, `zaufane`; akcje (też proponowane przez Claude) potwierdza się
-  odpisując „tak” w ciągu 2 min (`CZAT_AKCJA`), „nie” anuluje. Telegram: `pomoc`/`help`/`/pomoc` → pełna lista.
+  odpisując „tak” w ciągu 2 min (`CZAT_AKCJA`), „nie” anuluje.
+  Zadania w czacie: przypomnienia idą też na Linphone (`bot.do_linphone(..., todo_id=…)`; telefon.py zapamiętuje id
+  w `OSTATNIE_ZADANIE`), odpowiedzi `zrobione [nr]`, `+15`, `+1h`, `+jutro [nr]`, `usuń <nr>`, `cofnij` (`zadanie_czat`,
+  numery jak w liście `zadania` = `bot.zadania_do_zrobienia()`). Telegram: `pomoc`/`help`/`/pomoc` → pełna lista.
   **Głosówki w Linphone**: przychodzą jako `application/vnd.gsma.rcs-ft-http+xml` (adres pliku na
   files.linphone.org; Linphone wysyła `.mka` (Matroska), czasem pusty – wtedy grzeczny komunikat) → pobranie → whisper;
   odpowiedź głosem: Piper → WAV → `.mka` z Opusem 48 kHz (jak Linphone) → upload na

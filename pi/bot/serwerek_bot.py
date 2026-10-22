@@ -872,23 +872,42 @@ def kiedy_tekst(termin):
     return f"{nazwa} {d.strftime('%H:%M')}"
 
 
-def dodaj_zadanie(tekst):
+POWT_T = {"dzien": " · 🔁 codziennie", "tydzien": " · 🔁 co tydzień", "miesiac": " · 🔁 co miesiąc"}
+
+
+def nowe_zadanie(tekst):
+    """„jutro 17:00 trening (zadzwoń)” -> zapis w portalu; (zadanie, opis, termin, powt, dzwon) albo None (pusty opis).
+    Wspólne dla Telegrama i czatu Linphone."""
     dzwon = bool(re.search(r"\b(zadzwoń|zadzwon|dzwoń|dzwon)\b", tekst, re.I))
     tekst = re.sub(r"\s*\b(i\s+)?(zadzwoń|zadzwon|dzwoń|dzwon)\b", "", tekst, flags=re.I)
     opis, termin, powt = parsuj_zadanie(tekst)
     if not opis:
+        return None
+    z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon and bool(termin)})
+    return z, opis, termin, powt, dzwon and bool(termin)
+
+
+def dodaj_zadanie(tekst):
+    w = nowe_zadanie(tekst)
+    if not w:
         wyslij("Napisz, co dodać, np. „todo jutro 17:00 trening” albo „przypomnij za 20 min pranie”.")
         return
-    z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon and bool(termin)})
-    powt_t = {"dzien": " · 🔁 codziennie", "tydzien": " · 🔁 co tydzień", "miesiac": " · 🔁 co miesiąc"}.get(powt, "")
+    z, opis, termin, powt, dzwon = w
+    powt_t = POWT_T.get(powt, "")
     wyslij(f"📝 Dodane: <b>{e(opis)}</b>\n⏰ {kiedy_tekst(termin) if termin else 'bez terminu (bez przypomnienia)'}{powt_t}"
            + (" · 📞 zadzwonię" if dzwon and termin else ""), html_=True,
            przyciski={"inline_keyboard": [[{"text": "🗑 Cofnij", "callback_data": f"todo_usun:{z['id']}"}]]})
 
 
-def tekst_zadan():
+def zadania_do_zrobienia():
+    """niezrobione zadania w kolejności listy (numery 1, 2, … w „zadania” = pozycje tutaj)"""
     lista = [z for z in portal("/api/todo")["zadania"] if not z.get("zrobione")]
     lista.sort(key=lambda z: (z.get("termin") or "9999", z["utworzono"]))
+    return lista
+
+
+def tekst_zadan():
+    lista = zadania_do_zrobienia()
     if not lista:
         return "📝 Nic nie czeka. 🎉\nDodaj: „todo jutro 17:00 trening”.", None
     teraz = datetime.now().strftime("%Y-%m-%dT%H:%M")
@@ -916,6 +935,10 @@ def przypomnienia():
             [{"text": "✅ Zrobione", "callback_data": f"todo_ok:{z['id']}"}],
             [{"text": "⏰ +15 min", "callback_data": f"todo_odloz:{z['id']}:15"}, {"text": "⏰ +1 h", "callback_data": f"todo_odloz:{z['id']}:60"},
              {"text": "⏰ Jutro", "callback_data": f"todo_odloz:{z['id']}:jutro"}]]})
+        try:
+            do_linphone(f"⏰ {z['tekst']}\n{kiedy_tekst(z['termin'])}{powt}\nOdpisz: zrobione, +15, +1h albo +jutro.", todo_id=z["id"])
+        except OSError as ex:
+            print(f"przypomnienie na Linphone: {ex}", flush=True)
         portal(f"/api/todo/{z['id']}", {"wyslano": True})
 
 
@@ -954,6 +977,16 @@ def callback_zadania(dane):
 import sys
 sys.path.insert(0, "/home/tonyg/glos")
 TELEFON = KATALOG / "telefon"           # kolejka polaczen dla uslugi serwerek-telefon (telefon.py)
+
+
+def do_linphone(tekst, **dodatki):
+    """wiadomość na czat Linphone: plik w kolejce, wysyła ją usługa serwerek-telefon (gdy konto jest zarejestrowane)"""
+    kat = TELEFON / "czat"
+    kat.mkdir(parents=True, exist_ok=True)
+    p = kat / f"{time.time():.3f}.json"
+    tmp = p.with_suffix(".tmp")                 # najpierw cały plik, potem zmiana nazwy: telefon.py nie czyta połówki
+    tmp.write_text(json.dumps({"tekst": tekst, **dodatki}, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(p)
 
 
 def glos():
