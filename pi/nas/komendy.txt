@@ -73,6 +73,12 @@ minecraft status
 Serwer NIE startuje sam po wlaczeniu Pi. Automatyczna aktualizacja zostawia go w tym stanie, w jakim byl.
 Wylacza sie sam po 30 min bez graczy (bot pisze o tym w Telegramie).
 
+KOMUNIKACJA MIEJSKA (ZTM Poznan)
+--------------------------------
+W bocie / Linphone: "odjazdy Junikowo", "odjazdy" (obok Ciebie), "do domu", "trasa z Junikowo do Rondo Kaponiera",
+"zapisz dom" (tu, gdzie jestes) albo "zapisz szkola ul. ... 5", "miejsca". Przycisk "📍 Odjazdy obok mnie" w Telegramie.
+Strona: portal -> Automatyczne -> Komunikacja. Rozklad pobiera sie sam codziennie o 3:40.
+
 ZAWODOWE (program od nauczyciela, ASTORINO Web Lab)
 ---------------------------------------------------
 Strona: portal -> Zawodowe (http://100.108.241.58/strony/zawodowe/).

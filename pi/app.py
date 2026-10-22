@@ -1576,6 +1576,153 @@ def nas_przenies(zrodlo, cel):
     nas_zapisz(cel, zrodlo=zrodlo)
 
 
+# ---------- Komunikacja miejska (ZTM Poznań) i lokalizacja Antka ----------
+# ztm.py: rozkład GTFS (codziennie), opóźnienia na żywo, odjazdy i trasy. Lokalizacja przychodzi z OwnTracks na iPhonie
+# (HTTP przez Tailscale), z Telegrama (bot: zwykła albo „na żywo”) albo ze skrótu iOS; trzymana jest tylko ostatnia
+# (dane/lokalizacja.json, nigdy w repo). Miejsca („dom”, „szkoła”…): dane/miejsca.json.
+import ztm                                  # noqa: E402
+
+LOKALIZACJA = BASE / "dane" / "lokalizacja.json"
+MIEJSCA = BASE / "dane" / "miejsca.json"
+
+
+def miejsca():
+    try:
+        return json.loads(MIEJSCA.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def lokalizacja():
+    try:
+        return json.loads(LOKALIZACJA.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+@app.route("/api/lokalizacja", methods=["GET", "POST"])
+def api_lokalizacja():
+    from flask import request
+    if request.method == "GET":
+        return jsonify({"lokalizacja": lokalizacja(), "miejsca": miejsca()})
+    b = request.get_json(silent=True, force=True)
+    if not isinstance(b, dict):
+        abort(400)
+    if b.get("_type") not in (None, "location"):          # OwnTracks wysyła też inne komunikaty: odpowiedz pustą listą
+        return jsonify([])
+    try:
+        lat, lon = float(b["lat"]), float(b["lon"])
+    except (KeyError, TypeError, ValueError):
+        abort(400)
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        abort(400)
+    tst = b.get("tst")
+    zapisz_json(LOKALIZACJA, {"lat": lat, "lon": lon, "dokladnosc_m": b.get("acc"),
+                              "czas": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(tst if isinstance(tst, (int, float)) else None)),
+                              "zrodlo": str(b.get("zrodlo") or ("owntracks" if "_type" in b else "inne"))[:20]})
+    return jsonify([]) if "_type" in b else jsonify({"ok": True})
+
+
+@app.route("/api/miejsca", methods=["POST"])
+def api_miejsca():
+    """{nazwa, lat, lon} albo {nazwa, tu: true} (ostatnia lokalizacja) albo {nazwa, adres} albo {nazwa, usun: true}"""
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not isinstance(b.get("nazwa"), str) or not 0 < len(b["nazwa"].strip()) <= 40:
+        abort(400)
+    nazwa, m = ztm.norm(b["nazwa"]), miejsca()
+    if b.get("usun"):
+        m.pop(nazwa, None)
+    else:
+        if b.get("tu"):
+            l = lokalizacja()
+            if not l:
+                return jsonify({"blad": "nie znam jeszcze Twojej lokalizacji"}), 409
+            lat, lon, opis = l["lat"], l["lon"], "z lokalizacji"
+        elif b.get("adres"):
+            g = ztm.geokoduj(str(b["adres"])[:200])
+            if not g:
+                return jsonify({"blad": "nie znalazłem tego adresu"}), 404
+            lat, lon, opis = g
+        else:
+            try:
+                lat, lon, opis = float(b["lat"]), float(b["lon"]), ""
+            except (KeyError, TypeError, ValueError):
+                abort(400)
+        m[nazwa] = {"lat": lat, "lon": lon, "opis": opis, "nazwa": b["nazwa"].strip()}
+    zapisz_json(MIEJSCA, m)
+    return jsonify({"miejsca": m})
+
+
+def ztm_punkt(tekst):
+    """„tu” / miejsce („dom”) / przystanek / adres -> (punkt dla ztm, opis) albo (None, powód)"""
+    t = (tekst or "tu").strip()
+    if ztm.norm(t) in ("tu", "tutaj", "ja", "moja lokalizacja", "stad", "stąd", ""):
+        l = lokalizacja()
+        if not l:
+            return None, "nie znam Twojej lokalizacji (wyślij ją w Telegramie albo włącz OwnTracks)"
+        wiek = time.time() - time.mktime(time.strptime(l["czas"], "%Y-%m-%dT%H:%M:%S"))
+        return {"lat": l["lat"], "lon": l["lon"]}, f"Twoja lokalizacja ({'teraz' if wiek < 300 else 'sprzed ' + str(int(wiek // 60)) + ' min'})"
+    mj, k = miejsca(), ztm.norm(t)
+    m = mj.get(k) or next((v for n, v in mj.items() if len(k) > 3 and n[:-1] == k[:-1]), None)   # „szkoły” = „szkoła”
+    if m:
+        return {"lat": m["lat"], "lon": m["lon"]}, m["nazwa"]
+    if k in ("dom", "domu", "do domu"):
+        return None, "nie znam jeszcze Twojego domu: napisz „zapisz dom” (gdy jesteś w domu) albo „zapisz dom ul. … 5”"
+    s = ztm.szukaj_przystanku(t)
+    if s:
+        return {"slupki": s}, ztm.rozklad()["przystanki"][s[0]][0]
+    try:
+        g = ztm.geokoduj(t)
+    except OSError:
+        g = None
+    if g:
+        return {"lat": g[0], "lon": g[1]}, g[2]
+    return None, f"nie znam miejsca „{t}”"
+
+
+@app.route("/api/ztm/odjazdy")
+def api_ztm_odjazdy():
+    """?przystanek=Junikowo albo ?skad=tu|dom|adres (przystanki do 500 m); &ile=10"""
+    from flask import request
+    try:
+        ile = max(1, min(30, int(request.args.get("ile", 10))))
+        if request.args.get("przystanek"):
+            s = ztm.szukaj_przystanku(request.args["przystanek"])
+            if not s:
+                return jsonify({"blad": f"nie ma przystanku „{request.args['przystanek']}”", "tekst": ""}), 404
+            nazwa = ztm.rozklad()["przystanki"][s[0]][0]
+            w = ztm.odjazdy(s, ile)
+            return jsonify({"przystanek": nazwa, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"🚏 {nazwa}:")})
+        p, opis = ztm_punkt(request.args.get("skad", "tu"))
+        if p is None:
+            return jsonify({"blad": opis, "tekst": opis}), 409
+        if "slupki" in p:
+            w = ztm.odjazdy(p["slupki"], ile)
+            return jsonify({"przystanek": opis, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"🚏 {opis}:")})
+        bl = ztm.najblizsze(p["lat"], p["lon"], 500)
+        w = ztm.odjazdy([s for s, _ in bl], ile, dojscie=dict(bl))
+        return jsonify({"skad": opis, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"Najbliżej ({opis}):")})
+    except RuntimeError as ex:
+        return jsonify({"blad": str(ex), "tekst": str(ex)}), 503
+
+
+@app.route("/api/ztm/trasa")
+def api_ztm_trasa():
+    """?skad=tu&dokad=dom (tu / miejsce / przystanek / adres)"""
+    from flask import request
+    try:
+        a, opa = ztm_punkt(request.args.get("skad", "tu"))
+        b, opb = ztm_punkt(request.args.get("dokad", "dom"))
+        if a is None or b is None:
+            pow_ = opa if a is None else opb
+            return jsonify({"blad": pow_, "tekst": pow_}), 409
+        w = ztm.trasa(a, b)
+        return jsonify({"skad": opa, "dokad": opb, "warianty": w, "tekst": f"🗺 {opa} → {opb}\n" + ztm.tekst_trasy(w, opb)})
+    except RuntimeError as ex:
+        return jsonify({"blad": str(ex), "tekst": str(ex)}), 503
+
+
 # ---------- Zawodowe: program od nauczyciela (ASTORINO Web Lab) prosto z NAS ----------
 # Nowa wersja: wrzucic plik .html (dowolna nazwa) do Tony-Folder/Raspberry/Zawodowe/ i usunac stary. Strona pokazuje
 # najnowszy plik .html z tego folderu i trzyma jego kopie w sites/zawodowe/index.html (dziala tez bez NAS).
@@ -2688,6 +2835,7 @@ if not os.environ.get("PORTAL_TEST"):
     threading.Thread(target=zdrowie_petla, name="zdrowie", daemon=True).start()
     threading.Thread(target=nas_petla, name="nas", daemon=True).start()
     threading.Thread(target=obc_petla, name="obciazenie", daemon=True).start()
+    threading.Thread(target=ztm.petla_aktualizacji, name="ztm", daemon=True).start()
 
 
 if __name__ == "__main__":

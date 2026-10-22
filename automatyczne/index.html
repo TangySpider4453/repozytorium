@@ -81,7 +81,14 @@ const AUTOMATY = [
        return el("li", {}, el("span", {class:d <= 1 ? "dzis" : "", text:d === 0 ? "dziś" : d === 1 ? "jutro" : `za ${d} dni`}), ` · ${x.przedmiot} (${x.typ})`); }))];
    }},
   {ikona:"📧", nazwa:"Poczta", wkrotce:true, opis:"Twoje skrzynki mailowe: ważne wiadomości w Telegramie, streszczenia, przypomnienia z maili."},
-  {ikona:"🚌", nazwa:"Komunikacja miejska", wkrotce:true, opis:"Odjazdy z Twoich przystanków, opóźnienia i „kiedy wyjść”, żeby zdążyć."},
+  {ikona:"🚌", nazwa:"Komunikacja miejska", link:"/strony/komunikacja/",
+   opis:"ZTM Poznań: odjazdy obok Ciebie, trasa do domu, opóźnienia na żywo.",
+   stan: async () => {
+     const d = await json("/api/ztm/odjazdy?skad=tu&ile=4").catch(() => null);
+     if(!d || !d.odjazdy) return ["Wyślij lokalizację (📍 w Telegramie), a pokażę odjazdy obok Ciebie."];
+     return [el("ul", {}, ...d.odjazdy.map(x => el("li", {}, el("span", {class:x.za_min <= 3 ? "dzis" : "", text:x.za_min ? `za ${x.za_min} min` : "teraz"}),
+       ` · ${x.linia} → ${x.kierunek.charAt(0) + x.kierunek.slice(1).toLowerCase()} (${x.przystanek})`)))];
+   }},
 ];
 
 for(const a of AUTOMATY){

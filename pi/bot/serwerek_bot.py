@@ -62,7 +62,8 @@ AKCJE = {   # nazwa: (opis dla przycisku, polecenie)
     "przejrzane": ("Oznaczyć wszystkie problemy jako przejrzane", None),
 }
 KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "📝 Zadania"], ["🎮 Minecraft", "💾 Kopia", "✅ Przejrzane", "🔄 Restart"],
-                           ["🧭 Ścieżka", "📞 Zadzwoń", "🆕 Nowa rozmowa"]],
+                           ["🧭 Ścieżka", "📞 Zadzwoń", "🆕 Nowa rozmowa"],
+                           [{"text": "📍 Odjazdy obok mnie", "request_location": True}, "🏠 Do domu"]],
               "resize_keyboard": True, "is_persistent": True}
 
 LOCK = threading.RLock()
@@ -1098,6 +1099,54 @@ sys.path.insert(0, "/home/tonyg/glos")
 TELEFON = KATALOG / "telefon"           # kolejka polaczen dla uslugi serwerek-telefon (telefon.py)
 
 
+# ---------------------------------------------------------------- komunikacja miejska (ZTM Poznań)
+# Odjazdy i trasy liczy portal (ztm.py, /api/ztm/...); lokalizacja: przycisk 📍 w Telegramie, lokalizacja „na żywo”,
+# OwnTracks albo skrót iOS (POST /api/lokalizacja). Te same komendy działają w czacie Linphone.
+ZTM_PRZYCISKI = {"inline_keyboard": [[{"text": "🏠 Do domu", "callback_data": "ztm:dom"},
+                                      {"text": "🚏 Odjazdy obok", "callback_data": "ztm:odj"}]]}
+
+
+def ztm_api(sciezka, dane=None, **arg):
+    try:
+        return portal(sciezka + ("?" + urllib.parse.urlencode(arg) if arg else ""), dane)
+    except urllib.error.HTTPError as ex:
+        try:
+            return json.loads(ex.read())
+        except ValueError:
+            return {"tekst": f"Błąd portalu ({ex.code})."}
+    except OSError as ex:
+        return {"tekst": f"Portal nie odpowiada ({ex})."}
+
+
+def zapisz_lokalizacje(loc):
+    ztm_api("/api/lokalizacja", {"lat": loc["latitude"], "lon": loc["longitude"], "acc": loc.get("horizontal_accuracy"),
+                                 "zrodlo": "telegram"})
+
+
+def komenda_ztm(tekst):
+    """odjazdy / trasa / miejsca (Telegram i Linphone) -> tekst odpowiedzi albo None (to nie ta komenda)"""
+    t = " ".join(tekst.strip().split())
+    if m := re.fullmatch(r"(?:🚏\s*)?/?(?:odjazdy|odjazd)(?:\s+(?:z|ze|spod)?\s*(.+))?", t, re.I):
+        return ztm_api("/api/ztm/odjazdy", skad=(m.group(1) or "tu").strip(" ?.!"), ile=10).get("tekst") or "Brak danych."
+    if m := re.fullmatch(r"(?:🏠\s*)?(?:/?trasa|jak dojadę|jak dojade|dojazd)?\s*(?:z\s+(.+?)\s+)?do\s+(domu|dom)\s*[?.!]*", t, re.I) \
+            or re.fullmatch(r"(?:🗺\s*)?(?:/?trasa|jak dojadę|jak dojade|dojazd)\s+(?:z\s+(.+?)\s+)?do\s+(.+?)\s*[?.!]*", t, re.I):
+        dokad = "dom" if m.group(2).lower() in ("domu", "dom") else m.group(2)
+        return ztm_api("/api/ztm/trasa", skad=m.group(1) or "tu", dokad=dokad).get("tekst") or "Brak danych."
+    if m := re.fullmatch(r"(?:zapisz|ustaw)\s+(?:miejsce\s+)?(\S+)(?:\s+(.+))?", t, re.I):
+        gdzie = (m.group(2) or "tu").strip()
+        dane = {"nazwa": m.group(1), **({"tu": True} if gdzie.lower() in ("tu", "tutaj") else {"adres": gdzie})}
+        w = ztm_api("/api/miejsca", dane)
+        if w.get("blad"):
+            return f"⚠️ {w['blad'].capitalize()}."
+        mj = w.get("miejsca", {}).get(re.sub(r"\s+", " ", m.group(1).lower()), {})
+        return f"📍 Zapisane: {m.group(1)}" + (" (tu, gdzie jesteś)." if dane.get("tu") else f" ({mj.get('opis', gdzie)}).")
+    if t.lower() in ("miejsca", "/miejsca"):
+        mj = ztm_api("/api/lokalizacja").get("miejsca", {})
+        return ("📍 Miejsca: " + ", ".join(v["nazwa"] for v in mj.values()) + "\nDodasz: „zapisz dom” (tu, gdzie jesteś) albo „zapisz szkoła ul. … 5”.") \
+            if mj else "Nie ma zapisanych miejsc. Dodasz: „zapisz dom” (tu, gdzie jesteś) albo „zapisz dom ul. … 5”."
+    return None
+
+
 def do_linphone(tekst, **dodatki):
     """wiadomość na czat Linphone: plik w kolejce, wysyła ją usługa serwerek-telefon (gdy konto jest zarejestrowane)"""
     kat = TELEFON / "czat"
@@ -1289,6 +1338,9 @@ POMOC_WSPOLNE = """📊 stan – temperatura, procesor, RAM, NAS, kopia, maksima
 📝 todo <kiedy> <co> – dodaj zadanie, np. todo jutro 17:00 trening, todo za 20 min pranie,
     todo w piątek 8:30 dentysta, todo codziennie 21:00 leki, todo jutro 7:00 ważne pobudka
     („ważne” / „zadzwoń” = bardzo ważne: Pi zadzwoni; zrobione po 24 h idą do archiwum na stronie)
+🚏 odjazdy [przystanek] – najbliższe odjazdy ZTM (bez nazwy: obok Ciebie), np. odjazdy Junikowo
+🏠 do domu / trasa do <miejsce|przystanek|adres> – jak dojechać stąd (też: trasa z Junikowo do Rondo Kaponiera)
+📍 zapisz dom [adres] – zapamiętaj miejsce (bez adresu: tu, gdzie jesteś); miejsca – lista
 🎮 minecraft – stan serwera (włącz / wyłącz)
 💾 kopia – kopia systemu na NAS teraz
 ✅ przejrzane – zgaś żółtą diodę
@@ -1390,6 +1442,10 @@ def obsluz(u):
                 zapisz(s2)
             wyslij("👀 OK, nie będę dzwonić w tej sprawie.")
             return
+        if dane.startswith("ztm:"):
+            threading.Thread(target=lambda: wyslij(komenda_ztm("do domu" if dane == "ztm:dom" else "odjazdy"),
+                                                   przyciski=ZTM_PRZYCISKI), daemon=True).start()
+            return
         if dane.startswith("todo_"):
             try:
                 wyslij(callback_zadania(dane))
@@ -1424,8 +1480,18 @@ def obsluz(u):
         elif dane == "nie":
             wyslij("Nic nie zrobiłem.")
         return
+    if (u.get("edited_message") or {}).get("location"):          # lokalizacja „na żywo”: tylko zapis, bez odpowiedzi
+        em = u["edited_message"]
+        if em["chat"]["id"] == s["wlasciciel"]:
+            zapisz_lokalizacje(em["location"])
+        return
     m = u.get("message") or {}
     chat, tekst = (m.get("chat") or {}).get("id"), (m.get("text") or "").strip()
+    if chat and chat == s["wlasciciel"] and m.get("location"):
+        zapisz_lokalizacje(m["location"])
+        threading.Thread(target=lambda: wyslij(komenda_ztm("odjazdy") + "\n\n📍 Zapamiętałem Twoją lokalizację.", przyciski=ZTM_PRZYCISKI),
+                         daemon=True).start()
+        return
     if chat and chat == s["wlasciciel"] and (m.get("voice") or m.get("audio")):
         threading.Thread(target=glosowka, args=(m,), daemon=True).start()
         return
@@ -1488,6 +1554,8 @@ def obsluz(u):
     elif tekst in ("📝 Zadania", "/zadania", "/todo") or tekst.lower() in ("todo", "zadania", "lista"):
         t, p = tekst_zadan()
         wyslij(t, html_=True, przyciski=p)
+    elif (odp_ztm := komenda_ztm(tekst)) is not None:
+        wyslij(odp_ztm, przyciski=ZTM_PRZYCISKI if "🚏" in odp_ztm[:3] or odp_ztm.startswith("Najbliżej") else None)
     elif tekst.split()[0].lower() in ("todo", "/todo", "przypomnij", "/przypomnij", "zadanie", "📝"):
         dodaj_zadanie(tekst.split(None, 1)[1] if len(tekst.split()) > 1 else "")
     elif tekst.lower() in ("zaufane", "/zaufane"):
@@ -1551,7 +1619,7 @@ def main():
 
 
 def tg_updates(offset):
-    dane = {"timeout": 50, "allowed_updates": ["message", "callback_query"]}
+    dane = {"timeout": 50, "allowed_updates": ["message", "edited_message", "callback_query"]}
     if offset:
         dane["offset"] = offset
     req = urllib.request.Request(API + "getUpdates", data=json.dumps(dane).encode(), headers={"Content-Type": "application/json"})

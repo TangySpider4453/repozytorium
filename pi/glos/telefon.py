@@ -550,6 +550,8 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
                 odp = "Napisz, co dodać, np. „todo jutro 17:00 trening”."
         else:
             odp = zadanie_czat(t, bot)
+            if odp is None:
+                odp = bot.komenda_ztm(t)            # odjazdy, trasa, zapisz miejsce
         if akcja:
             CZAT_AKCJA.clear()
             CZAT_AKCJA.update(akcja=akcja, t=time.time())

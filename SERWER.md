@@ -202,6 +202,22 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ze stanem na żywo: 📝 Zadania (link do `/strony/todo/`, która ma powrót „← Automatyczne”), 📚 Sprawdziany i kartkówki,
   📧 Poczta i 🚌 Komunikacja miejska („wkrótce”). Nowa automatyzacja = wpis w tablicy `AUTOMATY` w `index.html`.
 
+## Komunikacja miejska ZTM Poznań i lokalizacja (od 2026-10-22)
+- Moduł portalu `~/portal/ztm.py` (repo `pi/ztm.py`): rozkład GTFS z ztm.poznan.pl pobierany przy starcie i codziennie
+  o 3:40 (wątek `ztm`, ok. 30 s) do `~/portal/dane/ztm/rozklad.{npz,json}`; opóźnienia GTFS-RT (`trip_updates.pb`,
+  własny mini-dekoder protobuf, pamięć 20 s; na pętli „przed czasem” ignorowane). Trasa: Connection Scan Algorithm,
+  dojście do 1 km, przesiadki pieszo do 400 m, okno 3 h, 2 warianty (ok. 1–2 s na Pi). Adresy: OSM Nominatim (pamięć
+  `dane/ztm/adresy.json`).
+- API: `GET /api/ztm/odjazdy?skad=<tu|miejsce|przystanek|adres>&ile=10`, `GET /api/ztm/trasa?skad=…&dokad=…`
+  (pole `tekst` gotowe do wysłania), `GET/POST /api/lokalizacja` (`{lat, lon, acc, zrodlo}` albo format OwnTracks,
+  odpowiedź `[]`), `POST /api/miejsca` (`{nazwa, tu:true | adres | lat, lon | usun}`). Lokalizacja: tylko ostatnia,
+  `dane/lokalizacja.json`; miejsca `dane/miejsca.json` (prywatne, nie w repo).
+- Bot: przycisk „📍 Odjazdy obok mnie” (Telegram wysyła lokalizację), lokalizacja „na żywo” (edycje zapisywane po cichu),
+  „🏠 Do domu”, komendy `odjazdy [przystanek]`, `do domu`, `trasa [z X] do Y`, `zapisz <nazwa> [adres]`, `miejsca`
+  (`komenda_ztm`, też w czacie Linphone); Claude używa API (`instrukcja.md`), także przez telefon.
+- Strona `/strony/komunikacja/` (repo `komunikacja/`) i karta na „⚙️ Automatyczne”.
+- OwnTracks (iPhone, stała lokalizacja): tryb HTTP, URL `http://100.108.241.58/api/lokalizacja` (przez Tailscale).
+
 ## Zadania (todo) z przypomnieniami (od 2026-10-22)
 - Dane `~/portal/dane/todo.json`: `{id, tekst, termin "RRRR-MM-DDTHH:MM"|null, powtarzaj null|dzien|tydzien|miesiac,
   zrobione, wyslano, utworzono}`. API: `GET/POST /api/todo`, `POST /api/todo/<id>` (`zrobione`, `tekst`, `termin`,

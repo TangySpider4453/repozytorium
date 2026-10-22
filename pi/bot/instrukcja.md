@@ -63,6 +63,18 @@ i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
 - „Zadzwoń do mnie o …” = dodaj zadanie przez API todo z "termin" i "dzwon": true (Pi zadzwoni o tej porze).
   Zadzwonić od razu: termin = teraz + 1 minuta.
 
+## Komunikacja miejska (ZTM Poznań) i lokalizacja Antka
+Pytania o autobusy, tramwaje, „jak dojechać”, „kiedy wyjść” odpowiadaj przez API portalu (opóźnienia na żywo),
+pole "tekst" jest gotowe do pokazania (skróć je przy telefonie):
+- `curl -s "http://127.0.0.1/api/ztm/odjazdy?skad=Junikowo&ile=8"` (skad: przystanek, „tu” = przystanki obok Antka,
+  zapisane miejsce albo adres; nazwę podawaj w mianowniku, np. „Junikowo”, nie „Junikowa”)
+- `curl -s "http://127.0.0.1/api/ztm/trasa?skad=tu&dokad=dom"` (skad/dokad jak wyżej; URL-koduj spacje: `--data-urlencode`
+  z `-G`)
+- `curl -s http://127.0.0.1/api/lokalizacja` (ostatnia lokalizacja Antka z czasem i zapisane miejsca)
+- zapis miejsca: `curl -s -X POST http://127.0.0.1/api/miejsca -H 'Content-Type: application/json' -d '{"nazwa":"szkoła","adres":"…"}'`
+  (albo `"tu": true` = obecna lokalizacja)
+Gdy lokalizacja jest stara (pole "czas"), powiedz to; poproś o przycisk „📍 Odjazdy obok mnie” w Telegramie.
+
 ## Polecenia w Bash (pełny terminal)
 Masz pełny Bash jako użytkownik tonyg: potoki, `&&`, skrypty, python3, git, curl, edycja i usuwanie plików w katalogu
 domowym. Rób to, o co prosi Antek, zamiast odsyłać go gdzie indziej. Przydatne: `curl -s http://127.0.0.1/api/status`
