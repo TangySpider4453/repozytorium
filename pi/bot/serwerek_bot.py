@@ -231,6 +231,8 @@ def wykonaj(akcja):
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
     if r.returncode != 0:
         return f"❌ Nie udało się: {(r.stderr or r.stdout)[-300:]}"
+    if akcja in ("mc_wlacz", "mc_wylacz", "restart_minecrafta"):
+        MC_BOT["t"] = time.time()
     if akcja in ("mc_wlacz", "mc_wylacz"):
         return "🎮 " + (r.stdout.strip().splitlines() or ["Gotowe."])[-1]
     return {"kopia": "💾 Kopia ruszyła. Postęp: 📊 Stan albo panel na stronie.",
@@ -1043,6 +1045,44 @@ def petla_minecrafta():
             print(f"minecraft: {type(ex).__name__}: {ex}", flush=True)
 
 
+MC_BOT = {"t": 0}       # bot sam włączył/wyłączył serwer i już o tym napisał: nie dubluj powiadomienia
+
+
+def petla_mc_stanu():
+    """co 15 s: powiadomienie o każdej zmianie stanu serwera Minecraft (włączony, wyłączony, restart, awaria)
+    i o tym, że ktoś zaczął grać albo serwer opustoszał"""
+    poprz = None
+    while True:
+        time.sleep(15)
+        try:
+            m = portal("/api/minecraft")
+            if m.get("trwa"):
+                continue
+            teraz = {"dziala": m.get("dziala"), "od": m.get("od"), "stan": m.get("stan"),
+                     "gracze": m.get("gracze") if m.get("dziala") else 0}
+            if poprz is not None and stan()["wlasciciel"]:
+                cichy = time.time() - MC_BOT["t"] < 120
+                if teraz["stan"] == "failed" and poprz["stan"] != "failed":
+                    wyslij("🔴 🎮 Serwer Minecraft się wysypał. Włączysz go ponownie przyciskiem 🎮 Minecraft.")
+                elif teraz["dziala"] and not poprz["dziala"] and not cichy:
+                    wyslij(f"🎮 Minecraft <b>włączony</b> ({(teraz['od'] or '')[11:16]}), można grać.", html_=True)
+                elif not teraz["dziala"] and poprz["dziala"] and teraz["stan"] != "failed" and not cichy:
+                    wyslij("⏹ Minecraft <b>wyłączony</b> (świat zapisany).", html_=True)
+                elif teraz["dziala"] and poprz["dziala"] and teraz["od"] != poprz["od"] and not cichy:
+                    wyslij(f"🔄 Minecraft <b>zrestartowany</b> ({(teraz['od'] or '')[11:16]}).", html_=True)
+                if teraz["dziala"] and poprz["dziala"] and teraz["gracze"] is not None and poprz["gracze"] is not None:
+                    if teraz["gracze"] > 0 and poprz["gracze"] == 0:
+                        wyslij(f"👤 Ktoś gra na serwerze Minecraft (graczy: {teraz['gracze']}).")
+                    elif teraz["gracze"] == 0 and poprz["gracze"] > 0:
+                        auto = stan()["ustawienia"].get("mc_auto_min", USTAWIENIA["mc_auto_min"])
+                        wyslij("👤 Serwer Minecraft opustoszał." + (f" Wyłączy się sam za {auto} min, jeśli nikt nie wejdzie." if auto else ""))
+            if teraz["gracze"] is None and poprz:
+                teraz["gracze"] = poprz["gracze"]
+            poprz = teraz
+        except Exception as ex:
+            print(f"minecraft stan: {type(ex).__name__}: {ex}", flush=True)
+
+
 # ---------------------------------------------------------------- odbieranie wiadomosci
 KOLEJKA = []
 KOLEJKA_BUDZIK = threading.Event()
@@ -1268,6 +1308,7 @@ def main():
     threading.Thread(target=petla_przypomnien, daemon=True).start()
     threading.Thread(target=petla_telefonu, daemon=True).start()
     threading.Thread(target=petla_minecrafta, daemon=True).start()
+    threading.Thread(target=petla_mc_stanu, daemon=True).start()
     offset = None
     while True:
         wyn = tg_updates(offset)

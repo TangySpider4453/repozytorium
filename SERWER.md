@@ -81,6 +81,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Auto-wyłączanie**: bot (`petla_minecrafta`, co 60 s) wyłącza serwer (`mc_wylacz`, zapis świata) po
   `ustawienia.mc_auto_min` (domyślnie 30, 0 = nigdy) minutach bez graczy, licząc od włączenia albo od ostatnich graczy
   (po restarcie bota od nowa); nieznana liczba graczy nie przybliża wyłączenia. Wiadomość w Telegramie.
+- **Powiadomienia o stanie** (bot `petla_mc_stanu`, co 15 s z `/api/minecraft`): włączony, wyłączony, zrestartowany,
+  wysypał się, „ktoś gra” (0 → n graczy) i „opustoszał” (n → 0); niezależnie od źródła zmiany. Gdy zmianę zrobił sam
+  bot (`MC_BOT`, 2 min), nie dubluje wiadomości.
 - Monitor: `uslugi_reczne` = wyłączony to OK (⏸ na stronie Zdrowie), 🔴 tylko gdy `failed`.
 - `~/scripts/auto-update.sh` (kopia `.przed_recznym`): po aktualizacji PNX wyłącza serwer, jeśli był wyłączony.
 
