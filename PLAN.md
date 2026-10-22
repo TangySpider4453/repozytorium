@@ -310,3 +310,4 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (hasło)**: Portal dostępny też z sieci domowej (`http://172.23.0.20`) po zalogowaniu hasłem; ciasteczko
   na rok, Tailscale bez hasła. Komenda `portal-haslo` (zmiana hasła). Sprawdzone curl z Pi: bez hasła 302/401,
   złe hasło 401, dobre → strony, API i zdjęcia 200. Backup `app.py.bak_2026-10-22_haslo`.
+- **2026-10-22 (pokaż hasło)**: Na stronie logowania przycisk „Pokaż”/„Ukryj” hasło. Wdrożone, backup `app.py.bak_2026-10-22_pokaz`.
