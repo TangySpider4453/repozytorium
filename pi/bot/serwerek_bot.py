@@ -352,6 +352,28 @@ TELEFON_PODPOWIEDZ = ("[To rozmowa TELEFONICZNA: Twoja odpowiedź zostanie przec
                       "naturalnie, bez emotek, list, Markdown i adresów. Gdy coś sprawdzasz, zrób to szybko.]")
 
 
+def claude_polecenie(prompt):
+    """claude -p z uprawnieniami bota (uprawnienia.json, strażnik, bez sudo) -> (cmd, env)"""
+    u = json.loads((KATALOG / "uprawnienia.json").read_text())
+    cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
+           "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"],
+           "--settings", json.dumps({"hooks": u.get("hooks", {})})]
+    env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")}
+    env["HOME"] = "/home/tonyg"
+    return cmd, env
+
+
+def claude_jednorazowo(prompt, limit=180):
+    """osobne zapytanie (bez wspólnej sesji, żeby nie mieszać jej z rozmową Antka) -> tekst albo None"""
+    cmd, env = claude_polecenie(pamiec.kontekst(nowa_sesja=True) + "\n\n" + prompt)
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=limit, cwd="/home/tonyg", env=env)
+        d = json.loads(r.stdout or "{}")
+    except (subprocess.TimeoutExpired, ValueError):
+        return None
+    return None if d.get("is_error") else (d.get("result") or "").strip() or None
+
+
 def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glosem=False):
     """jedna wiadomosc do Claude (wspolna sesja dla czatu, glosowek i telefonu) -> (odpowiedz, akcje) albo wyjatek RuntimeError"""
     with LOCK:
@@ -374,14 +396,9 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
         prompt = GLOS_PODPOWIEDZ + "\n\n" + prompt
     if kanal != "telefon" and prosi_o_czytanie(tekst):
         prompt = CZYTAJ_PODPOWIEDZ + "\n\n" + prompt
-    u = json.loads((KATALOG / "uprawnienia.json").read_text())
-    cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
-           "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"],
-           "--settings", json.dumps({"hooks": u.get("hooks", {})})]
+    cmd, env = claude_polecenie(prompt)
     if ses.get("id"):
         cmd += ["--resume", ses["id"]]
-    env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")}
-    env["HOME"] = "/home/tonyg"
     stop = threading.Event()
 
     def pisze_():
@@ -986,15 +1003,38 @@ def tekst_zadan():
     return "\n".join(linie), {"inline_keyboard": przyc}
 
 
+PRZYGOTOWANE = {}      # id zadania z telefonem -> {"termin", "tekst" (None = Claude jeszcze myśli)}
+
+
+def przygotuj_rozmowe(z):
+    """kilka minut przed terminem Claude układa, co powie, gdy Antek odbierze (żeby od razu mówić, bez czekania)"""
+    tekst = claude_jednorazowo(
+        f"[Za kilka minut, o {z['termin'][11:16]}, Pi dzwoni do Antka przez Linphone z przypomnieniem: „{z['tekst']}”. "
+        "Napisz DOKŁADNIE to, co powiesz, gdy odbierze: 1–3 krótkie zdania po polsku, naturalnie, bez emotek, list "
+        "i Markdown (zostanie przeczytane na głos). Zinterpretuj przypomnienie: powiedz, o czym pamiętać i co zrobić "
+        "(możesz krótko coś sprawdzić, np. stan serwera, plan, pogodę, jeśli to pomaga). Zakończ krótkim pytaniem albo "
+        "„jeśli chcesz coś jeszcze, powiedz”. Nic poza samą wypowiedzią.]")
+    PRZYGOTOWANE[z["id"]] = {"termin": z["termin"], "tekst": tekst or None, "gotowe": True}
+    print(f"przygotowane przypomnienie {z['id']}: {(tekst or 'brak')[:80]}", flush=True)
+
+
 def przypomnienia():
     if not stan()["wlasciciel"]:
         return
     teraz = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    za_chwile = (datetime.now() + timedelta(minutes=4)).strftime("%Y-%m-%dT%H:%M")
     for z in portal("/api/todo")["zadania"]:
+        if (z.get("dzwon") and not z.get("zrobione") and z.get("termin") and not z.get("wyslano") and z["termin"] <= za_chwile
+                and PRZYGOTOWANE.get(z["id"], {}).get("termin") != z["termin"]):
+            PRZYGOTOWANE[z["id"]] = {"termin": z["termin"], "tekst": None}
+            threading.Thread(target=przygotuj_rozmowe, args=(z,), daemon=True).start()
         if z.get("zrobione") or not z.get("termin") or z.get("wyslano") or z["termin"] > teraz:
             continue
         if z.get("dzwon"):
-            zadzwon(f"Przypomnienie: {z['tekst']}", "przypomnienie z telefonem")
+            p = PRZYGOTOWANE.pop(z["id"], {})
+            powitanie = p.get("tekst") if p.get("termin") == z["termin"] and p.get("tekst") else f"Przypomnienie: {z['tekst']}."
+            pamiec.zapisz("bot", "telefon", f"Dzwonię z przypomnieniem „{z['tekst']}” i mówię: {powitanie}")
+            zadzwon(powitanie, "przypomnienie z telefonem")
         powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
         wyslij(f"⏰ <b>{e(z['tekst'])}</b>\n{kiedy_tekst(z['termin'])}{powt}", html_=True, przyciski={"inline_keyboard": [
             [{"text": "✅ Zrobione", "callback_data": f"todo_ok:{z['id']}"}],

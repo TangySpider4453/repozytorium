@@ -129,16 +129,35 @@ class Rozmowa:
         self.zapis = []
         self.tmp = Path(tempfile.mkdtemp(prefix="rozmowa-", dir="/tmp"))
         self.nagranie = self.tmp / "rozmowa.wav"
+        self.przygotowanie = None
+        if kierunek == "od Pi" and powitanie:
+            self.przygotowanie = threading.Thread(target=self.przygotuj, args=(powitanie,), daemon=True)
+            self.przygotowanie.start()
+
+    def przygotuj(self, tekst):
+        """synteza z wyprzedzeniem (np. powitanie, gdy telefon jeszcze dzwoni)"""
+        wav = self.tmp / f"gotowe-{abs(hash(tekst))}.wav"
+        try:
+            glos.powiedz(tekst, wav.with_suffix(".tmp.wav"), czestotliwosc=HZ)
+            os.replace(wav.with_suffix(".tmp.wav"), wav)
+        except Exception as ex:
+            log(f"Piper (z wyprzedzeniem): {ex}")
 
     def mow(self, tekst):
         """synteza (Piper) i odtworzenie w rozmowie; czeka do końca wypowiedzi"""
         self.zapis.append(f"Pi: {tekst}")
-        wav = self.tmp / f"mowa-{time.time():.3f}.wav"
-        try:
-            glos.powiedz(tekst, wav, czestotliwosc=HZ)
-        except Exception as ex:
-            log(f"Piper: {ex}")
-            return
+        wav = self.tmp / f"gotowe-{abs(hash(tekst))}.wav"
+        for _ in range(100):                    # synteza z wyprzedzeniem jeszcze trwa: poczekaj na nią (max 10 s)
+            if wav.exists() or not self.przygotowanie or not self.przygotowanie.is_alive():
+                break
+            time.sleep(0.1)
+        if not wav.exists():
+            wav = self.tmp / f"mowa-{time.time():.3f}.wav"
+            try:
+                glos.powiedz(tekst, wav, czestotliwosc=HZ)
+            except Exception as ex:
+                log(f"Piper: {ex}")
+                return
         gotowe = threading.Event()
         AKCJE.put((graj, (self.p, wav, gotowe)))
         gotowe.wait(10)
@@ -238,13 +257,22 @@ class Polaczenie(pj.Call):
     def onCallMediaState(self, prm):
         ci = self.getInfo()
         for mi in ci.media:
-            if mi.type == pj.PJMEDIA_TYPE_AUDIO and mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE and self.media is None:
+            if mi.type == pj.PJMEDIA_TYPE_AUDIO and mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE:
+                # Linphone po ICE odnawia media (UPDATE): pjsua tworzy nowy port w mostku, więc za każdym razem podpinamy
+                # się do aktualnego; inaczej Pi mówi do starego portu i w słuchawce jest cisza
                 self.media = self.getAudioMedia(mi.index)
-                self.rec = pj.AudioMediaRecorder()
-                self.rec.createRecorder(str(self.rozmowa.nagranie))
+                if self.rec is None:
+                    self.rec = pj.AudioMediaRecorder()
+                    self.rec.createRecorder(str(self.rozmowa.nagranie))
                 self.media.startTransmit(self.rec)
-                self.watek = threading.Thread(target=self.rozmowa.praca, daemon=True)
-                self.watek.start()
+                for _, g in GRACZE:             # to, co właśnie gra, też na nowy port
+                    try:
+                        g.startTransmit(self.media)
+                    except pj.Error:
+                        pass
+                if self.watek is None:
+                    self.watek = threading.Thread(target=self.rozmowa.praca, daemon=True)
+                    self.watek.start()
 
 
 def graj(p, wav, gotowe):
@@ -569,7 +597,8 @@ def zadzwon_do_wlasciciela(konto, zl):
         wynik(stan="blad", opis="nie znam jeszcze Twojego adresu Linphone (SIP_WLASCICIEL). Zadzwoń raz do Pi z Linphone, to go podam.", **zl)
         return
     zl.setdefault("start", time.time())          # pierwsza próba: przez CZAS_DZWONIENIA dzwonimy (z ponowieniami)
-    p = Polaczenie(konto, kierunek="od Pi", powitanie=zl["tekst"] + " Możesz mi odpowiedzieć albo się rozłączyć.", zlecenie=zl)
+    p = Polaczenie(konto, kierunek="od Pi", powitanie=zl["tekst"] + ("" if zl["tekst"].rstrip().endswith("?") else " Możesz mi odpowiedzieć albo się rozłączyć."),
+                   zlecenie=zl)
     try:
         p.makeCall(WLASCICIEL, pj.CallOpParam(True))
         AKTYWNE[p.getId()] = p
