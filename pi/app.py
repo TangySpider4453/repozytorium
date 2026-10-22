@@ -1583,6 +1583,7 @@ def nas_przenies(zrodlo, cel):
 import ztm                                  # noqa: E402
 
 LOKALIZACJA = BASE / "dane" / "lokalizacja.json"
+LOKALIZACJA_MAX_MIN = 30        # min: starsza w dzień (7–22) = żółty problem w monitorze zdrowia
 MIEJSCA = BASE / "dane" / "miejsca.json"
 
 
@@ -1617,7 +1618,9 @@ def api_lokalizacja():
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         abort(400)
     tst = b.get("tst")
+    nz = b.get("na_zywo_do")
     zapisz_json(LOKALIZACJA, {"lat": lat, "lon": lon, "dokladnosc_m": b.get("acc"),
+                              "na_zywo_do": nz if isinstance(nz, (int, float)) else None,
                               "czas": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(tst if isinstance(tst, (int, float)) else None)),
                               "zrodlo": str(b.get("zrodlo") or ("owntracks" if "_type" in b else "inne"))[:20]})
     return jsonify([]) if "_type" in b else jsonify({"ok": True})
@@ -2337,6 +2340,18 @@ def zdrowie_problemy(prog):
                    f"Ostatnia udana: {pom.get('kopia', 'nigdy')}.", round(wiek or 0)))
     if Path("/var/run/reboot-required").exists():
         pr.append(("restart", "warn", "Potrzebny restart Pi", "Po aktualizacji systemu. Zrób go, gdy nikt nie gra.", 1))
+    # lokalizacja Antka (komunikacja miejska): w dzień najpóźniej co LOKALIZACJA_MAX_MIN, chyba że trwa „na żywo” z Telegrama
+    if 7 <= time.localtime().tm_hour < 22:
+        l = lokalizacja()
+        try:
+            wiek_l = (time.time() - time.mktime(time.strptime(l["czas"], "%Y-%m-%dT%H:%M:%S"))) / 60 if l else None
+        except (KeyError, ValueError):
+            wiek_l = None
+        na_zywo = l and (l.get("na_zywo_do") or 0) > time.time()
+        if not na_zywo and (wiek_l is None or wiek_l > LOKALIZACJA_MAX_MIN):
+            pr.append(("lokalizacja", "warn", "Brak aktualnej lokalizacji",
+                       (f"Ostatnia: {l['czas'][11:16]} ({l.get('zrodlo', '?')}). " if l else "Pi jeszcze nie dostało lokalizacji. ")
+                       + "Sprawdź OwnTracks i Tailscale na iPhonie albo kliknij „📍 Odjazdy obok mnie” w Telegramie.", 1))
     pom["uslugi"] = uslugi
     return pr, pom
 

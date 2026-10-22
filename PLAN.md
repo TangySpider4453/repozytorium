@@ -369,6 +369,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (pilnowanie lokalizacji)**: 🟡 w monitorze, gdy w dzień lokalizacja starsza niż 30 min (poza
+  lokalizacją „na żywo” z Telegrama).
 - **2026-10-22 (komunikacja ZTM)**: Odjazdy i trasy ZTM Poznań z opóźnieniami na żywo (`ztm.py` w portalu), lokalizacja
   z Telegrama (📍), OwnTracks albo skrótu iOS, miejsca („dom”); bot, Linphone, Claude i strona `/strony/komunikacja/`.
   Sprawdzone na Pi: odjazdy z Junikowa, trasy, zapis miejsca z adresu.

@@ -1118,9 +1118,11 @@ def ztm_api(sciezka, dane=None, **arg):
         return {"tekst": f"Portal nie odpowiada ({ex})."}
 
 
-def zapisz_lokalizacje(loc):
+def zapisz_lokalizacje(loc, wyslano=None):
+    """live_period: lokalizacja „na żywo” (Telegram wysyła zmiany tylko przy ruchu, więc do jej końca jest aktualna)"""
+    na_zywo = (wyslano or time.time()) + loc["live_period"] if loc.get("live_period") else None
     ztm_api("/api/lokalizacja", {"lat": loc["latitude"], "lon": loc["longitude"], "acc": loc.get("horizontal_accuracy"),
-                                 "zrodlo": "telegram"})
+                                 "zrodlo": "telegram na żywo" if na_zywo else "telegram", "na_zywo_do": na_zywo})
 
 
 def komenda_ztm(tekst):
@@ -1483,12 +1485,12 @@ def obsluz(u):
     if (u.get("edited_message") or {}).get("location"):          # lokalizacja „na żywo”: tylko zapis, bez odpowiedzi
         em = u["edited_message"]
         if em["chat"]["id"] == s["wlasciciel"]:
-            zapisz_lokalizacje(em["location"])
+            zapisz_lokalizacje(em["location"], em.get("date"))
         return
     m = u.get("message") or {}
     chat, tekst = (m.get("chat") or {}).get("id"), (m.get("text") or "").strip()
     if chat and chat == s["wlasciciel"] and m.get("location"):
-        zapisz_lokalizacje(m["location"])
+        zapisz_lokalizacje(m["location"], m.get("date"))
         threading.Thread(target=lambda: wyslij(komenda_ztm("odjazdy") + "\n\n📍 Zapamiętałem Twoją lokalizację.", przyciski=ZTM_PRZYCISKI),
                          daemon=True).start()
         return

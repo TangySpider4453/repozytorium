@@ -217,6 +217,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (`komenda_ztm`, też w czacie Linphone); Claude używa API (`instrukcja.md`), także przez telefon.
 - Strona `/strony/komunikacja/` (repo `komunikacja/`) i karta na „⚙️ Automatyczne”.
 - OwnTracks (iPhone, stała lokalizacja): tryb HTTP, URL `http://100.108.241.58/api/lokalizacja` (przez Tailscale).
+- Monitor zdrowia: w dzień (7–22) lokalizacja starsza niż 30 min (`LOKALIZACJA_MAX_MIN`) = 🟡 „Brak aktualnej
+  lokalizacji”, chyba że trwa lokalizacja „na żywo” z Telegrama (`na_zywo_do` = wysłanie + live_period).
+  iPhone nie pozwala serwerowi samemu pobrać lokalizacji: musi ją wysyłać aplikacja (OwnTracks albo Telegram).
 
 ## Zadania (todo) z przypomnieniami (od 2026-10-22)
 - Dane `~/portal/dane/todo.json`: `{id, tekst, termin "RRRR-MM-DDTHH:MM"|null, powtarzaj null|dzien|tydzien|miesiac,
