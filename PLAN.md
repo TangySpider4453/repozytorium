@@ -347,3 +347,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   w `/etc/serwerek-bot/sip.env`. Czeka na adres Linphone właściciela (`SIP_WLASCICIEL`); do tego czasu Pi odrzuca
   połączenia i bot podaje adres dzwoniącego.
 - **2026-10-22 (Linphone 2)**: Właściciel `sip:za_kolaz@sip.linphone.org` wpisany do `sip.env`, telefon zarejestrowany.
+- **2026-10-22 (czat Linphone)**: Pisanie z Pi w aplikacji Linphone jak w Telegramie (komendy + Claude, wspólna pamięć);
+  test lokalny udany. Poprawione rozpoznawanie właściciela po nazwie SIP.

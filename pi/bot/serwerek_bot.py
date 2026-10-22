@@ -279,7 +279,7 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True):
     pam = pamiec.kontekst(nowa_sesja=not ses.get("id"), odpowiedz_na=odpowiedz_na)
     if kanal not in ("telegram", "glosowka_zapisana"):      # czat i glosowki zapisuje juz obsluz()/glosowka()
         pamiec.zapisz("antek", kanal, tekst)
-    prompt = (pam + "\n\nNowa wiadomość od Antka" + {"telefon": " (mówi przez telefon)", "glosowka_zapisana": " (wiadomość głosowa)"}.get(kanal, "")
+    prompt = (pam + "\n\nNowa wiadomość od Antka" + {"telefon": " (mówi przez telefon)", "glosowka_zapisana": " (wiadomość głosowa)", "linphone": " (pisze na Linphone)"}.get(kanal, "")
               + ":\n" + tekst) if pam else tekst
     if kanal == "telefon":
         prompt = TELEFON_PODPOWIEDZ + "\n\n" + prompt
@@ -1017,6 +1017,8 @@ def petla_telefonu():
                 elif w.get("stan") == "nieznany_wlasciciel":
                     wyslij(f"📞 Ktoś dzwonił do Pi z adresu {w.get('od')}. Jeśli to Ty, napisz „to mój adres Linphone”, "
                            "a Claude w sesji w chmurze dopisze go jako Twój (wtedy Pi będzie odbierać i dzwonić).")
+                elif w.get("stan") == "obcy_czat":
+                    wyslij(f"💬 Ktoś obcy napisał do Pi na Linphone ({w.get('od')}): {w.get('tekst')}\nNie odpowiedziałem.")
                 elif w.get("stan") == "obcy":
                     wyslij(f"📞 Ktoś obcy próbował zadzwonić do Pi: {w.get('od')}. Odrzuciłem.")
                 elif w.get("stan") == "blad":

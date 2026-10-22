@@ -142,6 +142,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   z `dzwon: true`), wyniki `~/bot/telefon/wyniki/*.json` → wiadomość w Telegramie (nieodebrane, zapis rozmowy).
   Rozmowa: nagrywanie (AudioMediaRecorder) → wykrycie końca wypowiedzi (energia, 0,9 s ciszy) → whisper → Claude
   (`claude_odpowiedz(kanal="telefon")`, ta sama sesja co czat) → Piper → odtworzenie. Pożegnanie albo 90 s ciszy = koniec.
+  **Czat Linphone**: `onInstantMessage` (text/plain albo message/cpim; imdn/iscomposing pomijane), tylko od właściciela
+  (`od_wlasciciela`: porównanie nazwy użytkownika SIP), obcy → wiadomość w Telegramie. Komendy jak w bocie (stan,
+  sprawdziany, zadania, ścieżka, minecraft, „todo …”), reszta → `claude_odpowiedz(kanal="linphone")`; odpowiedź przez
+  `Buddy.sendInstantMessage` (części po 1500 znaków, wskaźnik „pisze…”). Bot może pisać na Linphone: JSON w
+  `~/bot/telefon/czat/`. Test lokalny: `test_czat.py`.
   Szybkość na Pi 4: rozpoznanie ok. 1 s na 1 s mowy (whisper base, okno `-ac` dopasowane do długości), Claude 5–10 s,
   Piper 2–3 s → odpowiedź ok. 15–25 s po skończeniu mówienia. Test bez Linphone: `SIP_DOMENA=lokalnie`
   (adres `sip:<użytkownik>@127.0.0.1:5070`, bez STUN) + `test_dzwoniacy.py`. Uwaga pjsua2 w Pythonie: wynik

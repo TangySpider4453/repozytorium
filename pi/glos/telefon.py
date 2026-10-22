@@ -7,6 +7,9 @@ Telefon serwerka (usługa serwerek-telefon): rozmowy głosowe z właścicielem p
 Rozmowa: nagrywanie rozmowy do pliku (AudioMediaRecorder), wykrywanie końca wypowiedzi po energii dźwięku (VAD),
 rozpoznanie mowy whisper.cpp na Pi -> Claude (ta sama sesja i pamięć co czat, bot serwerek_bot.claude_odpowiedz) ->
 mowa Piper na Pi -> odtworzenie w rozmowie. Wszystkie wywołania pjsua2 tylko w głównym wątku (kolejka AKCJE).
+Czat Linphone (wiadomości SIP MESSAGE, także w kopercie message/cpim): Antek pisze jak w Telegramie; proste komendy
+(stan, sprawdziany, zadania, ścieżka, minecraft, „todo …”) i reszta do Claude (ta sama sesja i pamięć, kanał „linphone”).
+Bot może też wysłać wiadomość na Linphone: plik JSON {"tekst": …} w ~/bot/telefon/czat/.
 Konfiguracja: /etc/serwerek-bot/sip.env (SIP_UZYTKOWNIK, SIP_HASLO, SIP_DOMENA, SIP_WLASCICIEL), podawana przez systemd.
 Bez konfiguracji usługa czeka i odpowiada na zlecenia wynikiem „brak_konfiguracji”.
 """
@@ -28,7 +31,7 @@ import glos                     # noqa: E402
 import pamiec                   # noqa: E402
 
 KAT = Path("/home/tonyg/bot/telefon")
-KOLEJKA, WYNIKI = KAT / "kolejka", KAT / "wyniki"
+KOLEJKA, WYNIKI, CZAT = KAT / "kolejka", KAT / "wyniki", KAT / "czat"
 UZYT, HASLO = os.environ.get("SIP_UZYTKOWNIK", ""), os.environ.get("SIP_HASLO", "")
 DOMENA = os.environ.get("SIP_DOMENA", "sip.linphone.org")
 WLASCICIEL = os.environ.get("SIP_WLASCICIEL", "")       # np. sip:antek@sip.linphone.org
@@ -40,6 +43,13 @@ CISZA_KONIEC = 90                                       # s ciszy: rozłącz
 POZEGNANIA = ("do widzenia", "rozłącz", "rozlacz", "koniec rozmowy", "na razie", "pa pa", "cześć to wszystko")
 
 AKCJE = queue.Queue()        # (funkcja, argumenty) do wykonania w głównym wątku pjsua2
+
+
+def od_wlasciciela(uri):
+    """czy adres SIP (np. "Antek" <sip:za_kolaz@sip.linphone.org>) należy do właściciela: porównanie nazwy użytkownika"""
+    import re
+    u = lambda x: (re.search(r"sips?:([^@;>]+)@", x or "") or [None, ""])[1].lower()
+    return bool(WLASCICIEL) and u(uri) == u(WLASCICIEL) != ""
 
 
 def log(t):
@@ -260,13 +270,25 @@ class Konto(pj.Account):
         self.zarejestrowane = ai.regIsActive
         log(f"rejestracja: {ai.regStatus} {ai.regStatusText} (aktywna: {ai.regIsActive})")
 
+    def onInstantMessage(self, prm):
+        tekst = tresc_wiadomosci(prm.msgBody, prm.contentType)
+        if not tekst:
+            return
+        od = prm.fromUri
+        if od_wlasciciela(od):
+            log(f"czat od właściciela: {tekst[:80]}")
+            threading.Thread(target=odpowiedz_czat, args=(tekst,), daemon=True).start()
+        else:
+            log(f"czat od obcego {od}: pomijam")
+            wynik(stan="obcy_czat", od=od, tekst=tekst[:300])
+
     def onIncomingCall(self, prm):
         p = Polaczenie(self, prm.callId, "do Pi", "Cześć, tu serwerek. Słucham.")
         ci = p.getInfo()
         od = ci.remoteUri
         AKTYWNE[ci.id] = p
         op = pj.CallOpParam()
-        if WLASCICIEL and WLASCICIEL.split(":")[-1].split("@")[0].lower() in od.lower() and len(AKTYWNE) == 1:
+        if WLASCICIEL and od_wlasciciela(od) and len(AKTYWNE) == 1:
             op.statusCode = 200
             p.answer(op)
             log(f"odbieram od {od}")
@@ -275,6 +297,101 @@ class Konto(pj.Account):
             p.hangup(op)
             wynik(stan="obcy" if WLASCICIEL else "nieznany_wlasciciel", od=od)
             log(f"odrzucam {od}")
+
+
+# ---------------------------------------------------------------- czat Linphone
+def tresc_wiadomosci(cialo, typ):
+    """tekst z wiadomości SIP; Linphone zwykle opakowuje ją w message/cpim (nagłówki CPIM, pusta linia, nagłówki MIME,
+    pusta linia, treść). Potwierdzenia i „pisze…” (imdn, iscomposing) pomijamy."""
+    typ = (typ or "").lower()
+    if "imdn" in typ or "iscomposing" in typ:
+        return None
+    if "cpim" in typ:
+        czesci = cialo.replace("\r\n", "\n").split("\n\n", 2)
+        if len(czesci) < 3:
+            return None
+        if "text/plain" not in czesci[1].lower():
+            return None
+        return czesci[2].strip()
+    return cialo.strip() if typ.startswith("text/plain") or not typ else None
+
+
+def odpowiedz_czat(tekst):
+    """komenda albo Claude; odpowiedź wraca na Linphone (wysyłka w głównym wątku)"""
+    import html as h
+    import re
+    try:
+        pj.Endpoint.instance().libRegisterThread("czat")
+    except pj.Error:
+        pass
+    czysty = lambda t: h.unescape(re.sub(r"<[^>]+>", "", t))
+    try:
+        import serwerek_bot as bot
+        t = tekst.strip()
+        sl = t.lower().split()
+        if sl and sl[0] in ("stan", "/stan"):
+            odp = czysty(bot.tekst_stanu())
+        elif sl and sl[0] in ("sprawdziany", "/sprawdziany", "jutro"):
+            odp = czysty(bot.tekst_sprawdzianow())
+        elif t.lower() in ("zadania", "todo", "lista", "/zadania"):
+            odp = czysty(bot.tekst_zadan()[0])
+        elif sl and sl[0] in ("ścieżka", "sciezka", "/sciezka"):
+            odp = czysty(bot.tekst_sciezki(" ".join(sl[1:])))
+        elif t.lower() in ("minecraft", "mc"):
+            m = bot.portal("/api/minecraft")
+            odp = (f"Minecraft działa od {(m.get('od') or '')[11:16]}, gracze: {m.get('gracze')}." if m.get("dziala")
+                   else "Minecraft jest wyłączony. Napisz „włącz minecrafta”, a Claude go włączy (potwierdzisz w Telegramie).")
+        elif sl and sl[0] in ("todo", "przypomnij", "zadanie") and len(sl) > 1:
+            opis, termin, powt = bot.parsuj_zadanie(t.split(None, 1)[1])
+            bot.portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt})
+            odp = f"Dodane: {opis} ({bot.kiedy_tekst(termin) if termin else 'bez terminu'})."
+        else:
+            odp = None
+        if odp is not None:
+            pamiec.zapisz("antek", "linphone", t)
+            pamiec.zapisz("bot", "linphone", odp)
+        else:
+            AKCJE.put((wyslij_czat, ("…", True)))           # „pisze…”
+            try:
+                odp, akcje = bot.claude_odpowiedz(t, "linphone", pisze=False)
+            except Exception as ex:
+                odp, akcje = f"⚠️ Claude: {ex}. Spróbuj jeszcze raz.", []
+            pamiec.zapisz("claude", "linphone", odp)
+            for a in akcje:
+                bot.zapytaj(a, " (proponuje Claude, pisałeś na Linphone)")
+            if akcje:
+                odp += "\n\n(Przycisk do potwierdzenia wysłałem w Telegramie.)"
+        AKCJE.put((wyslij_czat, (odp,)))
+    except Exception as ex:
+        log(f"czat: {type(ex).__name__}: {ex}")
+        AKCJE.put((wyslij_czat, (f"⚠️ Błąd po stronie Pi: {ex}",)))
+
+
+KONTAKT = {}
+
+
+def wyslij_czat(tekst, pisze=False):
+    """wiadomość do właściciela na Linphone (tylko główny wątek); długie dzielone na części"""
+    try:
+        if "b" not in KONTAKT:
+            bc = pj.BuddyConfig()
+            bc.uri = WLASCICIEL
+            b = pj.Buddy()
+            b.create(KONTAKT["konto"], bc)
+            KONTAKT["b"] = b
+        b = KONTAKT["b"]
+        if pisze:
+            p = pj.SendTypingIndicationParam()
+            p.isTyping = True
+            b.sendTypingIndication(p)
+            return
+        for i in range(0, len(tekst), 1500):
+            p = pj.SendInstantMessageParam()
+            p.content = tekst[i:i + 1500]
+            p.contentType = "text/plain"
+            b.sendInstantMessage(p)
+    except pj.Error as ex:
+        log(f"wyślij czat: {ex.info()}")
 
 
 def zadzwon_do_wlasciciela(konto, zl):
@@ -352,6 +469,8 @@ def main():
         ac.natConfig.sipOutboundUse = 1
     konto = Konto()
     konto.create(ac)
+    KONTAKT["konto"] = konto
+    CZAT.mkdir(parents=True, exist_ok=True)
     log(f"telefon startuje jako {ac.idUri}, właściciel {WLASCICIEL}")
     while True:
         ep.libHandleEvents(20)
@@ -366,6 +485,14 @@ def main():
         for p in list(AKTYWNE.values()):         # nikt nie odebrał
             if p.rozmowa.kierunek == "od Pi" and not p.odebrane and teraz - p.utworzone > CZAS_DZWONIENIA:
                 rozlacz(p)
+        for p in sorted(CZAT.glob("*.json")):             # wiadomości od bota na Linphone
+            try:
+                tekst = json.loads(p.read_text(encoding="utf-8")).get("tekst", "")
+            except (OSError, ValueError):
+                tekst = ""
+            p.unlink(missing_ok=True)
+            if tekst and WLASCICIEL and konto.zarejestrowane:
+                wyslij_czat(tekst)
         if not AKTYWNE:
             for p in sorted(KOLEJKA.glob("*.json")):
                 zl = json.loads(p.read_text(encoding="utf-8"))

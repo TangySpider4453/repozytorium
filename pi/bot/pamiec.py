@@ -41,7 +41,7 @@ def po_tg_id(tg_id):
 
 def _linia(czas, kto, kanal, tekst, limit=400):
     kto_t = {"antek": "Antek", "bot": "bot (sam z siebie)", "claude": "Ty (Claude)"}.get(kto, kto)
-    kan = {"telefon": " przez telefon", "glosowka": " głosówką"}.get(kanal, "")
+    kan = {"telefon": " przez telefon", "glosowka": " głosówką", "linphone": " na Linphone"}.get(kanal, "")
     t = " ".join((tekst or "").split())
     return f"{time.strftime('%d.%m %H:%M', time.localtime(czas))} {kto_t}{kan}: {t[:limit]}{'…' if len(t) > limit else ''}"
 
