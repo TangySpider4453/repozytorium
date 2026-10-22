@@ -325,3 +325,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   zalogowanym subskrypcją (ograniczone narzędzia). Tokeny tylko na Pi. Szczegóły w `SERWER.md`.
 - **2026-10-22 (bot 2)**: Bot: 🟡 od razu poza ciszą nocną, powiadomienia o każdym wejściu z sieci domowej (portal,
   SSH, Samba, VNC, panel MC) z IP, zdjęcia/PDF → Claude robi nową stronę w Nauce (kontrola `sprawdz_strone.js`).
+- **2026-10-22 (wizyty)**: Bot śledzi wizyty z sieci domowej: od razu nowe wejście, panel logowania, przejście
+  zabezpieczeń, nieudane próby i oznaki ataku; po 10 min podsumowanie ścieżki. Pełny zapis na NAS `Logi/wejscia/`
+  (30 dni). Samba: zapis logowań i operacji na plikach. Naprawiony błąd, przez który powiadomienia o wejściach nie szły.
