@@ -171,7 +171,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (odtwarzanie głosówek od Pi w Linphone niepotwierdzone; wzór głosówki z Linphone zapisuje się w
   `~/bot/telefon/ostatni_plik_z_linphone.txt` do dopasowania formatu). Bez echa „🎙 rozpoznany tekst”. Gdy głosem, Claude dostaje `GLOS_PODPOWIEDZ` (zdania do czytania, bez list i emotek); w Telegramie
   głosówka z tekstem w podpisie.
-  **SRTP**: Linphone szyfruje dźwięk, więc konto ma `srtpUse = OPTIONAL`, `srtpSecureSignaling = 0` (inaczej 488).
+  **SRTP**: Linphone szyfruje dźwięk, więc konto ma `srtpUse = MANDATORY` (od 2026-10-22; przy OPTIONAL połączenia od Pi
+  kończyły się 603 Decline i w iPhonie było „Anonymous”), `srtpSecureSignaling = 0`. Nadawca: `"Serwer Rpi" <sip:…>`;
+  w dzienniku przy rozłączeniu jest kod i powód (np. `603 Decline`).
   Diagnostyka w razie problemów: drop-in `serwerek-telefon.service.d/diagnostyka.conf` z `Environment=TELEFON_LOG=5`
   → `/tmp/telefon-sip.log` (teraz wyłączona). Sprawdzone 2026-10-22: rozmowa z iPhone'a działa (opus, SRTP).
   Szybkość na Pi 4: rozpoznanie ok. 1 s na 1 s mowy (whisper base, okno `-ac` dopasowane do długości), Claude 5–10 s,

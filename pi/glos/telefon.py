@@ -219,7 +219,8 @@ class Polaczenie(pj.Call):
 
     def onCallState(self, prm):
         ci = self.getInfo()
-        log(f"połączenie {ci.id}: {ci.stateText}")
+        log(f"połączenie {ci.id}: {ci.stateText}" + (f" ({ci.lastStatusCode} {ci.lastReason}, {ci.connectDuration.sec} s rozmowy)"
+                                                      if ci.state == pj.PJSIP_INV_STATE_DISCONNECTED else ""))
         if ci.state == pj.PJSIP_INV_STATE_CONFIRMED:
             self.odebrane = True
         if ci.state == pj.PJSIP_INV_STATE_DISCONNECTED:
@@ -621,15 +622,16 @@ def main():
     if lokalnie:
         ac.idUri = f"sip:{UZYT}@127.0.0.1:5070"
     else:
-        ac.idUri = f"sip:{UZYT}@{DOMENA}"
+        ac.idUri = f'"Serwer Rpi" <sip:{UZYT}@{DOMENA}>'      # nazwa w Linphone/CallKit zamiast „Anonymous”
         ac.regConfig.registrarUri = f"sip:{DOMENA};transport=tcp"
         ac.sipConfig.proxies.append(f"sip:{DOMENA};transport=tcp;lr")
         ac.sipConfig.authCreds.append(pj.AuthCredInfo("digest", "*", UZYT, 0, HASLO))
         ac.natConfig.iceEnabled = True
         ac.natConfig.sipOutboundUse = 1
         # Linphone szyfruje dźwięk (SRTP): bez tego połączenia kończą się „488 Not Acceptable Here”.
-        # Opcjonalnie: oferujemy SRTP, ale przyjmiemy też zwykłe RTP; klucze SDES także przez TCP (secureSignaling 0).
-        ac.mediaConfig.srtpUse = pj.PJMEDIA_SRTP_OPTIONAL
+        # Wymagane (RTP/SAVP): przy „opcjonalnym” Pi oferuje zwykłe RTP/AVP i Linphone na iPhonie odrzuca połączenia od Pi
+        # (603 Decline, „Anonymous”). Klucze SDES także przez TCP (secureSignaling 0).
+        ac.mediaConfig.srtpUse = pj.PJMEDIA_SRTP_MANDATORY
         ac.mediaConfig.srtpSecureSignaling = 0
     konto = Konto()
     konto.create(ac)

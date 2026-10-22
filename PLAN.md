@@ -367,6 +367,9 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (dzwonienie od Pi)**: Przypomnienie z telefonem nie dzwoniło (iPhone: „Anonymous”, odrzucone po 4 s,
+  603 Decline). Poprawka: SRTP wymagane przy połączeniach (RTP/SAVP) i nazwa „Serwer Rpi” w nadawcy; test: połączenie
+  od Pi odebrane (CONFIRMED).
 - **2026-10-22 (pełny terminal bota)**: Claude w bocie ma pełny Bash (potoki, skrypty, edycja plików); sudo tylko za
   zgodą Antka: znacznik `[[SUDO: …]]` → przycisk „Tak” / „tak” w Linphone (Claude sam sudo nie uruchomi: `setpriv
   --no-new-privs` + strażnik `~/bot/straznik.py`). Sprawdzone na Pi: potok działa, bezpośrednie sudo zablokowane,
