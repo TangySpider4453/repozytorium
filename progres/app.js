@@ -516,17 +516,33 @@ async function kadruj(z, poZapisie){
 }
 
 /* ---------- FILM ---------- */
-let FM = {tryb:"seria", typ:"przod", od:"", do:"", co:7, sek:0.5, format:"4:5", przejscie:0.25, napisy:true, pp1:"", pp2:"", ppT:1.5, ppTr:1};
+let FM = {tryb:"seria", typ:"przod", od:"", do:"", co:7, krok:"dni", sek:0.5, format:"4:5", przejscie:0.25, napisy:true, pp1:"", pp2:"", ppT:1.5, ppTr:1};
 function formatWH(){ return {"4:5":[1080, 1350], "9:16":[1080, 1920], "1:1":[1080, 1080]}[FM.format] || [1080, 1350]; }
+/* klatki serii: zaplanowane dni (od początku zakresu co N dni albo co miesiąc ten sam dzień miesiąca) i do każdego
+   zdjęcie najbliższe zaplanowanemu dniu (przy remisie wcześniejsze). Co N dni: z okna ±N/2 dnia wokół planu;
+   co miesiąc: tylko z tego samego miesiąca kalendarzowego. Brak zdjęcia w oknie = ten termin jest pomijany. */
 function klatki(){
   const zd = DANE.zdjecia.filter(z => z.typ === FM.typ && (!FM.od || z.data >= FM.od) && (!FM.do || z.data <= FM.do)).sort((a, b) => a.data.localeCompare(b.data) || a.dodano.localeCompare(b.dodano));
   if(!zd.length) return [];
-  const co = Math.max(1, Math.round(FM.co) || 1), wyn = [];
-  let t = pd(FM.od || zd[0].data); const koniec = pd(FM.do || zd[zd.length - 1].data);
-  while(t <= koniec){
-    const a = iso(t), b = new Date(t); b.setDate(b.getDate() + co); const bi = iso(b);
-    const z = zd.find(q => q.data >= a && q.data < bi); if(z) wyn.push(z);
-    t = b;
+  const start = pd(FM.od || zd[0].data), koniec = pd(FM.do || zd[zd.length - 1].data), wyn = [];
+  const najblizsze = (plan, a, b) => {           // zdjęcie z dniem w [a, b) najbliższe dniowi „plan”
+    let best = null, bd = Infinity;
+    for(const z of zd) if(z.data >= a && z.data < b){ const d = Math.abs(pd(z.data) - plan); if(d < bd){ bd = d; best = z; } }
+    return best;
+  };
+  if(FM.krok === "miesiac"){
+    const dzien = start.getDate();
+    for(let r = start.getFullYear(), m = start.getMonth(); new Date(r, m, 1) <= koniec; m++){
+      const pierwszy = new Date(r, m, 1), nast = new Date(r, m + 1, 1);
+      const plan = new Date(r, m, Math.min(dzien, new Date(r, m + 1, 0).getDate()));      // 31 → ostatni dzień krótszego miesiąca
+      const z = najblizsze(plan, iso(pierwszy), iso(nast)); if(z) wyn.push(z);
+    }
+    return wyn;
+  }
+  const co = Math.max(1, Math.round(FM.co) || 1), przed = Math.floor(co / 2);
+  for(let t = new Date(start); t <= koniec; t.setDate(t.getDate() + co)){
+    const a = new Date(t), b = new Date(t); a.setDate(a.getDate() - przed); b.setDate(b.getDate() + co - przed);
+    const z = najblizsze(t, iso(a), iso(b)); if(z) wyn.push(z);
   }
   return wyn;
 }
@@ -598,6 +614,8 @@ function filmUstaw(){
   const ch = $("fmTyp"); ch.innerHTML = "";
   TYPY.forEach(([k, n]) => { const ile = DANE.zdjecia.filter(z => z.typ === k).length; if(!ile && k !== FM.typ) return;
     ch.append(el("button", {"aria-pressed":String(FM.typ === k), text:`${n} (${ile})`, onclick:() => { FM.typ = k; zapiszFM(); filmUstaw(); }})); });
+  const mies = FM.krok === "miesiac";
+  $("fmKrokDni").setAttribute("aria-pressed", String(!mies)); $("fmKrokMies").setAttribute("aria-pressed", String(mies)); $("fmCoPole").hidden = mies;
   $("fmOd").value = FM.od; $("fmDo").value = FM.do; $("fmCo").value = FM.co; $("fmSek").value = String(FM.sek).replace(".", ",");
   $("fmFormat").value = FM.format; $("fmPrzejscie").value = String(FM.przejscie).replace(".", ","); $("fmNapisy").checked = !!FM.napisy;
   const [W, H] = formatWH(); const c = $("fmCanvas"); if(c.width !== W || c.height !== H){ c.width = W; c.height = H; }
@@ -626,6 +644,8 @@ function zapiszFM(){ post(API + "/ustawienia", {film:FM}).catch(() => {}); DANE.
   zapiszFM(); filmUstaw();
 });
 $("fmCaly").onclick = () => { FM.od = ""; FM.do = ""; zapiszFM(); filmUstaw(); };
+$("fmKrokDni").onclick = () => { FM.krok = "dni"; zapiszFM(); filmUstaw(); };
+$("fmKrokMies").onclick = () => { FM.krok = "miesiac"; zapiszFM(); filmUstaw(); };
 $("fmTrybSeria").onclick = () => { FM.tryb = "seria"; zapiszFM(); filmUstaw(); };
 $("fmDopSyl").onclick = () => { FM.rece = false; resetWzorow(); zapiszFM(); filmUstaw(); };
 $("fmDopRece").onclick = () => { FM.rece = true; resetWzorow(); zapiszFM(); filmUstaw(); };
@@ -812,7 +832,7 @@ $("szRysuj").onclick = () => { szTryb = szTryb === "rysuj" ? null : "rysuj"; rys
 function opisFilmu(){
   const k = plan().kl, typ = NAZWA[FM.typ] || FM.typ;
   if(FM.tryb === "pp") return k.length === 2 ? `${typ} · przed i po: ${krotko(k[0].data)} → ${krotko(k[1].data)}` : typ;
-  return k.length ? `${typ} · seria ${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)} · ${k.length} zdj., co ${FM.co} dni` : typ;
+  return k.length ? `${typ} · seria ${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)} · ${k.length} zdj., ${FM.krok === "miesiac" ? "co miesiąc" : `co ${FM.co} dni`}` : typ;
 }
 $("fmPi").onclick = async () => {
   const k = plan().kl;

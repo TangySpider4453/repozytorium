@@ -30,7 +30,10 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   (`WYK.sklad`, localStorage). Masa tłuszczu i mięśni = masa ciała × % / 100 z tego samego dnia (`kgSkladu` w `app.js`,
   liczone w przeglądarce, nie zapisywane). Lista dni pokazuje oba: „tłuszcz 18,0% (14,4 kg)”; formularz pokazuje kg na
   żywo pod polami. Lista dni z miniaturami, edycja typu/daty, kosz.
-- **Film:** typ zdjęcia, zakres dat, „co ile dni” (z każdego okna N dni pierwsze zdjęcie), sekundy na zdjęcie,
+- **Film:** typ zdjęcia, zakres dat, odstęp `FM.krok`: „co ileś dni” (`FM.co`; plan co N dni od początku zakresu,
+  z okna ±N/2 wokół planu zdjęcie najbliższe planowi) albo „co miesiąc” (ten sam dzień miesiąca co początek zakresu,
+  31 → ostatni dzień krótszego miesiąca; zdjęcie najbliższe planowi, ale tylko z tego miesiąca; miesiąc bez zdjęć
+  jest pomijany). Remis = wcześniejsze. `klatki()` w `app.js` (render dostaje gotowe `ids`), sekundy na zdjęcie,
   format 4:5 / 9:16 / 1:1, przejście płynne/cięcie, napis z datą i wynikami. Podgląd na canvasie, nagrywanie przez
   MediaRecorder (MP4 w Safari/Chrome, inaczej WebM). Ustawienia zapisują się na Pi.
 
@@ -101,3 +104,5 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   przeniesione. Gdy NAS niedostępny: zapis na Pi i od razu czerwona dioda („Zdjęcia lub filmy tylko na Pi”).
 - **2026-10-22 (3)**: Masa tłuszczu i mięśni w kg (z masy ciała i %): pod formularzem, w historii obok % i jako
   przełączany wykres składu ciała (% albo kg). `app.js?v=11`.
+- **2026-10-22 (4)**: Film „co miesiąc” i wybór zdjęcia najbliższego planowanemu dniowi (zamiast pierwszego w oknie);
+  w trybie miesięcznym zawsze z tego samego miesiąca. `app.js?v=12`.
