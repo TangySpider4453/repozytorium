@@ -368,6 +368,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (minuta dzwonienia)**: Pi dzwoni do 60 s; gdy iPhone od razu odrzuca (603, gdy Linphone jest otwarty),
+  ponawia co ok. 5 s do minuty. Test: połączenie odebrane.
 - **2026-10-22 (todo: archiwum i ważne)**: Zrobione zadania po 24 h przechodzą do „Archiwum” na stronie; „📞 Bardzo
   ważne: zadzwoń” (strona, Telegram, Linphone „ważne [nr]”, słowa „ważne/pilne” w „todo …”) = Pi dzwoni o terminie.
 - **2026-10-22 (zawodowe)**: Strona „🤖 Zawodowe” z programem nauczyciela (ASTORINO Web Lab); portal pokazuje najnowszy

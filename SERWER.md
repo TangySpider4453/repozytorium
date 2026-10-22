@@ -181,6 +181,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   **SRTP**: Linphone szyfruje dźwięk, więc konto ma `srtpUse = MANDATORY` (od 2026-10-22; przy OPTIONAL połączenia od Pi
   kończyły się 603 Decline i w iPhonie było „Anonymous”), `srtpSecureSignaling = 0`. Nadawca: `"Serwer Rpi" <sip:…>`;
   w dzienniku przy rozłączeniu jest kod i powód (np. `603 Decline`).
+  **Dzwonienie do właściciela trwa do 60 s** (`CZAS_DZWONIENIA`): iPhone czasem od razu odsyła `603 Decline` (zwykle
+  gdy Linphone jest otwarty, mimo „110 Push sent”), więc po 603/486/480/408 Pi dzwoni znowu po 5 s (`PONOW`), aż minie
+  minuta; dopiero wtedy bot pisze „nie odebrałeś”. Dokładny log SIP: `sudo systemctl set-environment TELEFON_LOG=5`
+  + restart usługi → `/tmp/telefon-sip.log` (wyłączenie: `unset-environment TELEFON_LOG`).
   Diagnostyka w razie problemów: drop-in `serwerek-telefon.service.d/diagnostyka.conf` z `Environment=TELEFON_LOG=5`
   → `/tmp/telefon-sip.log` (teraz wyłączona). Sprawdzone 2026-10-22: rozmowa z iPhone'a działa (opus, SRTP).
   Szybkość na Pi 4: rozpoznanie ok. 1 s na 1 s mowy (whisper base, okno `-ac` dopasowane do długości), Claude 5–10 s,

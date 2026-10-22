@@ -37,7 +37,8 @@ DOMENA = os.environ.get("SIP_DOMENA", "sip.linphone.org")
 WLASCICIEL = os.environ.get("SIP_WLASCICIEL", "")       # np. sip:antek@sip.linphone.org
 HZ = 16000
 RAMKA = HZ * 2 // 50                                    # 20 ms, 16 bit mono
-CZAS_DZWONIENIA = 45                                    # s: potem „nie odebrał”
+CZAS_DZWONIENIA = 60                                    # s: tyle Pi próbuje dzwonić, potem „nie odebrał”
+PONOW = []          # [(kiedy, zlecenie)]: iPhone czasem od razu odrzuca (603), np. gdy Linphone jest otwarty; dzwonimy znowu
 MAX_ROZMOWA = 20 * 60
 CISZA_KONIEC = 90                                       # s ciszy: rozłącz
 POZEGNANIA = ("do widzenia", "rozłącz", "rozlacz", "koniec rozmowy", "na razie", "pa pa", "cześć to wszystko")
@@ -226,7 +227,11 @@ class Polaczenie(pj.Call):
         if ci.state == pj.PJSIP_INV_STATE_DISCONNECTED:
             if not self.odebrane and self.rozmowa.kierunek == "od Pi":
                 z = self.rozmowa.zlecenie
-                wynik(stan="nieodebrane", tekst=z.get("tekst", ""), powod=z.get("powod", ""))
+                if ci.lastStatusCode in (408, 480, 486, 487, 503, 603) and time.time() + 8 - z.get("start", 0) < CZAS_DZWONIENIA:
+                    PONOW.append((time.time() + 5, z))
+                    log(f"odrzucone od razu ({ci.lastStatusCode}), dzwonię jeszcze raz za 5 s")
+                else:
+                    wynik(stan="nieodebrane", tekst=z.get("tekst", ""), powod=z.get("powod", ""))
             self.rozmowa.zakonczona()
             ZAKONCZONE.append(AKTYWNE.pop(ci.id, self))
 
@@ -563,6 +568,7 @@ def zadzwon_do_wlasciciela(konto, zl):
     if not WLASCICIEL:
         wynik(stan="blad", opis="nie znam jeszcze Twojego adresu Linphone (SIP_WLASCICIEL). Zadzwoń raz do Pi z Linphone, to go podam.", **zl)
         return
+    zl.setdefault("start", time.time())          # pierwsza próba: przez CZAS_DZWONIENIA dzwonimy (z ponowieniami)
     p = Polaczenie(konto, kierunek="od Pi", powitanie=zl["tekst"] + " Możesz mi odpowiedzieć albo się rozłączyć.", zlecenie=zl)
     try:
         p.makeCall(WLASCICIEL, pj.CallOpParam(True))
@@ -653,7 +659,7 @@ def main():
             ZAKONCZONE.remove(p)
             p.rozmowa.p = None          # przerwij cykl referencji: obiekt pjsua2 zniknie tu, w głównym wątku
         for p in list(AKTYWNE.values()):         # nikt nie odebrał
-            if p.rozmowa.kierunek == "od Pi" and not p.odebrane and teraz - p.utworzone > CZAS_DZWONIENIA:
+            if p.rozmowa.kierunek == "od Pi" and not p.odebrane and teraz - p.rozmowa.zlecenie.get("start", p.utworzone) > CZAS_DZWONIENIA:
                 rozlacz(p)
         for p in sorted(CZAT.glob("*.json")):             # wiadomości od bota na Linphone
             try:
@@ -669,7 +675,9 @@ def main():
                     wyslij_czat(zl["tekst"])
                 if zl.get("todo_id"):      # przypomnienie: „zrobione” / „+15” w odpowiedzi dotyczy tego zadania
                     OSTATNIE_ZADANIE["id"] = zl["todo_id"]
-        if not AKTYWNE:
+        if not AKTYWNE and PONOW and PONOW[0][0] <= teraz:
+            zadzwon_do_wlasciciela(konto, PONOW.pop(0)[1])
+        elif not AKTYWNE and not PONOW:
             for p in sorted(KOLEJKA.glob("*.json")):
                 try:
                     zl = json.loads(p.read_text(encoding="utf-8"))
