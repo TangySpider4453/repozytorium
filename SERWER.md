@@ -215,6 +215,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - Bot: przycisk „📍 Odjazdy obok mnie” (Telegram wysyła lokalizację), lokalizacja „na żywo” (edycje zapisywane po cichu),
   „🏠 Do domu”, komendy `odjazdy [przystanek]`, `do domu`, `trasa [z X] do Y`, `zapisz <nazwa> [adres]`, `miejsca`
   (`komenda_ztm`, też w czacie Linphone); Claude używa API (`instrukcja.md`), także przez telefon.
+- Miejsca słowami (`komenda_miejsca`, czat, Linphone i rozmowa telefoniczna bez pytania Claude): „ustaw tu, gdzie teraz
+  jestem, jako dom”, „zapisz to miejsce jako szkoła”, „ustaw tutaj szkołę”, „zapisz dom ul. … 5”, „usuń miejsce X”.
+  Samo „zapisz X” tylko dla typowych nazw (`ZWYKLE_MIEJSCA`), inaczej odpowiada Claude.
 - Strona `/strony/komunikacja/` (repo `komunikacja/`) i karta na „⚙️ Automatyczne”.
 - OwnTracks (iPhone, stała lokalizacja): tryb HTTP, URL `http://100.108.241.58/api/lokalizacja` (przez Tailscale).
 - Monitor zdrowia: w dzień (7–22) lokalizacja starsza niż 30 min (`LOKALIZACJA_MAX_MIN`) = 🟡 „Brak aktualnej

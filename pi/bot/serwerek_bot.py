@@ -1125,6 +1125,56 @@ def zapisz_lokalizacje(loc, wyslano=None):
                                  "zrodlo": "telegram na żywo" if na_zywo else "telegram", "na_zywo_do": na_zywo})
 
 
+TU_SLOWA = r"(?:to\s+miejsce|tu|tutaj|tu\s+gdzie\s+(?:teraz\s+)?jestem|tam\s+gdzie\s+(?:teraz\s+)?jestem|gdzie\s+(?:teraz\s+)?jestem|moj[aą]\s+lokalizacj[eęa]|teraz)"
+
+
+ZWYKLE_MIEJSCA = {"dom", "szkoła", "szkola", "praca", "uczelnia", "siłownia", "silownia", "babcia", "dziadkowie", "internat",
+                  "trening", "basen", "kościół", "kosciol", "dziewczyna", "przystanek"}
+
+
+def komenda_miejsca(tekst):
+    """zapis / usunięcie miejsca słowami (czat, Linphone, telefon) -> odpowiedź albo None:
+    „ustaw tu, gdzie teraz jestem, jako dom”, „zapisz to miejsce jako szkoła”, „zapisz siłownia” (tu),
+    „zapisz dom ul. Fredry 5” (adres), „usuń miejsce siłownia”"""
+    t = re.sub(r"[,.!?]", " ", tekst)
+    t = " ".join(t.split())
+    if m := re.fullmatch(r"(?:usuń|usun|skasuj)\s+miejsce\s+(.+)", t, re.I):
+        w = ztm_api("/api/miejsca", {"nazwa": m.group(1), "usun": True})
+        return f"🗑 Usunięte miejsce: {m.group(1)}." if "miejsca" in w else "⚠️ Nie udało się usunąć."
+    m = re.fullmatch(r"(?:ustaw|zapisz|zapamiętaj|zapamietaj|dodaj|oznacz)\s+(?:miejsce\s+)?(.+)", t, re.I)
+    if not m:
+        return None
+    r = m.group(1)
+    if j := re.fullmatch(rf"(?:(?:{TU_SLOWA})\s+)*jako\s+(.+?)(?:\s+adres\s+(.+))?", r, re.I):       # „… jako dom”
+        nazwa, adres = j.group(1), j.group(2)
+    elif j := re.fullmatch(rf"(?:{TU_SLOWA})\s+(?:jako\s+)?(.+)", r, re.I):                            # „tutaj szkołę”
+        nazwa, adres = j.group(1), None
+    elif re.match(r"zapisz|zapamiętaj|zapamietaj", t, re.I) and (j := re.fullmatch(rf"(\S+)(?:\s+(.+))?", r, re.I)):
+        nazwa, adres = j.group(1), j.group(2)                                                    # „zapisz dom [adres|tu]”
+        if adres and re.fullmatch(rf"(?:{TU_SLOWA}\s*)+", adres, re.I):
+            adres = None
+        elif not adres and nazwa.lower() not in ZWYKLE_MIEJSCA:
+            return None                                     # „zapisz zakupy”: to raczej nie miejsce
+        elif adres and not re.search(r"\d|\bul\b|ulica|\bos\b|osiedle|plac|aleja|rondo", adres, re.I):
+            return None                                     # „zapisz mi to…”: nie miejsce, niech odpowie Claude
+    else:
+        return None
+    nazwa = re.sub(rf"\s+(?:{TU_SLOWA})$", "", nazwa.strip(), flags=re.I)
+    if not nazwa or len(nazwa) > 40 or nazwa.lower() in ("przypomnienie", "zadanie", "todo", "mi", "to", "sobie", "go", "je"):
+        return None
+    if " " not in nazwa and nazwa.lower().endswith("ę"):    # „ustaw tutaj szkołę” -> szkoła
+        nazwa = nazwa[:-1] + "a"
+    dane = {"nazwa": nazwa, **({"adres": adres} if adres else {"tu": True})}
+    w = ztm_api("/api/miejsca", dane)
+    if w.get("blad"):
+        return f"⚠️ {w['blad'].capitalize()}."
+    if adres:
+        mj = next((v for k, v in w.get("miejsca", {}).items() if v.get("nazwa") == nazwa), {})
+        return f"📍 Zapisane: {nazwa} ({mj.get('opis') or adres})."
+    l = ztm_api("/api/lokalizacja").get("lokalizacja") or {}
+    return f"📍 Zapisane: {nazwa}, tu, gdzie jesteś (lokalizacja z {l.get('czas', '?')[11:16]})."
+
+
 def komenda_ztm(tekst):
     """odjazdy / trasa / miejsca (Telegram i Linphone) -> tekst odpowiedzi albo None (to nie ta komenda)"""
     t = " ".join(tekst.strip().split())
@@ -1134,14 +1184,8 @@ def komenda_ztm(tekst):
             or re.fullmatch(r"(?:🗺\s*)?(?:/?trasa|jak dojadę|jak dojade|dojazd)\s+(?:z\s+(.+?)\s+)?do\s+(.+?)\s*[?.!]*", t, re.I):
         dokad = "dom" if m.group(2).lower() in ("domu", "dom") else m.group(2)
         return ztm_api("/api/ztm/trasa", skad=m.group(1) or "tu", dokad=dokad).get("tekst") or "Brak danych."
-    if m := re.fullmatch(r"(?:zapisz|ustaw)\s+(?:miejsce\s+)?(\S+)(?:\s+(.+))?", t, re.I):
-        gdzie = (m.group(2) or "tu").strip()
-        dane = {"nazwa": m.group(1), **({"tu": True} if gdzie.lower() in ("tu", "tutaj") else {"adres": gdzie})}
-        w = ztm_api("/api/miejsca", dane)
-        if w.get("blad"):
-            return f"⚠️ {w['blad'].capitalize()}."
-        mj = w.get("miejsca", {}).get(re.sub(r"\s+", " ", m.group(1).lower()), {})
-        return f"📍 Zapisane: {m.group(1)}" + (" (tu, gdzie jesteś)." if dane.get("tu") else f" ({mj.get('opis', gdzie)}).")
+    if (odp := komenda_miejsca(t)) is not None:
+        return odp
     if t.lower() in ("miejsca", "/miejsca"):
         mj = ztm_api("/api/lokalizacja").get("miejsca", {})
         return ("📍 Miejsca: " + ", ".join(v["nazwa"] for v in mj.values()) + "\nDodasz: „zapisz dom” (tu, gdzie jesteś) albo „zapisz szkoła ul. … 5”.") \
@@ -1342,7 +1386,8 @@ POMOC_WSPOLNE = """📊 stan – temperatura, procesor, RAM, NAS, kopia, maksima
     („ważne” / „zadzwoń” = bardzo ważne: Pi zadzwoni; zrobione po 24 h idą do archiwum na stronie)
 🚏 odjazdy [przystanek] – najbliższe odjazdy ZTM (bez nazwy: obok Ciebie), np. odjazdy Junikowo
 🏠 do domu / trasa do <miejsce|przystanek|adres> – jak dojechać stąd (też: trasa z Junikowo do Rondo Kaponiera)
-📍 zapisz dom [adres] – zapamiętaj miejsce (bez adresu: tu, gdzie jesteś); miejsca – lista
+📍 ustaw tu jako dom / zapisz szkoła [adres] – zapamiętaj miejsce (bez adresu: tu, gdzie jesteś);
+    miejsca – lista; usuń miejsce <nazwa>
 🎮 minecraft – stan serwera (włącz / wyłącz)
 💾 kopia – kopia systemu na NAS teraz
 ✅ przejrzane – zgaś żółtą diodę

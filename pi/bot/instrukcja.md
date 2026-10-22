@@ -72,7 +72,8 @@ pole "tekst" jest gotowe do pokazania (skróć je przy telefonie):
   z `-G`)
 - `curl -s http://127.0.0.1/api/lokalizacja` (ostatnia lokalizacja Antka z czasem i zapisane miejsca)
 - zapis miejsca: `curl -s -X POST http://127.0.0.1/api/miejsca -H 'Content-Type: application/json' -d '{"nazwa":"szkoła","adres":"…"}'`
-  (albo `"tu": true` = obecna lokalizacja)
+  (albo `"tu": true` = obecna lokalizacja). „Ustaw tu jako X” / „zapamiętaj to miejsce jako X” = zapis z `"tu": true`;
+  nazwę zapisuj w mianowniku („szkoła”, nie „szkołę”). Usunięcie: `{"nazwa":"…","usun":true}`.
 Gdy lokalizacja jest stara (pole "czas"), powiedz to; poproś o przycisk „📍 Odjazdy obok mnie” w Telegramie.
 
 ## Polecenia w Bash (pełny terminal)

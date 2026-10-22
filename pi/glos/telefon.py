@@ -205,6 +205,12 @@ class Rozmowa:
                     pamiec.zapisz("bot", "telefon", f"Odhaczone przez telefon: {odp}")
                     s.pomin_do_konca()
                     continue
+                if (odp_m := bot.komenda_miejsca(tekst)) is not None:     # „ustaw tu jako szkoła” bez pytania Claude
+                    pamiec.zapisz("antek", "telefon", tekst)
+                    pamiec.zapisz("bot", "telefon", odp_m)
+                    self.mow(odp_m)
+                    s.pomin_do_konca()
+                    continue
                 if any(x in tekst.lower() for x in POZEGNANIA):
                     pamiec.zapisz("antek", "telefon", tekst)
                     self.mow("Na razie, trzymaj się!")
