@@ -26,7 +26,10 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   rysowana i przesuwana palcem na podglądzie. Ramka ręczna ma pierwszeństwo. Ręczna korekta per zdjęcie: `reczne = {dx, dy, z}`
   (przesunięcie w długościach tułowia i zoom), ustawiana w oknie „Kadrowanie” z półprzezroczystym poprzednim
   zdjęciem tego samego typu.
-- **Historia:** wykres masy (kg) i osobno składu ciała (%), lista dni z miniaturami, edycja typu/daty, kosz.
+- **Historia:** wykres masy (kg) i osobno składu ciała, przełącznik „Skład ciała w: % (z wagi) / kg (masa składnika)”
+  (`WYK.sklad`, localStorage). Masa tłuszczu i mięśni = masa ciała × % / 100 z tego samego dnia (`kgSkladu` w `app.js`,
+  liczone w przeglądarce, nie zapisywane). Lista dni pokazuje oba: „tłuszcz 18,0% (14,4 kg)”; formularz pokazuje kg na
+  żywo pod polami. Lista dni z miniaturami, edycja typu/daty, kosz.
 - **Film:** typ zdjęcia, zakres dat, „co ile dni” (z każdego okna N dni pierwsze zdjęcie), sekundy na zdjęcie,
   format 4:5 / 9:16 / 1:1, przejście płynne/cięcie, napis z datą i wynikami. Podgląd na canvasie, nagrywanie przez
   MediaRecorder (MP4 w Safari/Chrome, inaczej WebM). Ustawienia zapisują się na Pi.
@@ -96,3 +99,5 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   krok co 1 godzinę, pozycja zapisywana po puszczeniu. `app.js?v=10`.
 - **2026-10-22 (2)**: Zdjęcia i filmy na NAS (`Tony-Folder/Raspberry/Progres-zdjecia`, `Progres-filmy`), istniejące
   przeniesione. Gdy NAS niedostępny: zapis na Pi i od razu czerwona dioda („Zdjęcia lub filmy tylko na Pi”).
+- **2026-10-22 (3)**: Masa tłuszczu i mięśni w kg (z masy ciała i %): pod formularzem, w historii obok % i jako
+  przełączany wykres składu ciała (% albo kg). `app.js?v=11`.

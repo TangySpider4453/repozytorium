@@ -330,3 +330,4 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   (30 dni). Samba: zapis logowań i operacji na plikach. Naprawiony błąd, przez który powiadomienia o wejściach nie szły.
 - **2026-10-22 (ścieżka)**: Bot nie wysyła podsumowań wizyt; ścieżka zapisuje się na Pi i NAS, a przycisk 🧭 Ścieżka
   pokazuje wizyty z dnia. 📊 Stan z maksimum temperatury, CPU i RAM z dziś i z 7 dni.
+- **2026-10-22 (progres kg)**: Progres: tłuszcz i mięśnie przeliczane na kg, przełącznik wykresu %/kg, historia z obiema wartościami.

@@ -102,6 +102,17 @@ function naCanvas(img, maks){
 }
 const doBloba = (c, q) => new Promise(res => c.toBlob(res, "image/jpeg", q));
 
+/* masa tłuszczu i mięśni w kg z masy ciała i procentu (waga podaje %) */
+const kgSkladu = (w, k) => w && w.masa != null && w[k] != null ? Math.round(w.masa * w[k]) / 100 : null;
+function pokazSklad(){
+  const w = {masa:num($("fMasa").value), fat:num($("fFat").value), muscle:num($("fMuscle").value)};
+  const t = kgSkladu(w, "fat"), m = kgSkladu(w, "muscle"), cz = [];
+  if(t != null && !Number.isNaN(t)) cz.push(`tłuszcz ${pl(t)} kg`);
+  if(m != null && !Number.isNaN(m)) cz.push(`mięśnie ${pl(m)} kg`);
+  $("fSklad").hidden = !cz.length;
+  $("fSklad").textContent = cz.length ? "To jest: " + cz.join(" · ") : "";
+}
+
 /* ---------- DODAJ ---------- */
 const NOWE = [];
 function ustawFormularz(data, zachowaj){
@@ -114,6 +125,7 @@ function ustawFormularz(data, zachowaj){
   wstaw("fFat", w && w.fat != null ? pl(w.fat) : "");
   wstaw("fMuscle", w && w.muscle != null ? pl(w.muscle) : "");
   wstaw("fNotatka", w && w.notatka || "");
+  pokazSklad();
   const ile = DANE.zdjecia.filter(z => z.data === data).length;
   $("fIstnieje").hidden = !(w || ile);
   $("fIstnieje").textContent = `Dla ${krotko(data)} są już zapisane ${w ? "wyniki z wagi" : ""}${w && ile ? " i " : ""}${ile ? ile + " " + (ile === 1 ? "zdjęcie" : ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? "zdjęcia" : "zdjęć") : ""}. Zapis podmieni wyniki, a zdjęcia dopisze.`;
@@ -125,7 +137,7 @@ function uzyjDaty(d){
   ustawFormularz(d, true);
 }
 $("fData").onchange = () => ustawFormularz($("fData").value || dzis());
-["fMasa", "fFat", "fMuscle", "fNotatka"].forEach(id => $(id).addEventListener("input", () => delete $(id).dataset.auto));
+["fMasa", "fFat", "fMuscle", "fNotatka"].forEach(id => $(id).addEventListener("input", () => { delete $(id).dataset.auto; pokazSklad(); }));
 
 $("fPliki").onchange = async e => {
   const files = [...e.target.files]; e.target.value = "";
@@ -251,14 +263,17 @@ function wykres(tytul, serie, jedn, zak){
 }
 /* zakres wykresów: liczba dni (null = całość) i koniec okna (suwak); zapamiętywane w tej przeglądarce */
 const ZAKRESY = [[7, "7 dni"], [30, "Miesiąc"], [61, "2 mies."], [91, "3 mies."], [182, "6 mies."], [365, "Rok"], [null, "Całość"]];
-let WYK = {dni:null, koniec:null};
+let WYK = {dni:null, koniec:null, sklad:"proc"};
 try{ Object.assign(WYK, JSON.parse(localStorage.getItem("progres:wykres") || "{}")); }catch(e){}
 const zapiszWYK = () => { try{ localStorage.setItem("progres:wykres", JSON.stringify(WYK)); }catch(e){} };
 const DZIEN = 864e5;
 const GODZ = 36e5;
 function rysujWykresy(){
   const wpisy = Object.entries(DANE.wpisy).sort((a, b) => a[0].localeCompare(b[0]));
-  const ser = k => wpisy.filter(([, w]) => w[k] != null).map(([d, w]) => [d, w[k]]);
+  // seria wykresu; „fatKg”/„muscleKg” = masa składnika przeliczona z % i masy ciała z tego samego dnia
+  const ser = k => k.endsWith("Kg") ? wpisy.map(([d, w]) => [d, kgSkladu(w, k.slice(0, -2))]).filter(p => p[1] != null)
+    : wpisy.filter(([, w]) => w[k] != null).map(([d, w]) => [d, w[k]]);
+  const kg = WYK.sklad === "kg";
   const cs = getComputedStyle(document.documentElement), s1 = cs.getPropertyValue("--s1").trim(), s2 = cs.getPropertyValue("--s2").trim();
   const daty = wpisy.filter(([, w]) => w.masa != null || w.fat != null || w.muscle != null).map(([d]) => pd(d).getTime());
   const dmin = daty.length ? daty[0] : Date.now(), dmax = daty.length ? daty[daty.length - 1] : Date.now(), rozpietosc = Math.round((dmax - dmin) / DZIEN);
@@ -276,9 +291,14 @@ function rysujWykresy(){
   const wnetrze = el("div");
   const rysujSame = () => { wnetrze.replaceChildren(
     wykres("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg", zak),
-    wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak)); };
+    kg ? wykres("Skład ciała (kg)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fatKg")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscleKg")}], " kg", zak)
+       : wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak)); };
+  // skład ciała: procent z wagi albo przeliczona masa tłuszczu i mięśni (kg); zapamiętywane w tej przeglądarce
+  const skladChips = el("div", {class:"chips"}, ...[["proc", "% (z wagi)"], ["kg", "kg (masa składnika)"]].map(([k, n]) =>
+    el("button", {"aria-pressed":String(WYK.sklad === k || (k === "proc" && WYK.sklad !== "kg")), text:n, onclick:() => { WYK.sklad = k; zapiszWYK(); rysujWykresy(); }})));
   box.append(el("h2", {text:"Wykresy"}), el("div", {class:"f", style:"margin-bottom:6px"}, "Zakres", chips),
-    el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})), wnetrze);
+    el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})),
+    el("div", {class:"f", style:"margin-bottom:8px"}, "Skład ciała w", skladChips), wnetrze);
   rysujSame();
   // suwak od dołu: przesuwa okno w czasie co godzinę (płynnie), wspólny dla obu wykresów
   if(okno){
@@ -304,8 +324,8 @@ function rysujHistorie(){
     const dt = pd(d);
     const vals = el("div", {class:"vals"});
     if(w.masa != null) vals.append(el("span", {}, "masa ", el("b", {text:pl(w.masa) + " kg"})));
-    if(w.fat != null) vals.append(el("span", {}, "tłuszcz ", el("b", {text:pl(w.fat) + "%"})));
-    if(w.muscle != null) vals.append(el("span", {}, "mięśnie ", el("b", {text:pl(w.muscle) + "%"})));
+    if(w.fat != null) vals.append(el("span", {}, "tłuszcz ", el("b", {text:pl(w.fat) + "%"}), kgSkladu(w, "fat") != null ? ` (${pl(kgSkladu(w, "fat"))} kg)` : ""));
+    if(w.muscle != null) vals.append(el("span", {}, "mięśnie ", el("b", {text:pl(w.muscle) + "%"}), kgSkladu(w, "muscle") != null ? ` (${pl(kgSkladu(w, "muscle"))} kg)` : ""));
     if(w.notatka) vals.append(el("span", {text:"„" + w.notatka + "”"}));
     const th = el("div", {class:"thumbs"});
     zd.forEach(z => th.append(el("button", {class:"th", onclick:() => otworzZdjecie(z)}, el("img", {src:plik(z, true), alt:NAZWA[z.typ], loading:"lazy"}),
