@@ -15,6 +15,7 @@ Bez konfiguracji usługa czeka i odpowiada na zlecenia wynikiem „brak_konfigur
 """
 import json
 import os
+import re
 import queue
 import sys
 import tempfile
@@ -190,6 +191,15 @@ class Rozmowa:
                     continue
                 self.zapis.append(f"Ty: {tekst}")
                 log(f"Antek: {tekst}")
+                tid = self.zlecenie.get("todo_id")
+                if tid and not re.search(r"\bnie\s+(\w+\s+)?(zrobi|odhacz|skończ|skoncz|załatw|zalatw)", tekst.lower()) and re.search(r"\b(odhacz|odhaczon|odchacz|odhaczy|zrobion|zrobił|zrobil|gotowe|załatwion|zalatwion|wykonan|skończon|skonczon)\w*", tekst.lower()):
+                    pamiec.zapisz("antek", "telefon", tekst)
+                    odp = bot.callback_zadania(f"todo_ok:{tid}")
+                    self.zlecenie.pop("todo_id", None)
+                    self.mow("Odhaczone." if odp.startswith("✅ Zrobione:") else "Odhaczone. " + odp.replace("✅ Zrobione. ", ""))
+                    pamiec.zapisz("bot", "telefon", f"Odhaczone przez telefon: {odp}")
+                    s.pomin_do_konca()
+                    continue
                 if any(x in tekst.lower() for x in POZEGNANIA):
                     pamiec.zapisz("antek", "telefon", tekst)
                     self.mow("Na razie, trzymaj się!")

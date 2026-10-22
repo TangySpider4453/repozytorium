@@ -203,7 +203,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `powtarzaj`, `odloz_min`, `wyslano`, `usun`). Zrobienie zadania powtarzanego przesuwa termin (`todo_nastepny`).
 - Strona `/strony/todo/` (repo `todo/`, link „📝 Zadania” w menu): dodawanie (dzień, godzina, powtarzanie), edycja,
   zrobione/cofnij, usuwanie; sama godzina = dziś albo jutro, sam dzień = 9:00. Zrobione dawniej niż 24 h temu są
-  w zwijanym „Archiwum” (liczone na stronie z pola `zrobione`, dane się nie zmieniają).
+  w zwijanym „Archiwum” (liczone na stronie z pola `zrobione`, dane się nie zmieniają); przy zrobionych „do archiwum za
+  X h Y min”. Karta „📚 Sprawdziany i kartkówki” (z `/strony/nauka/sprawdziany.json`, linki do stron nauki); bot dopisuje
+  je (14 dni) do listy „zadania”, a przypomnienia o sprawdzianach idą też na Linphone.
+- **Odhaczanie głosem**: w rozmowie z przypomnienia (`todo_id` w zleceniu telefonu) „odhaczone / odhacz / zrobione /
+  gotowe / załatwione…” (bez „nie …”) oznacza zadanie jako zrobione i Pi mówi „Odhaczone.”.
 - **Bardzo ważne = Pi dzwoni** (pole `dzwon`): przycisk „📞 Bardzo ważne: zadzwoń” w formularzu i 📞 przy zadaniu na
   stronie (wymaga terminu), przycisk pod „Dodane” w Telegramie (`todo_dzwon:<id>`), w tekście „ważne”, „bardzo ważne”,
   „pilne”, „zadzwoń” (`nowe_zadanie`), w Linphone „ważne [nr]”.

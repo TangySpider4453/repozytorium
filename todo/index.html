@@ -90,6 +90,7 @@ details.arch[open] summary{margin-bottom:8px}
     </form>
   </div>
   <div class="card"><h2>Do zrobienia</h2><div id="otwarte"><p class="pusto">Ładowanie…</p></div></div>
+  <div class="card"><h2>📚 Sprawdziany i kartkówki</h2><div id="sprawdziany"><p class="pusto">Ładowanie…</p></div></div>
   <div class="card"><h2>Zrobione</h2><p class="small muted" style="margin:0 0 4px">Po 24 godzinach przechodzą do archiwum.</p><div id="zrobione"></div></div>
   <div class="card"><details class="arch"><summary id="archTyt">Archiwum</summary><div id="archiwum"></div></details></div>
 </div></main>
@@ -113,12 +114,33 @@ function opisTerminu(z){
   const k = !z.zrobione && d < new Date() ? "spoz" : dz === 0 ? "dzis" : "";
   return {t:`${k === "spoz" ? "spóźnione: " : ""}${dzien}, ${g}${z.powtarzaj ? " · 🔁 " + POWT[z.powtarzaj] : ""}${z.dzwon ? " · 📞 zadzwonię" : ""}${z.wyslano && !z.zrobione ? " · 🔔 przypomniane" : ""}`, k};
 }
+function doArchiwum(z){
+  const ms = new Date(z.zrobione).getTime() + 864e5 - Date.now();
+  if(ms <= 0) return "";
+  const h = Math.floor(ms / 36e5), m = Math.ceil(ms % 36e5 / 6e4);
+  return ` · do archiwum za ${h ? h + " h " : ""}${m} min`;
+}
+function sprawdzian(x){
+  const d = new Date(x.data + "T00:00"), dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+  const dz = Math.round((d - dzis) / 864e5);
+  const kiedy = dz === 0 ? "dziś" : dz === 1 ? "jutro" : `za ${dz} dni · ${DNI[d.getDay()]} ${d.getDate()} ${MIES[d.getMonth()]}`;
+  return el("div", {class:"zad"}, el("div", {class:"ok", style:"border:0;font-size:20px", text:x.typ === "sprawdzian" ? "📕" : "📗"}),
+    el("div", {}, el("a", {class:"t", href:`/strony/nauka/${x.folder}/`, style:"color:inherit", text:`${x.przedmiot}: ${x.tytul}`}),
+      el("div", {class:"kiedy" + (dz <= 1 ? " dzis" : ""), text:`${x.typ} · ${kiedy}`})), el("div"));
+}
+async function sprawdziany(){
+  try{
+    const lista = (await api("/strony/nauka/sprawdziany.json")).filter(x => x.data && new Date(x.data + "T23:59") >= new Date())
+      .sort((a, b) => a.data.localeCompare(b.data));
+    $("sprawdziany").replaceChildren(...(lista.length ? lista.map(sprawdzian) : [el("p", {class:"pusto", text:"Brak zapowiedzianych."})]));
+  }catch(e){ $("sprawdziany").replaceChildren(el("p", {class:"pusto", text:"Nie udało się wczytać sprawdzianów."})); }
+}
 function wiersz(z){
   const o = opisTerminu(z);
   return el("div", {class:"zad" + (z.zrobione ? " zrobione" : "") + (z.dzwon && !z.zrobione ? " dzwoni" : "")},
     el("button", {class:"ok", title:z.zrobione ? "Cofnij" : "Zrobione", "aria-label":z.zrobione ? "Cofnij" : "Oznacz jako zrobione", text:z.zrobione ? "✓" : "",
       onclick:async () => { await api(`/api/todo/${z.id}`, {zrobione:!z.zrobione}); odswiez(); }}),
-    el("div", {}, el("div", {class:"t", text:z.tekst}), el("div", {class:"kiedy " + o.k, text:z.zrobione ? "zrobione " + z.zrobione.slice(0, 16).replace("T", " ") : o.t})),
+    el("div", {}, el("div", {class:"t", text:z.tekst}), el("div", {class:"kiedy " + o.k, text:z.zrobione ? "zrobione " + z.zrobione.slice(0, 16).replace("T", " ") + doArchiwum(z) : o.t})),
     el("div", {class:"akcje"},
       z.zrobione ? null : el("button", {class:"dz", title:z.dzwon ? "Bardzo ważne: Pi zadzwoni (kliknij, żeby wyłączyć)" : "Bardzo ważne: niech Pi zadzwoni",
         "aria-label":"Bardzo ważne: zadzwoń", "aria-pressed":String(!!z.dzwon), text:"📞",
@@ -163,7 +185,7 @@ $("form").onsubmit = async ev => {
     wyczysc(); odswiez();
   }catch(e){ $("info").textContent = "Nie udało się zapisać."; }
 };
-odswiez(); setInterval(odswiez, 30000);
+odswiez(); sprawdziany(); setInterval(odswiez, 30000);
 document.addEventListener("visibilitychange", () => { if(!document.hidden) odswiez(); });
 </script>
 </body>

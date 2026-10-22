@@ -368,6 +368,9 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (odhaczanie głosem)**: Na stronie Zadania: „do archiwum za …” przy zrobionych i karta sprawdzianów
+  i kartkówek; sprawdziany też w liście „zadania” bota i w przypomnieniach na Linphone; w rozmowie z przypomnienia
+  „odhaczone / zrobione” odhacza zadanie.
 - **2026-10-22 (bez formułki)**: Pi nie kończy wypowiedzi przez telefon formułką „jeśli chcesz coś powiedzieć…”; po niej po prostu słucha.
 - **2026-10-22 (głos w przypomnieniach)**: Naprawiona cisza w połączeniach od Pi (nowy port mediów po UPDATE). Claude
   przygotowuje wypowiedź ok. 4 min przed terminem, synteza zaczyna się przy dzwonieniu; po powitaniu można rozmawiać.

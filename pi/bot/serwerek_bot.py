@@ -508,6 +508,10 @@ def powiadomienia():
             co, tekst = "dzis", f"☀️ <b>Dziś {e(x['typ'])} z {e(x['przedmiot'].lower())}</b>. Powodzenia!"
         if co and w.get(f"nauka:{x['id']}:{x['data']}:{co}") is None:
             wyslij(f"{tekst}\n{e(x['tytul'])}\nPowtórz zakładkę „Najważniejsze”: {link_sprawdzianu(x)}", html_=True)
+            try:
+                do_linphone(html.unescape(re.sub(r"<[^>]+>", "", tekst)) + f"\n{x['tytul']}\n{link_sprawdzianu(x)}")
+            except OSError:
+                pass
             w[f"nauka:{x['id']}:{x['data']}:{co}"] = time.time()
     for k in [k for k in w if k.startswith("nauka:") and k.split(":")[-2] < (dzis - timedelta(days=7)).isoformat()]:
         del w[k]
@@ -998,6 +1002,12 @@ def tekst_zadan():
         spoz = " ⚠️" if z.get("termin") and z["termin"] < teraz else ""
         powt = " 🔁" if z.get("powtarzaj") else ""
         linie.append(f"{i}. {e(z['tekst'])} · <i>{kiedy_tekst(z.get('termin'))}</i>{spoz}{powt}")
+    spr = [x for x in sprawdziany() if x.get("data") and 0 <= (date.fromisoformat(x["data"]) - date.today()).days <= 14]
+    if spr:
+        linie.append("\n<b>📚 Sprawdziany i kartkówki</b>")
+        for x in sorted(spr, key=lambda x: x["data"]):
+            dz = (date.fromisoformat(x["data"]) - date.today()).days
+            linie.append(f"• {e(x['przedmiot'])} ({e(x['typ'])}): <i>{'dziś' if dz == 0 else 'jutro' if dz == 1 else f'za {dz} dni'}</i>")
     linie.append(f"\nWszystkie: {LINK_DOM}/strony/todo/")
     przyc = [[{"text": f"✅ {i}", "callback_data": f"todo_ok:{z['id']}"} for i, z in list(enumerate(lista[:20], 1))[k:k + 5]] for k in range(0, min(len(lista), 20), 5)]
     return "\n".join(linie), {"inline_keyboard": przyc}
@@ -1013,7 +1023,8 @@ def przygotuj_rozmowe(z):
         "Napisz DOKŁADNIE to, co powiesz, gdy odbierze: 1–3 krótkie zdania po polsku, naturalnie, bez emotek, list "
         "i Markdown (zostanie przeczytane na głos). Zinterpretuj przypomnienie: powiedz, o czym pamiętać i co zrobić "
         "(możesz krótko coś sprawdzić, np. stan serwera, plan, pogodę, jeśli to pomaga). Bez pytań i formułek na końcu "
-        "typu „jeśli chcesz coś powiedzieć” (Antek i tak może mówić po Tobie). Nic poza samą wypowiedzią.]")
+        "typu „jeśli chcesz coś powiedzieć” (Antek i tak może mówić po Tobie; „odhaczone” / „zrobione” zamyka zadanie). "
+        "Nic poza samą wypowiedzią.]")
     PRZYGOTOWANE[z["id"]] = {"termin": z["termin"], "tekst": tekst or None, "gotowe": True}
     print(f"przygotowane przypomnienie {z['id']}: {(tekst or 'brak')[:80]}", flush=True)
 
@@ -1034,7 +1045,7 @@ def przypomnienia():
             p = PRZYGOTOWANE.pop(z["id"], {})
             powitanie = p.get("tekst") if p.get("termin") == z["termin"] and p.get("tekst") else f"Przypomnienie: {z['tekst']}."
             pamiec.zapisz("bot", "telefon", f"Dzwonię z przypomnieniem „{z['tekst']}” i mówię: {powitanie}")
-            zadzwon(powitanie, "przypomnienie z telefonem")
+            zadzwon(powitanie, "przypomnienie z telefonem", todo_id=z["id"])
         powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
         wyslij(f"⏰ <b>{e(z['tekst'])}</b>\n{kiedy_tekst(z['termin'])}{powt}", html_=True, przyciski={"inline_keyboard": [
             [{"text": "✅ Zrobione", "callback_data": f"todo_ok:{z['id']}"}],
@@ -1176,11 +1187,11 @@ def glosowka(m):
     KOLEJKA_BUDZIK.set()
 
 
-def zadzwon(tekst, powod="prośba"):
+def zadzwon(tekst, powod="prośba", **dodatki):
     """zlecenie polaczenia do wlasciciela dla uslugi serwerek-telefon (Linphone); wynik wraca przez petla_telefonu"""
     (TELEFON / "kolejka").mkdir(parents=True, exist_ok=True)
     nazwa = f"{time.time():.3f}.json"
-    (TELEFON / "kolejka" / (nazwa + ".tmp")).write_text(json.dumps({"tekst": tekst, "powod": powod}, ensure_ascii=False), encoding="utf-8")
+    (TELEFON / "kolejka" / (nazwa + ".tmp")).write_text(json.dumps({"tekst": tekst, "powod": powod, **dodatki}, ensure_ascii=False), encoding="utf-8")
     os.replace(TELEFON / "kolejka" / (nazwa + ".tmp"), TELEFON / "kolejka" / nazwa)
 
 
