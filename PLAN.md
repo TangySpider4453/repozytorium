@@ -311,3 +311,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   na rok, Tailscale bez hasła. Komenda `portal-haslo` (zmiana hasła). Sprawdzone curl z Pi: bez hasła 302/401,
   złe hasło 401, dobre → strony, API i zdjęcia 200. Backup `app.py.bak_2026-10-22_haslo`.
 - **2026-10-22 (pokaż hasło)**: Na stronie logowania przycisk „Pokaż”/„Ukryj” hasło. Wdrożone, backup `app.py.bak_2026-10-22_pokaz`.
+- **2026-10-22 (hasło, poprawka)**: Hasło z iPada nie przechodziło, choć na serwerze było poprawne. Pole hasła ma teraz
+  wyłączoną autokorektę i wielką literę iOS, spacje na końcu są ignorowane, a dziennik przy złym haśle podaje długość
+  i podpowiedź o wielkości liter (bez samego hasła).

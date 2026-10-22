@@ -1016,7 +1016,7 @@ small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
   <input type="hidden" name="nast" value="%%NAST%%">
   <input type="text" name="username" value="serwerek" autocomplete="username" hidden>
   <label for="h">Hasło</label>
-  <div class="pole"><input id="h" name="haslo" type="password" autocomplete="current-password" autofocus required>
+  <div class="pole"><input id="h" name="haslo" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus required>
     <button type="button" id="pokaz" aria-controls="h" aria-pressed="false">Pokaż</button></div>
   <button type="submit">Wejdź</button>
   %%BLAD%%
@@ -1057,12 +1057,17 @@ def logowanie():
         LOGOWANIE_PROBY[ip] = proby
         if len(proby) >= 5:
             return logowanie_strona(f"Za dużo złych haseł. Spróbuj za {int(300 - (teraz - proby[0])) // 60 + 1} min.", nast, 429)
-    haslo = request.form.get("haslo", "")
+    import unicodedata
+    surowe = request.form.get("haslo", "")
+    haslo = unicodedata.normalize("NFKC", surowe).strip()      # spacja na koncu, znaki z klawiatury iOS
     if not (0 < len(haslo) <= 200 and check_password_hash(d["hash"], haslo)):
         with LOGOWANIE_LOCK:
             LOGOWANIE_PROBY.setdefault(ip, []).append(teraz)
+        # podpowiedz do dziennika bez zapisywania hasla: dlugosc i czy pasowaloby z inna wielkoscia liter
+        wl = next((n for n, w in (("odwrocona wielkosc liter", haslo.swapcase()), ("pierwsza litera mala", haslo[:1].lower() + haslo[1:]),
+                                  ("pierwsza litera wielka", haslo[:1].upper() + haslo[1:])) if w != haslo and check_password_hash(d["hash"], w)), "")
         try:
-            zdrowie_log(f"LOGOWANIE zle haslo z {ip}")
+            zdrowie_log(f"LOGOWANIE zle haslo z {ip} (dlugosc {len(surowe)}{', pasowaloby: ' + wl if wl else ''})")
         except OSError:
             pass
         time.sleep(1)
