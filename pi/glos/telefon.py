@@ -500,7 +500,7 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
         if akcja:
             CZAT_AKCJA.clear()
             CZAT_AKCJA.update(akcja=akcja, t=time.time())
-            odp = f"❓ {bot.AKCJE[akcja][0]}? Odpisz „tak” (w ciągu 2 min) albo „nie”."
+            odp = f"❓ {bot.opis_akcji(akcja)}? Odpisz „tak” (w ciągu 2 min) albo „nie”."
         if odp is not None:
             pamiec.zapisz("antek", "linphone", t)
             pamiec.zapisz("bot", "linphone", odp)
@@ -515,7 +515,7 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             if akcje:
                 CZAT_AKCJA.clear()
                 CZAT_AKCJA.update(akcja=akcje[0], t=time.time())
-                odp += f"\n\n❓ {bot.AKCJE[akcje[0]][0]}? Odpisz „tak” (w ciągu 2 min) albo „nie”."
+                odp += f"\n\n❓ {bot.opis_akcji(akcje[0])}? Odpisz „tak” (w ciągu 2 min) albo „nie”."
         AKCJE.put((wyslij_czat, (odp,)))          # w Linphone zawsze tekst (głosówki od Pi mogą się nie odtwarzać)
         if bot.tryb_odpowiedzi(t, "tekst") == "glos":     # głosówka tylko na wyraźną prośbę („przeczytaj”, „powiedz”…)
             try:

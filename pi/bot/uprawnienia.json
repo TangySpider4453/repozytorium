@@ -1,38 +1,14 @@
 {
   "allow": [
+    "Bash",
     "Read",
     "Grep",
     "Glob",
+    "Edit",
+    "Write",
     "WebSearch",
     "WebFetch",
-    "Edit(//home/tonyg/portal/sites/**)",
-    "Write(//home/tonyg/portal/sites/**)",
-    "Bash(systemctl status:*)",
-    "Bash(systemctl is-active:*)",
-    "Bash(systemctl list-timers:*)",
-    "Bash(systemctl --failed:*)",
-    "Bash(journalctl:*)",
-    "Bash(df:*)",
-    "Bash(free:*)",
-    "Bash(uptime)",
-    "Bash(vcgencmd:*)",
-    "Bash(ls:*)",
-    "Bash(du:*)",
-    "Bash(ps:*)",
-    "Bash(ss:*)",
-    "Bash(ping -c:*)",
-    "Bash(curl -s http://127.0.0.1/api/:*)",
-    "Bash(python3 -m json.tool:*)",
-    "Bash(date)",
-    "Bash(node /home/tonyg/bot/sprawdz_strone.js:*)",
-    "Bash(systemctl list-units:*)",
-    "Bash(systemctl show:*)",
-    "Bash(systemctl list-unit-files:*)",
-    "Bash(top -bn1:*)",
-    "Bash(lscpu)",
-    "Bash(minecraft status)",
-    "Bash(ip -br:*)",
-    "Bash(hostname -I)"
+    "TodoWrite"
   ],
   "deny": [
     "Read(//etc/serwerek-bot/**)",
@@ -48,10 +24,39 @@
     "Grep(//home/tonyg/.claude/**)",
     "Grep(//home/tonyg/.ssh/**)",
     "Bash(sudo:*)",
-    "Bash(rm:*)",
     "Read(//proc/*/environ)",
     "Read(//proc/self/**)",
     "Read(//proc/thread-self/**)",
-    "Grep(//proc/**)"
-  ]
+    "Grep(//proc/**)",
+    "Read(//etc/shadow)",
+    "Edit(//home/tonyg/.ssh/**)",
+    "Write(//home/tonyg/.ssh/**)",
+    "Edit(//home/tonyg/.claude/**)",
+    "Write(//home/tonyg/.claude/**)",
+    "Edit(//home/tonyg/bot/*.py)",
+    "Write(//home/tonyg/bot/*.py)",
+    "Edit(//home/tonyg/bot/uprawnienia.json)",
+    "Write(//home/tonyg/bot/uprawnienia.json)",
+    "Edit(//home/tonyg/bot/instrukcja.md)",
+    "Write(//home/tonyg/bot/instrukcja.md)",
+    "Edit(//home/tonyg/glos/*.py)",
+    "Write(//home/tonyg/glos/*.py)",
+    "Edit(//home/tonyg/portal/app.py)",
+    "Write(//home/tonyg/portal/app.py)",
+    "Edit(//home/tonyg/bot/sudo_czeka.json)",
+    "Write(//home/tonyg/bot/sudo_czeka.json)"
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/tonyg/bot/straznik.py"
+          }
+        ]
+      }
+    ]
+  }
 }

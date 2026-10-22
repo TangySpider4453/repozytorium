@@ -205,13 +205,72 @@ def tekst_sprawdzianow(dni=14):
     return "\n".join(linie)
 
 
+# sudo na prośbę Claude: znacznik [[SUDO: polecenie]] -> przycisk „Tak” (Telegram) albo „tak” (Linphone) -> bot uruchamia
+# `sudo bash -c polecenie` i pokazuje wynik. Claude sam sudo nie uruchomi (setpriv --no-new-privs w claude_odpowiedz).
+SUDO_PLIK = KATALOG / "sudo_czeka.json"
+
+
+def _sudo_lista():
+    try:
+        return json.loads(SUDO_PLIK.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def sudo_zapisz(polecenie):
+    import hashlib
+    zid = hashlib.sha256(polecenie.encode()).hexdigest()[:12]
+    with LOCK:
+        d = {k: v for k, v in _sudo_lista().items() if time.time() - v["t"] < 86400}
+        d[zid] = {"cmd": polecenie, "t": time.time()}
+        SUDO_PLIK.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    return "sudo:" + zid
+
+
+def sudo_polecenie(akcja):
+    """polecenie czekające na zgodę; id to skrót polecenia, więc podmiana w pliku nie przejdzie"""
+    import hashlib
+    cmd = _sudo_lista().get(akcja[5:], {}).get("cmd")
+    return cmd if cmd and hashlib.sha256(cmd.encode()).hexdigest()[:12] == akcja[5:] else None
+
+
+def czy_akcja(akcja):
+    return akcja in AKCJE or akcja.startswith("sudo:")
+
+
+def opis_akcji(akcja):
+    if akcja.startswith("sudo:"):
+        return f"Uruchomić jako root (sudo):\n{sudo_polecenie(akcja) or '(polecenie wygasło)'}\n"
+    return AKCJE[akcja][0]
+
+
+def wykonaj_sudo(akcja):
+    cmd = sudo_polecenie(akcja)
+    if not cmd:
+        return "To polecenie sudo wygasło albo już było uruchomione. Poproś Claude jeszcze raz."
+    with LOCK:
+        d = _sudo_lista()
+        d.pop(akcja[5:], None)
+        SUDO_PLIK.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    try:
+        r = subprocess.run(["sudo", "bash", "-c", cmd], capture_output=True, text=True, timeout=600, cwd="/home/tonyg")
+        kod, wyj = r.returncode, (r.stdout + r.stderr).strip()
+    except subprocess.TimeoutExpired:
+        kod, wyj = "przekroczony czas (10 min)", ""
+    wynik = f"{'✅' if kod == 0 else '❌'} sudo {cmd}\nkod: {kod}" + (f"\n{wyj[-1500:]}" if wyj else "")
+    pamiec.zapisz("bot", "telegram", f"Antek zatwierdził i bot uruchomił: {wynik}")      # Claude zobaczy wynik
+    return wynik + "\n(Napisz „dalej”, jeśli Claude ma kontynuować.)"
+
+
 def zapytaj(akcja, dodatek=""):
-    opis = AKCJE[akcja][0]
+    opis = opis_akcji(akcja)
     wyslij(f"❓ {opis}?{dodatek}", przyciski={"inline_keyboard": [[{"text": "✅ Tak", "callback_data": f"tak:{akcja}"},
                                                                     {"text": "✖ Nie", "callback_data": "nie"}]]})
 
 
 def wykonaj(akcja):
+    if akcja.startswith("sudo:"):
+        return wykonaj_sudo(akcja)
     if akcja == "przejrzane":
         d = portal("/api/zdrowie/przejrzane", {"wszystkie": True})
         return f"✅ Gotowe. Dioda: {d['stan']}, do sprawdzenia: {d['liczba']}."
@@ -316,8 +375,9 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     if kanal != "telefon" and prosi_o_czytanie(tekst):
         prompt = CZYTAJ_PODPOWIEDZ + "\n\n" + prompt
     u = json.loads((KATALOG / "uprawnienia.json").read_text())
-    cmd = [str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
-           "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"]]
+    cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
+           "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"],
+           "--settings", json.dumps({"hooks": u.get("hooks", {})})]
     if ses.get("id"):
         cmd += ["--resume", ses["id"]]
     env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")}
@@ -353,6 +413,9 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     akcje = [a for a in AKCJE if f"[[AKCJA: {a}]]" in odp]
     for a in AKCJE:
         odp = odp.replace(f"[[AKCJA: {a}]]", "")
+    for m in re.finditer(r"\[\[SUDO:\s*(.+?)\s*\]\]", odp, re.S):
+        akcje.append(sudo_zapisz(m.group(1)))
+    odp = re.sub(r"\[\[SUDO:\s*(.+?)\s*\]\]", "", odp, flags=re.S)
     return odp.strip(), akcje
 
 
@@ -1293,10 +1356,14 @@ def obsluz(u):
             wyslij(f"✅ Zapamiętane: {mac} to Twoje urządzenie. Jego wejścia będą tylko zapisywane (🧭 Ścieżka), bez powiadomień."
                    if dane.startswith("zaufaj:") else f"🔔 {mac} usunięte z zaufanych: znów będą powiadomienia.")
             return
-        if dane.startswith("tak:") and dane[4:] in AKCJE:
+        if dane.startswith("tak:") and czy_akcja(dane[4:]):
             if dane[4:] in ("mc_wlacz", "mc_wylacz"):
                 wyslij("🎮 " + ("Włączam serwer Minecraft… (ok. 30 s)" if dane[4:] == "mc_wlacz" else "Zapisuję świat i wyłączam…"))
-            wyslij(wykonaj(dane[4:]))
+            if dane[4:].startswith("sudo:"):          # może trwać długo: w osobnym wątku
+                wyslij("⏳ Uruchamiam…")
+                threading.Thread(target=lambda a=dane[4:]: wyslij(wykonaj(a)), daemon=True).start()
+            else:
+                wyslij(wykonaj(dane[4:]))
         elif dane == "nie":
             wyslij("Nic nie zrobiłem.")
         return

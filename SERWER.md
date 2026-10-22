@@ -121,8 +121,15 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   wpis w `sprawdziany.json`, kontrola `node ~/bot/sprawdz_strone.js <id>`), zapisuje linię w
   `~/portal/sites/nauka/DODANE_PRZEZ_BOTA.txt`. Limit czasu jednego zadania: 30 min.
 - Inny tekst → `claude -p` (Claude Code 2.1.308 w `~/.local/bin/claude`) z `--permission-mode dontAsk`, narzędzia
-  z `~/bot/uprawnienia.json` (czytanie, diagnostyka, edycja `~/portal/sites/**`, bez sudo/rm, zakaz czytania sekretów),
-  instrukcja `~/bot/instrukcja.md` (Bash tylko pojedyncze polecenia, bez potoków; odczyt /proc dozwolony poza environ i self). Claude prosi o akcje znacznikiem `[[AKCJA: kopia|restart_portalu|restart_minecrafta|przejrzane]]`.
+  z `~/bot/uprawnienia.json` (od 2026-10-22 **pełny Bash** jako tonyg, Edit/Write; zakaz czytania sekretów i edycji kodu
+  bota/telefonu/portalu), instrukcja `~/bot/instrukcja.md`. Claude działa przez `setpriv --no-new-privs`, więc **sudo
+  mu nie zadziała**; hook PreToolUse `~/bot/straznik.py` (przez `--settings`) blokuje z wyjaśnieniem: sudo/su,
+  crontab/at/systemd-run, czytanie tokenów i `env`, wyłączanie Pi, operacje na dyskach, `rm -rf` katalogów systemu/domu/NAS,
+  odcinanie Tailscale/SSH, restart bota, zmiany kodu bota/portalu. **sudo za zgodą**: Claude pisze `[[SUDO: polecenie]]`
+  → bot zapisuje je w `~/bot/sudo_czeka.json` (id = sha256 polecenia, ważne 24 h, jednorazowe) → przycisk „Tak”
+  w Telegramie albo „tak” w Linphone → `sudo bash -c polecenie`, wynik do czatu i do pamięci (Claude go widzi; „dalej”).
+  Gotowe akcje: `[[AKCJA: kopia|restart_portalu|restart_minecrafta|przejrzane|mc_wlacz|mc_wylacz]]`.
+  Strażnik to bariera przed pomyłkami, nie pełna izolacja (Claude ma prawa użytkownika tonyg).
   Nowa rozmowa po 250 tys. tokenów kontekstu (z ostatniej wiadomości w `~/.claude/projects/*/<sesja>.jsonl`)
   albo po 1 h ciszy. Zużycie liczy się do limitów subskrypcji właściciela; bot tylko dla niego (zasady Anthropic).
 - Odnowienie logowania Claude (co rok): `claude setup-token` → token do `/etc/serwerek-bot/claude.env`, restart bota.
