@@ -80,7 +80,7 @@ const AUTOMATY = [
      return [el("ul", {}, ...l.slice(0, 4).map(x => { const d = dni(x.data);
        return el("li", {}, el("span", {class:d <= 1 ? "dzis" : "", text:d === 0 ? "dziś" : d === 1 ? "jutro" : `za ${d} dni`}), ` · ${x.przedmiot} (${x.typ})`); }))];
    }},
-  {ikona:"⏰", nazwa:"Budziki", link:null,
+  {ikona:"⏰", nazwa:"Budziki", link:"/strony/budziki/",
    opis:"Pi dzwoni o tej porze i czyta poranny przegląd. Ustawiasz słowami: „budzik jutro 6:15”, „budzik w dni robocze 6:30”, „budziki”, „usuń budzik 2”.",
    stan: async () => {
      const l = (await json("/api/alarmy")).alarmy.filter(a => a.aktywny);
@@ -88,7 +88,7 @@ const AUTOMATY = [
      if(!l.length) return ["Brak budzików."];
      return [el("ul", {}, ...l.map(a => el("li", {text:`${a.godzina} · ${a.data ? a.data.split("-").reverse().join(".") : (a.dni.length === 7 ? "codziennie" : a.dni.map(d => DN[d]).join(", "))}${a.opis ? " · " + a.opis : ""}`})))];
    }},
-  {ikona:"📅", nazwa:"Mobidziennik", link:null,
+  {ikona:"📅", nazwa:"Mobidziennik", link:"/strony/mobi/",
    opis:"Plan lekcji, zastępstwa, odwołane lekcje i sprawdziany, sprawdzane co 10 minut (tylko odczyt). Zmiany przychodzą na Linphone.",
    stan: async () => {
      const d = await json("/api/mobi");

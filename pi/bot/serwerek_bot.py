@@ -1310,11 +1310,14 @@ def petla_mobi():
     time.sleep(30)
     while True:
         try:
-            if mobi.skonfigurowany() and 6 <= datetime.now().hour < 22 and time.time() - mobi.OSTATNIO["t"] >= 590:
+            na_zadanie = (mobi.KAT / "odswiez").exists()       # przycisk „Sprawdź teraz” na stronie
+            if na_zadanie:
+                (mobi.KAT / "odswiez").unlink(missing_ok=True)
+            if mobi.skonfigurowany() and (na_zadanie or 6 <= datetime.now().hour < 22 and time.time() - mobi.OSTATNIO["t"] >= 590):
                 mobi.sprawdz(powiadom, mobi_nowy_sprawdzian)
         except Exception as ex:
             print(f"mobi: {type(ex).__name__}: {ex}", flush=True)
-        time.sleep(60)
+        time.sleep(5)
 
 
 def komenda_mobi(tekst):

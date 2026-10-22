@@ -1432,6 +1432,16 @@ def api_mobi():
                     "sprawdziany": sorted(st.get("sprawdziany", {}).values(), key=lambda x: x["data"]), "zadania": st.get("zadania", [])})
 
 
+@app.route("/api/mobi/odswiez", methods=["POST"])
+def api_mobi_odswiez():
+    """przycisk „Sprawdź teraz”: znacznik dla bota (petla_mobi sprawdza go co kilka sekund)"""
+    try:
+        (BOT_DANE / "mobi" / "odswiez").write_text(str(time.time()))
+    except OSError:
+        abort(503)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/poczta")
 def api_poczta():
     try:

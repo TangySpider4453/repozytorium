@@ -154,7 +154,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (zmiana planu, przesunięty termin, nowe zadanie domowe); nowy sprawdzian, którego nie ma w Nauce → Claude
   (`mobi_nowy_sprawdzian`, do 30 min) robi stronę i 2–3 sesje nauki w todo albo prosi o materiały. Dane logowania:
   `/etc/serwerek-bot/mobi.env` (MOBI_ADRES/LOGIN/HASLO, root 600; usuwane ze środowiska Claude, strażnik blokuje).
-  Komenda „plan [jutro|w poniedziałek]”. API portalu `/api/mobi` (bez haseł), karta na „Automatyczne”.
+  Komenda „plan [jutro|w poniedziałek]”. API portalu `/api/mobi` (bez haseł), karta na „Automatyczne” i strona
+  `/strony/mobi/` (repo `mobi/`: cały plan tego i następnego tygodnia z zastępstwami/odwołaniami, sprawdziany z
+  tematyką, zadania domowe; „↻ Sprawdź teraz” = `POST /api/mobi/odswiez` → znacznik `~/bot/mobi/odswiez` dla bota).
+- Strona `/strony/budziki/` (repo `budziki/`): lista, włącz/wyłącz, usuń, dodawanie (jednorazowy z datą albo dni tygodnia).
 - **Poczta** (`pi/bot/poczta.py`): konta w `/etc/serwerek-bot/poczta.env` (`POCZTA_n=nazwa|imap.serwer|login|hasło do
   aplikacji`; Gmail: imap.gmail.com, iCloud: imap.mail.me.com). Co 10 min UNSEEN z 3 dni (BODY.PEEK) → Claude BEZ
   narzędzi (`claude_bez_narzedzi`: `--tools ""`, bez pamięci, maile jako dane) daje kategorię: spam → \Seen,

@@ -370,6 +370,9 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (strony Mobidziennik i Budziki)**: `/strony/mobi/` pokazuje wszystko odczytane z dziennika (cały plan
+  z zastępstwami, sprawdziany, zadania, „Sprawdź teraz”); `/strony/budziki/` do ustawiania budzików klikając
+  (sprawdzone w przeglądarce: dodanie, wyłączenie, usunięcie).
 - **2026-10-22 (budziki, Mobidziennik, poczta)**: Budziki (Pi dzwoni z porannym przeglądem, 3 próby; pierwszy na
   23.10 6:15), Mobidziennik co 10 min tylko do odczytu (plan, zastępstwa, odwołane, sprawdziany, zadania domowe; nowy
   sprawdzian → strona w Nauce i sesje nauki albo prośba o materiały), poczta (kod gotowy, czeka na 4 hasła do aplikacji),
