@@ -349,3 +349,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (Linphone 2)**: Właściciel `sip:za_kolaz@sip.linphone.org` wpisany do `sip.env`, telefon zarejestrowany.
 - **2026-10-22 (czat Linphone)**: Pisanie z Pi w aplikacji Linphone jak w Telegramie (komendy + Claude, wspólna pamięć);
   test lokalny udany. Poprawione rozpoznawanie właściciela po nazwie SIP.
+- **2026-10-22 (głos/tekst)**: Bot sam wybiera głos albo tekst („przeczytaj” → głosówka, „wypisz” → tekst, inaczej jak
+  pytanie). Głosówki działają też w czacie Linphone (rozpoznanie na Pi, odpowiedź głosem przez serwer plików Linphone).

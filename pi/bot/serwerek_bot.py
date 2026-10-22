@@ -261,11 +261,31 @@ def kontekst_sesji(sid):
     return 0
 
 
+GLOS_SLOWA = re.compile(r"\b(przeczytaj|odczytaj|powiedz mi|powiedz to|nagraj|głosówk\w*|glosowk\w*|głosem|glosem|na głos|na glos|"
+                        r"wiadomość głosow\w*|wiadomosc glosow\w*|posłucham|poslucham|chcę posłuchać|chce posluchac)\b", re.I)
+TEKST_SLOWA = re.compile(r"\b(wypisz|napisz|tekstem|na piśmie|na pismie|pisemnie|bez głosu|bez glosu|w punktach|rozpisz|listę|liste)\b", re.I)
+GLOS_PODPOWIEDZ = ("[Twoja odpowiedź zostanie zamieniona na WIADOMOŚĆ GŁOSOWĄ i przeczytana na głos: pisz naturalnymi zdaniami, "
+                   "bez emotek, tabel, list i Markdown; liczby i skróty tak, żeby dało się je wygodnie przeczytać.]")
+
+
+def tryb_odpowiedzi(tekst, wejscie):
+    """„glos” albo „tekst”: prośba w treści („przeczytaj”, „powiedz”, „nagraj” / „wypisz”, „napisz”) wygrywa;
+    bez prośby odpowiedź tym samym sposobem, jakim przyszło pytanie"""
+    g, t = GLOS_SLOWA.search(tekst or ""), TEKST_SLOWA.search(tekst or "")
+    if g and not t:
+        return "glos"
+    if t and not g:
+        return "tekst"
+    if g and t:                     # oba: liczy się to, co padło później („napisz… a potem przeczytaj”)
+        return "glos" if g.start() > t.start() else "tekst"
+    return "glos" if wejscie == "glos" else "tekst"
+
+
 TELEFON_PODPOWIEDZ = ("[To rozmowa TELEFONICZNA: Twoja odpowiedź zostanie przeczytana na głos. Mów krótko (1–3 zdania), "
                       "naturalnie, bez emotek, list, Markdown i adresów. Gdy coś sprawdzasz, zrób to szybko.]")
 
 
-def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True):
+def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glosem=False):
     """jedna wiadomosc do Claude (wspolna sesja dla czatu, glosowek i telefonu) -> (odpowiedz, akcje) albo wyjatek RuntimeError"""
     with LOCK:
         s = stan()
@@ -283,6 +303,8 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True):
               + ":\n" + tekst) if pam else tekst
     if kanal == "telefon":
         prompt = TELEFON_PODPOWIEDZ + "\n\n" + prompt
+    elif glosem:
+        prompt = GLOS_PODPOWIEDZ + "\n\n" + prompt
     u = json.loads((KATALOG / "uprawnienia.json").read_text())
     cmd = [str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
            "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"]]
@@ -324,15 +346,17 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True):
     return odp.strip(), akcje
 
 
-def claude(tekst, kanal="telegram", odpowiedz_na=None, glosem=False):
+def claude(tekst, kanal="telegram", odpowiedz_na=None, glosem=None):
+    """glosem: None = sam zdecyduj (tryb_odpowiedzi); głosem idzie wiadomość głosowa z tekstem w podpisie"""
+    if glosem is None:
+        glosem = tryb_odpowiedzi(tekst, "glos" if kanal.startswith("glosowka") else "tekst") == "glos"
     try:
-        odp, akcje = claude_odpowiedz(tekst, kanal, odpowiedz_na)
+        odp, akcje = claude_odpowiedz(tekst, kanal, odpowiedz_na, glosem=glosem)
     except RuntimeError as ex:
         wyslij(f"⚠️ Claude: {ex}\nSpróbuj jeszcze raz.")
         return
-    wyslij(odp, kto="claude")
-    if glosem:
-        wyslij_glos(odp)
+    if not glosem or not wyslij_glos(odp):
+        wyslij(odp, kto="claude")
     for a in akcje:
         zapytaj(a, " (proponuje Claude)")
 
@@ -950,20 +974,30 @@ def tg_plik(metoda, pole, sciezka, **dane):
 
 
 def wyslij_glos(tekst):
-    """odpowiedz Claude takze jako wiadomosc glosowa (Piper na Pi)"""
+    """odpowiedz Claude jako wiadomosc glosowa (Piper na Pi) z tekstem w podpisie; False = nie wyszlo (wtedy tekstem)"""
     g = glos()
     if not g or not tekst.strip():
-        return
+        return False
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         try:
-            wav, ogg = Path(tmp) / "odp.wav", Path(tmp) / "odp.ogg"
-            g.powiedz(tekst[:3000], wav)
-            g.do_ogg(wav, ogg)
             tg("sendChatAction", timeout=10, chat_id=stan()["wlasciciel"], action="record_voice")
-            tg_plik("sendVoice", "voice", ogg, chat_id=str(stan()["wlasciciel"]))
+            wav, ogg = Path(tmp) / "odp.wav", Path(tmp) / "odp.ogg"
+            g.powiedz(tekst[:4000], wav)
+            g.do_ogg(wav, ogg)
+            dane = {"chat_id": str(stan()["wlasciciel"])}
+            if len(tekst) <= 1000:
+                dane["caption"] = tekst
+            w = tg_plik("sendVoice", "voice", ogg, **dane)
         except (OSError, subprocess.SubprocessError) as ex:
             print(f"glos: {ex}", flush=True)
+            return False
+    if not w:
+        return False
+    pamiec.zapisz("claude", "telegram", "[głosówka] " + tekst, w.get("message_id"))
+    if len(tekst) > 1000:
+        wyslij(tekst, kto="claude")
+    return True
 
 
 def glosowka(m):
@@ -988,7 +1022,7 @@ def glosowka(m):
         return
     wyslij(f"🎙 „{tekst}”")
     pamiec.zapisz("antek", "glosowka", tekst, m.get("message_id"))
-    KOLEJKA.append({"tekst": tekst, "kanal": "glosowka_zapisana", "glosem": True})
+    KOLEJKA.append({"tekst": tekst, "kanal": "glosowka_zapisana", "glosem": None})
     KOLEJKA_BUDZIK.set()
 
 
@@ -1100,7 +1134,7 @@ def petla_claude():
         while KOLEJKA:
             z = KOLEJKA.pop(0)
             try:
-                claude(z["tekst"], z.get("kanal", "telegram"), z.get("odpowiedz_na"), z.get("glosem", False))
+                claude(z["tekst"], z.get("kanal", "telegram"), z.get("odpowiedz_na"), z.get("glosem"))
             except Exception as ex:
                 wyslij(f"⚠️ Błąd: {type(ex).__name__}: {ex}")
 
@@ -1128,7 +1162,7 @@ def do_claude(pliki, podpis, kanal="telegram", odpowiedz_na=None, glosem=False):
     tekst = podpis or "Przysłałem materiały."
     if pliki:
         tekst += "\n\n[Załączone pliki (otwórz narzędziem Read): " + ", ".join(str(p) for p in pliki) + "]"
-    KOLEJKA.append({"tekst": tekst, "kanal": kanal, "odpowiedz_na": odpowiedz_na, "glosem": glosem})
+    KOLEJKA.append({"tekst": tekst, "kanal": kanal, "odpowiedz_na": odpowiedz_na, "glosem": glosem or None})
     KOLEJKA_BUDZIK.set()
     if len(KOLEJKA) > 1:
         wyslij("⏳ Claude jeszcze pracuje nad poprzednią wiadomością, ta poczeka w kolejce.")

@@ -146,7 +146,15 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (`od_wlasciciela`: porównanie nazwy użytkownika SIP), obcy → wiadomość w Telegramie. Komendy jak w bocie (stan,
   sprawdziany, zadania, ścieżka, minecraft, „todo …”), reszta → `claude_odpowiedz(kanal="linphone")`; odpowiedź przez
   `Buddy.sendInstantMessage` (części po 1500 znaków, wskaźnik „pisze…”). Bot może pisać na Linphone: JSON w
-  `~/bot/telefon/czat/`. Test lokalny: `test_czat.py`.
+  `~/bot/telefon/czat/`. Test lokalny: `test_czat.py` (także `PLIK:<url>` = głosówka).
+  **Głosówki w Linphone**: przychodzą jako `application/vnd.gsma.rcs-ft-http+xml` (adres pliku na
+  files.linphone.org) → pobranie → whisper → „🎙 tekst”; odpowiedź głosem: Piper → WAV → upload na
+  `files.linphone.org/http-file-transfer-server/hft.php` (link ważny 7 dni) → wiadomość z XML
+  (`voice-recording=yes`, `am:playing-length`).
+- **Głos czy tekst** (`tryb_odpowiedzi` w bocie, wspólne dla Telegrama i Linphone): „przeczytaj / powiedz / nagraj /
+  głosówką / na głos” → głosówka; „wypisz / napisz / tekstem / w punktach” → tekst; bez prośby → tak, jak przyszło
+  pytanie. Gdy głosem, Claude dostaje `GLOS_PODPOWIEDZ` (zdania do czytania, bez list i emotek); w Telegramie
+  głosówka z tekstem w podpisie.
   Szybkość na Pi 4: rozpoznanie ok. 1 s na 1 s mowy (whisper base, okno `-ac` dopasowane do długości), Claude 5–10 s,
   Piper 2–3 s → odpowiedź ok. 15–25 s po skończeniu mówienia. Test bez Linphone: `SIP_DOMENA=lokalnie`
   (adres `sip:<użytkownik>@127.0.0.1:5070`, bez STUN) + `test_dzwoniacy.py`. Uwaga pjsua2 w Pythonie: wynik

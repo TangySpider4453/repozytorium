@@ -271,16 +271,22 @@ class Konto(pj.Account):
         log(f"rejestracja: {ai.regStatus} {ai.regStatusText} (aktywna: {ai.regIsActive})")
 
     def onInstantMessage(self, prm):
-        tekst = tresc_wiadomosci(prm.msgBody, prm.contentType)
-        if not tekst:
+        w = tresc_wiadomosci(prm.msgBody, prm.contentType)
+        if not w:
             return
         od = prm.fromUri
+        rodzaj, wartosc = w
+        if rodzaj == "plik" and not wartosc[1].startswith("audio"):
+            if od_wlasciciela(od):
+                AKCJE.put((wyslij_czat, ("Na razie rozumiem tylko tekst i wiadomości głosowe. Zdjęcia i pliki wyślij w Telegramie.",)))
+            return
         if od_wlasciciela(od):
-            log(f"czat od właściciela: {tekst[:80]}")
-            threading.Thread(target=odpowiedz_czat, args=(tekst,), daemon=True).start()
+            log(f"czat od właściciela ({rodzaj}): {str(wartosc)[:80]}")
+            threading.Thread(target=odpowiedz_czat, args=(wartosc[0] if rodzaj == "plik" else wartosc, "glos" if rodzaj == "plik" else "tekst"),
+                             daemon=True).start()
         else:
             log(f"czat od obcego {od}: pomijam")
-            wynik(stan="obcy_czat", od=od, tekst=tekst[:300])
+            wynik(stan="obcy_czat", od=od, tekst=(wartosc if rodzaj == "tekst" else "[plik]")[:300])
 
     def onIncomingCall(self, prm):
         p = Polaczenie(self, prm.callId, "do Pi", "Cześć, tu serwerek. Słucham.")
@@ -300,24 +306,64 @@ class Konto(pj.Account):
 
 
 # ---------------------------------------------------------------- czat Linphone
+FT_TYP = "application/vnd.gsma.rcs-ft-http+xml"         # plik w czacie Linphone (np. głosówka): XML z adresem pliku
+FT_SERWER = "https://files.linphone.org/http-file-transfer-server/hft.php"
+
+
 def tresc_wiadomosci(cialo, typ):
-    """tekst z wiadomości SIP; Linphone zwykle opakowuje ją w message/cpim (nagłówki CPIM, pusta linia, nagłówki MIME,
-    pusta linia, treść). Potwierdzenia i „pisze…” (imdn, iscomposing) pomijamy."""
+    """(rodzaj, wartość): ("tekst", tekst) albo ("plik", (url, typ_pliku)); None dla potwierdzeń i „pisze…”.
+    Linphone zwykle opakowuje wiadomość w message/cpim (nagłówki CPIM, pusta linia, nagłówki MIME, pusta linia, treść)."""
+    import re
     typ = (typ or "").lower()
-    if "imdn" in typ or "iscomposing" in typ:
-        return None
     if "cpim" in typ:
         czesci = cialo.replace("\r\n", "\n").split("\n\n", 2)
         if len(czesci) < 3:
             return None
-        if "text/plain" not in czesci[1].lower():
-            return None
-        return czesci[2].strip()
-    return cialo.strip() if typ.startswith("text/plain") or not typ else None
+        m = re.search(r"content-type:\s*([^\n]+)", czesci[1], re.I)
+        typ, cialo = (m.group(1).strip().lower() if m else "text/plain"), czesci[2]
+    if "imdn" in typ or "iscomposing" in typ:
+        return None
+    if "rcs-ft-http" in typ:
+        url = re.search(r'<data\s+url="([^"]+)"', cialo)
+        ct = re.search(r"<content-type>([^<]+)</content-type>", cialo)
+        return ("plik", (url.group(1), ct.group(1) if ct else "")) if url else None
+    return ("tekst", cialo.strip()) if typ.startswith("text/plain") or not typ else None
 
 
-def odpowiedz_czat(tekst):
-    """komenda albo Claude; odpowiedź wraca na Linphone (wysyłka w głównym wątku)"""
+def wyslij_glosowke(tekst):
+    """odpowiedź jako głosówka w Linphone: Piper -> WAV -> serwer plików Linphone (link ważny 7 dni) -> wiadomość z plikiem"""
+    import uuid
+    import urllib.request
+    wav = Path(tempfile.mkdtemp(prefix="czat-", dir="/tmp")) / "odpowiedz.wav"
+    glos.powiedz(tekst[:4000], wav, czestotliwosc=HZ)
+    ms = int(czas_wav(wav) * 1000)
+    g = uuid.uuid4().hex
+    cialo = (f"--{g}\r\nContent-Disposition: form-data; name=\"File\"; filename=\"glosowka.wav\"\r\n"
+             f"Content-Type: audio/wav\r\n\r\n").encode() + wav.read_bytes() + f"\r\n--{g}--\r\n".encode()
+    req = urllib.request.Request(FT_SERWER, data=cialo, headers={"Content-Type": f"multipart/form-data; boundary={g}"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        xml = r.read().decode("utf-8")
+    import shutil
+    shutil.rmtree(wav.parent, ignore_errors=True)
+    # znaczniki głosówki Linphone: typ z voice-recording=yes i długość nagrania
+    xml = xml.replace("<content-type>audio/wav</content-type>", "<content-type>audio/wav;voice-recording=yes</content-type>")
+    xml = xml.replace('<file xmlns="urn:gsma:params:xml:ns:rcs:rcs:fthttp">',
+                      '<file xmlns="urn:gsma:params:xml:ns:rcs:rcs:fthttp" xmlns:am="urn:gsma:params:xml:ns:rcs:rcs:rram">')
+    xml = xml.replace("</file-info>", f"<am:playing-length>{ms}</am:playing-length></file-info>", 1)
+    return xml
+
+
+def pobierz_glosowke(url):
+    import urllib.request
+    p = Path(tempfile.mkdtemp(prefix="czat-", dir="/tmp")) / "glosowka"
+    with urllib.request.urlopen(url, timeout=60) as r:
+        p.write_bytes(r.read())
+    return p
+
+
+def odpowiedz_czat(tekst, wejscie="tekst"):
+    """komenda albo Claude; odpowiedź wraca na Linphone (wysyłka w głównym wątku). wejscie: "tekst" albo "glos"
+    (głosówka: najpierw rozpoznanie na Pi). Głosem albo tekstem: bot.tryb_odpowiedzi („przeczytaj” / „wypisz”…)."""
     import html as h
     import re
     try:
@@ -327,6 +373,16 @@ def odpowiedz_czat(tekst):
     czysty = lambda t: h.unescape(re.sub(r"<[^>]+>", "", t))
     try:
         import serwerek_bot as bot
+        if wejscie == "glos":                   # tekst = adres pliku głosówki
+            AKCJE.put((wyslij_czat, ("…", True)))
+            plik = pobierz_glosowke(tekst)
+            tekst = glos.rozpoznaj(plik, dokladnie=True)
+            import shutil
+            shutil.rmtree(plik.parent, ignore_errors=True)
+            if not tekst:
+                AKCJE.put((wyslij_czat, ("🎙 Nic nie usłyszałem, spróbuj jeszcze raz.",)))
+                return
+            AKCJE.put((wyslij_czat, (f"🎙 „{tekst}”",)))
         t = tekst.strip()
         sl = t.lower().split()
         if sl and sl[0] in ("stan", "/stan"):
@@ -352,8 +408,9 @@ def odpowiedz_czat(tekst):
             pamiec.zapisz("bot", "linphone", odp)
         else:
             AKCJE.put((wyslij_czat, ("…", True)))           # „pisze…”
+            glosem = bot.tryb_odpowiedzi(t, wejscie) == "glos"
             try:
-                odp, akcje = bot.claude_odpowiedz(t, "linphone", pisze=False)
+                odp, akcje = bot.claude_odpowiedz(t, "linphone", pisze=False, glosem=glosem)
             except Exception as ex:
                 odp, akcje = f"⚠️ Claude: {ex}. Spróbuj jeszcze raz.", []
             pamiec.zapisz("claude", "linphone", odp)
@@ -361,6 +418,12 @@ def odpowiedz_czat(tekst):
                 bot.zapytaj(a, " (proponuje Claude, pisałeś na Linphone)")
             if akcje:
                 odp += "\n\n(Przycisk do potwierdzenia wysłałem w Telegramie.)"
+        if bot.tryb_odpowiedzi(t, wejscie) == "glos":
+            try:
+                AKCJE.put((wyslij_czat, (wyslij_glosowke(odp), False, FT_TYP)))
+                return
+            except Exception as ex:
+                log(f"głosówka: {type(ex).__name__}: {ex}")       # nie wyszło: odpowiedź tekstem
         AKCJE.put((wyslij_czat, (odp,)))
     except Exception as ex:
         log(f"czat: {type(ex).__name__}: {ex}")
@@ -370,7 +433,7 @@ def odpowiedz_czat(tekst):
 KONTAKT = {}
 
 
-def wyslij_czat(tekst, pisze=False):
+def wyslij_czat(tekst, pisze=False, typ="text/plain"):
     """wiadomość do właściciela na Linphone (tylko główny wątek); długie dzielone na części"""
     try:
         if "b" not in KONTAKT:
@@ -385,10 +448,10 @@ def wyslij_czat(tekst, pisze=False):
             p.isTyping = True
             b.sendTypingIndication(p)
             return
-        for i in range(0, len(tekst), 1500):
+        for i in range(0, len(tekst), 1500 if typ == "text/plain" else len(tekst)):
             p = pj.SendInstantMessageParam()
-            p.content = tekst[i:i + 1500]
-            p.contentType = "text/plain"
+            p.content = tekst[i:i + 1500] if typ == "text/plain" else tekst
+            p.contentType = typ
             b.sendInstantMessage(p)
     except pj.Error as ex:
         log(f"wyślij czat: {ex.info()}")
