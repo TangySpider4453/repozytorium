@@ -354,3 +354,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (telefon SRTP)**: Połączenia z Linphone kończyły się 488 (Linphone wymaga szyfrowania dźwięku): włączone
   SRTP opcjonalne (`srtpUse` OPTIONAL, `srtpSecureSignaling` 0). Połączenie od Pi dochodzi już do iPhone'a (push),
   test w toku. Zabezpieczone czytanie kolejki połączeń. Tymczasowo log SIP (`serwerek-telefon.service.d/diagnostyka.conf`).
+- **2026-10-22 (telefon działa)**: Pierwsza prawdziwa rozmowa przez Linphone (opus, SRTP): pytanie rozpoznane, Claude
+  odpowiedział po 7 s. Log diagnostyczny SIP wyłączony.

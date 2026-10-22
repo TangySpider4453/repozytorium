@@ -156,7 +156,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   pytanie. Gdy głosem, Claude dostaje `GLOS_PODPOWIEDZ` (zdania do czytania, bez list i emotek); w Telegramie
   głosówka z tekstem w podpisie.
   **SRTP**: Linphone szyfruje dźwięk, więc konto ma `srtpUse = OPTIONAL`, `srtpSecureSignaling = 0` (inaczej 488).
-  Diagnostyka: `TELEFON_LOG=5` (drop-in `diagnostyka.conf`) → `/tmp/telefon-sip.log`.
+  Diagnostyka w razie problemów: drop-in `serwerek-telefon.service.d/diagnostyka.conf` z `Environment=TELEFON_LOG=5`
+  → `/tmp/telefon-sip.log` (teraz wyłączona). Sprawdzone 2026-10-22: rozmowa z iPhone'a działa (opus, SRTP).
   Szybkość na Pi 4: rozpoznanie ok. 1 s na 1 s mowy (whisper base, okno `-ac` dopasowane do długości), Claude 5–10 s,
   Piper 2–3 s → odpowiedź ok. 15–25 s po skończeniu mówienia. Test bez Linphone: `SIP_DOMENA=lokalnie`
   (adres `sip:<użytkownik>@127.0.0.1:5070`, bez STUN) + `test_dzwoniacy.py`. Uwaga pjsua2 w Pythonie: wynik
