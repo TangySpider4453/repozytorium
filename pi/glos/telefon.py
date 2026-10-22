@@ -135,6 +135,7 @@ class Rozmowa:
 
     def praca(self):
         try:
+            pj.Endpoint.instance().libRegisterThread("rozmowa")     # wymagane przez pjlib w każdym wątku, który go dotyka
             import serwerek_bot as bot
             s = Sluchacz(self.nagranie)
             self.mow(self.powitanie)
@@ -192,6 +193,7 @@ class Rozmowa:
 import pjsua2 as pj         # noqa: E402
 
 AKTYWNE = {}                # id połączenia -> obiekt Polaczenie (trzymamy referencje, inaczej Python je usunie)
+ZAKONCZONE = []             # zakończone połączenia: usuwane dopiero w głównym wątku, gdy wątek rozmowy skończy pracę
 GRACZE = []                 # odtwarzacze (też muszą żyć do końca odtwarzania)
 
 
@@ -203,6 +205,7 @@ class Polaczenie(pj.Call):
         self.rec = None
         self.utworzone = time.time()
         self.odebrane = False
+        self.watek = None
 
     def onCallState(self, prm):
         ci = self.getInfo()
@@ -214,7 +217,7 @@ class Polaczenie(pj.Call):
                 z = self.rozmowa.zlecenie
                 wynik(stan="nieodebrane", tekst=z.get("tekst", ""), powod=z.get("powod", ""))
             self.rozmowa.zakonczona()
-            AKTYWNE.pop(ci.id, None)
+            ZAKONCZONE.append(AKTYWNE.pop(ci.id, self))
 
     def onCallMediaState(self, prm):
         ci = self.getInfo()
@@ -224,7 +227,8 @@ class Polaczenie(pj.Call):
                 self.rec = pj.AudioMediaRecorder()
                 self.rec.createRecorder(str(self.rozmowa.nagranie))
                 self.media.startTransmit(self.rec)
-                threading.Thread(target=self.rozmowa.praca, daemon=True).start()
+                self.watek = threading.Thread(target=self.rozmowa.praca, daemon=True)
+                self.watek.start()
 
 
 def graj(p, wav, gotowe):
@@ -314,25 +318,35 @@ def main():
     cfg.uaConfig.threadCnt = 0
     cfg.uaConfig.mainThreadOnly = True
     cfg.uaConfig.userAgent = "serwerek-raspberry"
-    cfg.uaConfig.stunServer.append("stun.linphone.org:3478")
+    lokalnie = DOMENA == "lokalnie"         # test na samym Pi: bez serwera SIP i STUN, adres sip:<uzytkownik>@127.0.0.1:5070
+    if not lokalnie:
+        cfg.uaConfig.stunServer.append("stun.linphone.org:3478")
     cfg.medConfig.clockRate = HZ
     cfg.medConfig.sndClockRate = HZ
     cfg.medConfig.ecTailLen = 0
     cfg.logConfig.level = 3
     cfg.logConfig.consoleLevel = 2
+    if os.environ.get("TELEFON_LOG"):            # diagnostyka: pełny zapis SIP do pliku
+        cfg.logConfig.level = int(os.environ["TELEFON_LOG"])
+        cfg.logConfig.filename = "/tmp/telefon-sip.log"
     ep.libInit(cfg)
     tc = pj.TransportConfig()
+    if lokalnie:
+        tc.port = 5070
     ep.transportCreate(pj.PJSIP_TRANSPORT_TCP, tc)
     ep.transportCreate(pj.PJSIP_TRANSPORT_UDP, tc)
     ep.libStart()
     ep.audDevManager().setNullDev()
     ac = pj.AccountConfig()
-    ac.idUri = f"sip:{UZYT}@{DOMENA}"
-    ac.regConfig.registrarUri = f"sip:{DOMENA};transport=tcp"
-    ac.sipConfig.proxies.append(f"sip:{DOMENA};transport=tcp;lr")
-    ac.sipConfig.authCreds.append(pj.AuthCredInfo("digest", "*", UZYT, 0, HASLO))
-    ac.natConfig.iceEnabled = True
-    ac.natConfig.sipOutboundUse = 1
+    if lokalnie:
+        ac.idUri = f"sip:{UZYT}@127.0.0.1:5070"
+    else:
+        ac.idUri = f"sip:{UZYT}@{DOMENA}"
+        ac.regConfig.registrarUri = f"sip:{DOMENA};transport=tcp"
+        ac.sipConfig.proxies.append(f"sip:{DOMENA};transport=tcp;lr")
+        ac.sipConfig.authCreds.append(pj.AuthCredInfo("digest", "*", UZYT, 0, HASLO))
+        ac.natConfig.iceEnabled = True
+        ac.natConfig.sipOutboundUse = 1
     konto = Konto()
     konto.create(ac)
     log(f"telefon startuje jako {ac.idUri}, właściciel {WLASCICIEL}")
@@ -343,6 +357,9 @@ def main():
             f(*a)
         teraz = time.time()
         GRACZE[:] = [(t, g) for t, g in GRACZE if t > teraz]
+        for p in [p for p in ZAKONCZONE if not (p.watek and p.watek.is_alive())]:
+            ZAKONCZONE.remove(p)
+            p.rozmowa.p = None          # przerwij cykl referencji: obiekt pjsua2 zniknie tu, w głównym wątku
         for p in list(AKTYWNE.values()):         # nikt nie odebrał
             if p.rozmowa.kierunek == "od Pi" and not p.odebrane and teraz - p.utworzone > CZAS_DZWONIENIA:
                 rozlacz(p)

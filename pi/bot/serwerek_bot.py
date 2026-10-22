@@ -37,7 +37,7 @@ import pamiec
 KATALOG = Path(__file__).resolve().parent
 STAN = KATALOG / "stan.json"
 INSTRUKCJA = KATALOG / "instrukcja.md"
-CLAUDE = Path.home() / ".local" / "bin" / "claude"
+CLAUDE = Path("/home/tonyg/.local/bin/claude")
 PORTAL = "http://127.0.0.1"
 LINK_TS, LINK_DOM = "http://100.108.241.58", "http://172.23.0.20"
 TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
@@ -242,7 +242,7 @@ def nowa_sesja(s, powod=None):
 
 def kontekst_sesji(sid):
     """rozmiar kontekstu = tokeny ostatniego wywolania modelu w zapisie sesji (usage w raporcie -p sumuje wszystkie wywolania)"""
-    for plik in (Path.home() / ".claude" / "projects").glob(f"*/{sid}.jsonl"):
+    for plik in Path("/home/tonyg/.claude/projects").glob(f"*/{sid}.jsonl"):
         try:
             for linia in reversed(plik.read_text(encoding="utf-8").splitlines()):
                 u = ((json.loads(linia).get("message") or {}).get("usage")) if '"usage"' in linia else None
@@ -281,6 +281,7 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True):
     if ses.get("id"):
         cmd += ["--resume", ses["id"]]
     env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")}
+    env["HOME"] = "/home/tonyg"
     stop = threading.Event()
 
     def pisze_():

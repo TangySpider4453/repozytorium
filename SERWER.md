@@ -127,6 +127,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   z `dzwon: true`), wyniki `~/bot/telefon/wyniki/*.json` → wiadomość w Telegramie (nieodebrane, zapis rozmowy).
   Rozmowa: nagrywanie (AudioMediaRecorder) → wykrycie końca wypowiedzi (energia, 0,9 s ciszy) → whisper → Claude
   (`claude_odpowiedz(kanal="telefon")`, ta sama sesja co czat) → Piper → odtworzenie. Pożegnanie albo 90 s ciszy = koniec.
+  Szybkość na Pi 4: rozpoznanie ok. 1 s na 1 s mowy (whisper base, okno `-ac` dopasowane do długości), Claude 5–10 s,
+  Piper 2–3 s → odpowiedź ok. 15–25 s po skończeniu mówienia. Test bez Linphone: `SIP_DOMENA=lokalnie`
+  (adres `sip:<użytkownik>@127.0.0.1:5070`, bez STUN) + `test_dzwoniacy.py`. Uwaga pjsua2 w Pythonie: wynik
+  `getInfo()` trzymać w zmiennej (inaczej `.media` wskazuje na zwolnioną pamięć), obiekty pjsua2 zwalniać w głównym wątku.
 
 ## Zadania (todo) z przypomnieniami (od 2026-10-22)
 - Dane `~/portal/dane/todo.json`: `{id, tekst, termin "RRRR-MM-DDTHH:MM"|null, powtarzaj null|dzien|tydzien|miesiac,

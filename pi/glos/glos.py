@@ -24,13 +24,24 @@ def gotowe():
     return WHISPER.exists() and MODEL_SZYBKI.exists() and PIPER.exists() and GLOS.exists()
 
 
+# podpowiedź słownictwa dla whispera (nazwy, które inaczej przekręca)
+SLOWNIK = "Serwerek, Raspberry Pi, Minecraft, serwer, NAS, Tailscale, Telegram, Claude, kartkówka, sprawdzian, Progres."
+
+
 def rozpoznaj(plik, dokladnie=True, limit=180):
+    """dokladnie=False: model base na 4 rdzeniach (telefon, ok. 1 s na 1 s mowy); True: small (ok. 2 s na 1 s mowy)"""
+    import wave
     model = MODEL_DOKLADNY if dokladnie and MODEL_DOKLADNY.exists() else MODEL_SZYBKI
     with tempfile.TemporaryDirectory() as tmp:
         wav = Path(tmp) / "we.wav"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(plik), "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", str(wav)],
                        check=True, timeout=60)
-        r = subprocess.run(["nice", "-n", "5", str(WHISPER), "-m", str(model), "-l", "pl", "-t", WATKI, "-nt", "-np", "-f", str(wav)],
+        with wave.open(str(wav)) as w:
+            sek = w.getnframes() / 16000
+        # okno kodera dopasowane do długości nagrania (domyślnie zawsze 30 s = 1500): 2-3 razy szybciej dla krótkich wypowiedzi
+        okno = str(min(1500, max(256, int(sek * 50) + 96)))
+        r = subprocess.run(["nice", "-n", "5", str(WHISPER), "-m", str(model), "-l", "pl", "-t", "4" if not dokladnie else WATKI,
+                            "-ac", okno, "--prompt", SLOWNIK, "-nt", "-np", "-f", str(wav)],
                            capture_output=True, text=True, timeout=limit)
     tekst = " ".join(l.strip() for l in r.stdout.splitlines() if l.strip())
     tekst = re.sub(r"\[(BLANK_AUDIO|MUZYKA|Muzyka|muzyka)\]|\((muzyka|cisza)\)", "", tekst).strip()
