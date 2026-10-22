@@ -314,3 +314,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (hasło, poprawka)**: Hasło z iPada nie przechodziło, choć na serwerze było poprawne. Pole hasła ma teraz
   wyłączoną autokorektę i wielką literę iOS, spacje na końcu są ignorowane, a dziennik przy złym haśle podaje długość
   i podpowiedź o wielkości liter (bez samego hasła).
+- **2026-10-22 (emotki)**: Menu portalu z emotkami: 🏠 Start, 🌐 Sieć, 💻 Terminal, 🚙 Łazik, 📚 Nauka, 💪 Progres,
+  🩺 Zdrowie, 🚪 Wyloguj. Backup `app.py.bak_2026-10-22_emotki`.

@@ -672,6 +672,7 @@ h3{font-size:19px;font-weight:600}
 .sub{color:var(--muted);font-size:14px;margin-top:4px}
 nav{display:flex;flex-wrap:wrap;gap:6px}
 nav a{font-family:var(--mono);font-size:13px;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px}
+nav a .ik{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;margin-right:5px;font-size:14px}
 nav a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 nav a:hover{border-color:var(--accent)}
 section{display:flex;flex-direction:column;gap:14px}
@@ -728,13 +729,13 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 <header>
   <div><h1 id="h-title">Serwerek domowy</h1><div class="sub" id="h-sub">Raspberry Pi 4B · ładowanie…</div></div>
   <nav>
-    <a href="/" data-p="start">Start</a>
-    <a href="/siec" data-p="siec">Sieć i adresy</a>
-    <a href="/terminal" data-p="terminal">Terminal</a>
-    <a href="/strony/lazik/" data-p="lazik">Łazik</a>
-    <a href="/strony/nauka/" data-p="nauka">Nauka</a>
-    <a href="/strony/progres/" data-p="progres">Progres</a>
-    <a href="/strony/zdrowie/" data-p="zdrowie">Zdrowie</a>
+    <a href="/" data-p="start"><span class="ik" aria-hidden="true">🏠</span>Start</a>
+    <a href="/siec" data-p="siec"><span class="ik" aria-hidden="true">🌐</span>Sieć i adresy</a>
+    <a href="/terminal" data-p="terminal"><span class="ik" aria-hidden="true">💻</span>Terminal</a>
+    <a href="/strony/lazik/" data-p="lazik"><span class="ik" aria-hidden="true">🚙</span>Łazik</a>
+    <a href="/strony/nauka/" data-p="nauka"><span class="ik" aria-hidden="true">📚</span>Nauka</a>
+    <a href="/strony/progres/" data-p="progres"><span class="ik" aria-hidden="true">💪</span>Progres</a>
+    <a href="/strony/zdrowie/" data-p="zdrowie"><span class="ik" aria-hidden="true">🩺</span>Zdrowie</a>
   </nav>
 </header>
 <main id="main" class="wrap" style="padding:0;width:100%"></main>
@@ -743,7 +744,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 <script>
 const PAGE="%%PAGE%%", PORT=%%PORT%%, TERMINAL_PORT=%%TPORT%%;
 document.querySelectorAll('nav a').forEach(a=>{if(a.dataset.p===PAGE)a.classList.add('on')});
-fetch('/api/dostep').then(r=>r.json()).then(d=>{if(d.siec==='domowa'){const a=document.createElement('a');a.href='/wyloguj';a.textContent='Wyloguj';a.title='Zapomnij to urządzenie (wejście z sieci domowej)';document.querySelector('nav').append(a)}}).catch(()=>{});
+fetch('/api/dostep').then(r=>r.json()).then(d=>{if(d.siec==='domowa'){const a=document.createElement('a');a.href='/wyloguj';a.innerHTML='<span class="ik" aria-hidden="true">🚪</span>Wyloguj';a.title='Zapomnij to urządzenie (wejście z sieci domowej)';document.querySelector('nav').append(a)}}).catch(()=>{});
 function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v] of Object.entries(attrs||{})){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v)}for(const k of kids.flat(9)){if(k==null||k===false)continue;e.append(k instanceof Node?k:document.createTextNode(String(k)))}return e}
 const main=document.getElementById('main');
 function dur(s){if(s==null)return'–';s=Math.floor(s);const d=Math.floor(s/86400),g=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);if(d)return d+' d '+g+' h';if(g)return g+' h '+m+' min';if(m)return m+' min';return s+' s'}
