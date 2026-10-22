@@ -1705,7 +1705,7 @@ def api_ztm_odjazdy():
             return jsonify({"przystanek": opis, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"🚏 {opis}:")})
         bl = ztm.najblizsze(p["lat"], p["lon"], 500)
         w = ztm.odjazdy([s for s, _ in bl], ile, dojscie=dict(bl))
-        return jsonify({"skad": opis, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"Najbliżej ({opis}):")})
+        return jsonify({"skad": opis, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"Najbliżej · {opis}:")})
     except RuntimeError as ex:
         return jsonify({"blad": str(ex), "tekst": str(ex)}), 503
 
