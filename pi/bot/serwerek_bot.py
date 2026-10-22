@@ -53,7 +53,7 @@ AKCJE = {   # nazwa: (opis dla przycisku, polecenie)
     "restart_minecrafta": ("Zrestartować serwer Minecraft (rozłączy graczy)", None),
     "przejrzane": ("Oznaczyć wszystkie problemy jako przejrzane", None),
 }
-KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany"], ["💾 Kopia", "✅ Przejrzane", "🔄 Restart"], ["🆕 Nowa rozmowa"]],
+KLAWIATURA = {"keyboard": [["📊 Stan", "📚 Sprawdziany", "🧭 Ścieżka"], ["💾 Kopia", "✅ Przejrzane", "🔄 Restart"], ["🆕 Nowa rozmowa"]],
               "resize_keyboard": True, "is_persistent": True}
 
 LOCK = threading.RLock()
@@ -146,6 +146,16 @@ def tekst_stanu():
             linie.append(f"💾 Kopia: trwa {kopia.get('procent') or 0}%")
         elif kopia.get("udana"):
             linie.append(f"💾 Ostatnia kopia: {kopia['udana']['czas'].replace('T', ' ')[:16]}")
+    try:
+        mk = portal("/api/obciazenie").get("maks", {})
+        for etyk, k in (("Dziś max", "dzis"), ("7 dni max", "tydzien")):
+            d = mk.get(k) or {}
+            if d:
+                cz = lambda t: f" ({d[t][1][-5:] if k == 'dzis' else d[t][1][8:10] + '.' + d[t][1][5:7] + ' ' + d[t][1][-5:]})" if t in d else ""
+                linie.append(f"📈 {etyk}: 🌡 {d.get('temp', ['?'])[0]} °C{cz('temp')} · CPU {round(d['cpu'][0]) if 'cpu' in d else '?'}%{cz('cpu')}"
+                             f" · RAM {round(d['ram'][0]) if 'ram' in d else '?'}%{cz('ram')}")
+    except (OSError, ValueError):
+        pass
     for i in z["aktywne"]:
         linie.append(f"{'🔴' if i.get('teraz', i['poziom']) == 'crit' else '🟡'} {e(i['tytul'])}: {e(i['opis'])}")
     if z["do_przejrzenia"]:
@@ -354,13 +364,14 @@ def petla_powiadomien():
 
 
 # ---------------------------------------------------------------- wejscia z sieci domowej
-# Kazde zdarzenie z IP spoza Tailscale trafia do wizyty (WIZYTY[ip]) i od razu do logu na NAS
-# (Logi/wejscia/RRRR-MM-DD.log, pliki starsze niz 30 dni sa usuwane). Od razu na Telegram: nowe wejscie, otwarcie
-# panelu logowania, kazde przejscie zabezpieczen (haslo portalu, SSH, Samba, VNC, panel MC), nieudane proby i oznaki
-# ataku (zgadywanie hasla, skanowanie portow, szukanie dziur w portalu). Po 10 min ciszy: podsumowanie calej wizyty.
+# Kazde zdarzenie z IP spoza Tailscale trafia do wizyty (WIZYTY[ip]) i od razu do logu na Pi (~/bot/wejscia/) i na NAS
+# (Logi/wejscia/RRRR-MM-DD.log; pliki starsze niz 30 dni sa usuwane). Od razu na Telegram tylko: nowe wejscie, otwarcie
+# panelu logowania, przejscie zabezpieczen (haslo portalu, SSH, Samba, VNC, panel MC), nieudane proby i oznaki ataku
+# (zgadywanie hasla, skanowanie portow, szukanie dziur w portalu). Cala sciezka: komenda „ścieżka [wczoraj|RRRR-MM-DD]”.
 import re
 
 NAS_WEJSCIA = Path("/mnt/nas/Raspberry/Logi/wejscia")
+LOK_WEJSCIA = KATALOG / "wejscia"          # ta sama kopia na Pi (komenda „ścieżka” czyta stad), 30 dni
 BUFOR = KATALOG / "wejscia-bufor.log"
 WIZYTA_KONIEC = 600
 WIZYTY = {}
@@ -383,6 +394,12 @@ def log_nas(linia):
     dzien = date.today().isoformat()
     tekst = f"{dzien} {linia}\n"
     try:
+        LOK_WEJSCIA.mkdir(exist_ok=True)
+        with open(LOK_WEJSCIA / f"{dzien}.log", "a", encoding="utf-8") as f:
+            f.write(tekst)
+    except OSError:
+        pass
+    try:
         if Path("/mnt/nas/Raspberry/.nas").exists():
             NAS_WEJSCIA.mkdir(exist_ok=True)
             if BUFOR.exists() and BUFOR.stat().st_size:
@@ -400,12 +417,13 @@ def log_nas(linia):
 
 def sprzataj_nas():
     granica = (date.today() - timedelta(days=30)).isoformat()
-    try:
-        for p in NAS_WEJSCIA.glob("*.log"):
-            if p.stem < granica:
-                p.unlink()
-    except OSError:
-        pass
+    for katalog in (NAS_WEJSCIA, LOK_WEJSCIA):
+        try:
+            for p in katalog.glob("*.log"):
+                if p.stem < granica:
+                    p.unlink()
+        except OSError:
+            pass
 
 
 def urzadzenie(ip):
@@ -460,6 +478,8 @@ def zdarzenie(ip, krok, alarm=None, rodzaj_alarmu=None, przerwa=0):
         if wyslac and rodzaj_alarmu:
             w["alarmy"][rodzaj_alarmu] = teraz
         urz = w["urz"]
+    if nowa:
+        log_nas(f"{time.strftime('%H:%M:%S')} {ip} NOWA WIZYTA" + (f" ({urz})" if urz else ""))
     log_nas(f"{time.strftime('%H:%M:%S')} {ip} {krok}")
     if not stan()["wlasciciel"]:
         return
@@ -481,14 +501,7 @@ def petla_wizyt():
             for ip, _ in koniec:
                 del WIZYTY[ip]
         for ip, w in koniec:
-            od, do = time.strftime("%H:%M", time.localtime(w["od"])), time.strftime("%H:%M", time.localtime(w["ostatnio"]))
-            kroki = [f"{t[:5]} {k}" + (f" (×{w['liczniki'][k]})" if w["liczniki"].get(k, 1) > 1 else "") for t, k in w["kroki"]]
-            if len(kroki) > 40:
-                kroki = kroki[:20] + [f"… i jeszcze {len(kroki) - 35} kroków (pełna lista w logu na NAS) …"] + kroki[-15:]
-            log_nas(f"{time.strftime('%H:%M:%S')} {ip} KONIEC WIZYTY (od {od})")
-            if stan()["wlasciciel"]:
-                wyslij(f"📋 <b>Koniec wizyty z {e(ip)}</b>" + (f" ({e(w['urz'])})" if w["urz"] else "") + f"\n{od}–{do}, {len(w['kroki'])} kroków:\n"
-                       + "\n".join(e(k) for k in kroki) + f"\n\nPełny zapis: NAS → Raspberry/Logi/wejscia/{date.today().isoformat()}.log", html_=True)
+            log_nas(f"{time.strftime('%H:%M:%S', time.localtime(w['ostatnio']))} {ip} KONIEC WIZYTY")
         if ostatnie_sprzatanie != date.today():
             ostatnie_sprzatanie = date.today()
             sprzataj_nas()
@@ -623,6 +636,51 @@ def petla_dziennika():
         time.sleep(10)
 
 
+def tekst_sciezki(arg=""):
+    import re as re_
+    arg = arg.strip().lower()
+    dzien = date.today() - timedelta(days=1) if arg == "wczoraj" else date.today()
+    if re_.fullmatch(r"\d{4}-\d{2}-\d{2}", arg):
+        dzien = date.fromisoformat(arg)
+    plik = LOK_WEJSCIA / f"{dzien.isoformat()}.log"
+    if not plik.exists():
+        return f"🧭 {dzien.strftime('%d.%m.%Y')}: nikt nie wchodził na Pi z sieci domowej."
+    wizyty = []             # [{ip, urz, od, do, kroki: [[czas, krok, ile]]}]
+    otwarte = {}
+    for l in plik.read_text(encoding="utf-8").splitlines():
+        cz = l.split(" ", 3)
+        if len(cz) < 4:
+            continue
+        _, godz, ip, krok = cz
+        if krok.startswith("NOWA WIZYTA") or ip not in otwarte:
+            w = {"ip": ip, "urz": krok[13:-1] if krok.startswith("NOWA WIZYTA (") else "", "od": godz, "do": godz, "kroki": []}
+            wizyty.append(w)
+            otwarte[ip] = w
+            if krok.startswith("NOWA WIZYTA"):
+                continue
+        w = otwarte[ip]
+        if krok == "KONIEC WIZYTY":
+            otwarte.pop(ip, None)
+            continue
+        w["do"] = godz
+        if w["kroki"] and w["kroki"][-1][1] == krok:
+            w["kroki"][-1][2] += 1
+        else:
+            w["kroki"].append([godz, krok, 1])
+    n = len(wizyty)
+    slowo = "wizyta" if n == 1 else "wizyty" if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14) else "wizyt"
+    linie = [f"<b>🧭 Ścieżka {dzien.strftime('%d.%m.%Y')}: {n} {slowo}</b>"]
+    for w in wizyty:
+        linie.append(f"\n<b>{e(w['ip'])}</b>" + (f" ({e(w['urz'])})" if w["urz"] else "") + f" · {w['od'][:5]}–{w['do'][:5]}")
+        kroki = w["kroki"]
+        if len(kroki) > 30:
+            kroki = kroki[:15] + [["", f"… {len(kroki) - 25} kroków pominiętych (pełna lista na NAS) …", 1]] + kroki[-10:]
+        for g, k, n in kroki:
+            linie.append(f"{g[:5]} {e(k.removeprefix('portal: '))}" + (f" ×{n}" if n > 1 else ""))
+    linie.append(f"\nPełny zapis: NAS → Raspberry/Logi/wejscia/{dzien.isoformat()}.log")
+    return "\n".join(linie)
+
+
 # ---------------------------------------------------------------- odbieranie wiadomosci
 KOLEJKA = []
 KOLEJKA_BUDZIK = threading.Event()
@@ -739,6 +797,11 @@ def obsluz(u):
         return
     if tekst in ("📊 Stan", "/stan"):
         wyslij(tekst_stanu(), html_=True)
+    elif tekst.split()[0].lower() in ("🧭", "ścieżka", "sciezka", "/sciezka"):
+        slowa = tekst.split()
+        while slowa and slowa[0].lower() in ("🧭", "ścieżka", "sciezka", "/sciezka"):
+            slowa.pop(0)
+        wyslij(tekst_sciezki(" ".join(slowa)), html_=True)
     elif tekst in ("📚 Sprawdziany", "/sprawdziany", "/jutro"):
         wyslij(tekst_sprawdzianow(), html_=True)
     elif tekst in ("💾 Kopia", "/kopia"):
@@ -767,7 +830,7 @@ def main():
         s = stan()
         zapisz(s)
     tg("setMyCommands", commands=[{"command": c, "description": d} for c, d in (
-        ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("kopia", "Kopia systemu teraz"),
+        ("stan", "Stan serwera"), ("sprawdziany", "Najbliższe sprawdziany"), ("sciezka", "Kto i gdzie wchodził dziś (albo: /sciezka wczoraj)"), ("kopia", "Kopia systemu teraz"),
         ("przejrzane", "Zgaś żółtą diodę"), ("restart", "Restart portalu lub Minecrafta"), ("nowa", "Nowa rozmowa z Claude"))])
     threading.Thread(target=petla_powiadomien, daemon=True).start()
     threading.Thread(target=petla_claude, daemon=True).start()

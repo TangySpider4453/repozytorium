@@ -2216,6 +2216,43 @@ def obc_zakoncz(e, koniec):
     zapisz_json(ZDROWIE / "obciazenie.json", lista[-3000:], indent=None)
 
 
+OBC_MAKS = ZDROWIE / "maksima.json"     # {"RRRR-MM-DD": {"cpu": [wartosc, "HH:MM"], "temp": [...], "ram": [...]}}, 60 dni
+
+
+def obc_maksima(wart, teraz):
+    """najwyzsze wartosci kazdego dnia (pomiar co 5 s), zapis na karte co minute"""
+    m = OBC_STAN.get("maks")
+    if m is None:
+        try:
+            m = json.loads(OBC_MAKS.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            m = {}
+        OBC_STAN["maks"] = m
+    dzien, godz = time.strftime("%Y-%m-%d"), time.strftime("%H:%M")
+    d = m.setdefault(dzien, {})
+    for k, v in wart.items():
+        if v is not None and (k not in d or v > d[k][0]):
+            d[k] = [round(v, 1), godz]
+    if teraz - OBC_STAN.get("maks_zapis", 0) > 60:
+        OBC_STAN["maks_zapis"] = teraz
+        for stary in sorted(m)[:-60]:
+            del m[stary]
+        zapisz_json(OBC_MAKS, m, indent=None)
+
+
+def obc_maks_okres(dni):
+    """maksimum z ostatnich dni (dzis wlacznie): {typ: [wartosc, "RRRR-MM-DD HH:MM"]}"""
+    m = OBC_STAN.get("maks") or {}
+    granica = time.strftime("%Y-%m-%d", time.localtime(time.time() - (dni - 1) * 86400))
+    wynik = {}
+    for dzien, d in m.items():
+        if dzien >= granica:
+            for k, (v, g) in d.items():
+                if k not in wynik or v > wynik[k][0]:
+                    wynik[k] = [v, f"{dzien} {g}"]
+    return wynik
+
+
 def obc_petla():
     prev_cpu, prev_proc, t_prev = None, {}, None
     while True:
@@ -2241,6 +2278,7 @@ def obc_petla():
                 OBC_STAN["pomiar"] = {"cpu": round(cpu, 1), "temp": temp and round(temp, 1), "ram": ram and round(ram, 1),
                                       "czas": time.strftime("%Y-%m-%dT%H:%M:%S")}
                 obc_krok({"cpu": cpu, "temp": temp, "ram": ram}, procesy, dt, teraz)
+                obc_maksima({"cpu": cpu, "temp": temp, "ram": ram}, teraz)
             prev_cpu, prev_proc, t_prev = cur_cpu, cur_proc, teraz
         except Exception as e:      # pomiar nie moze zatrzymac portalu
             try:
@@ -2262,7 +2300,8 @@ def api_obciazenie():
     for typ in OBC_TYPY:
         ep = [e for e in lista if e["typ"] == typ and e["do"] >= granica]
         doba[typ] = {"ile": len(ep), "sek": sum(e["sek"] for e in ep), "max": max((e["max"] for e in ep), default=None)}
-    return jsonify({"progi": obc_progi(), "teraz": OBC_STAN["pomiar"], "trwa": trwa, "doba": doba, "przedzialy": lista[::-1][:150]})
+    return jsonify({"progi": obc_progi(), "teraz": OBC_STAN["pomiar"], "trwa": trwa, "doba": doba, "przedzialy": lista[::-1][:150],
+                    "maks": {"dzis": obc_maks_okres(1), "tydzien": obc_maks_okres(7)}})
 
 
 # ---------- Zadania w tle: kopia systemu, render, NAS, logi, aktualizacje (panel na /strony/zdrowie/) ----------

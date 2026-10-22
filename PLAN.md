@@ -328,3 +328,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (wizyty)**: Bot śledzi wizyty z sieci domowej: od razu nowe wejście, panel logowania, przejście
   zabezpieczeń, nieudane próby i oznaki ataku; po 10 min podsumowanie ścieżki. Pełny zapis na NAS `Logi/wejscia/`
   (30 dni). Samba: zapis logowań i operacji na plikach. Naprawiony błąd, przez który powiadomienia o wejściach nie szły.
+- **2026-10-22 (ścieżka)**: Bot nie wysyła podsumowań wizyt; ścieżka zapisuje się na Pi i NAS, a przycisk 🧭 Ścieżka
+  pokazuje wizyty z dnia. 📊 Stan z maksimum temperatury, CPU i RAM z dziś i z 7 dni.

@@ -86,7 +86,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   dopisywany później; pliki starsze niż 30 dni bot usuwa). Od razu na Telegram: 🚪 nowe wejście (z MAC i nazwą
   z DNS routera), 🔑 otwarcie panelu logowania (najwyżej co 1 min), 🔓 każde przejście zabezpieczeń (hasło portalu,
   SSH, Samba, VNC, panel MC), ⛔ nieudane próby, 🕵️ oznaki ataku (≥ 3 złe hasła, 5+ portów w minutę, ścieżki typu
-  `wp-login`/`.env`). Po 10 min ciszy 📋 podsumowanie wizyty (kroki z czasem, powtórzenia jako ×N).
+  `wp-login`/`.env`). Pojedynczych przejść stron bot nie wysyła: zapisuje je od razu na Pi (`~/bot/wejscia/`, 30 dni)
+  i na NAS; komenda/przycisk **🧭 Ścieżka** (`ścieżka`, `ścieżka wczoraj`, `ścieżka RRRR-MM-DD`) pokazuje wizyty z dnia
+  (IP, MAC, od–do, kroki z godziną, powtórzenia ×N; wizyta kończy się po 10 min ciszy).
+- **📊 Stan** pokazuje też maksimum temperatury, CPU i RAM z dziś i z 7 dni (`/api/obciazenie` → `maks`; portal zapisuje
+  dzienne maksima z pomiaru co 5 s w `~/portal/dane/zdrowie/maksima.json`, 60 dni).
   Źródła: portal dopisuje do `~/portal/dane/wejscia.jsonl` każde zapytanie (`zapytanie`: metoda, ścieżka, wynik,
   zalogowany), `panel_logowania`, `logowanie_ok`, `zle_haslo`, `blokada` (bot czyta co 1 s, plik > 5 MB zeruje);
   dziennik: `sshd`, Samba `smbd` (auth_audit: `log level = 1 auth_audit:3`, `logging = file syslog@3`) i `smbd_audit`
