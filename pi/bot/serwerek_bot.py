@@ -280,7 +280,7 @@ def tryb_odpowiedzi(tekst, wejscie):
     return "glos" if wejscie == "glos" else "tekst"
 
 
-TELEFON_PODPOWIEDZ = ("[To rozmowa TELEFONICZNA: Twoja odpowiedź zostanie przeczytana na głos. Mów krótko (1–3 zdania), "
+TELEFON_PODPOWIEDZ = ("[To rozmowa TELEFONICZNA: Twoja odpowiedź zostanie przeczytana na głos. Mów krótko (1–2 zdania), "
                       "naturalnie, bez emotek, list, Markdown i adresów. Gdy coś sprawdzasz, zrób to szybko.]")
 
 

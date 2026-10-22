@@ -362,3 +362,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   bez echa rozpoznanego tekstu; Claude może listować usługi i czytać /proc/meminfo (pojedyncze polecenia, bez potoków).
 - **2026-10-22 (głosówki Linphone)**: Błąd przy pustej głosówce z Linphone (sam nagłówek .mka) obsłużony komunikatem;
   głosówki od Pi w formacie Linphone (.mka/Opus); wysłana głosówka testowa do sprawdzenia na iPhonie.
+- **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
+  dłużej tylko na wyraźną prośbę (`instrukcja.md`).
