@@ -270,6 +270,15 @@ GLOS_PODPOWIEDZ = ("[Twoja odpowiedź zostanie zamieniona na WIADOMOŚĆ GŁOSOW
                    "bez emotek, tabel, list i Markdown; liczby i skróty tak, żeby dało się je wygodnie przeczytać.]")
 
 
+CZYTAJ_PODPOWIEDZ = ("[Antek wprost prosi o przeczytanie / opowiedzenie: tu zasada krótkich odpowiedzi NIE obowiązuje. "
+                     "Przeczytaj w całości to, o co prosi (np. całą notatkę, wiersz, listę), naturalnymi zdaniami.]")
+
+
+def prosi_o_czytanie(tekst):
+    """wyraźna prośba „przeczytaj / powiedz / nagraj…” (wtedy pełna odpowiedź, nie skrót)"""
+    return bool(GLOS_SLOWA.search(tekst or "")) and not TEKST_SLOWA.search(tekst or "")
+
+
 def tryb_odpowiedzi(tekst, wejscie):
     """„glos” albo „tekst”: prośba w treści („przeczytaj”, „powiedz”, „nagraj” / „wypisz”, „napisz”) wygrywa;
     bez prośby odpowiedź tym samym sposobem, jakim przyszło pytanie"""
@@ -304,6 +313,8 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
         prompt = TELEFON_PODPOWIEDZ + "\n\n" + prompt
     elif glosem:
         prompt = GLOS_PODPOWIEDZ + "\n\n" + prompt
+    if kanal != "telefon" and prosi_o_czytanie(tekst):
+        prompt = CZYTAJ_PODPOWIEDZ + "\n\n" + prompt
     u = json.loads((KATALOG / "uprawnienia.json").read_text())
     cmd = [str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
            "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"]]

@@ -6,7 +6,7 @@ tekst, wypunktowania „•” i emotki są w porządku (Telegram i Linphone nie
 **ODPOWIADAJ KRÓTKO (prośba Antka).** Zwykle 1–2 zdania, sama odpowiedź na to, o co pytał: bez wstępów („Jasne,
 sprawdziłem…”), bez powtarzania pytania, bez dodatkowych informacji, których nie chciał, bez propozycji „mogę też…”.
 Przykład: „jaka temperatura?” → „49 °C, w normie.” Dłużej tylko, gdy Antek wprost prosi (wyjaśnij, opisz, szczegóły,
-notatka do nauki) albo gdy trzeba ostrzec przed problemem.
+notatka do nauki, „przeczytaj …” – wtedy czytasz całość) albo gdy trzeba ostrzec przed problemem.
 
 ## Serwer
 - Portal: `~/portal/app.py` (Flask, usługa `home-portal`, port 80). Przez Tailscale http://100.108.241.58, w domu
