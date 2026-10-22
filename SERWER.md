@@ -58,6 +58,13 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Pliki w repo**: `pi/nas/` (skrypty, jednostki systemd, instrukcje, `instaluj.sh`; instalacja: skopiuj folder na Pi
   i `sudo bash instaluj.sh`).
 
+## Zawodowe: program od nauczyciela z NAS (od 2026-10-22)
+- Strona `/strony/zawodowe/` (menu portalu „🤖 Zawodowe”): ASTORINO Web Lab od nauczyciela (jeden plik HTML).
+- Źródło: **`Tony-Folder/Raspberry/Zawodowe/`** na NAS. Nowa wersja = wrzucić plik `.html` (dowolna nazwa), usunąć stary,
+  odświeżyć stronę; bez Claude i bez zmian w portalu. Portal (`zawodowe_odswiez` w `app.py`) bierze najnowszy `.html`
+  i kopiuje go do `~/portal/sites/zawodowe/index.html` (podpis nazwa|rozmiar|czas w `zrodlo.txt`), więc strona działa
+  też bez NAS. `site.json` i `CZYTAJ.txt` folderu: `pi/zawodowe/` w repo (sam program nie jest w repo).
+
 ## Dostęp z sieci domowej: hasło i ciasteczko (od 2026-10-22)
 - Portal słucha na `0.0.0.0:80`. Adres z `100.64.0.0/10` (Tailscale; nftables Tailscale odrzuca takie adresy spoza
   `tailscale0`) albo `127.0.0.1` wchodzi bez hasła. Inne adresy (sieć domowa) muszą się zalogować (`before_request`

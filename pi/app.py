@@ -740,6 +740,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <a href="/strony/progres/" data-p="progres"><span class="ik" aria-hidden="true">💪</span>Progres</a>
     <a href="/strony/zdrowie/" data-p="zdrowie"><span class="ik" aria-hidden="true">🩺</span>Zdrowie</a>
     <a href="/strony/todo/" data-p="todo"><span class="ik" aria-hidden="true">📝</span>Zadania</a>
+    <a href="/strony/zawodowe/" data-p="zawodowe"><span class="ik" aria-hidden="true">🤖</span>Zawodowe</a>
   </nav>
 </header>
 <main id="main" class="wrap" style="padding:0;width:100%"></main>
@@ -1573,6 +1574,44 @@ def nas_zapisz(cel, dane=None, zrodlo=None):
 
 def nas_przenies(zrodlo, cel):
     nas_zapisz(cel, zrodlo=zrodlo)
+
+
+# ---------- Zawodowe: program od nauczyciela (ASTORINO Web Lab) prosto z NAS ----------
+# Nowa wersja: wrzucic plik .html (dowolna nazwa) do Tony-Folder/Raspberry/Zawodowe/ i usunac stary. Strona pokazuje
+# najnowszy plik .html z tego folderu i trzyma jego kopie w sites/zawodowe/index.html (dziala tez bez NAS).
+ZAWODOWE_NAS = NAS / "Zawodowe"
+ZAWODOWE = SITES / "zawodowe"
+
+
+def zawodowe_odswiez():
+    if not nas_ok():
+        return
+    try:
+        pliki = [p for p in ZAWODOWE_NAS.glob("*.htm*") if p.is_file() and not p.name.startswith(".")]
+        if not pliki:
+            return
+        naj = max(pliki, key=lambda p: p.stat().st_mtime)
+        st = naj.stat()
+        podpis = f"{naj.name}|{st.st_size}|{int(st.st_mtime)}"
+        znacznik = ZAWODOWE / "zrodlo.txt"
+        if read(znacznik).strip() == podpis and (ZAWODOWE / "index.html").is_file():
+            return
+        ZAWODOWE.mkdir(exist_ok=True)
+        tmp = ZAWODOWE / "index.html.tmp"
+        shutil.copyfile(naj, tmp)
+        os.replace(tmp, ZAWODOWE / "index.html")
+        znacznik.write_text(podpis + "\n", encoding="utf-8")
+    except OSError:
+        nas_blad()
+
+
+@app.route("/strony/zawodowe/")
+def zawodowe():
+    zawodowe_odswiez()
+    if not (ZAWODOWE / "index.html").is_file():
+        return Response("Brak programu: wrzuć plik .html do Tony-Folder/Raspberry/Zawodowe na NAS.", 404,
+                        mimetype="text/plain; charset=utf-8")
+    return send_from_directory(ZAWODOWE, "index.html", max_age=0)
     zrodlo.unlink()
 
 

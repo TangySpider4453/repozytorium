@@ -73,6 +73,11 @@ minecraft status
 Serwer NIE startuje sam po wlaczeniu Pi. Automatyczna aktualizacja zostawia go w tym stanie, w jakim byl.
 Wylacza sie sam po 30 min bez graczy (bot pisze o tym w Telegramie).
 
+ZAWODOWE (program od nauczyciela, ASTORINO Web Lab)
+---------------------------------------------------
+Strona: portal -> Zawodowe (http://100.108.241.58/strony/zawodowe/).
+Nowa wersja: wrzuc plik .html do Raspberry/Zawodowe na NAS, usun stary, odswiez strone.
+
 PORTAL Z SIECI DOMOWEJ (haslo)
 ------------------------------
 Adres w domu: http://172.23.0.20  (przez Tailscale: http://100.108.241.58, bez hasla)
