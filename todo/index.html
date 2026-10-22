@@ -58,13 +58,18 @@ input[type=date],input[type=time]{-webkit-appearance:none;appearance:none}
 .akcje button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:15px}
 .pusto{margin:0;color:var(--muted)}
 .err{color:var(--bad);font-weight:700}
+.btn.wazne[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
+.zad.dzwoni .t::before{content:"❗ ";color:var(--bad)}
+.akcje button.dz[aria-pressed="true"]{background:var(--bad);border-color:var(--bad)}
+details.arch summary{cursor:pointer;font-family:var(--serif);font-size:22px;font-weight:700;list-style-position:inside}
+details.arch[open] summary{margin-bottom:8px}
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap">
   <a class="back" href="/">← Serwerek domowy</a>
   <h1 id="h-title">📝 Zadania</h1>
-  <p>Przypomnienia przychodzą od bota w Telegramie. Zadania dodasz też tam: „todo jutro 17:00 trening”.</p>
+  <p>Przypomnienia przychodzą w Telegramie i Linphone; „📞 Bardzo ważne” = Pi do Ciebie zadzwoni. Zadania dodasz też tam: „todo jutro 17:00 trening”.</p>
 </div></header>
 <main><div class="wrap">
   <div class="card">
@@ -78,13 +83,15 @@ input[type=date],input[type=time]{-webkit-appearance:none;appearance:none}
       </div>
       <div class="row">
         <button class="btn primary" type="submit" id="zapisz">Dodaj</button>
+        <button class="btn wazne" type="button" id="wazne" aria-pressed="false" title="Pi zadzwoni do Ciebie przez Linphone o tej porze">📞 Bardzo ważne: zadzwoń</button>
         <button class="btn" type="button" id="anuluj" hidden>Anuluj</button>
         <span class="small muted" id="info"></span>
       </div>
     </form>
   </div>
   <div class="card"><h2>Do zrobienia</h2><div id="otwarte"><p class="pusto">Ładowanie…</p></div></div>
-  <div class="card"><h2>Zrobione</h2><div id="zrobione"></div></div>
+  <div class="card"><h2>Zrobione</h2><p class="small muted" style="margin:0 0 4px">Po 24 godzinach przechodzą do archiwum.</p><div id="zrobione"></div></div>
+  <div class="card"><details class="arch"><summary id="archTyt">Archiwum</summary><div id="archiwum"></div></details></div>
 </div></main>
 <script>
 const $ = id => document.getElementById(id);
@@ -104,15 +111,18 @@ function opisTerminu(z){
   const g = z.termin.slice(11, 16);
   const dzien = dz === 0 ? "dziś" : dz === 1 ? "jutro" : dz === -1 ? "wczoraj" : `${DNI[d.getDay()]} ${d.getDate()} ${MIES[d.getMonth()]}`;
   const k = !z.zrobione && d < new Date() ? "spoz" : dz === 0 ? "dzis" : "";
-  return {t:`${k === "spoz" ? "spóźnione: " : ""}${dzien}, ${g}${z.powtarzaj ? " · 🔁 " + POWT[z.powtarzaj] : ""}${z.wyslano && !z.zrobione ? " · 🔔 przypomniane" : ""}`, k};
+  return {t:`${k === "spoz" ? "spóźnione: " : ""}${dzien}, ${g}${z.powtarzaj ? " · 🔁 " + POWT[z.powtarzaj] : ""}${z.dzwon ? " · 📞 zadzwonię" : ""}${z.wyslano && !z.zrobione ? " · 🔔 przypomniane" : ""}`, k};
 }
 function wiersz(z){
   const o = opisTerminu(z);
-  return el("div", {class:"zad" + (z.zrobione ? " zrobione" : "")},
+  return el("div", {class:"zad" + (z.zrobione ? " zrobione" : "") + (z.dzwon && !z.zrobione ? " dzwoni" : "")},
     el("button", {class:"ok", title:z.zrobione ? "Cofnij" : "Zrobione", "aria-label":z.zrobione ? "Cofnij" : "Oznacz jako zrobione", text:z.zrobione ? "✓" : "",
       onclick:async () => { await api(`/api/todo/${z.id}`, {zrobione:!z.zrobione}); odswiez(); }}),
     el("div", {}, el("div", {class:"t", text:z.tekst}), el("div", {class:"kiedy " + o.k, text:z.zrobione ? "zrobione " + z.zrobione.slice(0, 16).replace("T", " ") : o.t})),
     el("div", {class:"akcje"},
+      z.zrobione ? null : el("button", {class:"dz", title:z.dzwon ? "Bardzo ważne: Pi zadzwoni (kliknij, żeby wyłączyć)" : "Bardzo ważne: niech Pi zadzwoni",
+        "aria-label":"Bardzo ważne: zadzwoń", "aria-pressed":String(!!z.dzwon), text:"📞",
+        onclick:async () => { if(!z.termin && !z.dzwon){ alert("Ustaw najpierw dzień i godzinę (✏️): Pi zadzwoni o tej porze."); return; } await api(`/api/todo/${z.id}`, {dzwon:!z.dzwon}); odswiez(); }}),
       z.zrobione ? null : el("button", {title:"Edytuj", "aria-label":"Edytuj", text:"✏️", onclick:() => edytuj(z)}),
       el("button", {title:"Usuń", "aria-label":"Usuń", text:"🗑", onclick:async () => { if(confirm(`Usunąć „${z.tekst}”?`)){ await api(`/api/todo/${z.id}`, {usun:true}); odswiez(); } }})));
 }
@@ -120,16 +130,22 @@ async function odswiez(){
   try{ LISTA = (await api("/api/todo")).zadania; }
   catch(e){ $("otwarte").replaceChildren(el("p", {class:"err", text:"Nie udało się wczytać zadań."})); return; }
   const otw = LISTA.filter(z => !z.zrobione).sort((a, b) => (a.termin || "9999").localeCompare(b.termin || "9999") || a.utworzono.localeCompare(b.utworzono));
-  const zr = LISTA.filter(z => z.zrobione).sort((a, b) => b.zrobione.localeCompare(a.zrobione)).slice(0, 30);
+  const granica = Date.now() - 864e5;          // zrobione dawniej niż 24 h temu -> archiwum
+  const zrAll = LISTA.filter(z => z.zrobione).sort((a, b) => b.zrobione.localeCompare(a.zrobione));
+  const zr = zrAll.filter(z => new Date(z.zrobione) >= granica), arch = zrAll.filter(z => new Date(z.zrobione) < granica).slice(0, 200);
+  $("archTyt").textContent = `Archiwum (${arch.length})`;
+  $("archiwum").replaceChildren(...(arch.length ? arch.map(wiersz) : [el("p", {class:"pusto", text:"Pusto."})]));
   $("otwarte").replaceChildren(...(otw.length ? otw.map(wiersz) : [el("p", {class:"pusto", text:"Nic nie czeka. 🎉"})]));
   $("zrobione").replaceChildren(...(zr.length ? zr.map(wiersz) : [el("p", {class:"pusto", text:"Jeszcze nic."})]));
 }
 function edytuj(z){
   EDYCJA = z; $("formTyt").textContent = "Edycja zadania"; $("zapisz").textContent = "Zapisz"; $("anuluj").hidden = false;
   $("tekst").value = z.tekst; $("data").value = z.termin ? z.termin.slice(0, 10) : ""; $("godz").value = z.termin ? z.termin.slice(11, 16) : "";
-  $("powt").value = z.powtarzaj || ""; window.scrollTo({top:0, behavior:"smooth"}); $("tekst").focus();
+  $("powt").value = z.powtarzaj || ""; ustawWazne(!!z.dzwon); window.scrollTo({top:0, behavior:"smooth"}); $("tekst").focus();
 }
-function wyczysc(){ EDYCJA = null; $("form").reset(); $("formTyt").textContent = "Nowe zadanie"; $("zapisz").textContent = "Dodaj"; $("anuluj").hidden = true; }
+function ustawWazne(v){ $("wazne").setAttribute("aria-pressed", String(v)); }
+$("wazne").onclick = () => ustawWazne($("wazne").getAttribute("aria-pressed") !== "true");
+function wyczysc(){ EDYCJA = null; $("form").reset(); ustawWazne(false); $("formTyt").textContent = "Nowe zadanie"; $("zapisz").textContent = "Dodaj"; $("anuluj").hidden = true; }
 $("anuluj").onclick = wyczysc;
 $("form").onsubmit = async ev => {
   ev.preventDefault();
@@ -138,10 +154,12 @@ $("form").onsubmit = async ev => {
   if(d && !g) g = "09:00";
   const termin = d ? `${d}T${g}` : null, powtarzaj = $("powt").value || null;
   if(powtarzaj && !termin){ $("info").textContent = "Powtarzanie wymaga dnia albo godziny."; return; }
+  const dzwon = $("wazne").getAttribute("aria-pressed") === "true";
+  if(dzwon && !termin){ $("info").textContent = "„Zadzwoń” wymaga dnia albo godziny: Pi zadzwoni o tej porze."; return; }
   try{
-    if(EDYCJA) await api(`/api/todo/${EDYCJA.id}`, {tekst:$("tekst").value, termin, powtarzaj});
-    else await api("/api/todo", {tekst:$("tekst").value, termin, powtarzaj});
-    $("info").textContent = termin ? "Zapisane. Przypomnienie przyjdzie w Telegramie." : "Zapisane.";
+    if(EDYCJA) await api(`/api/todo/${EDYCJA.id}`, {tekst:$("tekst").value, termin, powtarzaj, dzwon});
+    else await api("/api/todo", {tekst:$("tekst").value, termin, powtarzaj, dzwon});
+    $("info").textContent = dzwon ? "Zapisane. O tej porze Pi zadzwoni i napisze." : termin ? "Zapisane. Przypomnienie przyjdzie w Telegramie i Linphone." : "Zapisane.";
     wyczysc(); odswiez();
   }catch(e){ $("info").textContent = "Nie udało się zapisać."; }
 };

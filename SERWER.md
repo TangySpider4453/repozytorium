@@ -193,7 +193,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   zrobione, wyslano, utworzono}`. API: `GET/POST /api/todo`, `POST /api/todo/<id>` (`zrobione`, `tekst`, `termin`,
   `powtarzaj`, `odloz_min`, `wyslano`, `usun`). Zrobienie zadania powtarzanego przesuwa termin (`todo_nastepny`).
 - Strona `/strony/todo/` (repo `todo/`, link „📝 Zadania” w menu): dodawanie (dzień, godzina, powtarzanie), edycja,
-  zrobione/cofnij, usuwanie; sama godzina = dziś albo jutro, sam dzień = 9:00.
+  zrobione/cofnij, usuwanie; sama godzina = dziś albo jutro, sam dzień = 9:00. Zrobione dawniej niż 24 h temu są
+  w zwijanym „Archiwum” (liczone na stronie z pola `zrobione`, dane się nie zmieniają).
+- **Bardzo ważne = Pi dzwoni** (pole `dzwon`): przycisk „📞 Bardzo ważne: zadzwoń” w formularzu i 📞 przy zadaniu na
+  stronie (wymaga terminu), przycisk pod „Dodane” w Telegramie (`todo_dzwon:<id>`), w tekście „ważne”, „bardzo ważne”,
+  „pilne”, „zadzwoń” (`nowe_zadanie`), w Linphone „ważne [nr]”.
 - Bot: przycisk 📝 Zadania (lista + ✅ 1…20), dodawanie „todo …”/„przypomnij …” (`parsuj_zadanie`: dziś/jutro/pojutrze,
   dni tygodnia, DD.MM[.RRRR], RRRR-MM-DD, „o 17”, „17:30”, „za 20 min / 2 godziny / 3 dni”, codziennie / co tydzień /
   co miesiąc). Przypomnienia co 30 s, o każdej porze (godzinę wybiera właściciel), przyciski ✅ / +15 min / +1 h / jutro.

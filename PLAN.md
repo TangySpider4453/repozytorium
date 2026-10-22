@@ -42,7 +42,7 @@ Zasady od użytkownika:
 | Edukacja obywatelska: *Masz wpływ 1*, dział 5 „Prawo i prawa człowieka”, tematy 1–5 (sprawdzian **2026-11-12**) | ✅ na Pi, `edukacja-obywatelska-dzial-5`, z PDF podręcznika (s. 187–218): 45 fiszek, 57 pytań, 20 pytań otwartych. Temat 4 oznaczony w podręczniku „F” (fakultatywny) — uwzględniony, do potwierdzenia u nauczyciela |
 | Zawodowe: ASTORINO Web Lab od nauczyciela (`/strony/zawodowe/`) | ✅ od 2026-10-22, plik z NAS `Raspberry/Zawodowe/` (nowa wersja: podmień plik, bez Claude) |
 | Claude w bocie: pełny terminal, sudo tylko po „Tak” Antka | ✅ od 2026-10-22 (`SERWER.md`, sekcja bota) |
-| Zadania (todo) w bocie Telegram i w czacie Linphone | ✅ od 2026-10-22: dodawanie, lista, przypomnienia w obu, „zrobione / +15 / +1h / +jutro” w Linphone (szczegóły w `SERWER.md`) |
+| Zadania (todo) w bocie Telegram i w czacie Linphone | ✅ od 2026-10-22: dodawanie, lista, przypomnienia w obu, archiwum po 24 h, „📞 Bardzo ważne” = telefon, „zrobione / +15 / +1h / +jutro” w Linphone (szczegóły w `SERWER.md`) |
 | Kopie zapasowe na NAS (172.23.0.28, `Tony-Folder/Raspberry/`) | ✅ od 2026-10-22: logi i zdjęcia Progres od razu na NAS, cały system co noc o 02:00 (szczegóły w `SERWER.md`). Postępy nauki (`dane/nauka/`) i strony są w nocnej kopii |
 
 Kalendarz sprawdzianów użytkownik wkleja jako zrzut z dziennika (Librus: „najbliższe sprawdziany”). Klasa 3 KL, technikum, zawód technik robotyk.
@@ -368,6 +368,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-22 (todo: archiwum i ważne)**: Zrobione zadania po 24 h przechodzą do „Archiwum” na stronie; „📞 Bardzo
+  ważne: zadzwoń” (strona, Telegram, Linphone „ważne [nr]”, słowa „ważne/pilne” w „todo …”) = Pi dzwoni o terminie.
 - **2026-10-22 (zawodowe)**: Strona „🤖 Zawodowe” z programem nauczyciela (ASTORINO Web Lab); portal pokazuje najnowszy
   `.html` z NAS `Raspberry/Zawodowe/` i trzyma kopię na Pi. Sprawdzone: podmiana pliku na NAS od razu zmienia stronę.
 - **2026-10-22 (dzwonienie od Pi)**: Przypomnienie z telefonem nie dzwoniło (iPhone: „Anonymous”, odrzucone po 4 s,

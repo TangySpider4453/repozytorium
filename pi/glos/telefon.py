@@ -379,7 +379,8 @@ POMOC_LINPHONE_KONIEC = ("\n\nW Linphone nie ma przycisków: gdy coś trzeba pot
                          "\n\nZadania (przypomnienia przychodzą też tutaj):\n"
                          "✅ zrobione [nr] – ostatnie przypomnienie albo pozycja z listy „zadania”\n"
                          "⏰ +15, +1h, +jutro [nr] – odłóż\n"
-                         "🗑 usuń <nr>, cofnij – usuń z listy / ostatnio dodane")
+                         "🗑 usuń <nr>, cofnij – usuń z listy / ostatnio dodane\n"
+                         "📞 ważne [nr] – bardzo ważne: Pi zadzwoni o tej porze (też „todo jutro 8:00 ważne …”)")
 OSTATNIE_ZADANIE = {}   # id zadania z ostatniego przypomnienia albo ostatnio dodanego (do „zrobione”, „+15”, „cofnij”)
 
 
@@ -409,6 +410,9 @@ def zadanie_czat(t, bot):
     if m := re.fullmatch(r"(?:usuń|usun)\s+(\d+)", tl):
         zid = cel(m.group(1))
         return bot.callback_zadania(f"todo_usun:{zid}") if zid else "Nie ma takiej pozycji. Napisz „zadania”."
+    if m := re.fullmatch(r"(?:bardzo\s+)?(?:ważne|wazne)(?:\s+(\d+))?", tl):
+        zid = cel(m.group(1))
+        return bot.callback_zadania(f"todo_dzwon:{zid}") if zid else "Nie wiem, które zadanie. Napisz „zadania”, a potem np. „ważne 2”."
     if tl == "cofnij":
         zid = OSTATNIE_ZADANIE.pop("dodane", None)
         return bot.callback_zadania(f"todo_usun:{zid}") if zid else "Nie ma czego cofnąć."

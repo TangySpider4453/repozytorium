@@ -941,8 +941,9 @@ POWT_T = {"dzien": " · 🔁 codziennie", "tydzien": " · 🔁 co tydzień", "mi
 def nowe_zadanie(tekst):
     """„jutro 17:00 trening (zadzwoń)” -> zapis w portalu; (zadanie, opis, termin, powt, dzwon) albo None (pusty opis).
     Wspólne dla Telegrama i czatu Linphone."""
-    dzwon = bool(re.search(r"\b(zadzwoń|zadzwon|dzwoń|dzwon)\b", tekst, re.I))
-    tekst = re.sub(r"\s*\b(i\s+)?(zadzwoń|zadzwon|dzwoń|dzwon)\b", "", tekst, flags=re.I)
+    wz = r"(zadzwoń|zadzwon|dzwoń|dzwon|bardzo\s+ważne|bardzo\s+wazne|ważne|wazne|pilne)(?!\w)"     # „bardzo ważne” = Pi dzwoni
+    dzwon = bool(re.search(r"(?<!\w)" + wz, tekst, re.I))
+    tekst = re.sub(r"\s*(?<!\w)(i\s+)?" + wz + r"[!:,]*", "", tekst, flags=re.I)
     opis, termin, powt = parsuj_zadanie(tekst)
     if not opis:
         return None
@@ -959,7 +960,8 @@ def dodaj_zadanie(tekst):
     powt_t = POWT_T.get(powt, "")
     wyslij(f"📝 Dodane: <b>{e(opis)}</b>\n⏰ {kiedy_tekst(termin) if termin else 'bez terminu (bez przypomnienia)'}{powt_t}"
            + (" · 📞 zadzwonię" if dzwon and termin else ""), html_=True,
-           przyciski={"inline_keyboard": [[{"text": "🗑 Cofnij", "callback_data": f"todo_usun:{z['id']}"}]]})
+           przyciski={"inline_keyboard": [[{"text": "🗑 Cofnij", "callback_data": f"todo_usun:{z['id']}"}]
+                                          + ([{"text": "📞 Bardzo ważne: zadzwoń", "callback_data": f"todo_dzwon:{z['id']}"}] if termin and not dzwon else [])]})
 
 
 def zadania_do_zrobienia():
@@ -1021,6 +1023,9 @@ def callback_zadania(dane):
         if z.get("powtarzaj") and not z.get("zrobione"):
             return f"✅ Zrobione. Następnym razem: {kiedy_tekst(z['termin'])}."
         return f"✅ Zrobione: {z['tekst']}"
+    if dane.startswith("todo_dzwon:"):
+        z = portal(f"/api/todo/{zid}", {"dzwon": True})
+        return f"📞 Bardzo ważne: {kiedy_tekst(z.get('termin'))} zadzwonię i napiszę."
     if dane.startswith("todo_usun:"):
         portal(f"/api/todo/{zid}", {"usun": True})
         return "🗑 Usunięte."
@@ -1231,7 +1236,8 @@ POMOC_WSPOLNE = """📊 stan – temperatura, procesor, RAM, NAS, kopia, maksima
 📚 sprawdziany – najbliższe 2 tygodnie (też: jutro)
 📝 zadania – lista do zrobienia
 📝 todo <kiedy> <co> – dodaj zadanie, np. todo jutro 17:00 trening, todo za 20 min pranie,
-    todo w piątek 8:30 dentysta, todo codziennie 21:00 leki, todo jutro 7:00 zadzwoń pobudka
+    todo w piątek 8:30 dentysta, todo codziennie 21:00 leki, todo jutro 7:00 ważne pobudka
+    („ważne” / „zadzwoń” = bardzo ważne: Pi zadzwoni; zrobione po 24 h idą do archiwum na stronie)
 🎮 minecraft – stan serwera (włącz / wyłącz)
 💾 kopia – kopia systemu na NAS teraz
 ✅ przejrzane – zgaś żółtą diodę
