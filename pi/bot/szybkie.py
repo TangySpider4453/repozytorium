@@ -412,8 +412,9 @@ def _nauczone(t):
 
 def naucz(tekst, intencja):
     t = norm(tekst)
-    if intencja not in INTENCJE or not t or len(t) > 90:
-        return
+    if intencja not in INTENCJE or not t or len(t) > 90 or len(t.split()) > 12 or \
+            re.search(r"\b(i|oraz|a potem|potem|nastepnie|zrob|napisz|przypomnij|ustaw|dodaj|wyslij|porownaj|wytlumacz|dlaczego|jesli|gdyby)\b", t):
+        return                                      # zapamiętujemy tylko krótkie, proste pytania o jedną rzecz
     with LOCK:
         d = _wczytaj()
         d[t] = intencja
