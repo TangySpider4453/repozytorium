@@ -593,7 +593,35 @@ def _mc_krotko():
     return (f"Minecraft działa od {(m.get('od') or '')[11:16]}, gracze: {m.get('gracze')}." if m.get("dziala") else "Minecraft jest wyłączony.")
 
 
+def _kopia_krotko():
+    k = next((x for x in portal("/api/zadania")["zadania"] if x["id"] == "kopia-pi"), None)
+    if not k:
+        return "Nie mam danych o kopii."
+    if k.get("trwa"):
+        return f"Kopia właśnie trwa, {k.get('procent') or 0}%."
+    u = k.get("udana")
+    return (f"Ostatnia udana kopia: {u['czas'].replace('T', ' ')[:16]}." if u else "Nie było jeszcze udanej kopii.") + \
+        (" Ostatnia próba nie udała się." if k.get("blad") else "")
+
+
+def _lokalizacja_krotko():
+    d = portal("/api/lokalizacja")
+    l = d.get("lokalizacja")
+    if not l:
+        return "Nie znam Twojej lokalizacji: wyślij ją przyciskiem 📍 w Telegramie."
+    import math
+    odl = lambda m: 6371000 * math.hypot(math.radians(m["lat"] - l["lat"]), math.radians(m["lon"] - l["lon"]) * math.cos(math.radians(52.4)))
+    blisko = sorted(((odl(m), m["nazwa"]) for m in d.get("miejsca", {}).values()), key=lambda x: x[0])
+    kiedy = l["czas"][11:16] + ("" if l["czas"][:10] == date.today().isoformat() else f" ({l['czas'][8:10]}.{l['czas'][5:7]})")
+    if blisko and blisko[0][0] < 200:
+        return f"Jesteś w miejscu „{blisko[0][1]}” (lokalizacja z {kiedy})."
+    o = ztm_api("/api/ztm/odjazdy", skad="tu", ile=1).get("odjazdy") or []
+    return f"Lokalizacja z {kiedy}" + (f": najbliżej przystanek {o[0]['przystanek']} ({o[0]['dojscie_m']} m)." if o else ".")
+
+
 SZYBKIE_DANE = {
+    "kopia": _kopia_krotko,
+    "lokalizacja": _lokalizacja_krotko,
     "plan": lambda: mobi.wczytaj("stan", {}).get("plan", []),
     "sprawdziany": _sprawdziany_wszystkie,
     "zadania_domowe": lambda: mobi.wczytaj("stan", {}).get("zadania", []),

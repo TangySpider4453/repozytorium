@@ -76,7 +76,7 @@ def dzien_z(t, domyslny):
 
 def nazwa_dnia(d):
     dz = (d - date.today()).days
-    return {0: "dziś", 1: "jutro", 2: "pojutrze"}.get(dz) or f"w {DNI[d.weekday()]} {d.day}.{d.month:02d}".replace("w środa", "w środę") \
+    return {0: "dziś", 1: "jutro", 2: "pojutrze"}.get(dz) or f"w {DNI[d.weekday()]} {d.day}.{d.month:02d}".replace("w środa", "w środę").replace("w wtorek", "we wtorek") \
         .replace("w sobota", "w sobotę").replace("w niedziela", "w niedzielę")
 
 
@@ -219,7 +219,8 @@ def sprawdziany_odp(t, dane):
     if re.search(r"\b(najblizsz\w*|nastepn\w*|kolejn\w*)\b", t) or p:
         spr = spr[:1]
     krotko = lambda t: t if len(t) <= 70 else t[:70].rsplit(" ", 1)[0] + "…"
-    return "; ".join(f"{x['rodzaj'].capitalize()}: {x['przedmiot']}, {nazwa_dnia(date.fromisoformat(x['data']))}"
+    za = lambda x: (lambda n: "" if n < 2 else f" (za {n} dni)")((date.fromisoformat(x["data"]) - date.today()).days)
+    return "; ".join(f"{x['rodzaj'].capitalize()}: {x['przedmiot']}, {nazwa_dnia(date.fromisoformat(x['data']))}{za(x)}"
                      + (f" o {x['godzina']}" if x.get("godzina") else "") + (f" ({krotko(x['tematyka'].split(chr(10))[0])})" if x.get("tematyka") else "")
                      for x in spr[:6]) + "."
 
@@ -257,12 +258,161 @@ def godzina(t, dane):
 
 
 def data_dzis(t, dane):
-    n = datetime.now()
-    return f"Dziś {DNI[n.weekday()]}, {n.day}.{n.month:02d}.{n.year}."
+    d = dzien_z(t, lambda: date.today())
+    return f"{nazwa_dnia(d).capitalize()} {DNI[d.weekday()]}, {d.day}.{d.month:02d}.{d.year}." if (d - date.today()).days > 2 \
+        else f"{nazwa_dnia(d).capitalize()} jest {DNI[d.weekday()]}, {d.day}.{d.month:02d}.{d.year}."
 
 
 def serwer(t, dane):
     return dane["serwer"]()
+
+
+# ---------- serwer: odczyt prosto z systemu (bez portalu i bez AI)
+def _cmd(*a, timeout=3):
+    import subprocess
+    try:
+        return subprocess.run(a, capture_output=True, text=True, timeout=timeout).stdout.strip()
+    except Exception:
+        return ""
+
+
+def _temp():
+    try:
+        return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
+    except (OSError, ValueError):
+        return None
+
+
+def _cpu():
+    def stat():
+        v = [int(x) for x in Path("/proc/stat").read_text().split("\n")[0].split()[1:]]
+        return sum(v), v[3] + v[4]
+    c1, i1 = stat()
+    time.sleep(0.4)
+    c2, i2 = stat()
+    return 100 * (1 - (i2 - i1) / max(1, c2 - c1))
+
+
+def _mem():
+    m = {l.split(":")[0]: int(l.split()[1]) for l in Path("/proc/meminfo").read_text().splitlines() if ":" in l}
+    tot, dost = m["MemTotal"] / 1024, m["MemAvailable"] / 1024
+    return tot, tot - dost
+
+
+def _liczba(x, n=1):
+    return f"{x:.{n}f}".replace(".", ",")
+
+
+def temperatura(t, dane):
+    c = _temp()
+    if c is None:
+        return "Nie udało się odczytać temperatury."
+    ocena = "w normie" if c < 65 else "podwyższona, ale bezpieczna" if c < 75 else "wysoka, warto sprawdzić, co obciąża Pi"
+    return f"Procesor ma {_liczba(c)} °C, {ocena}."
+
+
+def cpu(t, dane):
+    u = _cpu()
+    l1, l5, l15 = Path("/proc/loadavg").read_text().split()[:3]
+    return f"Procesor zajęty w {round(u)}% (średnie obciążenie {l1.replace('.', ',')} na 4 rdzenie)."
+
+
+def ram(t, dane):
+    tot, uz = _mem()
+    return f"RAM: zajęte {_liczba(uz / 1024)} z {_liczba(tot / 1024)} GB ({round(100 * uz / tot)}%), wolne {_liczba((tot - uz) / 1024)} GB."
+
+
+def dysk(t, dane):
+    import os
+    st = os.statvfs("/")
+    tot, wol = st.f_blocks * st.f_frsize / 1e9, st.f_bavail * st.f_frsize / 1e9
+    wyn = f"Na karcie wolne {_liczba(wol)} z {_liczba(tot, 0)} GB (zajęte {round(100 * (1 - wol / tot))}%)."
+    if os.path.ismount("/mnt/nas"):
+        sn = os.statvfs("/mnt/nas")
+        wyn += f" Na NAS wolne {_liczba(sn.f_bavail * sn.f_frsize / 1e12, 2)} TB."
+    return wyn
+
+
+def uptime(t, dane):
+    s_ = float(Path("/proc/uptime").read_text().split()[0])
+    d, g, m = int(s_ // 86400), int(s_ % 86400 // 3600), int(s_ % 3600 // 60)
+    start = datetime.now() - timedelta(seconds=s_)
+    return (f"Pi działa bez przerwy {f'{d} dni ' if d else ''}{g} h {m} min, od {start.strftime('%d.%m %H:%M')}.")
+
+
+def zasilanie(t, dane):
+    v = _cmd("vcgencmd", "get_throttled").split("=")[-1]
+    try:
+        x = int(v, 16)
+    except ValueError:
+        return "Nie udało się odczytać stanu zasilania."
+    if x == 0:
+        return "Zasilanie i taktowanie w porządku, bez spadków napięcia."
+    teraz = [n for b, n in ((0, "za niskie napięcie"), (1, "ograniczone taktowanie"), (2, "throttling"), (3, "limit temperatury")) if x >> b & 1]
+    kiedys = [n for b, n in ((16, "za niskie napięcie"), (17, "ograniczone taktowanie"), (18, "throttling"), (19, "limit temperatury")) if x >> b & 1]
+    return ("Teraz: " + ", ".join(teraz) + ". " if teraz else "Teraz w porządku. ") + \
+        ("Od uruchomienia było: " + ", ".join(kiedys) + ". Sprawdź zasilacz (5 V, 3 A)." if kiedys else "")
+
+
+def nas(t, dane):
+    import os
+    if not os.path.ismount("/mnt/nas"):
+        ping = _cmd("ping", "-c1", "-W1", "172.23.0.28")
+        return ("NAS nie jest podłączony, ale odpowiada w sieci: Pi połączy się samo w ciągu 2 minut (albo każ mi to naprawić)."
+                if " 0% packet loss" in ping else "NAS nie odpowiada w sieci: pewnie jest wyłączony albo uśpiony.")
+    ok = Path("/mnt/nas/Raspberry/.nas").exists()
+    return "NAS jest podłączony i działa." if ok else "NAS jest zamontowany, ale nie widzę folderu Raspberry: sprawdź udział."
+
+
+def kopia(t, dane):
+    return dane["kopia"]()
+
+
+USLUGI = {"portal": "home-portal", "strona": "home-portal", "bot": "serwerek-bot", "telegram": "serwerek-bot",
+          "telefon": "serwerek-telefon", "linphone": "serwerek-telefon", "tailscale": "tailscaled", "vnc": "wayvnc",
+          "pulpit": "serwerek-vnc-ws", "terminal": "home-terminal", "samba": "smbd", "playit": "playit", "tunel": "playit",
+          "dashboard": "pi-dashboard", "panel": "pi-dashboard", "ollama": "ollama", "ssh": "ssh"}
+
+
+def usluga(t, dane):
+    k = next((k for k in USLUGI if re.search(rf"\b{k}\w*", t)), None)
+    if not k:
+        bledy = _cmd("systemctl", "--failed", "--no-legend", "--plain")
+        return "Wszystkie usługi działają." if not bledy else "Z błędem: " + ", ".join(l.split()[0] for l in bledy.splitlines()) + "."
+    stan = _cmd("systemctl", "is-active", USLUGI[k])
+    return f"{k.capitalize()} ({USLUGI[k]}): " + {"active": "działa.", "inactive": "wyłączony.", "failed": "ma błąd (failed)."}.get(stan, stan + ".")
+
+
+def co_obciaza(t, dane):
+    """chwilowe zużycie (druga próbka top), procesy o tej samej nazwie zsumowane"""
+    out = _cmd("top", "-b", "-n2", "-d0.5", "-w", "200", timeout=5).split("\n\n")
+    linie = [l.split() for l in out[-1].splitlines() if l.strip() and l.split()[0].isdigit()] if out else []
+    suma = {}
+    for l in linie:
+        try:
+            cpu_, mem_, nazwa = float(l[8].replace(",", ".")), float(l[9].replace(",", ".")), l[11]
+        except (IndexError, ValueError):
+            continue
+        if nazwa in ("top", "ps"):
+            continue
+        c, m = suma.get(nazwa, (0, 0))
+        suma[nazwa] = (c + cpu_, m + mem_)
+    naj = sorted(suma.items(), key=lambda x: -(x[1][0] * 3 + x[1][1]))[:4]
+    if not naj:
+        return "Nie udało się sprawdzić procesów."
+    tot, _ = _mem()
+    return "Najwięcej zajmuje: " + "; ".join(f"{n} {round(c)}% procesora, {round(m * tot / 100)} MB RAM" for n, (c, m) in naj) + "."
+
+
+def siec(t, dane):
+    ip = _cmd("hostname", "-I").split()
+    net = " 0% packet loss" in _cmd("ping", "-c1", "-W1", "1.1.1.1")
+    lan = [a for a in ip if a.startswith("172.") or a.startswith("192.")]
+    return f"Internet {'działa' if net else 'NIE działa'}. Adres w domu: {', '.join(lan) or 'brak'}, Tailscale: 100.108.241.58."
+
+
+def lokalizacja(t, dane):
+    return dane["lokalizacja"]()
 
 
 def minecraft(t, dane):
@@ -288,6 +438,8 @@ INTENCJE = {
     "sprawdziany": sprawdziany_odp, "zadania_domowe": zadania_domowe_odp, "todo": todo_odp, "budzik": budzik_odp,
     "godzina": godzina, "data": data_dzis, "serwer": serwer, "minecraft": minecraft, "poczta": poczta_odp,
     "autobus": autobus, "do_domu": do_domu,
+    "temperatura": temperatura, "cpu": cpu, "ram": ram, "dysk": dysk, "uptime": uptime, "zasilanie": zasilanie, "nas": nas,
+    "kopia": kopia, "usluga": usluga, "co_obciaza": co_obciaza, "siec": siec, "lokalizacja": lokalizacja,
 }
 
 # ---------------------------------------------------------------- wzorce
@@ -311,7 +463,8 @@ WZORCE = [
         rf"(?:jaka|kiedy|o ktorej)\s+(?:jest\s+|mam\s+)?ostatni\w*(?:\s+{L})?", rf"ostatni\w*\s+{L}", rf"koniec\s+{L}",
         rf"do\s+ktorej(?:\s+mam)?(?:\s+{L})?", rf"(?:do ktorej|o ktorej)\s+(?:jestem|siedze)\s+w\s+{L}", rf"(?:o\s+)?ktorej\s+(?:koniec|wolne)",
     ]),
-    ("ile_lekcji", [rf"ile\s+(?:mam\s+)?(?:godzin\s+)?{L}(?:\s+mam)?", rf"ile\s+mam\s+{L}", rf"ile\s+{L}\s+mam"]),
+    ("ile_lekcji", [rf"ile\s+(?:mam\s+)?(?:godzin\s+)?{L}(?:\s+mam)?", rf"ile\s+mam\s+{L}", rf"ile\s+{L}\s+mam",
+                    rf"czy\s+(?:mam|jest|ide do|idziemy do)\s+{L}", rf"czy\s+{L}", rf"(?:mam|jest)\s+{L}"]),
     ("plan_dnia", [
         rf"(?:jaki|co)\s+(?:mam\s+)?(?:za\s+)?(?:plan|planie)(?:\s+lekcji)?", rf"plan\w*(?:\s+lekcji)?",
         rf"co\s+(?:mam|bede miec|bede mial|jest)(?:\s+w\s+szkole|(?:\s+na)?\s+lekcjach)?", rf"(?:jakie|co za)\s+(?:mam\s+)?{L}",
@@ -331,6 +484,7 @@ WZORCE = [
         rf"(?:czy\s+)?(?:co\s+|jakie\s+)?(?:mam\s+|pisze\s+|bede pisac\s+|beda\s+)?(?:jakies\s+)?(?:sprawdzian\w*|kartkow\w*|testy|test|klasowk\w*)(?:\s+z\s+\w+)?(?:\s+w\s+tym\s+tygodniu)?",
         rf"co\s+(?:pisze|piszemy|bede pisac|mam pisac)", rf"(?:kiedy|na kiedy)\s+(?:mam\s+|jest\s+)?(?:sprawdzian\w*|kartkow\w*|test)\s*(?:z\s+\w+)?",
         rf"(?:najblizsz\w+|nastepn\w+|kolejn\w+)\s+(?:sprawdzian\w*|kartkow\w*|test)(?:\s+z\s+\w+)?",
+        rf"(?:za\s+)?ile\s+dni\s+(?:do|mam do|zostalo do)?\s*(?:sprawdzian\w*|kartkow\w*|testu)(?:\s+z\s+\w+)?", rf"(?:za\s+ile|kiedy)\s+(?:jest\s+|mam\s+)?(?:sprawdzian\w*|kartkow\w*)(?:\s+z\s+\w+)?",
         rf"z\s+czego\s+(?:mam\s+)?(?:sprawdzian|kartkowke|test)", rf"czego\s+(?:mam\s+)?(?:sie\s+)?(?:mam\s+)?uczyc", rf"(?:co|czego)\s+(?:sie\s+)?(?:musze\s+)?(?:nauczyc|powtorzyc)",
     ]),
     ("zadania_domowe", [rf"(?:co|czy|jakie)\s+(?:mam\s+)?(?:cos\s+)?(?:jakies\s+)?(?:zadane|zadan\w*\s+domow\w*|prace\s+domow\w*|zadanie\s+domowe|lekcje\s+do\s+odrobienia|do\s+odrobienia)",
@@ -341,11 +495,38 @@ WZORCE = [
                 r"(?:czy\s+)?(?:mam\s+)?(?:ustawiony|nastawiony)\s+(?:budzik|alarm)", r"(?:o\s+ktorej|kiedy)\s+(?:mnie\s+)?(?:obudzisz|budzisz|zadzwonisz rano)",
                 r"(?:moje\s+)?(?:budziki|alarmy)"]),
     ("godzina", [r"(?:ktora|jaka)\s+(?:jest\s+)?(?:godzina|godz)(?:\s+teraz)?", r"ktora\s+(?:jest|teraz)", r"(?:ile\s+jest\s+)?godzina", r"jaki\s+(?:jest\s+)?czas"]),
-    ("data", [r"(?:jaki|ktory)\s+(?:jest\s+)?(?:dzien|data|dzien tygodnia)", r"(?:ktorego|jaki)\s+(?:mamy|jest)", r"(?:jaka|ktora)\s+(?:jest\s+)?data",
+    ("data", [r"(?:jaki|ktory)\s+(?:jest\s+|bedzie\s+)?(?:dzien|data|dzien tygodnia)(?:\s+(?:jest|bedzie))?", r"(?:ktorego|jaki)\s+(?:mamy|jest)", r"(?:jaka|ktora)\s+(?:jest\s+)?data",
               r"jaki\s+mamy\s+dzien", r"ktorego"]),
     ("serwer", [r"(?:jak\s+)?(?:sie\s+)?(?:ma|czuje|dziala)\s+(?:serwer|serwerek|raspberry|raspi|pi|malinka)", r"(?:stan|status)(?:\s+(?:serwera|pi|raspberry))?",
-                r"(?:czy\s+)?(?:wszystko|serwer)\s+(?:dziala|ok|w porzadku)(?:\s+na\s+(?:pi|serwerze))?", r"(?:jaka|ile)\s+(?:jest\s+)?(?:temperatura|temp)(?:\s+(?:procesora|cpu|pi|serwera))?",
-                r"(?:ile|jakie)\s+(?:jest\s+)?(?:zuzyci\w+\s+)?(?:ram|ramu|pamieci|procesora|cpu)(?:\s+(?:na\s+)?(?:pi|serwerze))?", r"(?:jak|co)\s+tam\s+(?:na\s+)?(?:serwerze|pi)"]),
+                r"(?:czy\s+)?(?:wszystko|serwer)\s+(?:dziala|ok|w porzadku)(?:\s+na\s+(?:pi|serwerze))?", r"(?:jak|co)\s+tam\s+(?:na\s+)?(?:serwerze|pi)",
+                r"(?:stan|status|parametry|statystyki)\s+(?:serwera|pi|raspberry)", r"(?:jak|co)\s+(?:z|u)\s+(?:serwerem|pi|raspberry)"]),
+    ("temperatura", [r"(?:jaka|ile)\s+(?:jest\s+|ma\s+)?(?:teraz\s+)?(?:temperatur\w*|temp|stopni)(?:\s+(?:ma\s+)?(?:procesor\w*|cpu|pi|raspberry|raspi|serwer\w*|malink\w*))?",
+                     r"(?:temperatur\w*|temp)(?:\s+(?:procesor\w*|cpu|pi|raspberry|serwer\w*))?", r"ile\s+stopni(?:\s+ma)?(?:\s+\w+)?",
+                     r"czy\s+(?:pi|raspberry|serwer|procesor)\s+(?:sie\s+)?(?:grzeje|przegrzewa|jest goracy|nie jest za goracy)",
+                     r"(?:jak|czy)\s+(?:goracy|cieply)\s+(?:jest\s+)?(?:procesor|pi|serwer)"]),
+    ("cpu", [r"(?:jakie|ile)\s+(?:jest\s+)?(?:zuzyci\w+|obciazeni\w+)(?:\s+(?:procesora|cpu))?(?:\s+na\s+(?:pi|serwerze))?", r"(?:ile|jak)\s+(?:zuzywa|zajety|obciazony)\s+(?:procesor|cpu)",
+             r"(?:zuzyci\w+|obciazeni\w+)\s+(?:procesora|cpu)", r"ile\s+(?:procent\s+)?(?:procesora|cpu)", r"(?:procesor|cpu)"]),
+    ("ram", [r"(?:ile|jakie)\s+(?:jest\s+)?(?:zuzyci\w+\s+|wolnego\s+|wolnej\s+|zajetego\s+|zajetej\s+)?(?:ram\w*|pamieci)(?:\s+(?:jest\s+)?(?:zajete|wolne|zajetej|wolnej))?(?:\s+na\s+(?:pi|serwerze))?",
+             r"(?:zuzyci\w+\s+)?(?:ram\w*|pamieci ram|pamiec)", r"(?:ile|jak)\s+(?:jest\s+)?zajet\w+\s+(?:ramu|pamieci)"]),
+    ("dysk", [r"(?:ile|jak duzo)\s+(?:jest\s+|mam\s+)?(?:wolnego\s+)?miejsca(?:\s+(?:na|w)\s+(?:karcie|dysku|pi|raspberry|serwerze|nas\w*|karcie sd))?",
+              r"(?:wolne|zajete)\s+miejsce(?:\s+na\s+\w+)?", r"(?:czy\s+)?(?:karta|dysk)\s+(?:jest\s+)?(?:pelna|pelny|zapchana)", r"(?:stan|zajetosc)\s+(?:dysku|karty)",
+              r"ile\s+(?:zostalo\s+)?(?:gb|miejsca)(?:\s+zostalo)?(?:\s+na\s+\w+)?"]),
+    ("uptime", [r"(?:od\s+kiedy|jak dlugo|ile\s+(?:czasu|dni))\s+(?:dziala|chodzi|jest wlaczony)\s*(?:pi|raspberry|serwer\w*|raspi)?(?:\s+bez\s+przerwy)?",
+                r"kiedy\s+(?:byl\s+)?(?:ostatni\s+)?(?:restart|reboot|wlaczony)(?:\s+(?:pi|serwera|raspberry))?", r"uptime"]),
+    ("zasilanie", [r"(?:czy\s+)?(?:zasilanie|zasilacz|napiecie)\s*(?:jest\s+)?(?:ok|w porzadku|dziala|wystarcza)?", r"(?:czy\s+)?(?:jest\s+|sa\s+|byly\s+)?(?:throttling|undervoltage|spadki napiecia)",
+                   r"czy\s+(?:pi|procesor)\s+(?:zwalnia|sie dlawi|jest dlawiony)"]),
+    ("nas", [r"(?:czy\s+)?(?:nas|dysk sieciowy|synology)\s+(?:dziala|jest podlaczony|jest wlaczony|odpowiada|jest)?\s*(?:podlaczony)?", r"(?:jak|co)\s+(?:tam\s+)?(?:z|tam)\s+(?:nasem|nas)",
+             r"(?:stan|status)\s+(?:nasa|nas)", r"czy\s+(?:pi\s+)?(?:widzi|ma)\s+(?:nas|nasa)"]),
+    ("kopia", [r"(?:kiedy|czy)\s+(?:byla\s+|jest\s+|zrobila sie\s+|sie zrobila\s+)?(?:ostatnia\s+)?kopi\w*(?:\s+(?:zapasowa|systemu))?(?:\s+sie\s+(?:zrobila|udala))?",
+               r"(?:stan|status)\s+kopii", r"(?:ostatnia\s+)?kopia(?:\s+(?:zapasowa|systemu))?"]),
+    ("usluga", [r"(?:czy\s+)?(?:dziala|chodzi|jest wlaczony|jest wlaczona)\s+(?:portal|strona|bot|telegram|telefon|linphone|tailscale|vnc|pulpit|terminal|samba|playit|tunel|dashboard|panel|ollama|ssh)\w*",
+                r"(?:czy\s+)?(?:portal|strona|bot|telefon|linphone|tailscale|vnc|pulpit|terminal|samba|playit|tunel|dashboard|panel|ollama|ssh)\w*\s+(?:dziala|chodzi|jest wlaczony|jest wlaczona|jest ok)",
+                r"(?:czy\s+)?(?:wszystkie\s+)?uslugi\s+(?:dzialaja|ok)", r"(?:czy\s+)?(?:jakas|cos)\s+(?:usluga\s+)?(?:nie dziala|ma blad|padlo)"]),
+    ("co_obciaza", [r"co\s+(?:najbardziej\s+)?(?:obciaza|zuzywa|zjada|zzera|zajmuje)\s*(?:procesor|cpu|ram|pamiec|pi|serwer)?", r"(?:jakie|ktore)\s+procesy(?:\s+\w+){0,3}",
+                    r"(?:top|najwieksze procesy)"]),
+    ("siec", [r"(?:czy\s+)?(?:jest|dziala)\s+internet(?:\s+na\s+(?:pi|serwerze))?", r"(?:jaki|jakie)\s+(?:jest\s+|ma\s+)?(?:adres|ip|adresy)(?:\s+ip)?(?:\s+(?:ma\s+)?(?:pi|raspberry|serwera|serwer))?",
+              r"(?:adres\s+)?ip(?:\s+(?:pi|raspberry|serwera))?", r"czy\s+(?:pi|serwer)\s+ma\s+internet"]),
+    ("lokalizacja", [r"gdzie\s+(?:teraz\s+)?jestem", r"(?:jaka\s+jest\s+)?moja\s+lokalizacja", r"gdzie\s+mnie\s+widzisz"]),
     ("minecraft", [r"(?:czy\s+)?(?:minecraft|serwer minecraft|mc)\s+(?:dziala|jest wlaczony|chodzi)", r"(?:ile|kto)\s+(?:osob\s+|graczy\s+)?(?:gra|jest)(?:\s+na\s+(?:minecraft\w*|serwerze minecraft|mc|serwerze))?",
                    r"(?:stan|status)\s+(?:minecraft\w*|mc)"]),
     ("poczta", [r"(?:czy\s+)?(?:mam\s+)?(?:jakies\s+)?(?:nowe\s+|wazne\s+)?(?:maile|maila|wiadomosci mailowe|poczte)", r"co\s+(?:nowego\s+)?(?:w\s+)?(?:poczcie|mailach|na mailu)",
@@ -357,7 +538,7 @@ WZORCE = [
 ]
 SKOMPILOWANE = [(i, [re.compile(w) for w in ws]) for i, ws in WZORCE]
 BEZ_DNIA = {"pierwsza_lekcja", "ostatnia_lekcja", "ile_lekcji", "plan_dnia", "sala", "kiedy_przedmiot", "zmiany", "sprawdziany",
-            "zadania_domowe", "todo", "teraz_lekcja", "budzik", "data"}
+            "zadania_domowe", "todo", "teraz_lekcja", "budzik", "data", "temperatura", "cpu", "ram", "dysk"}
 WYMAGA_DNIA = {"co jest", "co mam", "o ktorej", "na ktora", "na ktorej", "do ktorej", "ktora", "jest", "mam"}
 # ogólne wzorce z przedmiotem na końcu: najpierw wszystkie konkretne (np. „kiedy sprawdzian z fizyki” to sprawdziany)
 SKOMPILOWANE.sort(key=lambda x: x[0] in ("kiedy_przedmiot", "sala"))
@@ -378,7 +559,26 @@ def rozpoznaj(tekst):
             if intencja == "sala" and not przedmiot_z(t) and "sal" not in t:
                 continue
             return intencja, t
-    return _nauczone(t), t
+    return _nauczone(t) or _luzno(t), t
+
+
+LUZNE = [  # (słowa kluczowe po norm, intencja): krótkie pytania z przekręconej mowy („sprawcie go jest te paratura na procesorza”)
+    (r"temperat|paratur|\btemp\b|stopni|przegrz|grzeje", "temperatura"),
+    (r"\bram\w*|pamie[cn]", "ram"),
+    (r"wolne\w* miejsc|ile miejsc|\bdysk|karc\w* sd|zapchan", "dysk"),
+    (r"obciaz|zuzyc\w* procesor|procesor\w* zuzy", "cpu"),
+    (r"(?:\bnas\b|nasa\b|nasem\b|synology).*(?:dzial|polacz|podlacz|widz|odpowiad|stan|jest|wlacz)|(?:dzial|polacz|podlacz|widz|odpowiad|stan|wlacz).*(?:\bnas\b|nasa\b|nasem\b|synology)", "nas"),
+]
+NIE_LUZNIE = re.compile(r"\b(napraw|zrob|dlaczego|czemu|wylacz|wlacz|restart|usun|dodaj|ustaw|zmien|napisz|przypomnij|zadzwon|jak\s+to|co\s+zrobic|problem|nie\s+dziala|blad)")
+
+
+def _luzno(t):
+    if len(t.split()) > 9 or NIE_LUZNIE.search(t):
+        return None
+    for wz, intencja in LUZNE:
+        if re.search(wz, t):
+            return intencja
+    return None
 
 
 # ---------------------------------------------------------------- uczenie (sformułowania oznaczone przez Claude)

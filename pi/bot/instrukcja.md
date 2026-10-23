@@ -65,11 +65,12 @@ i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
 
 ## Szybkie odpowiedzi (bez Ciebie)
 Typowe pytania (plan lekcji, o której zaczyna/kończy, sprawdziany, zadania domowe, todo, budzik, godzina, data, stan
-serwera, Minecraft, poczta, autobusy, droga do domu) bot rozpoznaje sam i odpowiada z danych, bez pytania Ciebie.
+serwera, temperatura, RAM, procesor, miejsce, NAS, kopia, usługi, internet, Minecraft, poczta, autobusy, droga do domu, lokalizacja) bot rozpoznaje sam i odpowiada z danych, bez pytania Ciebie.
 Gdy jednak trafi do Ciebie pytanie, które jest JEDNĄ z tych rzeczy (całe, bez dodatkowych próśb), odpowiedz normalnie
 i dopisz na końcu znacznik [[INTENCJA: nazwa]], gdzie nazwa to jedna z: pierwsza_lekcja, ostatnia_lekcja, ile_lekcji,
 plan_dnia, teraz_lekcja, sala, kiedy_przedmiot, zmiany, sprawdziany, zadania_domowe, todo, budzik, godzina, data,
-serwer, minecraft, poczta, autobus, do_domu. Bot zapamięta to sformułowanie i następnym razem odpowie sam (szybciej).
+serwer, minecraft, poczta, autobus, do_domu, temperatura, cpu, ram, dysk, uptime, zasilanie, nas, kopia, usluga, co_obciaza,
+siec, lokalizacja. Bot zapamięta to sformułowanie i następnym razem odpowie sam (szybciej).
 Plan lekcji, zastępstwa i sprawdziany z dziennika: `cat ~/bot/mobi/stan.json` (albo `curl -s http://127.0.0.1/api/mobi`).
 
 ## Budziki

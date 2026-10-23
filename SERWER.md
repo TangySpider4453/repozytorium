@@ -195,9 +195,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 ## Szybkie odpowiedzi bez AI (od 2026-10-23)
 - `pi/bot/szybkie.py`: typowe pytania rozpoznane wzorcami (po `norm()`: bez polskich znaków i wypełniaczy; określenie
   dnia „jutro / w piątek…” wycinane przed dopasowaniem i odczytywane przez odpowiedź) → odpowiedź z danych na Pi
-  w < 0,1 s (autobusy ok. 0,5 s): pierwsza/ostatnia lekcja, ile lekcji, plan dnia, teraz/następna lekcja, sala,
-  kiedy przedmiot, zastępstwa, sprawdziany, zadania domowe, todo, budzik, godzina, data, serwer, Minecraft, poczta,
-  autobus, do domu. Hak na początku `claude_odpowiedz` (wszystkie kanały: Telegram, Linphone, głosówki, telefon).
+  w < 0,1 s (autobusy ok. 0,5 s): pierwsza/ostatnia lekcja, ile lekcji / czy jest szkoła, plan dnia, teraz/następna
+  lekcja, sala, kiedy przedmiot, zastępstwa, sprawdziany (z „za ile dni”), zadania domowe, todo, budzik, godzina, data,
+  serwer, Minecraft, poczta, autobus, do domu; od 2026-10-23 też prosto z systemu: temperatura (/sys), procesor
+  (/proc/stat), RAM, miejsce (karta i NAS), uptime, zasilanie (vcgencmd get_throttled), NAS, kopia, usługi (systemctl
+  is-active / --failed), co obciąża (top), internet i IP, lokalizacja. `_luzno`: krótkie pytania z przekręconej mowy
+  po słowach kluczowych (temperatura, RAM, miejsce, obciążenie, NAS), bez słów typu napraw/dlaczego/wyłącz. Hak na początku `claude_odpowiedz` (wszystkie kanały: Telegram, Linphone, głosówki, telefon).
 - Uczenie: Claude dopisuje `[[INTENCJA: nazwa]]`, gdy pytanie było jedną z intencji; bot zapisuje sformułowanie
   w `~/bot/szybkie_nauczone.json` i następnym razem (podobieństwo słów i trigramów ≥ 0,82) odpowiada sam.
   Statystyka trafień: `~/bot/szybkie_statystyka.json`. Test: `python3 pi/bot/test_szybkie.py` (308 zdań, w tym 30,
