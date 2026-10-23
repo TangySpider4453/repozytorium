@@ -451,4 +451,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-23 (przyczyna ciszy)**: Pi wysyła dźwięk, iPhone go odbiera (raporty RTCP bez strat), ale nie gra i nie
   wysyła mikrofonu. Zaczęło się po restarcie telefonu w trakcie rozmowy o 20:57 (brak rozłączenia). Telefon.py rozłącza
   teraz rozmowy przy zatrzymaniu usługi.
+- **2026-10-23 (Hasła Apple)**: logowanie do portalu z sieci domowej i hasło pulpitu VNC mają pola użytkownik + hasło
+  rozpoznawane przez Hasła Apple (zapis i autouzupełnianie). Wdrożone, strona sprawdzona curl.
 

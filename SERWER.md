@@ -69,6 +69,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - Portal słucha na `0.0.0.0:80`. Adres z `100.64.0.0/10` (Tailscale; nftables Tailscale odrzuca takie adresy spoza
   `tailscale0`) albo `127.0.0.1` wchodzi bez hasła. Inne adresy (sieć domowa) muszą się zalogować (`before_request`
   `wymagaj_hasla`): strony → przekierowanie na `/logowanie?nast=…`, `/api/*` → 401.
+- Hasła Apple / pęk kluczy: formularz `/logowanie` ma widoczne pole „Użytkownik” (`serwerek`, `autocomplete=username`)
+  i hasło `current-password`, więc iPhone proponuje zapisanie i sam wpisuje hasło (zapis pod adresem, z którego wchodzisz,
+  np. `raspberrypi.local`). Pulpit VNC na /zdalne ma pole `tonyg` + hasło, też do autouzupełniania.
 - `/logowanie`: hasło sprawdzane ze skrótem w `~/portal/dane/dostep.json` (600: `hash` werkzeug/scrypt, `klucz`
   podpisu, `wersja`). Ciasteczko `portal_sesja` (itsdangerous, HttpOnly, SameSite=Lax, 365 dni) zawiera `wersja`.
   5 złych haseł z jednego adresu = 5 min blokady; każda próba w dzienniku zdrowia (`LOGOWANIE …`). `/wyloguj` usuwa

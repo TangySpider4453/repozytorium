@@ -932,7 +932,10 @@ function renderVnc(cel){
   const ekran=h('div',{style:'width:100%;height:calc(100vh - 230px);min-height:320px;background:#111;border-radius:8px;overflow:hidden'});
   const haslo=h('input',{type:'password',placeholder:'hasło Linuksa (tonyg)',autocomplete:'current-password',style:'font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:7px;width:14em'});
   const pol=h('button',{class:'btn',text:'Połącz'}), roz=h('button',{class:'btn alt',type:'button',text:'Rozłącz',disabled:''}), pelny=h('button',{class:'btn alt',type:'button',text:'⛶ Pełny ekran'});
-  const form=h('form',{class:'btns',style:'margin:0 0 10px;align-items:center'},haslo,pol,roz,pelny,status);
+  // pole użytkownika: Hasła Apple (pęk kluczy) rozpoznają formularz logowania i podpowiadają hasło tonyg
+  const uzyt=h('input',{type:'text',name:'username',value:'tonyg',autocomplete:'username',autocapitalize:'off',style:'font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:7px;width:7em'});
+  haslo.name='password';
+  const form=h('form',{class:'btns',style:'margin:0 0 10px;align-items:center',autocomplete:'on',method:'post',action:'/zdalne?tryb=vnc'},uzyt,haslo,pol,roz,pelny,status);
   cel.replaceChildren(h('section',null,h('p',{class:'sec-note',text:'Pulpit Raspberry Pi. Wpisz hasło Linuksa (to samo co do terminala). Na telefonie: dotknięcie = klik, przeciągnięcie = ruch myszy.'}),form,ekran));
   let rfb=null;
   pelny.onclick=()=>{(ekran.requestFullscreen||ekran.webkitRequestFullscreen||(()=>{})).call(ekran)};
@@ -1089,11 +1092,12 @@ small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
 #pokaz{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:auto;margin:0;padding:6px 12px;font-size:15px;
   background:transparent;color:var(--acc);border:1.5px solid var(--line);border-radius:8px}
 </style></head><body>
-<form method="post" action="/logowanie">
+<form method="post" action="/logowanie" id="logowanie" name="logowanie" autocomplete="on">
   <h1>Serwerek domowy</h1>
   <p>Wejście z sieci domowej. Hasło wpisujesz raz: to urządzenie zostanie zapamiętane na rok.</p>
   <input type="hidden" name="nast" value="%%NAST%%">
-  <input type="text" name="username" value="serwerek" autocomplete="username" hidden>
+  <label for="u">Użytkownik</label>
+  <input id="u" type="text" name="username" value="serwerek" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-bottom:14px">
   <label for="h">Hasło</label>
   <div class="pole"><input id="h" name="haslo" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus required>
     <button type="button" id="pokaz" aria-controls="h" aria-pressed="false">Pokaż</button></div>
