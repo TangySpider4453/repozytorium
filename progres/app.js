@@ -341,7 +341,12 @@ function rysujHistorie(){
 /* CEL = szablon kadru: tułów ma CEL.s wysokości kadru, jego środek jest w poziomie na środku i na CEL.y wysokości.
    Ustawiany suwakami „Przybliżenie” i „Wysokość” (FM.celS, FM.celY); po zmianie sylwetka i tak jest centrowana. */
 const CEL = {y:0.44, s:0.26};
-function synchCEL(){ CEL.s = FM.celS || 0.26; CEL.y = FM.celY || 0.44; }
+/* tryb „same ręce” (biceps / tył+biceps): kadr na ręce, osobne suwaki FM.celSr (ręce = ułamek wysokości kadru) i FM.celYr */
+const trybRak = typ => !!FM.rece && BICEPS.includes(typ || FM.typ);
+function synchCEL(){
+  if(trybRak()){ CEL.s = FM.celSr || 0.5; CEL.y = FM.celYr || 0.45; }
+  else{ CEL.s = FM.celS || 0.26; CEL.y = FM.celY || 0.44; }
+}
 /* położenie zdjęcia w kadrze W×H: skala k i lewy górny róg (ox, oy) */
 /* ---------- wzór szkieletu dla każdego rodzaju zdjęcia i dopasowanie do niego ----------
    Wzór = średnie położenie 33 punktów MediaPipe ze wszystkich zdjęć danego rodzaju (uogólniona analiza Prokrustesa:
@@ -398,13 +403,27 @@ function wzor(typ){
   M = M.map(p => p && [(p[0] - t.c[0]) / t.L, (p[1] - t.c[1]) / t.L]);
   return WZORY[typ] = {M, n:zd.length};
 }
-/* dopasowanie zdjęcia: {s, tx, ty} (piksele zdjęcia -> jednostki wzoru) albo null */
+/* fokus na ręce: prostokąt barków, łokci i nadgarstków we wzorze (środek fc, rozmiar A w długościach tułowia).
+   W trybie rąk jednostką kadru jest A, a środkiem fc: suwak „Przybliżenie” mówi, ile wysokości kadru zajmują ręce. */
+function fokus(typ){
+  if(!trybRak(typ)) return null;
+  const wz = wzor(typ); if(!wz) return null;
+  const P = [11, 12, 13, 14, 15, 16].map(i => wz.M[i]).filter(Boolean);
+  if(P.length < 4) return null;
+  const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  return {fc:[(x0 + x1) / 2, (y0 + y1) / 2], A:Math.max(y1 - y0, (x1 - x0) * 0.8, 0.3)};
+}
+const naFokus = (p, f) => f ? [(p[0] - f.fc[0]) / f.A, (p[1] - f.fc[1]) / f.A] : p;
+/* dopasowanie zdjęcia: {s, tx, ty} (piksele zdjęcia -> jednostki kadru: wzór, a w trybie rąk wzór względem fokusu) albo null */
 function dopasowanie(z){
   sprawdzKlucz();
   if(z.id in DOPAS) return DOPAS[z.id];
   let d = null;
   const wz = maPunkty(z) && wzor(z.typ);
   if(wz) d = dopasujPunkty(z.lm.map((_, i) => px(z, i)), wz.M, wagiZdjecia(z, wagiTypu(z.typ)));
+  const f = d && fokus(z.typ);
+  if(f) d = {s:d.s / f.A, tx:(d.tx - f.fc[0]) / f.A, ty:(d.ty - f.fc[1]) / f.A};
   if(!d && z.pose && z.pose.s > 0){ const s = 1 / (z.pose.s * z.h); d = {s, tx:-z.pose.cx * z.w * s, ty:-z.pose.cy * z.h * s}; }
   return DOPAS[z.id] = d;
 }
@@ -742,7 +761,7 @@ const POLACZENIA = [[11,12],[11,23],[12,24],[23,24],[11,13],[13,15],[12,14],[14,
 function szkielet(g, W, H, typ){
   const wz = wzor(typ || FM.typ);
   if(wz){
-    const L = CEL.s * H, X = p => [W / 2 + L * p[0], CEL.y * H + L * p[1]], M = wz.M, W8 = wagiTypu(typ || FM.typ);
+    const f = fokus(typ || FM.typ), L = CEL.s * H, X = q => { const p = naFokus(q, f); return [W / 2 + L * p[0], CEL.y * H + L * p[1]]; }, M = wz.M, W8 = wagiTypu(typ || FM.typ);
     g.save(); g.strokeStyle = "rgba(77,183,201,.95)"; g.fillStyle = "rgba(77,183,201,.95)"; g.lineWidth = Math.max(2, W / 220); g.lineCap = "round";
     POLACZENIA.forEach(([a, b]) => { if(!M[a] || !M[b]) return; const A = X(M[a]), B = X(M[b]); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke(); });
     if(M[0] && M[7] && M[8]){ const c = X(M[0]); g.beginPath(); g.arc(c[0], c[1], L * Math.max(0.12, Math.hypot(M[7][0] - M[8][0], M[7][1] - M[8][1]) * 0.75), 0, Math.PI * 2); g.stroke(); }
@@ -771,7 +790,11 @@ async function rysujSzablon(){
   synchCEL();
   const [Wf, Hf] = formatWH(); if(c.width !== Wf / 2 || c.height !== Hf / 2){ c.width = Wf / 2; c.height = Hf / 2; }
   const g = c.getContext("2d"), W = c.width, H = c.height, kl = plan().kl;
-  $("szS").value = CEL.s; $("szY").value = CEL.y; $("szSv").textContent = `(tułów = ${Math.round(CEL.s * 100)}% wysokości)`; $("szYv").textContent = `(${Math.round(CEL.y * 100)}% od góry)`;
+  const rece = trybRak();
+  $("szS").max = rece ? "0.95" : "0.55"; $("szS").min = rece ? "0.2" : "0.12";
+  $("szS").value = CEL.s; $("szY").value = CEL.y;
+  $("szSv").textContent = rece ? `(ręce = ${Math.round(CEL.s * 100)}% wysokości, mniej = więcej reszty sylwetki)` : `(tułów = ${Math.round(CEL.s * 100)}% wysokości)`;
+  $("szYv").textContent = `(${Math.round(CEL.y * 100)}% od góry)`;
   $("szPrzytnij").checked = FM.przytnij !== false;
   g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
   szNr = Math.min(Math.max(szNr, 0), Math.max(kl.length - 1, 0));
@@ -790,15 +813,15 @@ async function rysujSzablon(){
   $("szRysuj").setAttribute("aria-pressed", String(szTryb === "rysuj")); $("szRysuj").textContent = szTryb === "rysuj" ? "▭ Przeciągnij po podglądzie…" : "▭ Narysuj własną ramkę";
 }
 function szZmiana(){ zapiszFM(); rysujSzablon(); pokazKlatke(0); }
-$("szS").oninput = () => { FM.celS = +$("szS").value; rysujSzablon(); };
-$("szY").oninput = () => { FM.celY = +$("szY").value; rysujSzablon(); };
+$("szS").oninput = () => { if(trybRak()) FM.celSr = +$("szS").value; else FM.celS = +$("szS").value; rysujSzablon(); };
+$("szY").oninput = () => { if(trybRak()) FM.celYr = +$("szY").value; else FM.celY = +$("szY").value; rysujSzablon(); };
 $("szS").onchange = $("szY").onchange = szZmiana;
 $("szSzkielet").onchange = () => rysujSzablon();
 $("szPrzytnij").onchange = () => { FM.przytnij = $("szPrzytnij").checked; szZmiana(); };
 $("szPoprz").onclick = () => { szNr--; rysujSzablon(); };
 $("szNast").onclick = () => { szNr++; rysujSzablon(); };
 $("szUsun").onclick = () => { FM.ramka = null; szTryb = null; szZmiana(); };
-$("szReset").onclick = () => { FM.celS = 0.26; FM.celY = 0.44; FM.ramka = null; FM.przytnij = true; szTryb = null; szZmiana(); };
+$("szReset").onclick = () => { if(trybRak()){ FM.celSr = 0.5; FM.celYr = 0.45; } else { FM.celS = 0.26; FM.celY = 0.44; } FM.ramka = null; FM.przytnij = true; szTryb = null; szZmiana(); };
 $("szRysuj").onclick = () => { szTryb = szTryb === "rysuj" ? null : "rysuj"; rysujSzablon(); };
 (() => {
   const c = $("szCanvas"); if(!c) return;

@@ -16,7 +16,10 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   (`[]` = nie rozpoznano). Wzór rodzaju = średnia punktów ze wszystkich zdjęć tego rodzaju (Prokrustes: skala +
   przesunięcie, 3 iteracje), w jednostkach tułowia. Zdjęcie dopasowane do wzoru ważoną MNK (`WAGI` w `app.js`: barki
   i biodra 3–3,5, głowa/kolana ok. 1, ręce 0,05–0,5; bok najmniej rąk). `FM.rece` (tylko `biceps`/`tylbiceps`):
-  dopasowanie tylko do barków, łokci, nadgarstków. Wynik `{s, tx, ty}` liczy przeglądarka i wysyła do renderu jako
+  dopasowanie tylko do barków, łokci, nadgarstków, a kadr (od 2026-10-23) jest na ręce: `fokus(typ)` = prostokąt
+  punktów 11–16 wzoru (środek `fc`, rozmiar `A`), `dopasowanie` przelicza wynik na jednostki fokusu, więc środek rąk
+  jest w środku kadru, a suwak „Przybliżenie” (`FM.celSr`, domyślnie 0,5, do 0,95) = ile wysokości kadru zajmują ręce
+  (mniej = więcej reszty sylwetki); „Wysokość” = `FM.celYr`. Render na Pi bierze `celSr/celYr`, gdy `rece` i typ biceps. Wynik `{s, tx, ty}` liczy przeglądarka i wysyła do renderu jako
   `geo` (Python go tylko stosuje). Starsze zdjęcia bez `lm` są uzupełniane automatycznie w zakładce Film.
 - **Wyrównanie w filmie:** każda klatka jest skalowana tak, by tułów miał `celS` wysokości kadru (domyślnie 26%),
   a jego środek był w poziomie na środku i na `celY` wysokości (domyślnie 44%). Oba ustawia się w karcie „Kadr filmu”
@@ -106,3 +109,4 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   przełączany wykres składu ciała (% albo kg). `app.js?v=11`.
 - **2026-10-22 (4)**: Film „co miesiąc” i wybór zdjęcia najbliższego planowanemu dniowi (zamiast pierwszego w oknie);
   w trybie miesięcznym zawsze z tego samego miesiąca. `app.js?v=12`.
+- **2026-10-23**: Tryb „Same ręce”: kadr centruje i przybliża ręce (barki, łokcie, nadgarstki), suwak „Przybliżenie” = ile kadru zajmują ręce (osobne ustawienia `celSr`/`celYr`). `app.js?v=13`.
