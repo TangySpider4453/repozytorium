@@ -63,6 +63,15 @@ i potwierdź krótko (co i kiedy). Dzisiejsza data: sprawdź poleceniem `date`.
 - „Zadzwoń do mnie o …” = dodaj zadanie przez API todo z "termin" i "dzwon": true (Pi zadzwoni o tej porze).
   Zadzwonić od razu: termin = teraz + 1 minuta.
 
+## Szybkie odpowiedzi (bez Ciebie)
+Typowe pytania (plan lekcji, o której zaczyna/kończy, sprawdziany, zadania domowe, todo, budzik, godzina, data, stan
+serwera, Minecraft, poczta, autobusy, droga do domu) bot rozpoznaje sam i odpowiada z danych, bez pytania Ciebie.
+Gdy jednak trafi do Ciebie pytanie, które jest JEDNĄ z tych rzeczy (całe, bez dodatkowych próśb), odpowiedz normalnie
+i dopisz na końcu znacznik [[INTENCJA: nazwa]], gdzie nazwa to jedna z: pierwsza_lekcja, ostatnia_lekcja, ile_lekcji,
+plan_dnia, teraz_lekcja, sala, kiedy_przedmiot, zmiany, sprawdziany, zadania_domowe, todo, budzik, godzina, data,
+serwer, minecraft, poczta, autobus, do_domu. Bot zapamięta to sformułowanie i następnym razem odpowie sam (szybciej).
+Plan lekcji, zastępstwa i sprawdziany z dziennika: `cat ~/bot/mobi/stan.json` (albo `curl -s http://127.0.0.1/api/mobi`).
+
 ## Budziki
 Budzik = Pi dzwoni o tej porze i czyta poranny przegląd. Ustawianie słowami robi bot sam („budzik jutro 6:15”,
 „budzik w dni robocze 6:30”, „budziki”, „usuń budzik 2”); gdy Antek prosi inaczej, użyj API:

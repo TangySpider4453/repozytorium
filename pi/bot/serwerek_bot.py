@@ -35,6 +35,7 @@ from pathlib import Path
 import pamiec
 import poczta
 import mobi
+import szybkie
 
 KATALOG = Path(__file__).resolve().parent
 STAN = KATALOG / "stan.json"
@@ -469,8 +470,68 @@ def claude_bez_narzedzi(prompt, limit=180):
     return None if d.get("is_error") else d.get("result")
 
 
+# ---------------------------------------------------------------- szybkie odpowiedzi bez AI (szybkie.py)
+def _sprawdziany_wszystkie():
+    """zapowiedzi z Mobidziennika (z godziną) + strony Nauki, bez powtórzeń"""
+    m = list(mobi.wczytaj("stan", {}).get("sprawdziany", {}).values())
+    k = lambda x: (x.get("data"), re.sub(r"[^a-z]", "", (x.get("przedmiot") or "").lower())[:5])
+    znane = {k(x) for x in m}
+    return sorted(m + [{"data": x["data"], "godzina": "", "przedmiot": x.get("przedmiot", ""), "rodzaj": x.get("typ", "sprawdzian"),
+                        "tematyka": x.get("tytul", "")} for x in sprawdziany() if x.get("data") and k(x) not in znane], key=lambda x: x["data"])
+
+
+def _serwer_krotko():
+    z = portal("/api/zdrowie")
+    p = z.get("pomiary", {})
+    return ({"ok": "Serwer działa dobrze", "warn": "Serwer działa, ale jest coś do sprawdzenia", "crit": "Serwer wymaga uwagi"}[z["stan"]]
+            + f": {p.get('temp', '?')} °C, procesor {round(p.get('cpu') or 0)}%, RAM {round(p.get('ram') or 0)}%."
+            + ("" if not z.get("aktywne") else " Problemy: " + "; ".join(i["tytul"] for i in z["aktywne"][:3]) + "."))
+
+
+def _mc_krotko():
+    m = portal("/api/minecraft")
+    return (f"Minecraft działa od {(m.get('od') or '')[11:16]}, gracze: {m.get('gracze')}." if m.get("dziala") else "Minecraft jest wyłączony.")
+
+
+SZYBKIE_DANE = {
+    "plan": lambda: mobi.wczytaj("stan", {}).get("plan", []),
+    "sprawdziany": _sprawdziany_wszystkie,
+    "zadania_domowe": lambda: mobi.wczytaj("stan", {}).get("zadania", []),
+    "todo": lambda: zadania_do_zrobienia(),
+    "budziki": lambda: [opis_alarmu(a) for a in sorted(portal("/api/alarmy")["alarmy"], key=lambda a: nastepny_alarm(a) or datetime.max)
+                        if nastepny_alarm(a)],
+    "serwer": _serwer_krotko,
+    "minecraft": _mc_krotko,
+    "poczta": lambda: poczta.podsumowanie() if poczta.konta() else "Poczta nie jest jeszcze podłączona.",
+    "odjazdy": lambda skad: ztm_api("/api/ztm/odjazdy", skad=skad, ile=4).get("tekst") or "Brak danych o odjazdach.",
+    "trasa": lambda dokad: ztm_api("/api/ztm/trasa", skad="tu", dokad=dokad).get("tekst") or "Brak danych o trasie.",
+}
+SZYBKIE_STAT = KATALOG / "szybkie_statystyka.json"
+
+
+def szybka_odpowiedz(tekst):
+    """pytanie rozpoznane bez AI -> odpowiedź z danych na Pi (albo None)"""
+    t0 = time.time()
+    w = szybkie.odpowiedz(tekst, SZYBKIE_DANE)
+    if not w:
+        return None
+    print(f"szybka odpowiedź ({w[0]}, {time.time() - t0:.2f} s): {tekst[:60]}", flush=True)
+    try:
+        st = json.loads(SZYBKIE_STAT.read_text()) if SZYBKIE_STAT.exists() else {}
+        st[w[0]] = st.get(w[0], 0) + 1
+        SZYBKIE_STAT.write_text(json.dumps(st))
+    except (OSError, ValueError):
+        pass
+    return w[1]
+
+
 def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glosem=False):
-    """jedna wiadomosc do Claude (wspolna sesja dla czatu, glosowek i telefonu) -> (odpowiedz, akcje) albo wyjatek RuntimeError"""
+    """jedna wiadomosc do Claude (wspolna sesja dla czatu, glosowek i telefonu) -> (odpowiedz, akcje) albo wyjatek RuntimeError.
+    Najpierw szybkie odpowiedzi bez AI (plan, sprawdziany, godzina…), gdy pytanie jest rozpoznane."""
+    if not odpowiedz_na and kanal != "plik" and (sz := szybka_odpowiedz(tekst)):
+        if kanal not in ("telegram", "glosowka_zapisana"):
+            pamiec.zapisz("antek", kanal, tekst)
+        return sz, []
     with LOCK:
         s = stan()
         ses = s["sesja"]
@@ -522,6 +583,9 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
         s = stan()
         s["sesja"] = {"id": d["session_id"], "ostatnio": time.time(), "kontekst": kontekst}
         zapisz(s)
+    if m := re.search(r"\[\[INTENCJA:\s*(\w+)\s*\]\]", odp):       # Claude rozpoznał znaną intencję: zapamiętaj sformułowanie
+        szybkie.naucz(tekst, m.group(1))
+        odp = re.sub(r"\s*\[\[INTENCJA:\s*\w+\s*\]\]", "", odp)
     akcje = [a for a in AKCJE if f"[[AKCJA: {a}]]" in odp]
     for a in AKCJE:
         odp = odp.replace(f"[[AKCJA: {a}]]", "")

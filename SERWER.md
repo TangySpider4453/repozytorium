@@ -166,6 +166,17 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ważne → `powiadom()` i czekanie („przeczytaj mail”, „przeczytany”, „później” = za 3 h; bez reakcji przypomnienie
   po 30 min; w nocy czeka), inne → poranny przegląd. Nigdy nie wysyła (bez SMTP). `/api/poczta`, komenda „maile”.
 
+## Szybkie odpowiedzi bez AI (od 2026-10-23)
+- `pi/bot/szybkie.py`: typowe pytania rozpoznane wzorcami (po `norm()`: bez polskich znaków i wypełniaczy; określenie
+  dnia „jutro / w piątek…” wycinane przed dopasowaniem i odczytywane przez odpowiedź) → odpowiedź z danych na Pi
+  w < 0,1 s (autobusy ok. 0,5 s): pierwsza/ostatnia lekcja, ile lekcji, plan dnia, teraz/następna lekcja, sala,
+  kiedy przedmiot, zastępstwa, sprawdziany, zadania domowe, todo, budzik, godzina, data, serwer, Minecraft, poczta,
+  autobus, do domu. Hak na początku `claude_odpowiedz` (wszystkie kanały: Telegram, Linphone, głosówki, telefon).
+- Uczenie: Claude dopisuje `[[INTENCJA: nazwa]]`, gdy pytanie było jedną z intencji; bot zapisuje sformułowanie
+  w `~/bot/szybkie_nauczone.json` i następnym razem (podobieństwo słów i trigramów ≥ 0,82) odpowiada sam.
+  Statystyka trafień: `~/bot/szybkie_statystyka.json`. Test: `python3 pi/bot/test_szybkie.py` (308 zdań, w tym 30,
+  które mają iść do Claude).
+
 ## Kanał: Linphone główny, Telegram zapasowy (od 2026-10-22)
 - Odpowiedź zawsze tam, skąd przyszło pytanie. Powiadomienia bota (`powiadom()`: alarmy, przypomnienia, sprawdziany,
   wyniki połączeń, Minecraft, wejścia z sieci) idą kanałem, którym Antek ostatnio pisał (`stan.json` → `kanal`,
