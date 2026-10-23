@@ -445,4 +445,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-23 (diagnoza ciszy w rozmowie)**: Trzy połączenia od Pi (20:56, 21:00, 21:05) bez dźwięku w słuchawce, choć
   synteza działa. Telefon loguje teraz stan mediów, odtwarzanie i brak mediów (`mówię …`, `media …`, `graj: …`). Czeka na
   połączenie testowe.
+- **2026-10-23 („dzwoń” od razu)**: „dzwoń / zadzwoń / dzwoń asap / możesz zadzwonić?” w Linphone i Telegramie dzwonią od
+  razu bez Claude (wcześniej „Dzwoń” szło przez Claude i połączenie przyszło po minucie). Cisza w rozmowach: w obie strony
+  nie płynie dźwięk (nagranie same zera), włączony pełny zapis SIP, czeka na połączenie testowe.
 

@@ -577,7 +577,7 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             akcja = "mc_wylacz"
         elif t.lower() in ("restart portalu", "restart portal"):
             akcja = "restart_portalu"
-        elif t.lower() in ("zadzwoń", "zadzwon", "zadzwoń do mnie", "zadzwon do mnie", "/zadzwon"):
+        elif t.lower() == "/zadzwon" or bot.chce_telefon(t):
             bot.zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś na czacie. W czym mogę pomóc?", "prośba z czatu Linphone")
             odp = "📞 Dzwonię…"
         elif t.lower() in ("nowa rozmowa", "nowa", "/nowa"):

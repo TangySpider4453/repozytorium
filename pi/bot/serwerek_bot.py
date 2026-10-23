@@ -1855,6 +1855,17 @@ def glosowka(m):
     KOLEJKA_BUDZIK.set()
 
 
+# „dzwoń”, „zadzwoń do mnie”, „dzwoń asap”, „możesz zadzwonić?” = połączenie od razu, bez Claude (z czasem albo
+# komu: „zadzwoń za 10 min”, „zadzwoń do mamy” idzie zwykłą drogą: przypomnienie / zadanie)
+DZWON_TERAZ_RE = re.compile(r"^(?:(?:możesz|mozesz|proszę|prosze|pls|hej|ej)[\s,]+)*(?:za)?dzwo[nń](?:i[ćc]|cie)?"
+                            r"(?:[\s,]+(?:do mnie|mi|teraz|asap|szybko|już|juz|natychmiast|zaraz|proszę|prosze|pls|"
+                            r"pilnie|od razu))*[\s.!?]*$", re.I)
+
+
+def chce_telefon(tekst):
+    return bool(DZWON_TERAZ_RE.match((tekst or "").strip()))
+
+
 def zadzwon(tekst, powod="prośba", **dodatki):
     """zlecenie polaczenia do wlasciciela dla uslugi serwerek-telefon (Linphone); wynik wraca przez petla_telefonu"""
     (TELEFON / "kolejka").mkdir(parents=True, exist_ok=True)
@@ -2142,7 +2153,7 @@ def obsluz(u):
     pamiec.zapisz("antek", "telegram", tekst, m.get("message_id"))
     ustaw_kanal("telegram")                 # pisze z Telegrama: powiadomienia też tutaj, aż znów napisze na Linphone
     odp_na = pamiec.po_tg_id(m["reply_to_message"]["message_id"]) if m.get("reply_to_message") else None
-    if tekst in ("📞 Zadzwoń", "/zadzwon") or tekst.lower() in ("zadzwoń", "zadzwon", "zadzwoń do mnie", "zadzwon do mnie"):
+    if tekst in ("📞 Zadzwoń", "/zadzwon") or chce_telefon(tekst):
         zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś. W czym mogę pomóc?", "na Twoją prośbę")
         wyslij("📞 Dzwonię przez Linphone…")
     elif tekst in ("🎮 Minecraft", "/minecraft") or tekst.lower() in ("minecraft", "mc"):

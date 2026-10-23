@@ -327,6 +327,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   „napisz”, „wiadomością”, „bez dzwonienia”, „nie dzwoń” (`nowe_zadanie`: `dzwon = bool(termin) and not tylko_napisz`).
 - **Restart bota/telefonu tylko poza rozmową**: `bash ~/bot/bez_rozmowy.sh` czeka, aż `~/glos/stan.json` ma
   `"rozmowa": false`, i dopiero wtedy restartuje serwerek-bot i serwerek-telefon. Każde wdrożenie przez ten skrypt.
+- **„Dzwoń” = telefon od razu**: „dzwoń”, „zadzwoń (do mnie)”, „dzwoń asap / szybko / teraz”, „możesz zadzwonić?” w Linphone
+  i Telegramie idą bez Claude (`chce_telefon`, `DZWON_TERAZ_RE`) prosto do kolejki telefonu (połączenie w ~1 s). Z czasem
+  albo z adresatem („zadzwoń za 10 min”, „zadzwoń do mamy”) dalej przypomnienie/zadanie.
+- **Diagnostyka SIP**: `echo 5 > ~/bot/telefon/diag_sip` + restart telefonu = pełny zapis do `/tmp/telefon-sip.log`
+  (usunięcie pliku wyłącza). Telefon loguje też `media …`, `mówię …`, `graj: …`.
 - **Odhaczanie głosem**: w rozmowie z przypomnienia (`todo_id` w zleceniu telefonu) „odhaczone / odhacz / zrobione /
   gotowe / załatwione…” (bez „nie …”) oznacza zadanie jako zrobione i Pi mówi „Odhaczone.”.
 - **Bardzo ważne = Pi dzwoni** (pole `dzwon`): przycisk „📞 Bardzo ważne: zadzwoń” w formularzu i 📞 przy zadaniu na
