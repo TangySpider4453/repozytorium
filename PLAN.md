@@ -442,3 +442,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   mówi „wysyłam Ci teraz wiadomość…”, a przy nieodebranym połączeniu dołącza je do „Dzwoniłem, ale nie odebrałeś”.
   Przypomnienia z terminem domyślnie dzwonią; same wiadomości tylko po „napisz / wiadomością / bez dzwonienia”.
   Wdrożenie przerwało rozmowę o 20:56, więc restarty idą teraz przez `~/bot/bez_rozmowy.sh` (czeka na koniec rozmowy).
+- **2026-10-23 (diagnoza ciszy w rozmowie)**: Trzy połączenia od Pi (20:56, 21:00, 21:05) bez dźwięku w słuchawce, choć
+  synteza działa. Telefon loguje teraz stan mediów, odtwarzanie i brak mediów (`mówię …`, `media …`, `graj: …`). Czeka na
+  połączenie testowe.
+

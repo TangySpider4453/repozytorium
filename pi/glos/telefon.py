@@ -178,7 +178,9 @@ class Rozmowa:
                 return
         gotowe = threading.Event()
         AKCJE.put((graj, (self.p, wav, gotowe)))
-        gotowe.wait(10)
+        if not gotowe.wait(10):
+            log("mowa: główny wątek nie odtworzył w 10 s")
+        log(f"mówię ({czas_wav(wav):.1f} s): {tekst[:60]}")
         if czat:
             self.wyslij_szczegoly(czat)
         self.koniec.wait(czas_wav(wav) + 0.3)
@@ -322,6 +324,7 @@ class Polaczenie(pj.Call):
     def onCallMediaState(self, prm):
         ci = self.getInfo()
         for mi in ci.media:
+            log(f"media {ci.id}: indeks {mi.index}, typ {mi.type}, stan {mi.status}, kierunek {mi.dir}")
             if mi.type == pj.PJMEDIA_TYPE_AUDIO and mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE:
                 # Linphone po ICE odnawia media (UPDATE): pjsua tworzy nowy port w mostku, więc za każdym razem podpinamy
                 # się do aktualnego; inaczej Pi mówi do starego portu i w słuchawce jest cisza
@@ -347,6 +350,8 @@ def graj(p, wav, gotowe):
             g.createPlayer(str(wav), pj.PJMEDIA_FILE_NO_LOOP)
             g.startTransmit(p.media)
             GRACZE.append((time.time() + czas_wav(wav) + 2, g))
+        else:
+            log("graj: brak mediów połączenia (cisza)")
     except pj.Error as ex:
         log(f"graj: {ex.info()}")
     gotowe.set()
