@@ -17,6 +17,7 @@ import json
 import os
 import re
 import queue
+import signal
 import sys
 import tempfile
 import threading
@@ -784,8 +785,22 @@ def main():
     KONTAKT["konto"] = konto
     CZAT.mkdir(parents=True, exist_ok=True)
     log(f"telefon startuje jako {ac.idUri}, właściciel {WLASCICIEL}")
+    # zatrzymanie usługi (restart, wdrożenie): najpierw rozłącz rozmowy (BYE), inaczej Linphone na iPhonie zostaje
+    # z „wiszącym” połączeniem, trzyma dźwięk i w kolejnych rozmowach jest cisza w obie strony
+    stop = threading.Event()
+    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    signal.signal(signal.SIGINT, lambda *_: stop.set())
     while True:
         ep.libHandleEvents(20)
+        if stop.is_set():
+            for p in list(AKTYWNE.values()):
+                log("koniec usługi: rozłączam trwające połączenie")
+                rozlacz(p)
+            koniec = time.time() + 2
+            while time.time() < koniec:
+                ep.libHandleEvents(50)
+            log("telefon zatrzymany")
+            os._exit(0)
         while not AKCJE.empty():
             f, a = AKCJE.get()
             f(*a)

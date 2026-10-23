@@ -330,6 +330,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **„Dzwoń” = telefon od razu**: „dzwoń”, „zadzwoń (do mnie)”, „dzwoń asap / szybko / teraz”, „możesz zadzwonić?” w Linphone
   i Telegramie idą bez Claude (`chce_telefon`, `DZWON_TERAZ_RE`) prosto do kolejki telefonu (połączenie w ~1 s). Z czasem
   albo z adresatem („zadzwoń za 10 min”, „zadzwoń do mamy”) dalej przypomnienie/zadanie.
+- **Zatrzymanie telefonu = rozłączenie**: przy SIGTERM telefon.py rozłącza trwające rozmowy (BYE) i dopiero kończy.
+  2026-10-23 restart w trakcie rozmowy zostawił w Linphone na iPhonie „wiszące” połączenie: potem w każdej rozmowie
+  iPhone dostawał dźwięk Pi, ale go nie grał i nie wysyłał mikrofonu (Pi: RX 0 pakietów). Naprawa: zamknąć Linphone.
 - **Diagnostyka SIP**: `echo 5 > ~/bot/telefon/diag_sip` + restart telefonu = pełny zapis do `/tmp/telefon-sip.log`
   (usunięcie pliku wyłącza). Telefon loguje też `media …`, `mówię …`, `graj: …`.
 - **Odhaczanie głosem**: w rozmowie z przypomnienia (`todo_id` w zleceniu telefonu) „odhaczone / odhacz / zrobione /

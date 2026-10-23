@@ -448,4 +448,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-23 („dzwoń” od razu)**: „dzwoń / zadzwoń / dzwoń asap / możesz zadzwonić?” w Linphone i Telegramie dzwonią od
   razu bez Claude (wcześniej „Dzwoń” szło przez Claude i połączenie przyszło po minucie). Cisza w rozmowach: w obie strony
   nie płynie dźwięk (nagranie same zera), włączony pełny zapis SIP, czeka na połączenie testowe.
+- **2026-10-23 (przyczyna ciszy)**: Pi wysyła dźwięk, iPhone go odbiera (raporty RTCP bez strat), ale nie gra i nie
+  wysyła mikrofonu. Zaczęło się po restarcie telefonu w trakcie rozmowy o 20:57 (brak rozłączenia). Telefon.py rozłącza
+  teraz rozmowy przy zatrzymaniu usługi.
 
