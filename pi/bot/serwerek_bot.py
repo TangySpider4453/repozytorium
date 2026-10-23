@@ -699,7 +699,8 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     for m in re.finditer(r"\[\[SUDO:\s*(.+?)\s*\]\]", odp, re.S):
         akcje.append(sudo_zapisz(m.group(1)))
     odp = re.sub(r"\[\[SUDO:\s*(.+?)\s*\]\]", "", odp, flags=re.S)
-    odp = szczegoly_na_czat(odp, mowione=kanal == "telefon" or glosem)
+    if kanal != "telefon":              # w rozmowie telefonicznej szczegóły wysyła telefon.py w chwili mówienia
+        odp = szczegoly_na_czat(odp, mowione=glosem)
     return odp.strip(), akcje
 
 
@@ -1263,6 +1264,10 @@ def nowe_zadanie(tekst):
     Wspólne dla Telegrama i czatu Linphone."""
     wz = r"(zadzwoń|zadzwon|dzwoń|dzwon|bardzo\s+ważne|bardzo\s+wazne|ważne|wazne|pilne)(?!\w)"     # „bardzo ważne” = Pi dzwoni
     dzwon = bool(re.search(r"(?<!\w)" + wz, tekst, re.I))
+    tylko_napisz = re.search(r"(?<!\w)(tylko\s+)?(napisz|wiadomości[ąa]|wiadomoscia|bez\s+dzwonienia|nie\s+dzwo[ńn])(?!\w)", tekst, re.I)
+    if tylko_napisz:                # „przypomnij mi za 20 min, napisz”: przypomnienie tylko wiadomością
+        tekst = re.sub(r"[,\s]*(?<!\w)(i\s+)?(tylko\s+)?(napisz(\s+mi)?|wiadomości[ąa]|wiadomoscia|bez\s+dzwonienia|nie\s+dzwo[ńn])(?!\w)[!:,.]*",
+                       " ", tekst, flags=re.I).strip()
     if numer_z(tekst):              # „zadzwoń do mamy 600 123 456”: to treść zadania, a Pi i tak zadzwoni z przypomnieniem
         dzwon = True
         tekst = re.sub(r"\s*(?<!\w)(i\s+)?(bardzo\s+ważne|bardzo\s+wazne|ważne|wazne|pilne)(?!\w)[!:,]*", "", tekst, flags=re.I)
@@ -1271,7 +1276,8 @@ def nowe_zadanie(tekst):
     opis, termin, powt = parsuj_zadanie(tekst)
     if not opis:
         return None
-    z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon and bool(termin)})
+    dzwon = bool(termin) and not tylko_napisz     # domyślnie: przypomnienie z godziną = Pi dzwoni
+    z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon})
     return z, opis, termin, powt, dzwon and bool(termin)
 
 
@@ -1323,10 +1329,10 @@ def przygotuj_rozmowe(z):
     """kilka minut przed terminem Claude układa, co powie, gdy Antek odbierze (żeby od razu mówić, bez czekania)"""
     tekst = claude_jednorazowo(
         f"[Za kilka minut, o {z['termin'][11:16]}, Pi dzwoni do Antka przez Linphone z przypomnieniem: „{z['tekst']}”. "
-        + ("W przypomnieniu jest numer telefonu: NIE czytaj go, powiedz, że trzeba zadzwonić na numer, który właśnie "
-           "wysłałeś na czacie. " if numer_z(z["tekst"]) else "")
-        + ("Adresów stron i maili ani kodów nie czytaj: powiedz, że szczegóły są na czacie. Przy czymś złożonym powiedz mało "
-           "(co i do kiedy), resztę Antek przeczyta na czacie albo poprosi Cię o szczegóły. ") +
+        + ("W przypomnieniu jest numer telefonu: NIE czytaj go; powiedz, o co chodzi, i dokładnie w tym czasie powiedz "
+           "„wysyłam Ci teraz wiadomość z numerem” (wiadomość pójdzie, kiedy to mówisz). " if numer_z(z["tekst"]) else "")
+        + ("Adresów stron i maili ani kodów nie czytaj: powiedz „wysyłam Ci teraz szczegóły na czat”. Przy czymś złożonym "
+           "powiedz mało (co i do kiedy), resztę Antek przeczyta na czacie albo poprosi Cię o szczegóły. ") +
         "Napisz DOKŁADNIE to, co powiesz, gdy odbierze: 1–3 krótkie zdania po polsku, naturalnie, bez emotek, list "
         "i Markdown (zostanie przeczytane na głos). Zinterpretuj przypomnienie: powiedz, o czym pamiętać i co zrobić "
         "(możesz krótko coś sprawdzić, np. stan serwera, plan, pogodę, jeśli to pomaga). Bez pytań i formułek na końcu "
@@ -1342,7 +1348,7 @@ def przypomnienia():
     teraz = datetime.now().strftime("%Y-%m-%dT%H:%M")
     za_chwile = (datetime.now() + timedelta(minutes=4)).strftime("%Y-%m-%dT%H:%M")
     for z in portal("/api/todo")["zadania"]:
-        if ((z.get("dzwon") or numer_z(z["tekst"])) and not z.get("zrobione") and z.get("termin") and not z.get("wyslano") and z["termin"] <= za_chwile
+        if (z.get("dzwon") and not z.get("zrobione") and z.get("termin") and not z.get("wyslano") and z["termin"] <= za_chwile
                 and PRZYGOTOWANE.get(z["id"], {}).get("termin") != z["termin"]):
             PRZYGOTOWANE[z["id"]] = {"termin": z["termin"], "tekst": None}
             threading.Thread(target=przygotuj_rozmowe, args=(z,), daemon=True).start()
@@ -1350,18 +1356,20 @@ def przypomnienia():
             continue
         nr = numer_z(z["tekst"])
         link = re.search(r"https?://\S+|www\.\S+|[\w.+-]+@[\w-]+\.[\w.-]+", z["tekst"])
-        if link and not nr and z.get("dzwon"):  # adres strony / mail z zadania: na czat (głos go nie czyta)
-            powiadom(f"📋 Szczegóły do przypomnienia:\n{z['tekst']}")
-        if nr:                                  # numer do oddzwonienia: osobna wiadomość (dotknięcie = połączenie)
-            powiadom(f"📞 Zadzwoń: {nr}\n{NUMER_RE.sub('', z['tekst']).strip(' ,:-')}", linphone=f"📞 Zadzwoń: {nr}\n{NUMER_RE.sub('', z['tekst']).strip(' ,:-')}")
-        if z.get("dzwon") or nr:
+        # numer / adres / mail z zadania: osobna wiadomość wysyłana W CHWILI, gdy Pi mówi „wysyłam Ci teraz…”
+        czat = (f"📞 Zadzwoń: {nr}\n{NUMER_RE.sub('', z['tekst']).strip(' ,:-')}" if nr else
+                f"📋 Szczegóły do przypomnienia:\n{z['tekst']}" if link else None)
+        if czat and not z.get("dzwon"):
+            powiadom(czat)
+        if z.get("dzwon"):
             p = PRZYGOTOWANE.pop(z["id"], {})
             bez_nr = NUMER_RE.sub("", z["tekst"]).strip(" ,:-")
             powitanie = p.get("tekst") if p.get("termin") == z["termin"] and p.get("tekst") else (
-                f"Przypomnienie: {bez_nr}. Zadzwoń na numer, który wysłałem Ci na czacie." if nr else f"Przypomnienie: {z['tekst']}.")
+                f"Przypomnienie: {bez_nr}. Wysyłam Ci teraz wiadomość z numerem, dotknij go, żeby zadzwonić." if nr else
+                f"Przypomnienie: {NUMER_RE.sub('', z['tekst'])}. Wysyłam Ci teraz szczegóły na czat." if link else f"Przypomnienie: {z['tekst']}.")
             powitanie = szczegoly_na_czat(powitanie, mowione=True)
             pamiec.zapisz("bot", "telefon", f"Dzwonię z przypomnieniem „{z['tekst']}” i mówię: {powitanie}")
-            zadzwon(powitanie, "przypomnienie z telefonem", todo_id=z["id"])
+            zadzwon(powitanie, "przypomnienie z telefonem", todo_id=z["id"], **({"czat": czat} if czat else {}))
         powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
         powiadom(f"⏰ <b>{e(z['tekst'])}</b>\n{kiedy_tekst(z['termin'])}{powt}", html_=True, todo_id=z["id"],
                  linphone=f"⏰ {z['tekst']}\n{kiedy_tekst(z['termin'])}{powt}\nOdpisz: zrobione, +15, +1h albo +jutro.", przyciski={"inline_keyboard": [
@@ -1870,7 +1878,8 @@ def petla_telefonu():
                                                                  "proba": int(w.get("proba", 1)) + 1}))
                     print(f"budzik nieodebrany (próba {w.get('proba')}), ponowię za {BUDZIK_CO // 60} min", flush=True)
                 elif w.get("stan") == "nieodebrane":
-                    powiadom(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}")
+                    powiadom(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}"
+                             + (f"\n\n{w['czat']}" if w.get("czat") else ""))
                 elif w.get("stan") == "rozmowa":
                     powiadom(f"📞 Rozmowa ({w.get('kierunek')}, {w.get('czas')}):\n{w.get('zapis', '')}"[:3900])
                 elif w.get("stan") == "nieznany_wlasciciel":

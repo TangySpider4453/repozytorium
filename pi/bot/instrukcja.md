@@ -73,6 +73,10 @@ serwer, minecraft, poczta, autobus, do_domu, temperatura, cpu, ram, dysk, uptime
 siec, lokalizacja. Bot zapamięta to sformułowanie i następnym razem odpowie sam (szybciej).
 Plan lekcji, zastępstwa i sprawdziany z dziennika: `cat ~/bot/mobi/stan.json` (albo `curl -s http://127.0.0.1/api/mobi`).
 
+## Przypomnienia: domyślnie telefon
+Przypomnienie z godziną („przypomnij mi za 20 min…”, „o 17…”) dodawaj przez API todo z "dzwon": true (Pi zadzwoni).
+Tylko gdy Antek powie „napisz”, „wiadomością”, „bez dzwonienia”: "dzwon": false (sama wiadomość).
+
 ## Numery telefonów w przypomnieniach
 Gdy Antek chce przypomnienie o telefonie do kogoś („przypomnij mi o 17, żebym zadzwonił na ten numer”), wpisz numer
 w treść zadania todo (np. „zadzwonić do dentysty 618521234”). Bot sam o tej porze zadzwoni do Antka, powie, żeby

@@ -148,8 +148,21 @@ class Rozmowa:
         except Exception as ex:
             log(f"Piper (z wyprzedzeniem): {ex}")
 
-    def mow(self, tekst):
-        """synteza (Piper) i odtworzenie w rozmowie; czeka do końca wypowiedzi"""
+    def wyslij_szczegoly(self, tekst):
+        """wiadomość ze szczegółami (numer, adres, kroki) na czat: w chwili, gdy Pi mówi „wysyłam teraz”"""
+        if not tekst:
+            return
+        def _():
+            try:
+                import serwerek_bot as bot
+                bot.powiadom(tekst)
+            except Exception as ex:
+                log(f"szczegóły na czat: {ex}")
+        threading.Thread(target=_, daemon=True).start()
+
+    def mow(self, tekst, czat=None):
+        """synteza (Piper) i odtworzenie w rozmowie; czeka do końca wypowiedzi. czat = szczegóły wysyłane na czat,
+        kiedy Pi zaczyna to mówić"""
         self.zapis.append(f"Pi: {tekst}")
         wav = self.tmp / f"gotowe-{abs(hash(tekst))}.wav"
         for _ in range(100):                    # synteza z wyprzedzeniem jeszcze trwa: poczekaj na nią (max 10 s)
@@ -166,6 +179,8 @@ class Rozmowa:
         gotowe = threading.Event()
         AKCJE.put((graj, (self.p, wav, gotowe)))
         gotowe.wait(10)
+        if czat:
+            self.wyslij_szczegoly(czat)
         self.koniec.wait(czas_wav(wav) + 0.3)
 
     def praca(self):
@@ -177,7 +192,8 @@ class Rozmowa:
                 self.koniec.wait(CZEKAJ_PO_ODEBRANIU)
                 if self.koniec.is_set():
                     return
-            self.mow(self.powitanie)
+            czat = self.zlecenie.pop("czat", None)
+            self.mow(self.powitanie, czat=czat)
             s.pomin_do_konca()
             while not self.koniec.is_set() and time.time() - self.start < MAX_ROZMOWA:
                 pcm = s.wypowiedz(self.koniec, CISZA_KONIEC)
@@ -242,12 +258,16 @@ class Rozmowa:
                     odp, akcje = bot.claude_odpowiedz(tekst, "telefon", pisze=False)
                 except Exception as ex:
                     odp, akcje = f"Coś poszło nie tak po mojej stronie: {ex}. Spróbuj powtórzyć.", []
-                pamiec.zapisz("claude", "telefon", odp)
+                szczeg = "\n\n".join(re.findall(r"\[\[CZAT:\s*(.+?)\s*\]\]", odp, re.S))
+                odp = re.sub(r"\s*\[\[CZAT:\s*(.+?)\s*\]\]", "", odp, flags=re.S).strip()
+                if szczeg and not re.search(r"wysy[łl]am|na czacie|na czat", odp, re.I):
+                    odp += " Wysyłam Ci teraz szczegóły na czat."
+                pamiec.zapisz("claude", "telefon", odp + (f"\n[na czat: {szczeg}]" if szczeg else ""))
                 if akcje:                       # zgoda głosem w tej samej rozmowie (bez przycisków)
                     self.czeka = akcje
                     if "?" not in odp[-60:]:
                         odp += " Mam to zrobić? Powiedz tak albo nie."
-                self.mow(odp)
+                self.mow(odp, czat=("📋 Szczegóły:\n" + szczeg) if szczeg else None)
                 s.pomin_do_konca()
         except Exception as ex:
             log(f"rozmowa: {type(ex).__name__}: {ex}")
@@ -295,7 +315,7 @@ class Polaczenie(pj.Call):
                     log(f"odrzucone od razu ({ci.lastStatusCode}), dzwonię jeszcze raz za 5 s")
                 else:
                     wynik(stan="nieodebrane", tekst=z.get("tekst", ""), powod=z.get("powod", ""),
-                          **{k: z[k] for k in ("budzik", "proba", "todo_id") if k in z})
+                          **{k: z[k] for k in ("budzik", "proba", "todo_id", "czat") if k in z})
             self.rozmowa.zakonczona()
             ZAKONCZONE.append(AKTYWNE.pop(ci.id, self))
 
@@ -657,7 +677,7 @@ def zapisz_stan(zarejestrowane):
     """dla bota: czy Linphone działa (powiadomienia idą na Linphone, a gdy nie, do Telegrama)"""
     try:
         tmp = KAT / "stan.json.tmp"
-        tmp.write_text(json.dumps({"zarejestrowane": bool(zarejestrowane), "t": time.time()}), encoding="utf-8")
+        tmp.write_text(json.dumps({"zarejestrowane": bool(zarejestrowane), "t": time.time(), "rozmowa": bool(AKTYWNE)}), encoding="utf-8")
         os.replace(tmp, KAT / "stan.json")
     except OSError:
         pass

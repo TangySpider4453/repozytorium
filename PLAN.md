@@ -44,7 +44,7 @@ Zasady od użytkownika:
 | Budziki z porannym przeglądem, Mobidziennik (odczyt co 10 min), poczta (czeka na hasła) | ✅ od 2026-10-22 (`SERWER.md`) |
 | Claude w bocie: pełny terminal, sudo tylko po „Tak” Antka | ✅ od 2026-10-22 (`SERWER.md`, sekcja bota) |
 | Strona „⚙️ Automatyczne” (zadania, sprawdziany, budziki, Mobidziennik, poczta, komunikacja ZTM) | ✅ od 2026-10-22, `/strony/automatyczne/` |
-| Zadania (todo) w bocie Telegram i w czacie Linphone | ✅ od 2026-10-22: dodawanie, lista, przypomnienia w obu, archiwum po 24 h, „📞 Bardzo ważne” = telefon, „zrobione / +15 / +1h / +jutro” w Linphone (szczegóły w `SERWER.md`) |
+| Zadania (todo) w bocie Telegram i w czacie Linphone | ✅ od 2026-10-22 (przypomnienia z terminem domyślnie dzwonią, „napisz” = tylko wiadomość; numer/szczegóły wysyłane w chwili, gdy Pi o nich mówi): dodawanie, lista, przypomnienia w obu, archiwum po 24 h, „📞 Bardzo ważne” = telefon, „zrobione / +15 / +1h / +jutro” w Linphone (szczegóły w `SERWER.md`) |
 | Kopie zapasowe na NAS (172.23.0.28, `Tony-Folder/Raspberry/`) | ✅ od 2026-10-22: logi i zdjęcia Progres od razu na NAS, cały system co noc o 02:00 (szczegóły w `SERWER.md`). Postępy nauki (`dane/nauka/`) i strony są w nocnej kopii |
 
 Kalendarz sprawdzianów użytkownik wkleja jako zrzut z dziennika (Librus: „najbliższe sprawdziany”). Klasa 3 KL, technikum, zawód technik robotyk.
@@ -438,3 +438,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (todo w Linphone)**: Zadania działają w czacie Linphone jak w Telegramie: przypomnienia przychodzą też na
   Linphone (`do_linphone`), odpowiedź „zrobione”, „+15”, „+1h”, „+jutro” (opcjonalnie z numerem z listy), „usuń <nr>”,
   „cofnij”; „todo … zadzwoń” działa też tutaj (`nowe_zadanie` wspólne dla obu kanałów). Sprawdzone na Pi.
+- **2026-10-23 (wiadomość w chwili mówienia, domyślne dzwonienie)**: Pi wysyła numer/szczegóły na czat w momencie, gdy
+  mówi „wysyłam Ci teraz wiadomość…”, a przy nieodebranym połączeniu dołącza je do „Dzwoniłem, ale nie odebrałeś”.
+  Przypomnienia z terminem domyślnie dzwonią; same wiadomości tylko po „napisz / wiadomością / bez dzwonienia”.
+  Wdrożenie przerwało rozmowę o 20:56, więc restarty idą teraz przez `~/bot/bez_rozmowy.sh` (czeka na koniec rozmowy).

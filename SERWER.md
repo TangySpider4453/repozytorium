@@ -319,6 +319,14 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Numer telefonu w zadaniu** (`numer_z`, 9 cyfr, opcjonalnie +48): zadanie z numerem zawsze dzwoni; „zadzwoń do X
   <numer>” zostaje w treści (nie jest brane jako „Pi ma dzwonić”). O czasie: osobna wiadomość „📞 Zadzwoń: +48 …”
   (Linphone/Telegram, dotknięcie = połączenie), a Pi w rozmowie mówi „zadzwoń na numer, który wysłałem na czacie”.
+- **Wiadomość w chwili mówienia** (od 2026-10-23): przy przypomnieniu z numerem/szczegółami Pi mówi „wysyłam Ci teraz
+  wiadomość z numerem/szczegółami” i dokładnie wtedy wysyła ją na czat (`zlecenie["czat"]` → `mow(tekst, czat=…)` w
+  telefon.py, wysyłka po starcie odtwarzania). Tak samo `[[CZAT: …]]` w odpowiedziach Claude w rozmowie. Nieodebrane →
+  szczegóły dochodzą w wiadomości „Dzwoniłem, ale nie odebrałeś”.
+- **Domyślnie telefon**: „przypomnij mi za X / o 17 …” z terminem = Pi dzwoni. Tylko wiadomość, gdy Antek podkreśli:
+  „napisz”, „wiadomością”, „bez dzwonienia”, „nie dzwoń” (`nowe_zadanie`: `dzwon = bool(termin) and not tylko_napisz`).
+- **Restart bota/telefonu tylko poza rozmową**: `bash ~/bot/bez_rozmowy.sh` czeka, aż `~/glos/stan.json` ma
+  `"rozmowa": false`, i dopiero wtedy restartuje serwerek-bot i serwerek-telefon. Każde wdrożenie przez ten skrypt.
 - **Odhaczanie głosem**: w rozmowie z przypomnienia (`todo_id` w zleceniu telefonu) „odhaczone / odhacz / zrobione /
   gotowe / załatwione…” (bez „nie …”) oznacza zadanie jako zrobione i Pi mówi „Odhaczone.”.
 - **Bardzo ważne = Pi dzwoni** (pole `dzwon`): przycisk „📞 Bardzo ważne: zadzwoń” w formularzu i 📞 przy zadaniu na
