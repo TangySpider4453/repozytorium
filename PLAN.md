@@ -370,6 +370,9 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-23 (wiedza o całym serwerze)**: `wiedza_serwer.md` obejmuje wszystkie usługi (portal, bot, telefon, Minecraft, playit,
+  Tailscale, SSH/terminal/VNC, Samba, NAS, kopia, Mobidziennik, poczta, lokalizacja, ZTM, budziki, Progres) i system (karta,
+  RAM, temperatura, zasilanie, aktualizacje); więcej słów kieruje do Sonneta.
 - **2026-10-23 (szybszy i mądrzejszy Claude)**: Dwa stałe procesy Claude (Haiku low do prostych, Sonnet medium do
   trudnych i awarii; Haiku sam przekazuje trudne), ściąga diagnozy i napraw serwera, potwierdzanie akcji głosem w rozmowie,
   szybsze rozpoznawanie mowy. Test na Pi: proste odpowiedzi 1–2 s, przekręcona mowa („do nas” = NAS) rozumiana.

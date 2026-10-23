@@ -502,7 +502,9 @@ TRUDNE_RE = re.compile(r"napraw|nie dzia|nie odpal|nie łącz|nie lacz|awari|bł
                        r"zepsu|problem|dlaczego|czemu|zrób|zrob|napisz|stron|\bkod|skrypt|program|nauk|sprawdzian|kartkówk|"
                        r"kartkowk|materia|zdjęc|zdjec|pdf|analiz|porówn|porown|zaplanuj|konfigur|instal|aktualiz|\bnas\b|dysk|"
                        r"kopi[aęi]|backup|tailscale|\bssh|\bvnc|portal|usług|uslug|\blog|sudo|restart|plik|folder|wytłumacz|"
-                       r"wytlumacz|wyjaśnij|wyjasnij|przelicz|oblicz|rozwiąż|rozwiaz|zadani[ea] z |przetłumacz|przetlumacz", re.I)
+                       r"wytlumacz|wyjaśnij|wyjasnij|przelicz|oblicz|rozwiąż|rozwiaz|zadani[ea] z |przetłumacz|przetlumacz|"
+                       r"tunel|playit|samba|zawiesz|zawiesil|laguje|\blag|przegrz|zasilacz|karta sd|nie mog|nie wchodzi|"
+                       r"nie odpowiada|wolno działa|wolno dziala|pamięć|pamiec|ram\b|wolne miejsce|miejsca na|terminal|pulpit", re.I)
 USLUGA = Path(sys.argv[0]).stem or "bot"      # bot i telefon mają osobne procesy i sesje (nie piszą do jednej sesji naraz)
 PROCESY = {n: klaud.Proces(n, m, e, (lambda n=n: claude_polecenie(None, DODATEK_SZYBKI if n == "szybki" else "")))
            for n, (m, e) in MODELE.items()}
