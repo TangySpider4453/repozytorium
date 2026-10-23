@@ -312,6 +312,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   w zwijanym „Archiwum” (liczone na stronie z pola `zrobione`, dane się nie zmieniają); przy zrobionych „do archiwum za
   X h Y min”. Karta „📚 Sprawdziany i kartkówki” (z `/strony/nauka/sprawdziany.json`, linki do stron nauki); bot dopisuje
   je (14 dni) do listy „zadania”, a przypomnienia o sprawdzianach idą też na Linphone.
+- **Numer telefonu w zadaniu** (`numer_z`, 9 cyfr, opcjonalnie +48): zadanie z numerem zawsze dzwoni; „zadzwoń do X
+  <numer>” zostaje w treści (nie jest brane jako „Pi ma dzwonić”). O czasie: osobna wiadomość „📞 Zadzwoń: +48 …”
+  (Linphone/Telegram, dotknięcie = połączenie), a Pi w rozmowie mówi „zadzwoń na numer, który wysłałem na czacie”.
 - **Odhaczanie głosem**: w rozmowie z przypomnienia (`todo_id` w zleceniu telefonu) „odhaczone / odhacz / zrobione /
   gotowe / załatwione…” (bez „nie …”) oznacza zadanie jako zrobione i Pi mówi „Odhaczone.”.
 - **Bardzo ważne = Pi dzwoni** (pole `dzwon`): przycisk „📞 Bardzo ważne: zadzwoń” w formularzu i 📞 przy zadaniu na

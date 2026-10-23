@@ -1225,12 +1225,28 @@ def kiedy_tekst(termin):
 POWT_T = {"dzien": " · 🔁 codziennie", "tydzien": " · 🔁 co tydzień", "miesiac": " · 🔁 co miesiąc"}
 
 
+NUMER_RE = re.compile(r"(?<![\d:.])(\+?48[\s-]?)?(\d{3}[\s-]?\d{3}[\s-]?\d{3}|\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2})(?![\d:])")
+
+
+def numer_z(tekst):
+    """numer telefonu w tekście (9 cyfr, opcjonalnie +48) -> „+48 600 123 456” albo None"""
+    m = NUMER_RE.search(tekst or "")
+    if not m:
+        return None
+    c = re.sub(r"\D", "", m.group(2))
+    return f"+48 {c[:3]} {c[3:6]} {c[6:]}"
+
+
 def nowe_zadanie(tekst):
     """„jutro 17:00 trening (zadzwoń)” -> zapis w portalu; (zadanie, opis, termin, powt, dzwon) albo None (pusty opis).
     Wspólne dla Telegrama i czatu Linphone."""
     wz = r"(zadzwoń|zadzwon|dzwoń|dzwon|bardzo\s+ważne|bardzo\s+wazne|ważne|wazne|pilne)(?!\w)"     # „bardzo ważne” = Pi dzwoni
     dzwon = bool(re.search(r"(?<!\w)" + wz, tekst, re.I))
-    tekst = re.sub(r"\s*(?<!\w)(i\s+)?" + wz + r"[!:,]*", "", tekst, flags=re.I)
+    if numer_z(tekst):              # „zadzwoń do mamy 600 123 456”: to treść zadania, a Pi i tak zadzwoni z przypomnieniem
+        dzwon = True
+        tekst = re.sub(r"\s*(?<!\w)(i\s+)?(bardzo\s+ważne|bardzo\s+wazne|ważne|wazne|pilne)(?!\w)[!:,]*", "", tekst, flags=re.I)
+    else:
+        tekst = re.sub(r"\s*(?<!\w)(i\s+)?" + wz + r"[!:,]*", "", tekst, flags=re.I)
     opis, termin, powt = parsuj_zadanie(tekst)
     if not opis:
         return None
@@ -1286,6 +1302,8 @@ def przygotuj_rozmowe(z):
     """kilka minut przed terminem Claude układa, co powie, gdy Antek odbierze (żeby od razu mówić, bez czekania)"""
     tekst = claude_jednorazowo(
         f"[Za kilka minut, o {z['termin'][11:16]}, Pi dzwoni do Antka przez Linphone z przypomnieniem: „{z['tekst']}”. "
+        + ("W przypomnieniu jest numer telefonu: NIE czytaj go, powiedz, że trzeba zadzwonić na numer, który właśnie "
+           "wysłałeś na czacie. " if numer_z(z["tekst"]) else "") +
         "Napisz DOKŁADNIE to, co powiesz, gdy odbierze: 1–3 krótkie zdania po polsku, naturalnie, bez emotek, list "
         "i Markdown (zostanie przeczytane na głos). Zinterpretuj przypomnienie: powiedz, o czym pamiętać i co zrobić "
         "(możesz krótko coś sprawdzić, np. stan serwera, plan, pogodę, jeśli to pomaga). Bez pytań i formułek na końcu "
@@ -1301,15 +1319,20 @@ def przypomnienia():
     teraz = datetime.now().strftime("%Y-%m-%dT%H:%M")
     za_chwile = (datetime.now() + timedelta(minutes=4)).strftime("%Y-%m-%dT%H:%M")
     for z in portal("/api/todo")["zadania"]:
-        if (z.get("dzwon") and not z.get("zrobione") and z.get("termin") and not z.get("wyslano") and z["termin"] <= za_chwile
+        if ((z.get("dzwon") or numer_z(z["tekst"])) and not z.get("zrobione") and z.get("termin") and not z.get("wyslano") and z["termin"] <= za_chwile
                 and PRZYGOTOWANE.get(z["id"], {}).get("termin") != z["termin"]):
             PRZYGOTOWANE[z["id"]] = {"termin": z["termin"], "tekst": None}
             threading.Thread(target=przygotuj_rozmowe, args=(z,), daemon=True).start()
         if z.get("zrobione") or not z.get("termin") or z.get("wyslano") or z["termin"] > teraz:
             continue
-        if z.get("dzwon"):
+        nr = numer_z(z["tekst"])
+        if nr:                                  # numer do oddzwonienia: osobna wiadomość (dotknięcie = połączenie)
+            powiadom(f"📞 Zadzwoń: {nr}\n{NUMER_RE.sub('', z['tekst']).strip(' ,:-')}", linphone=f"📞 Zadzwoń: {nr}\n{NUMER_RE.sub('', z['tekst']).strip(' ,:-')}")
+        if z.get("dzwon") or nr:
             p = PRZYGOTOWANE.pop(z["id"], {})
-            powitanie = p.get("tekst") if p.get("termin") == z["termin"] and p.get("tekst") else f"Przypomnienie: {z['tekst']}."
+            bez_nr = NUMER_RE.sub("", z["tekst"]).strip(" ,:-")
+            powitanie = p.get("tekst") if p.get("termin") == z["termin"] and p.get("tekst") else (
+                f"Przypomnienie: {bez_nr}. Zadzwoń na numer, który wysłałem Ci na czacie." if nr else f"Przypomnienie: {z['tekst']}.")
             pamiec.zapisz("bot", "telefon", f"Dzwonię z przypomnieniem „{z['tekst']}” i mówię: {powitanie}")
             zadzwon(powitanie, "przypomnienie z telefonem", todo_id=z["id"])
         powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
