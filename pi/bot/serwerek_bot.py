@@ -410,7 +410,10 @@ GLOS_SLOWA = re.compile(r"\b(przeczytaj|odczytaj|powiedz mi|powiedz to|nagraj|g�
 TEKST_SLOWA = re.compile(r"\b(wypisz|napisz|odpisz|tekstem|na piśmie|na pismie|pisemnie|bez głosu|bez glosu|w punktach|rozpisz|"
                          r"nie mogę odsłuchać|nie moge odsluchac|nie mogę słuchać|nie moge sluchac|nie słyszę|nie slysze)\b", re.I)
 GLOS_PODPOWIEDZ = ("[Twoja odpowiedź zostanie zamieniona na WIADOMOŚĆ GŁOSOWĄ i przeczytana na głos: pisz naturalnymi zdaniami, "
-                   "bez emotek, tabel, list i Markdown; liczby i skróty tak, żeby dało się je wygodnie przeczytać.]")
+                   "bez emotek, tabel, list i Markdown; liczby i skróty tak, żeby dało się je wygodnie przeczytać. "
+                   "Adresów stron i maili (także słownie, z „kropka” albo „punkt”), numerów telefonów, kodów, ścieżek ani długich instrukcji krok po kroku NIE czytaj: powiedz krótko, "
+                      "co trzeba zrobić, a szczegóły włóż do znacznika [[CZAT: …]] (bot wyśle je na czat) i powiedz, że szczegóły są na czacie. "
+                      "Gdy Antek poprosi o szczegóły („powiedz szczegóły”, „przeczytaj”), wtedy przeczytaj je normalnie.]")
 
 
 CZYTAJ_PODPOWIEDZ = ("[Antek wprost prosi o przeczytanie / opowiedzenie: tu zasada krótkich odpowiedzi NIE obowiązuje. "
@@ -434,7 +437,10 @@ def tryb_odpowiedzi(tekst, wejscie):
 
 TELEFON_PODPOWIEDZ = ("[To rozmowa TELEFONICZNA: Twoja odpowiedź zostanie przeczytana na głos. Mów krótko (1–2 zdania), "
                       "naturalnie, bez emotek, list, Markdown i adresów. Gdy coś sprawdzasz, zrób to szybko. Tekst Antka "
-                      "pochodzi z rozpoznawania mowy i bywa przekręcony: zgadnij sens z kontekstu (np. „do nas” = „do NAS”).]")
+                      "pochodzi z rozpoznawania mowy i bywa przekręcony: zgadnij sens z kontekstu (np. „do nas” = „do NAS”). "
+                      "Adresów stron i maili (także słownie, z „kropka” albo „punkt”), numerów telefonów, kodów, ścieżek ani długich instrukcji krok po kroku NIE czytaj: powiedz krótko, "
+                      "co trzeba zrobić, a szczegóły włóż do znacznika [[CZAT: …]] (bot wyśle je na czat) i powiedz, że szczegóły są na czacie. "
+                      "Gdy Antek poprosi o szczegóły („powiedz szczegóły”, „przeczytaj”), wtedy przeczytaj je normalnie.]")
 
 
 WIEDZA = KATALOG / "wiedza_serwer.md"
@@ -693,7 +699,22 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     for m in re.finditer(r"\[\[SUDO:\s*(.+?)\s*\]\]", odp, re.S):
         akcje.append(sudo_zapisz(m.group(1)))
     odp = re.sub(r"\[\[SUDO:\s*(.+?)\s*\]\]", "", odp, flags=re.S)
+    odp = szczegoly_na_czat(odp, mowione=kanal == "telefon" or glosem)
     return odp.strip(), akcje
+
+
+def szczegoly_na_czat(odp, mowione):
+    """[[CZAT: …]] = szczegóły (adresy, numery, kroki): przy mowie idą osobną wiadomością na czat, w tekście zostają w odpowiedzi.
+    Przy mowie bez znacznika, ale z adresem/mailem/numerem/kodem w odpowiedzi: całość też idzie na czat (głos ich nie czyta)."""
+    bloki = re.findall(r"\[\[CZAT:\s*(.+?)\s*\]\]", odp, re.S)
+    if not mowione:
+        return re.sub(r"\[\[CZAT:\s*(.+?)\s*\]\]", lambda m: "\n" + m.group(1), odp, flags=re.S)
+    odp = re.sub(r"\s*\[\[CZAT:\s*(.+?)\s*\]\]", "", odp, flags=re.S)
+    if not bloki and (re.search(r"https?://|www\.|[\w.+-]+@[\w-]+\.\w", odp) or numer_z(odp)):
+        bloki = [odp]
+    if bloki:
+        threading.Thread(target=powiadom, args=("📋 Szczegóły:\n" + "\n\n".join(bloki),), daemon=True).start()
+    return odp
 
 
 def claude(tekst, kanal="telegram", odpowiedz_na=None, glosem=None):
@@ -1303,7 +1324,9 @@ def przygotuj_rozmowe(z):
     tekst = claude_jednorazowo(
         f"[Za kilka minut, o {z['termin'][11:16]}, Pi dzwoni do Antka przez Linphone z przypomnieniem: „{z['tekst']}”. "
         + ("W przypomnieniu jest numer telefonu: NIE czytaj go, powiedz, że trzeba zadzwonić na numer, który właśnie "
-           "wysłałeś na czacie. " if numer_z(z["tekst"]) else "") +
+           "wysłałeś na czacie. " if numer_z(z["tekst"]) else "")
+        + ("Adresów stron i maili ani kodów nie czytaj: powiedz, że szczegóły są na czacie. Przy czymś złożonym powiedz mało "
+           "(co i do kiedy), resztę Antek przeczyta na czacie albo poprosi Cię o szczegóły. ") +
         "Napisz DOKŁADNIE to, co powiesz, gdy odbierze: 1–3 krótkie zdania po polsku, naturalnie, bez emotek, list "
         "i Markdown (zostanie przeczytane na głos). Zinterpretuj przypomnienie: powiedz, o czym pamiętać i co zrobić "
         "(możesz krótko coś sprawdzić, np. stan serwera, plan, pogodę, jeśli to pomaga). Bez pytań i formułek na końcu "
@@ -1326,6 +1349,9 @@ def przypomnienia():
         if z.get("zrobione") or not z.get("termin") or z.get("wyslano") or z["termin"] > teraz:
             continue
         nr = numer_z(z["tekst"])
+        link = re.search(r"https?://\S+|www\.\S+|[\w.+-]+@[\w-]+\.[\w.-]+", z["tekst"])
+        if link and not nr and z.get("dzwon"):  # adres strony / mail z zadania: na czat (głos go nie czyta)
+            powiadom(f"📋 Szczegóły do przypomnienia:\n{z['tekst']}")
         if nr:                                  # numer do oddzwonienia: osobna wiadomość (dotknięcie = połączenie)
             powiadom(f"📞 Zadzwoń: {nr}\n{NUMER_RE.sub('', z['tekst']).strip(' ,:-')}", linphone=f"📞 Zadzwoń: {nr}\n{NUMER_RE.sub('', z['tekst']).strip(' ,:-')}")
         if z.get("dzwon") or nr:
@@ -1333,6 +1359,7 @@ def przypomnienia():
             bez_nr = NUMER_RE.sub("", z["tekst"]).strip(" ,:-")
             powitanie = p.get("tekst") if p.get("termin") == z["termin"] and p.get("tekst") else (
                 f"Przypomnienie: {bez_nr}. Zadzwoń na numer, który wysłałem Ci na czacie." if nr else f"Przypomnienie: {z['tekst']}.")
+            powitanie = szczegoly_na_czat(powitanie, mowione=True)
             pamiec.zapisz("bot", "telefon", f"Dzwonię z przypomnieniem „{z['tekst']}” i mówię: {powitanie}")
             zadzwon(powitanie, "przypomnienie z telefonem", todo_id=z["id"])
         powt = {"dzien": "\n🔁 codziennie", "tydzien": "\n🔁 co tydzień", "miesiac": "\n🔁 co miesiąc"}.get(z.get("powtarzaj"), "")
@@ -1588,7 +1615,8 @@ def przygotuj_budzik(a, na):
         "głosem przez telefon): krótkie „dzień dobry”, dzień tygodnia i godzina, potem po kolei tylko to, co ważne: "
         "lekcje i zmiany planu, sprawdziany i kartkówki, ważne maile, zadania na dziś, a stan serwera jednym zdaniem "
         "(tylko gdy coś jest nie tak, powiedz co). 30–60 sekund mówienia, naturalnie i ciepło, bez list, emotek, "
-        "Markdown i adresów. Bez pytań i formułek na końcu. Nic poza samą wypowiedzią.]\n\nDane:\n" + dane, limit=150)
+        "Markdown i adresów. Adresów, numerów i szczegółów krok po kroku nie czytaj: krótko co, a szczegóły w [[CZAT: …]] "
+        "(pójdą na czat) i powiedz, że są na czacie. Bez pytań i formułek na końcu. Nic poza samą wypowiedzią.]\n\nDane:\n" + dane, limit=150)
     if not tekst:
         tekst = "Dzień dobry! Pora wstawać. " + dane.replace("\n", " ")
     BUDZIK_TEKST[a["id"]] = {"na": na, "tekst": tekst}
@@ -1615,6 +1643,7 @@ def budziki():
             tekst = gotowy.get("tekst") if gotowy.get("na") == na and gotowy.get("tekst") else "Dzień dobry! Pora wstawać. " + poranne_dane().replace("\n", " ")
             portal(f"/api/alarmy/{a['id']}", {"ostatnio": t.date().isoformat(), **({"aktywny": False} if a.get("data") else {})})
             BUDZIK_TEKST.pop(a["id"], None)
+            tekst = szczegoly_na_czat(tekst, mowione=True)
             pamiec.zapisz("bot", "telefon", f"Budzik {a['godzina']}: dzwonię i mówię: {tekst}")
             zadzwon(tekst, "budzik", budzik=a["id"], proba=1)
 

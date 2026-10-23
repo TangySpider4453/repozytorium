@@ -51,7 +51,14 @@ def rozpoznaj(plik, dokladnie=True, limit=180):
 
 def do_mowy(tekst):
     """tekst do czytania na głos: bez Markdown, emotek i adresów"""
-    t = re.sub(r"https?://\S+", "link na czacie", tekst)
+    t = re.sub(r"https?://\S+|\bwww\.\S+", "link na czacie", tekst)
+    t = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "adres na czacie", t)                       # maile
+    t = re.sub(r"\b(?:[\w-]+\.)+(?:pl|com|org|net|eu|io|edu|gov|info|me|app|dev)\b(?:/\S*)?", "adres na czacie", t)   # same domeny
+    t = re.sub(r"(?<![\d:.])(\+?48[\s-]?)?(\d{3}[\s-]?\d{3}[\s-]?\d{3}|\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2})(?![\d:])",
+               "numer na czacie", t)                                                    # telefony
+    t = re.sub(r"(?<![\w.-])(?=[A-Za-z0-9-]*\d)(?=[A-Za-z0-9-]*[A-Za-z])[A-Za-z0-9][A-Za-z0-9-]{7,}(?![\w-])", "kod na czacie", t)  # kody
+    t = re.sub(r"\bkod kod na czacie", "kod na czacie", t)
+    t = re.sub(r"(?:~|/home|/etc|/mnt|/var|/usr)/\S+?(?=[.,;:!?]?(?:\s|$))", "ścieżka na czacie", t)     # ścieżki plików
     t = re.sub(r"[*_`#>|]", "", t)
     t = re.sub(r"[\U0001F000-\U0001FAFF☀-➿️]", "", t)
     t = t.replace("•", ",").replace("°C", " stopni").replace("%", " procent")

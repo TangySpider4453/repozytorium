@@ -312,6 +312,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   w zwijanym „Archiwum” (liczone na stronie z pola `zrobione`, dane się nie zmieniają); przy zrobionych „do archiwum za
   X h Y min”. Karta „📚 Sprawdziany i kartkówki” (z `/strony/nauka/sprawdziany.json`, linki do stron nauki); bot dopisuje
   je (14 dni) do listy „zadania”, a przypomnienia o sprawdzianach idą też na Linphone.
+- **Szczegóły na czat zamiast czytania**: przy mowie (telefon, głosówki, budzik, przypomnienia) Claude mówi krótko, a adresy,
+  maile, numery, kody, ścieżki i kroki daje w `[[CZAT: …]]` → `szczegoly_na_czat` wysyła je „📋 Szczegóły” na czat
+  (także gdy w mówionej odpowiedzi jest adres/mail/numer bez znacznika). `glos.do_mowy` i tak nie czyta adresów, domen,
+  maili, numerów, kodów (litery+cyfry ≥ 8 znaków) ani ścieżek („… na czacie”). Na prośbę („powiedz szczegóły”) czyta całość.
 - **Numer telefonu w zadaniu** (`numer_z`, 9 cyfr, opcjonalnie +48): zadanie z numerem zawsze dzwoni; „zadzwoń do X
   <numer>” zostaje w treści (nie jest brane jako „Pi ma dzwonić”). O czasie: osobna wiadomość „📞 Zadzwoń: +48 …”
   (Linphone/Telegram, dotknięcie = połączenie), a Pi w rozmowie mówi „zadzwoń na numer, który wysłałem na czacie”.
