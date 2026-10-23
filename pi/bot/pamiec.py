@@ -65,3 +65,23 @@ def kontekst(nowa_sesja, odpowiedz_na=None):
     if odpowiedz_na:
         czesci.append("Antek odpowiada na tę wiadomość: " + _linia(*odpowiedz_na[:2], "", odpowiedz_na[2], 800))
     return "\n\n".join(czesci)
+
+
+def ostatnie_id():
+    with _LOCK:
+        db = _db()
+        w = db.execute("SELECT MAX(id) FROM wiadomosci").fetchone()[0] or 0
+        db.close()
+    return w
+
+
+def od_id(od, bez_ostatniej=True, limit=20):
+    """wiadomości po danym id (np. wymienione z drugim modelem albo wysłane przez bota) jako tekst do kontekstu"""
+    with _LOCK:
+        db = _db()
+        w = db.execute("SELECT id, czas, kto, kanal, tekst FROM wiadomosci WHERE id > ? ORDER BY id", (od,)).fetchall()
+        db.close()
+    if bez_ostatniej and w and w[-1][2] == "antek":
+        w = w[:-1]
+    w = w[-limit:]
+    return "\n".join(_linia(*x[1:]) for x in w)

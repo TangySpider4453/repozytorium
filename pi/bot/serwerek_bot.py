@@ -24,6 +24,7 @@ import re
 import os
 import random
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -36,6 +37,7 @@ import pamiec
 import poczta
 import mobi
 import szybkie
+import klaud
 
 KATALOG = Path(__file__).resolve().parent
 STAN = KATALOG / "stan.json"
@@ -381,7 +383,10 @@ def wykonaj(akcja):
 # ---------------------------------------------------------------- Claude
 def nowa_sesja(s, powod=None):
     s["sesja"] = {}
+    s.setdefault("sesje", {}).clear()
     zapisz(s)
+    for pr in PROCESY.values():
+        pr.nowa_rozmowa()
     if powod:
         wyslij(f"🧹 Nowa rozmowa z Claude ({powod}).")
 
@@ -428,14 +433,28 @@ def tryb_odpowiedzi(tekst, wejscie):
 
 
 TELEFON_PODPOWIEDZ = ("[To rozmowa TELEFONICZNA: Twoja odpowiedź zostanie przeczytana na głos. Mów krótko (1–2 zdania), "
-                      "naturalnie, bez emotek, list, Markdown i adresów. Gdy coś sprawdzasz, zrób to szybko.]")
+                      "naturalnie, bez emotek, list, Markdown i adresów. Gdy coś sprawdzasz, zrób to szybko. Tekst Antka "
+                      "pochodzi z rozpoznawania mowy i bywa przekręcony: zgadnij sens z kontekstu (np. „do nas” = „do NAS”).]")
 
 
-def claude_polecenie(prompt):
-    """claude -p z uprawnieniami bota (uprawnienia.json, strażnik, bez sudo) -> (cmd, env)"""
+WIEDZA = KATALOG / "wiedza_serwer.md"
+
+
+def instrukcja_pelna(dodatek=""):
+    """instrukcja bota + wiedza o serwerze (diagnoza i naprawy) + dodatek dla danego modelu"""
+    t = INSTRUKCJA.read_text(encoding="utf-8")
+    if WIEDZA.exists():
+        t += "\n\n" + WIEDZA.read_text(encoding="utf-8")
+    return t + ("\n\n" + dodatek if dodatek else "")
+
+
+def claude_polecenie(prompt=None, dodatek=""):
+    """claude -p z uprawnieniami bota (uprawnienia.json, strażnik, bez sudo) -> (cmd, env); prompt=None: tryb stały
+    (klaud.py dopisuje --input-format/--output-format stream-json)"""
     u = json.loads((KATALOG / "uprawnienia.json").read_text())
-    cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
-           "--append-system-prompt", INSTRUKCJA.read_text(encoding="utf-8"), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"],
+    cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p"] + ([prompt, "--output-format", "json"] if prompt is not None else []) + [
+           "--permission-mode", "dontAsk",
+           "--append-system-prompt", instrukcja_pelna(dodatek), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"],
            "--settings", json.dumps({"hooks": u.get("hooks", {})})]
     env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")
            and not k.startswith(("POCZTA_", "MOBI_"))}            # hasła do poczty i dziennika nie trafiają do Claude
@@ -468,6 +487,85 @@ def claude_bez_narzedzi(prompt, limit=180):
     except (subprocess.TimeoutExpired, ValueError):
         return None
     return None if d.get("is_error") else d.get("result")
+
+
+# ---------------------------------------------------------------- Claude: dwa stałe procesy (klaud.py)
+# „szybki” = Haiku (niski wysiłek): rozmowa, proste pytania i polecenia; „madry” = Sonnet (średni wysiłek): awarie, naprawy,
+# kod, strony nauki, pliki, wszystko dłuższe. Haiku sam oddaje trudne sprawy znacznikiem [[TRUDNE]]. Wspólna pamięć:
+# przed każdą wiadomością model dostaje to, co od jego ostatniej odpowiedzi powiedział drugi model albo bot (pamiec.od_id).
+MODELE = {"szybki": ("claude-haiku-5-5", "low"), "madry": ("claude-sonnet-5-5", "medium")}
+DODATEK_SZYBKI = ("[Jesteś szybkim modelem (Haiku) do rozmowy i prostych spraw. Jeśli prośba wymaga diagnozy awarii albo "
+                  "naprawy serwera, zmian w plikach lub konfiguracji, pisania kodu albo stron, analizy materiałów, planowania "
+                  "kilku kroków albo nie jesteś pewien, jak to dobrze zrobić: odpowiedz WYŁĄCZNIE znacznikiem [[TRUDNE]] "
+                  "(przejmie to mądrzejszy model). Proste pytania, rozmowę, sprawdzenie stanu, todo, budziki rób sam.]")
+TRUDNE_RE = re.compile(r"napraw|nie dzia|nie odpal|nie łącz|nie lacz|awari|błęd|błąd|bledu|blad|wyłączył|wylaczyl|wysypa|padł|padl|"
+                       r"zepsu|problem|dlaczego|czemu|zrób|zrob|napisz|stron|\bkod|skrypt|program|nauk|sprawdzian|kartkówk|"
+                       r"kartkowk|materia|zdjęc|zdjec|pdf|analiz|porówn|porown|zaplanuj|konfigur|instal|aktualiz|\bnas\b|dysk|"
+                       r"kopi[aęi]|backup|tailscale|\bssh|\bvnc|portal|usług|uslug|\blog|sudo|restart|plik|folder|wytłumacz|"
+                       r"wytlumacz|wyjaśnij|wyjasnij|przelicz|oblicz|rozwiąż|rozwiaz|zadani[ea] z |przetłumacz|przetlumacz", re.I)
+USLUGA = Path(sys.argv[0]).stem or "bot"      # bot i telefon mają osobne procesy i sesje (nie piszą do jednej sesji naraz)
+PROCESY = {n: klaud.Proces(n, m, e, (lambda n=n: claude_polecenie(None, DODATEK_SZYBKI if n == "szybki" else "")))
+           for n, (m, e) in MODELE.items()}
+PAMIEC_ID = {}          # nazwa procesu -> id ostatniej wiadomości w pamięci, którą już zna
+
+
+def wybierz_model(tekst, kanal):
+    if kanal == "plik" or len(tekst) > 220 or TRUDNE_RE.search(tekst):
+        return "madry"
+    return "szybki"
+
+
+def zapytaj_model(nazwa, tekst, kanal, odpowiedz_na=None, glosem=False):
+    """wiadomość do stałego procesu: nowa rozmowa po godzinie ciszy albo przy dużym kontekście; kontekst z pamięci"""
+    pr = PROCESY[nazwa]
+    klucz = f"{USLUGA}-{nazwa}"
+    with LOCK:
+        s = stan()
+        zap = s.setdefault("sesje", {}).get(klucz, {})
+    if pr.sesja is None and zap.get("id") and time.time() - zap.get("ostatnio", 0) < KONTEKST_CISZA:
+        pr.sesja = zap["id"]                    # po restarcie bota: wznów rozmowę
+        PAMIEC_ID.setdefault(nazwa, zap.get("pamiec_id", 0))
+    if pr.sesja and (time.time() - (pr.ostatnio or zap.get("ostatnio", 0)) > KONTEKST_CISZA or pr.kontekst >= KONTEKST_MAX):
+        pr.nowa_rozmowa()
+    nowa = pr.sesja is None
+    if nowa:
+        pam = pamiec.kontekst(nowa_sesja=True, odpowiedz_na=odpowiedz_na)
+    else:
+        pam = pamiec.od_id(PAMIEC_ID.get(nazwa, 0))
+        pam = ("W międzyczasie (inny kanał, drugi model albo bot):\n" + pam if pam else "") + \
+            ("\n\nAntek odpowiada na: " + pamiec._linia(*odpowiedz_na[:2], "", odpowiedz_na[2], 800) if odpowiedz_na else "")
+    prompt = (pam.strip() + "\n\nNowa wiadomość od Antka" + {"telefon": " (mówi przez telefon)", "glosowka_zapisana": " (wiadomość głosowa)",
+                                                             "linphone": " (pisze na Linphone)"}.get(kanal, "") + ":\n" + tekst) if pam.strip() else tekst
+    if kanal == "telefon":
+        prompt = TELEFON_PODPOWIEDZ + "\n\n" + prompt
+    elif glosem:
+        prompt = GLOS_PODPOWIEDZ + "\n\n" + prompt
+    if kanal != "telefon" and prosi_o_czytanie(tekst):
+        prompt = CZYTAJ_PODPOWIEDZ + "\n\n" + prompt
+    t0 = time.time()
+    d = pr.zapytaj(prompt, limit=600 if kanal == "telefon" else 1800)
+    print(f"klaud {nazwa}: {time.time() - t0:.1f} s ({kanal}): {tekst[:50]}", flush=True)
+    if not d.get("is_error") and d.get("session_id"):
+        pr.kontekst = kontekst_sesji(d["session_id"]) or pr.kontekst
+        PAMIEC_ID[nazwa] = pamiec.ostatnie_id()
+        with LOCK:
+            s = stan()
+            s.setdefault("sesje", {})[klucz] = {"id": d["session_id"], "ostatnio": time.time(), "pamiec_id": PAMIEC_ID[nazwa]}
+            zapisz(s)
+    return d
+
+
+def rozgrzej(nazwy=("szybki", "madry")):
+    """start procesów zawczasu (pierwsza odpowiedź też szybka)"""
+    for n in nazwy:
+        pr = PROCESY[n]
+        with pr.lock:
+            if pr.p is None:
+                zap = stan().get("sesje", {}).get(f"{USLUGA}-{n}", {})
+                if zap.get("id") and time.time() - zap.get("ostatnio", 0) < KONTEKST_CISZA:
+                    pr.sesja = zap["id"]
+                    PAMIEC_ID.setdefault(n, zap.get("pamiec_id", 0))
+                pr._start(pr.sesja)
 
 
 # ---------------------------------------------------------------- szybkie odpowiedzi bez AI (szybkie.py)
@@ -532,29 +630,9 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
         if kanal not in ("telegram", "glosowka_zapisana"):
             pamiec.zapisz("antek", kanal, tekst)
         return sz, []
-    with LOCK:
-        s = stan()
-        ses = s["sesja"]
-        if ses.get("id") and time.time() - ses.get("ostatnio", 0) > KONTEKST_CISZA:
-            nowa_sesja(s, "godzina bez wiadomości" if kanal in ("telegram", "glosowka_zapisana") else None)
-            ses = s["sesja"]
-        if ses.get("id") and ses.get("kontekst", 0) >= KONTEKST_MAX:
-            nowa_sesja(s, f"kontekst przekroczył {KONTEKST_MAX // 1000} tys. tokenów" if kanal in ("telegram", "glosowka_zapisana") else None)
-            ses = s["sesja"]
-    pam = pamiec.kontekst(nowa_sesja=not ses.get("id"), odpowiedz_na=odpowiedz_na)
     if kanal not in ("telegram", "glosowka_zapisana"):      # czat i glosowki zapisuje juz obsluz()/glosowka()
         pamiec.zapisz("antek", kanal, tekst)
-    prompt = (pam + "\n\nNowa wiadomość od Antka" + {"telefon": " (mówi przez telefon)", "glosowka_zapisana": " (wiadomość głosowa)", "linphone": " (pisze na Linphone)"}.get(kanal, "")
-              + ":\n" + tekst) if pam else tekst
-    if kanal == "telefon":
-        prompt = TELEFON_PODPOWIEDZ + "\n\n" + prompt
-    elif glosem:
-        prompt = GLOS_PODPOWIEDZ + "\n\n" + prompt
-    if kanal != "telefon" and prosi_o_czytanie(tekst):
-        prompt = CZYTAJ_PODPOWIEDZ + "\n\n" + prompt
-    cmd, env = claude_polecenie(prompt)
-    if ses.get("id"):
-        cmd += ["--resume", ses["id"]]
+    nazwa = wybierz_model(tekst, kanal)
     stop = threading.Event()
 
     def pisze_():
@@ -564,25 +642,18 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     if pisze:
         threading.Thread(target=pisze_, daemon=True).start()
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=600 if kanal == "telefon" else 1800, cwd="/home/tonyg", env=env)
-        d = json.loads(r.stdout or "{}")
-    except subprocess.TimeoutExpired:
-        d = {"is_error": True, "result": "Przekroczony czas."}
-    except ValueError:
-        d = {"is_error": True, "result": (r.stderr or r.stdout or "brak odpowiedzi")[-500:]}
+        d = zapytaj_model(nazwa, tekst, kanal, odpowiedz_na, glosem)
+        if nazwa == "szybki" and "[[TRUDNE]]" in (d.get("result") or ""):     # Haiku: „to dla Sonneta”
+            print(f"klaud: Haiku przekazał do Sonneta: {tekst[:60]}", flush=True)
+            nazwa = "madry"
+            d = zapytaj_model(nazwa, tekst, kanal, odpowiedz_na, glosem)
     finally:
         stop.set()
     odp = d.get("result") or ""
-    if d.get("is_error") or not d.get("session_id"):
-        if ses.get("id"):           # np. sesja wygasla po stronie Claude: zacznij od nowa przy nastepnej wiadomosci
-            with LOCK:
-                nowa_sesja(stan())
+    if d.get("is_error"):
+        PROCESY[nazwa].nowa_rozmowa()           # np. sesja wygasła po stronie Claude: następna wiadomość od nowa
         raise RuntimeError(odp or "błąd")
-    kontekst = kontekst_sesji(d["session_id"])
-    with LOCK:
-        s = stan()
-        s["sesja"] = {"id": d["session_id"], "ostatnio": time.time(), "kontekst": kontekst}
-        zapisz(s)
+    odp = odp.replace("[[TRUDNE]]", "").strip()
     if m := re.search(r"\[\[INTENCJA:\s*(\w+)\s*\]\]", odp):       # Claude rozpoznał znaną intencję: zapamiętaj sformułowanie
         szybkie.naucz(tekst, m.group(1))
         odp = re.sub(r"\s*\[\[INTENCJA:\s*\w+\s*\]\]", "", odp)
@@ -2063,6 +2134,7 @@ def main():
     threading.Thread(target=petla_budzikow, daemon=True).start()
     threading.Thread(target=petla_poczty, daemon=True).start()
     threading.Thread(target=petla_mobi, daemon=True).start()
+    threading.Thread(target=rozgrzej, daemon=True).start()
     threading.Thread(target=petla_telefonu, daemon=True).start()
     threading.Thread(target=petla_minecrafta, daemon=True).start()
     threading.Thread(target=petla_mc_stanu, daemon=True).start()

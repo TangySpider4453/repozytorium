@@ -166,6 +166,21 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ważne → `powiadom()` i czekanie („przeczytaj mail”, „przeczytany”, „później” = za 3 h; bez reakcji przypomnienie
   po 30 min; w nocy czeka), inne → poranny przegląd. Nigdy nie wysyła (bez SMTP). `/api/poczta`, komenda „maile”.
 
+## Claude w bocie: dwa stałe procesy, Haiku i Sonnet (od 2026-10-23)
+- `pi/bot/klaud.py`: Claude Code w trybie `--input-format/--output-format stream-json` startuje raz i dostaje kolejne
+  wiadomości (bez ok. 6 s startu przy każdej). Procesy: „szybki” = `claude-haiku-5-5 --effort low`, „madry” =
+  `claude-sonnet-5-5 --effort medium`; osobne dla bota i usługi telefonu (`USLUGA`), rozgrzewane przy starcie
+  (`rozgrzej`), razem ok. 0,9 GB RAM. Pomiar 2026-10-23: proste pytanie 0,9–2,3 s (Haiku), awaria/naprawa 6–8 s (Sonnet z
+  narzędziami); wcześniej 7–9 s na każde.
+- Wybór (`wybierz_model`): Sonnet dla plików, tekstów > 220 znaków i słów typu napraw / nie działa / awaria / NAS /
+  dysk / kod / strona / nauka / dlaczego (`TRUDNE_RE`), reszta Haiku; Haiku sam oddaje trudne `[[TRUDNE]]` (wtedy to samo
+  idzie do Sonneta). Wspólna pamięć: przed wiadomością model dostaje `pamiec.od_id()` (co od jego ostatniej odpowiedzi
+  napisał drugi model, bot albo inny kanał). Nowa rozmowa po 1 h ciszy albo 250 tys. tokenów; sesje w `stan.json → sesje`.
+- Instrukcja = `instrukcja.md` + `wiedza_serwer.md` (diagnoza i naprawy: NAS, usługi, zasoby, sieć, typowe naprawy
+  ze znacznikami SUDO/AKCJA, przekręcona mowa). W rozmowie telefonicznej akcje potwierdza się głosem („tak” / „nie”).
+- Rozpoznawanie mowy przy telefonie: whisper base zachłannie (`-bs 1 -bo 1 -nf`, ok. 30% szybciej), głosówki: small.
+  `claude_jednorazowo` (budzik, przypomnienia, nowe sprawdziany) zostaje jako osobne wywołanie.
+
 ## Zdalne: terminal i pulpit VNC w przeglądarce (od 2026-10-23)
 - Strona `/zdalne` (menu „🖥️ Zdalne”, zamiast „Terminal”; `/terminal` przekierowuje), tylko przez Tailscale, zakładki
   „💻 Terminal” (jak dotąd: `home-terminal`, port 7681, logowanie hasłem Linuksa) i „🖥️ Pulpit (VNC)”.

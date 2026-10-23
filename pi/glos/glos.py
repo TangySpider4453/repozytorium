@@ -25,7 +25,7 @@ def gotowe():
 
 
 # podpowiedź słownictwa dla whispera (nazwy, które inaczej przekręca)
-SLOWNIK = "Serwerek, Raspberry Pi, Minecraft, serwer, NAS, Tailscale, Telegram, Claude, kartkówka, sprawdzian, Progres."
+SLOWNIK = "Serwerek, Raspberry Pi, Minecraft, serwer, NAS, Samba, Tailscale, Telegram, Linphone, Claude, kartkówka, sprawdzian, Progres, plik, Mobidziennik."
 
 
 def rozpoznaj(plik, dokladnie=True, limit=180):
@@ -41,7 +41,8 @@ def rozpoznaj(plik, dokladnie=True, limit=180):
         # okno kodera dopasowane do długości nagrania (domyślnie zawsze 30 s = 1500): 2-3 razy szybciej dla krótkich wypowiedzi
         okno = str(min(1500, max(256, int(sek * 50) + 96)))
         r = subprocess.run(["nice", "-n", "5", str(WHISPER), "-m", str(model), "-l", "pl", "-t", "4" if not dokladnie else WATKI,
-                            "-ac", okno, "--prompt", SLOWNIK, "-nt", "-np", "-f", str(wav)],
+                            "-ac", okno, "--prompt", SLOWNIK, "-nt", "-np", "-f", str(wav)]
+                           + ([] if dokladnie else ["-bs", "1", "-bo", "1", "-nf"]),     # telefon: zachłannie, ok. 30% szybciej
                            capture_output=True, text=True, timeout=limit)
     tekst = " ".join(l.strip() for l in r.stdout.splitlines() if l.strip())
     tekst = re.sub(r"\[(BLANK_AUDIO|MUZYKA|Muzyka|muzyka)\]|\((muzyka|cisza)\)", "", tekst).strip()

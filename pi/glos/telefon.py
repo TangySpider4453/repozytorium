@@ -134,6 +134,7 @@ class Rozmowa:
         self.tmp = Path(tempfile.mkdtemp(prefix="rozmowa-", dir="/tmp"))
         self.nagranie = self.tmp / "rozmowa.wav"
         self.przygotowanie = None
+        self.czeka = []                     # akcje czekające na „tak” w rozmowie
         if kierunek == "od Pi" and powitanie:
             self.przygotowanie = threading.Thread(target=self.przygotuj, args=(powitanie,), daemon=True)
             self.przygotowanie.start()
@@ -217,15 +218,35 @@ class Rozmowa:
                     pamiec.zapisz("antek", "telefon", tekst)
                     self.mow("Na razie, trzymaj się!")
                     break
+                if self.czeka:                  # odpowiedź na „Mam to zrobić?”: tak / nie
+                    tl = tekst.lower()
+                    akcje_teraz, self.czeka = self.czeka, []
+                    if re.search(r"\b(tak|dobra|dobrze|zrób|zrob|rób|rob|działaj|dzialaj|ok|okej|jasne|potwierdzam)\b", tl) and not re.search(r"\bnie\b", tl):
+                        pamiec.zapisz("antek", "telefon", tekst)
+                        wyniki = []
+                        for a in akcje_teraz:
+                            try:
+                                wyniki.append(bot.wykonaj(a))
+                            except Exception as ex:
+                                wyniki.append(f"nie udało się: {ex}")
+                        odp = " ".join(re.sub(r"\n.*", "", w, flags=re.S)[:200] for w in wyniki) or "Zrobione."
+                        pamiec.zapisz("bot", "telefon", f"Wykonane w rozmowie: {odp}")
+                        self.mow(odp)
+                        s.pomin_do_konca()
+                        continue
+                    if re.search(r"^\W*(nie|nie trzeba|zostaw|anuluj)\b", tl):
+                        self.mow("Dobrze, nic nie robię.")
+                        s.pomin_do_konca()
+                        continue
                 try:
                     odp, akcje = bot.claude_odpowiedz(tekst, "telefon", pisze=False)
                 except Exception as ex:
                     odp, akcje = f"Coś poszło nie tak po mojej stronie: {ex}. Spróbuj powtórzyć.", []
                 pamiec.zapisz("claude", "telefon", odp)
-                for a in akcje:
-                    bot.zapytaj(a, " (proponuje Claude podczas rozmowy)")
-                if akcje:
-                    odp += " Wysłałem Ci też przycisk do potwierdzenia w Telegramie."
+                if akcje:                       # zgoda głosem w tej samej rozmowie (bez przycisków)
+                    self.czeka = akcje
+                    if "?" not in odp[-60:]:
+                        odp += " Mam to zrobić? Powiedz tak albo nie."
                 self.mow(odp)
                 s.pomin_do_konca()
         except Exception as ex:
@@ -669,8 +690,18 @@ def bez_konfiguracji():
 CHWILA = None
 
 
+def rozgrzej_claude():
+    """stałe procesy Claude gotowe przed pierwszą rozmową (odpowiedź bez czekania na start programu)"""
+    try:
+        import serwerek_bot as bot
+        bot.rozgrzej()
+    except Exception as ex:
+        log(f"rozgrzewanie Claude: {type(ex).__name__}: {ex}")
+
+
 def main():
     global CHWILA
+    threading.Thread(target=rozgrzej_claude, daemon=True).start()
     KOLEJKA.mkdir(parents=True, exist_ok=True)
     WYNIKI.mkdir(parents=True, exist_ok=True)
     if not (UZYT and HASLO):
