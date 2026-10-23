@@ -370,6 +370,9 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-23 (zdalne)**: W menu „🖥️ Zdalne” = terminal + pulpit VNC w przeglądarce, oba za hasłem Linuksa
+  (sprawdzone: złe hasło odrzucone, bez biletu brak połączenia, z biletem pulpit 1920x1080). Progres: kadr na ręce
+  działa zawsze dla zdjęć biceps / tył+biceps (wcześniej tylko z przełącznikiem „same ręce”).
 - **2026-10-23 (pauzy w rozmowie)**: W rozmowie telefonicznej koniec wypowiedzi dopiero po 3 s ciszy (`PAUZA_KONIEC`,
   było 0,9 s), wypowiedź do 60 s; końcowa cisza obcinana przed rozpoznaniem. Progres: kadr na ręce w trybie „Same ręce”.
 - **2026-10-23 (szybkie odpowiedzi)**: Typowe pytania (o której zaczynam, sprawdziany, zastępstwa, zadania, budzik,

@@ -4,7 +4,7 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
 
   /                  stan serwera, wszystkie dzialajace programy, linki do kazdej strony hostowanej na Pi
   /siec              wszystkie adresy IP (LAN, Tailscale, publiczny, tunel Minecraft), porty, urzadzenia Tailscale
-  /terminal          terminal w przegladarce (osadza usluge home-terminal z portu 7681)
+  /zdalne            terminal (usluga home-terminal, port 7681) i pulpit VNC (websockify 6080 -> wayvnc); /terminal -> /zdalne
   /strony/<nazwa>/   strony statyczne z katalogu sites/<nazwa>/ (wystarczy wrzucic folder z index.html)
   /api/status, /api/siec   dane w JSON dla powyzszych stron
   /api/nauka/...     postepy nauki (fiszki, quizy), zmiana daty, „wazne” i ustawienia listy dla /strony/nauka/
@@ -396,8 +396,8 @@ def web_pages(ports):
     pages = [
         {"nazwa": "Sieć i adresy", "opis": "Wszystkie adresy IP serwera, tunel Minecraft, porty i urządzenia w Tailscale",
          "port": PORT, "sciezka": "/siec", "dziala": True, "typ": "portal"},
-        {"nazwa": "Terminal", "opis": "Konsola Linuksa w przeglądarce, logowanie hasłem użytkownika",
-         "port": PORT, "sciezka": "/terminal", "dziala": TERMINAL_PORT in tcp, "typ": "portal"},
+        {"nazwa": "Zdalne: terminal i pulpit", "opis": "Konsola Linuksa i pulpit Raspberry (VNC) w przeglądarce, logowanie hasłem użytkownika",
+         "port": PORT, "sciezka": "/zdalne", "dziala": TERMINAL_PORT in tcp, "typ": "portal"},
         {"nazwa": "Panel Minecraft", "opis": "Temperatura, gracze online, pobór mocy (szacunek) i konsola serwera",
          "port": DASHBOARD_PORT, "sciezka": "/", "dziala": DASHBOARD_PORT in tcp, "typ": "aplikacja",
          "dodatkowe": [{"nazwa": "Konsola serwera MC", "sciezka": "/console"}]},
@@ -734,7 +734,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
   <nav>
     <a href="/" data-p="start"><span class="ik" aria-hidden="true">🏠</span>Start</a>
     <a href="/siec" data-p="siec"><span class="ik" aria-hidden="true">🌐</span>Sieć i adresy</a>
-    <a href="/terminal" data-p="terminal"><span class="ik" aria-hidden="true">💻</span>Terminal</a>
+    <a href="/zdalne" data-p="zdalne"><span class="ik" aria-hidden="true">🖥️</span>Zdalne</a>
     <a href="/strony/lazik/" data-p="lazik"><span class="ik" aria-hidden="true">🚙</span>Łazik</a>
     <a href="/strony/nauka/" data-p="nauka"><span class="ik" aria-hidden="true">📚</span>Nauka</a>
     <a href="/strony/progres/" data-p="progres"><span class="ik" aria-hidden="true">💪</span>Progres</a>
@@ -747,7 +747,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 <footer id="foot">Przez Tailscale bez hasła, z sieci domowej po zalogowaniu. Dane odświeżają się same.</footer>
 </div>
 <script>
-const PAGE="%%PAGE%%", PORT=%%PORT%%, TERMINAL_PORT=%%TPORT%%;
+const PAGE="%%PAGE%%", PORT=%%PORT%%, TERMINAL_PORT=%%TPORT%%, VNC_WS_PORT=%%VPORT%%;
 document.querySelectorAll('nav a').forEach(a=>{if(a.dataset.p===PAGE)a.classList.add('on')});
 fetch('/api/dostep').then(r=>r.json()).then(d=>{if(d.siec==='domowa'){const a=document.createElement('a');a.href='/wyloguj';a.innerHTML='<span class="ik" aria-hidden="true">🚪</span>Wyloguj';a.title='Zapomnij to urządzenie (wejście z sieci domowej)';document.querySelector('nav').append(a)}}).catch(()=>{});
 function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v] of Object.entries(attrs||{})){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v)}for(const k of kids.flat(9)){if(k==null||k===false)continue;e.append(k instanceof Node?k:document.createTextNode(String(k)))}return e}
@@ -881,11 +881,11 @@ let lastSys=null;function setSubFromCache(){if(lastSys)setSub(lastSys)}
 
 /* ---------- TERMINAL ---------- */
 function loadAsset(tag,attrs){return new Promise((ok,bad)=>{const e=document.createElement(tag);Object.assign(e,attrs);e.onload=ok;e.onerror=()=>bad(new Error('nie udało się pobrać '+(attrs.src||attrs.href)));document.head.append(e)})}
-function renderTerminal(){
+function renderTerminal(cel){
   const direct=location.protocol+'//'+location.hostname+':'+TERMINAL_PORT+'/';
   const box=h('div',{class:'term',style:'padding:8px'});
   const status=h('span',{class:'chip',text:'łączenie…'});
-  main.replaceChildren(h('section',null,
+  (cel||main).replaceChildren(h('section',null,
     h('p',{class:'sec-note',text:'Zaloguj się nazwą użytkownika (tonyg) i hasłem Linuksa. Każda karta to osobna sesja; zamknięcie karty lub przejście na inną stronę kończy sesję. Terminal działa tylko przez Tailscale.'}),
     box,
     h('div',{class:'btns'},status,h('a',{class:'btn alt',href:location.pathname,text:'Nowa sesja'}),h('a',{class:'btn alt',href:direct,target:'_blank',rel:'noopener',text:'Otwórz sam terminal w nowej karcie'}))));
@@ -920,15 +920,50 @@ async function tick(){
     else if(PAGE==='siec'){const [n,s]=await Promise.all([getJSON('/api/siec'),getJSON('/api/status?lekki=1')]);lastSys=s.system;renderSiec(n)}
   }catch(e){main.replaceChildren(h('div',{class:'err',text:'Nie udało się pobrać danych z serwera ('+e.message+'). Ponawiam…'}))}
 }
-if(PAGE==='terminal')renderTerminal();else{tick();setInterval(tick,PAGE==='start'?5000:15000)}
+/* ---------- ZDALNE: terminal i pulpit VNC (oba logowanie hasłem Linuksa, oba tylko przez Tailscale) ---------- */
+function renderZdalne(){
+  const cel=h('div'), tryb=new URLSearchParams(location.search).get('tryb')==='vnc'?'vnc':'terminal';
+  const zak=(k,n)=>h('a',{class:'btn'+(k===tryb?'':' alt'),href:'/zdalne?tryb='+k,text:n});
+  main.replaceChildren(h('div',{class:'btns',style:'margin:0 0 12px'},zak('terminal','💻 Terminal'),zak('vnc','🖥️ Pulpit (VNC)')),cel);
+  if(tryb==='terminal')renderTerminal(cel);else renderVnc(cel);
+}
+function renderVnc(cel){
+  const status=h('span',{class:'chip',text:'niepołączony'});
+  const ekran=h('div',{style:'width:100%;height:calc(100vh - 230px);min-height:320px;background:#111;border-radius:8px;overflow:hidden'});
+  const haslo=h('input',{type:'password',placeholder:'hasło Linuksa (tonyg)',autocomplete:'current-password',style:'font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:7px;width:14em'});
+  const pol=h('button',{class:'btn',text:'Połącz'}), roz=h('button',{class:'btn alt',type:'button',text:'Rozłącz',disabled:''}), pelny=h('button',{class:'btn alt',type:'button',text:'⛶ Pełny ekran'});
+  const form=h('form',{class:'btns',style:'margin:0 0 10px;align-items:center'},haslo,pol,roz,pelny,status);
+  cel.replaceChildren(h('section',null,h('p',{class:'sec-note',text:'Pulpit Raspberry Pi. Wpisz hasło Linuksa (to samo co do terminala). Na telefonie: dotknięcie = klik, przeciągnięcie = ruch myszy.'}),form,ekran));
+  let rfb=null;
+  pelny.onclick=()=>{(ekran.requestFullscreen||ekran.webkitRequestFullscreen||(()=>{})).call(ekran)};
+  roz.onclick=()=>{if(rfb)rfb.disconnect()};
+  form.onsubmit=async e=>{
+    e.preventDefault();if(rfb)return;
+    status.className='chip';status.textContent='sprawdzam hasło…';pol.disabled=true;
+    try{
+      const r=await fetch('/api/zdalne/vnc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({haslo:haslo.value})});
+      const d=await r.json();haslo.value='';
+      if(!d.token)throw new Error(d.blad||'odmowa');
+      status.textContent='łączenie…';
+      const {default:RFB}=await import('/strony/zdalne/novnc/core/rfb.js');
+      rfb=new RFB(ekran,(location.protocol==='https:'?'wss://':'ws://')+location.hostname+':'+VNC_WS_PORT+'/?token='+d.token);
+      rfb.scaleViewport=true;rfb.resizeSession=false;rfb.focusOnClick=true;
+      rfb.addEventListener('connect',()=>{status.className='chip ok';status.textContent='połączono';roz.removeAttribute('disabled')});
+      rfb.addEventListener('disconnect',ev=>{status.className=ev.detail.clean?'chip':'chip bad';status.textContent=ev.detail.clean?'rozłączono':'połączenie przerwane';
+        rfb=null;pol.disabled=false;roz.setAttribute('disabled','')});
+    }catch(err){status.className='chip bad';status.textContent=err.message;pol.disabled=false;rfb=null}
+  };
+}
+if(PAGE==='terminal')renderTerminal();else if(PAGE==='zdalne')renderZdalne();else{tick();setInterval(tick,PAGE==='start'?5000:15000)}
 </script></body></html>"""
 
-TITLES = {"start": "Serwerek domowy", "siec": "Sieć i adresy · serwerek", "terminal": "Terminal · serwerek"}
+TITLES = {"start": "Serwerek domowy", "siec": "Sieć i adresy · serwerek", "terminal": "Terminal · serwerek", "zdalne": "Zdalne · serwerek"}
+VNC_WS_PORT = 6080      # websockify (serwerek-vnc-ws): przeglądarka -> wayvnc na 127.0.0.1:5900, tylko na adresie Tailscale
 
 
 def page(name):
     html = (PAGE.replace("%%TITLE%%", TITLES[name]).replace("%%PAGE%%", name)
-            .replace("%%PORT%%", str(PORT)).replace("%%TPORT%%", str(TERMINAL_PORT)))
+            .replace("%%PORT%%", str(PORT)).replace("%%TPORT%%", str(TERMINAL_PORT)).replace("%%VPORT%%", str(VNC_WS_PORT)))
     return Response(html, mimetype="text/html")
 
 
@@ -1168,15 +1203,67 @@ def siec():
     return page("siec")
 
 
-@app.route("/terminal")
-def terminal():
+@app.route("/zdalne")
+def zdalne():
     if not przez_tailscale():
         return Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-                        '<title>Terminal</title><body style="font:17px system-ui;padding:24px;max-width:520px;margin:auto">'
-                        '<h1>Terminal tylko przez Tailscale</h1><p>Ze względów bezpieczeństwa terminal nie działa z sieci domowej. '
-                        'Włącz Tailscale na tym urządzeniu i wejdź na <b>http://100.108.241.58/terminal</b>.</p>'
+                        '<title>Zdalne</title><body style="font:17px system-ui;padding:24px;max-width:520px;margin:auto">'
+                        '<h1>Terminal i pulpit tylko przez Tailscale</h1><p>Ze względów bezpieczeństwa nie działają z sieci domowej. '
+                        'Włącz Tailscale na tym urządzeniu i wejdź na <b>http://100.108.241.58/zdalne</b>.</p>'
                         '<p><a href="/">← Strona główna</a></p></body>', mimetype="text/html")
-    return page("terminal")
+    return page("zdalne")
+
+
+# Pulpit VNC: przeglądarka (noVNC) -> websockify (serwerek-vnc-ws, Tailscale :6080, wtyczka TokenFile) -> wayvnc
+# z Raspberry Pi Connect (gniazdo unix tylko dla tonyg, bez hasła). Hasło sprawdza portal (PAM, hasło Linuksa tonyg),
+# a websockify wpuszcza tylko z jednorazowym biletem (plik w dane/vnc_tokeny, ważny 60 s).
+VNC_GNIAZDO = "/run/user/1000/rpi-connect-wayvnc.sock"
+VNC_TOKENY = BASE / "dane" / "vnc_tokeny"
+VNC_PROBY = {}          # ip -> [czasy nieudanych prób]
+
+
+def haslo_linuksa_ok(haslo):
+    import PAM
+    p = PAM.pam()
+    p.start("login")
+    p.set_item(PAM.PAM_USER, pwd.getpwuid(os.getuid()).pw_name)
+    p.set_item(PAM.PAM_CONV, lambda auth, query, data: [(haslo, 0) if t == PAM.PAM_PROMPT_ECHO_OFF else ("", 0) for q, t in query])
+    try:
+        p.authenticate()
+        p.acct_mgmt()
+        return True
+    except PAM.error:
+        return False
+
+
+@app.route("/api/zdalne/vnc", methods=["POST"])
+def api_zdalne_vnc():
+    from flask import request
+    if not przez_tailscale():
+        abort(403)
+    ip, teraz = request.remote_addr, time.time()
+    VNC_PROBY[ip] = [t for t in VNC_PROBY.get(ip, []) if teraz - t < 300]
+    if len(VNC_PROBY[ip]) >= 5:
+        return jsonify({"blad": "za dużo złych haseł, spróbuj za 5 minut"}), 429
+    b = request.get_json(silent=True) or {}
+    if not isinstance(b.get("haslo"), str) or not haslo_linuksa_ok(b["haslo"]):
+        VNC_PROBY[ip].append(teraz)
+        time.sleep(1)
+        return jsonify({"blad": "złe hasło"}), 403
+    if not os.path.exists(VNC_GNIAZDO):
+        return jsonify({"blad": "pulpit (Raspberry Pi Connect) nie działa"}), 503
+    VNC_TOKENY.mkdir(parents=True, exist_ok=True)
+    for p in VNC_TOKENY.glob("*"):                          # stare bilety
+        if teraz - p.stat().st_mtime > 60:
+            p.unlink(missing_ok=True)
+    tok = uuid_hex()
+    (VNC_TOKENY / tok).write_text(f"{tok}: unix_socket:{VNC_GNIAZDO}\n")
+    return jsonify({"token": tok})
+
+
+@app.route("/terminal")
+def terminal():
+    return redirect("/zdalne?tryb=terminal")
 
 
 @app.route("/api/status")

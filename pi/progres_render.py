@@ -143,7 +143,7 @@ class Render:
         self.wpisy = wej.get("wpisy") or {}
         self.katalogi = [Path(k) for k in wej.get("katalogi") or [wej["katalog"]]]
         self.W, self.H = FORMATY.get(self.film.get("format"), FORMATY["4:5"])
-        if self.film.get("rece") and self.film.get("typ") in ("biceps", "tylbiceps"):     # tryb rąk (jak synchCEL w app.js)
+        if self.film.get("typ") in ("biceps", "tylbiceps"):     # kadr na ręce (jak trybRak / synchCEL w app.js)
             self.cel = {"s": self.film.get("celSr") or 0.5, "y": self.film.get("celYr") or 0.45}
         else:
             self.cel = {"s": self.film.get("celS") or 0.26, "y": self.film.get("celY") or 0.44}

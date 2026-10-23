@@ -102,7 +102,7 @@ Wylogowanie urzadzenia: przycisk "Wyloguj" w menu portalu albo adres http://172.
 portal-haslo
     Zmiana hasla (wpisujesz dwa razy, nie widac znakow). Wylogowuje wszystkie urzadzenia w sieci domowej.
     Po 5 zlych haslach z jednego urzadzenia: 5 minut blokady. Proby logowania widac w Logi/zdrowie-dziennik.log.
-Terminal w przegladarce dziala tylko przez Tailscale.
+Terminal i pulpit (VNC) w przegladarce: portal -> Zdalne (http://100.108.241.58/zdalne), tylko przez Tailscale, haslo Linuksa.
 
 
 BOT TELEGRAM (@SerwerekAntek_bot)

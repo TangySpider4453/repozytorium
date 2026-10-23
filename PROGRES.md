@@ -16,7 +16,7 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   (`[]` = nie rozpoznano). Wzór rodzaju = średnia punktów ze wszystkich zdjęć tego rodzaju (Prokrustes: skala +
   przesunięcie, 3 iteracje), w jednostkach tułowia. Zdjęcie dopasowane do wzoru ważoną MNK (`WAGI` w `app.js`: barki
   i biodra 3–3,5, głowa/kolana ok. 1, ręce 0,05–0,5; bok najmniej rąk). `FM.rece` (tylko `biceps`/`tylbiceps`):
-  dopasowanie tylko do barków, łokci, nadgarstków, a kadr (od 2026-10-23) jest na ręce: `fokus(typ)` = prostokąt
+  dopasowanie tylko do barków, łokci, nadgarstków. Kadr zdjęć biceps/tylbiceps (zawsze, niezależnie od `FM.rece`) jest na ręce: `fokus(typ)` = prostokąt
   punktów 11–16 wzoru (środek `fc`, rozmiar `A`), `dopasowanie` przelicza wynik na jednostki fokusu, więc środek rąk
   jest w środku kadru, a suwak „Przybliżenie” (`FM.celSr`, domyślnie 0,5, do 0,95) = ile wysokości kadru zajmują ręce
   (mniej = więcej reszty sylwetki); „Wysokość” = `FM.celYr`. Render na Pi bierze `celSr/celYr`, gdy `rece` i typ biceps. Wynik `{s, tx, ty}` liczy przeglądarka i wysyła do renderu jako
@@ -110,3 +110,4 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 - **2026-10-22 (4)**: Film „co miesiąc” i wybór zdjęcia najbliższego planowanemu dniowi (zamiast pierwszego w oknie);
   w trybie miesięcznym zawsze z tego samego miesiąca. `app.js?v=12`.
 - **2026-10-23**: Tryb „Same ręce”: kadr centruje i przybliża ręce (barki, łokcie, nadgarstki), suwak „Przybliżenie” = ile kadru zajmują ręce (osobne ustawienia `celSr`/`celYr`). `app.js?v=13`.
+- **2026-10-23 (2)**: Kadr na ręce działa dla każdego zdjęcia biceps / tył+biceps (wcześniej tylko z przełącznikiem „same ręce”, który zostaje dla sposobu dopasowania). `app.js?v=14`.

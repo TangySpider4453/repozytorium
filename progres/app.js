@@ -341,8 +341,9 @@ function rysujHistorie(){
 /* CEL = szablon kadru: tułów ma CEL.s wysokości kadru, jego środek jest w poziomie na środku i na CEL.y wysokości.
    Ustawiany suwakami „Przybliżenie” i „Wysokość” (FM.celS, FM.celY); po zmianie sylwetka i tak jest centrowana. */
 const CEL = {y:0.44, s:0.26};
-/* tryb „same ręce” (biceps / tył+biceps): kadr na ręce, osobne suwaki FM.celSr (ręce = ułamek wysokości kadru) i FM.celYr */
-const trybRak = typ => !!FM.rece && BICEPS.includes(typ || FM.typ);
+/* zdjęcia z bicepsem (biceps / tył+biceps): kadr zawsze na ręce, osobne suwaki FM.celSr (ręce = ułamek wysokości kadru)
+   i FM.celYr; przełącznik „same ręce” (FM.rece) decyduje tylko o dopasowaniu zdjęć (do rąk albo do całej sylwetki) */
+const trybRak = typ => BICEPS.includes(typ || FM.typ);
 function synchCEL(){
   if(trybRak()){ CEL.s = FM.celSr || 0.5; CEL.y = FM.celYr || 0.45; }
   else{ CEL.s = FM.celS || 0.26; CEL.y = FM.celY || 0.44; }

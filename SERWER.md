@@ -166,6 +166,17 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ważne → `powiadom()` i czekanie („przeczytaj mail”, „przeczytany”, „później” = za 3 h; bez reakcji przypomnienie
   po 30 min; w nocy czeka), inne → poranny przegląd. Nigdy nie wysyła (bez SMTP). `/api/poczta`, komenda „maile”.
 
+## Zdalne: terminal i pulpit VNC w przeglądarce (od 2026-10-23)
+- Strona `/zdalne` (menu „🖥️ Zdalne”, zamiast „Terminal”; `/terminal` przekierowuje), tylko przez Tailscale, zakładki
+  „💻 Terminal” (jak dotąd: `home-terminal`, port 7681, logowanie hasłem Linuksa) i „🖥️ Pulpit (VNC)”.
+- VNC: noVNC 1.5.0 hostowany na Pi (`~/portal/sites/zdalne/novnc/`, core + vendor z GitHuba) → websockify
+  (`serwerek-vnc-ws.service`, repo `pi/zdalne/`, `100.108.241.58:6080`, `--token-plugin TokenFile`) → wayvnc
+  Raspberry Pi Connect (gniazdo `/run/user/1000/rpi-connect-wayvnc.sock`, bez hasła, tylko dla tonyg). Hasło: portal
+  `POST /api/zdalne/vnc {haslo}` sprawdza hasło Linuksa przez PAM (`python3-pam`, usługa `login`), 5 złych prób =
+  5 min blokady, po sukcesie bilet w `dane/vnc_tokeny/` (ważny 60 s). Bez biletu websockify nie łączy.
+  Główny wayvnc (port 5900, PAM + TLS/RSA-AES) zostaje dla zwykłych klientów VNC; noVNC go nie obsługuje (VeNCrypt TLS,
+  RSA-AES 5/129).
+
 ## Szybkie odpowiedzi bez AI (od 2026-10-23)
 - `pi/bot/szybkie.py`: typowe pytania rozpoznane wzorcami (po `norm()`: bez polskich znaków i wypełniaczy; określenie
   dnia „jutro / w piątek…” wycinane przed dopasowaniem i odczytywane przez odpowiedź) → odpowiedź z danych na Pi
