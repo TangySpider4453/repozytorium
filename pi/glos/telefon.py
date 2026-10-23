@@ -751,8 +751,10 @@ def main():
     cfg.medConfig.ecTailLen = 0
     cfg.logConfig.level = 3
     cfg.logConfig.consoleLevel = 2
-    if os.environ.get("TELEFON_LOG"):            # diagnostyka: pełny zapis SIP do pliku
-        cfg.logConfig.level = int(os.environ["TELEFON_LOG"])
+    diag = KAT / "diag_sip"                     # diagnostyka bez zmiany usługi: plik z poziomem (np. 5)
+    poziom = os.environ.get("TELEFON_LOG") or (diag.read_text().strip() if diag.exists() else "")
+    if poziom:                                  # pełny zapis SIP i mediów do pliku
+        cfg.logConfig.level = int(poziom)
         cfg.logConfig.filename = "/tmp/telefon-sip.log"
     ep.libInit(cfg)
     tc = pj.TransportConfig()
