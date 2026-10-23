@@ -370,6 +370,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
   dłużej tylko na wyraźną prośbę (`instrukcja.md`).
 - **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-23 (pauzy w rozmowie)**: W rozmowie telefonicznej koniec wypowiedzi dopiero po 3 s ciszy (`PAUZA_KONIEC`,
+  było 0,9 s), wypowiedź do 60 s; końcowa cisza obcinana przed rozpoznaniem. Progres: kadr na ręce w trybie „Same ręce”.
 - **2026-10-23 (szybkie odpowiedzi)**: Typowe pytania (o której zaczynam, sprawdziany, zastępstwa, zadania, budzik,
   serwer, autobus…) bot odpowiada sam z danych w ułamku sekundy, bez Claude; Claude oznacza rozpoznane pytania, a bot uczy
   się nowych sformułowań. Test 308/308. Budzik 6:15 zadziałał (603 → ponowienie, potem 486 i kolejna próba po 5 min).

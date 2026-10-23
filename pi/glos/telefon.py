@@ -43,6 +43,7 @@ CZAS_DZWONIENIA = 60                                    # s: tyle Pi próbuje dz
 PONOW = []          # [(kiedy, zlecenie)]: iPhone czasem od razu odrzuca (603), np. gdy Linphone jest otwarty; dzwonimy znowu
 MAX_ROZMOWA = 20 * 60
 CISZA_KONIEC = 90                                       # s ciszy: rozłącz
+PAUZA_KONIEC = 3.0                                      # s ciszy = koniec wypowiedzi (krótsze pauzy w zdaniu nie przerywają)
 POZEGNANIA = ("do widzenia", "rozłącz", "rozlacz", "koniec rozmowy", "na razie", "pa pa", "cześć to wszystko")
 
 AKCJE = queue.Queue()        # (funkcja, argumenty) do wykonania w głównym wątku pjsua2
@@ -96,7 +97,7 @@ class Sluchacz:
         return d
 
     def wypowiedz(self, koniec_rozmowy, limit_ciszy):
-        """czeka na wypowiedź: start po 3 głośnych ramkach, koniec po 0,9 s ciszy; None = cisza za długo / koniec"""
+        """czeka na wypowiedź: start po 3 głośnych ramkach, koniec po PAUZA_KONIEC s ciszy; None = cisza za długo / koniec"""
         mowa, cisza, glosne, start = bytearray(), 0, 0, time.time()
         while not koniec_rozmowy.is_set():
             d = self.czytaj()
@@ -117,7 +118,8 @@ class Sluchacz:
                     continue
                 mowa.extend(d[i:i + RAMKA])
                 cisza = cisza + 1 if rms < prog * 0.7 else 0
-                if cisza >= 45 or len(mowa) > HZ * 2 * 30:          # 0,9 s ciszy albo 30 s mówienia
+                if cisza >= PAUZA_KONIEC * 50 or len(mowa) > HZ * 2 * 60:   # pauza dłuższa niż PAUZA_KONIEC albo 60 s mówienia
+                    mowa = mowa[:max(len(mowa) - max(0, cisza - 15) * RAMKA, 0)]   # bez końcowej ciszy (szybsze rozpoznanie)
                     return bytes(mowa) if len(mowa) > HZ * 2 * 0.4 else self.wypowiedz(koniec_rozmowy, limit_ciszy)
         return None
 
