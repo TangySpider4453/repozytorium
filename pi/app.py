@@ -4,14 +4,19 @@ Serwerek domowy - strona glowna Raspberry Pi 4B ("strona matka").
 
   /                  stan serwera, wszystkie dzialajace programy, linki do kazdej strony hostowanej na Pi
   /siec              wszystkie adresy IP (LAN, Tailscale, publiczny, tunel Minecraft), porty, urzadzenia Tailscale
-  /terminal          terminal w przegladarce (osadza usluge home-terminal z portu 7681)
+  /zdalne            terminal (usluga home-terminal, port 7681) i pulpit VNC (websockify 6080 -> wayvnc); /terminal -> /zdalne
   /strony/<nazwa>/   strony statyczne z katalogu sites/<nazwa>/ (wystarczy wrzucic folder z index.html)
   /api/status, /api/siec   dane w JSON dla powyzszych stron
   /api/nauka/...     postepy nauki (fiszki, quizy), zmiana daty, „wazne” i ustawienia listy dla /strony/nauka/
   /api/progres/...   dziennik sylwetki: pomiary z wagi i zdjecia (tylko na Pi, dane/progres/) dla /strony/progres/
   /api/zdrowie       stan serwera dla diody na kazdej stronie i dziennik problemow (dane/zdrowie/), strona /strony/zdrowie/
+  /api/todo          lista zadan z przypomnieniami (dane/todo.json), strona /strony/todo/, przypomnienia wysyla bot Telegram
 
-Nasluch tylko na adresie Tailscale (port 80) - strona nie jest widoczna w sieci domowej ani w internecie.
+NAS (Tony-Folder/Raspberry w /mnt/nas, montuje go nas-montuj.timer): zdjecia i filmy Progres oraz logi zdrowia ida tam
+od razu. Gdy NAS niedostepny, zostaja na Pi (czerwona dioda) i przenosza sie same po jego powrocie (watek nas_petla).
+
+Nasluch na porcie 80 wszystkich adresow Pi: przez Tailscale bez hasla, z sieci domowej (172.23.0.x) po zalogowaniu
+haslem (ciasteczko na rok, sekcja „Dostep z sieci domowej”). Z internetu strona nie jest widoczna (brak publicznego IP).
 Uruchamiane przez systemd: home-portal.service (uzytkownik tonyg, CAP_NET_BIND_SERVICE dla portu 80).
 Konfiguracja (adres tunelu Minecraft, dodatkowe linki): config.json obok tego pliku.
 """
@@ -97,6 +102,8 @@ SERVICE_INFO = {
     "playit": ("Serwer i projekty", "Tunel playit.gg: publiczny adres serwera Minecraft mimo braku publicznego IP"),
     "pi-dashboard": ("Serwer i projekty", "Panel Minecraft: temperatura, gracze, pobór mocy i konsola serwera (port 8090)"),
     "home-portal": ("Serwer i projekty", "Ta strona: stan serwera, adresy i linki (port 80, tylko Tailscale)"),
+    "serwerek-telefon": ("Serwer i projekty", "Telefon serwerka: rozmowy przez Linphone, mowa rozpoznawana i syntezowana na Pi"),
+    "serwerek-bot": ("Serwer i projekty", "Bot Telegram @SerwerekAntek_bot: powiadomienia, przyciski i rozmowa z Claude"),
     "home-terminal": ("Serwer i projekty", "Terminal w przeglądarce (port 7681, tylko Tailscale, logowanie hasłem Linuksa)"),
     "ollama": ("Serwer i projekty", "Ollama: lokalne modele językowe AI, API tylko na tym Pi (port 11434)"),
     "tailscaled": ("Sieć i zdalny dostęp", "Tailscale: prywatna sieć VPN łącząca Twoje urządzenia"),
@@ -389,8 +396,8 @@ def web_pages(ports):
     pages = [
         {"nazwa": "Sieć i adresy", "opis": "Wszystkie adresy IP serwera, tunel Minecraft, porty i urządzenia w Tailscale",
          "port": PORT, "sciezka": "/siec", "dziala": True, "typ": "portal"},
-        {"nazwa": "Terminal", "opis": "Konsola Linuksa w przeglądarce, logowanie hasłem użytkownika",
-         "port": PORT, "sciezka": "/terminal", "dziala": TERMINAL_PORT in tcp, "typ": "portal"},
+        {"nazwa": "Zdalne: terminal i pulpit", "opis": "Konsola Linuksa i pulpit Raspberry (VNC) w przeglądarce, logowanie hasłem użytkownika",
+         "port": PORT, "sciezka": "/zdalne", "dziala": TERMINAL_PORT in tcp, "typ": "portal"},
         {"nazwa": "Panel Minecraft", "opis": "Temperatura, gracze online, pobór mocy (szacunek) i konsola serwera",
          "port": DASHBOARD_PORT, "sciezka": "/", "dziala": DASHBOARD_PORT in tcp, "typ": "aplikacja",
          "dodatkowe": [{"nazwa": "Konsola serwera MC", "sciezka": "/console"}]},
@@ -668,6 +675,7 @@ h3{font-size:19px;font-weight:600}
 .sub{color:var(--muted);font-size:14px;margin-top:4px}
 nav{display:flex;flex-wrap:wrap;gap:6px}
 nav a{font-family:var(--mono);font-size:13px;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px}
+nav a .ik{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;margin-right:5px;font-size:14px}
 nav a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 nav a:hover{border-color:var(--accent)}
 section{display:flex;flex-direction:column;gap:14px}
@@ -717,26 +725,31 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 .term iframe{width:100%;height:100%;border:0;display:block}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:640px){th,td{padding:7px 9px}}
-</style></head>
+.zad{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+.zad-sek{display:flex;flex-direction:column;gap:10px}
+</style><script src="/strony/zdrowie/zadania.js"></script><script src="/strony/zdrowie/obciazenie.js"></script></head>
 <body><div class="wrap">
 <header>
   <div><h1 id="h-title">Serwerek domowy</h1><div class="sub" id="h-sub">Raspberry Pi 4B · ładowanie…</div></div>
   <nav>
-    <a href="/" data-p="start">Start</a>
-    <a href="/siec" data-p="siec">Sieć i adresy</a>
-    <a href="/terminal" data-p="terminal">Terminal</a>
-    <a href="/strony/lazik/" data-p="lazik">Łazik</a>
-    <a href="/strony/nauka/" data-p="nauka">Nauka</a>
-    <a href="/strony/progres/" data-p="progres">Progres</a>
-    <a href="/strony/zdrowie/" data-p="zdrowie">Zdrowie</a>
+    <a href="/" data-p="start"><span class="ik" aria-hidden="true">🏠</span>Start</a>
+    <a href="/siec" data-p="siec"><span class="ik" aria-hidden="true">🌐</span>Sieć i adresy</a>
+    <a href="/zdalne" data-p="zdalne"><span class="ik" aria-hidden="true">🖥️</span>Zdalne</a>
+    <a href="/strony/lazik/" data-p="lazik"><span class="ik" aria-hidden="true">🚙</span>Łazik</a>
+    <a href="/strony/nauka/" data-p="nauka"><span class="ik" aria-hidden="true">📚</span>Nauka</a>
+    <a href="/strony/progres/" data-p="progres"><span class="ik" aria-hidden="true">💪</span>Progres</a>
+    <a href="/strony/zdrowie/" data-p="zdrowie"><span class="ik" aria-hidden="true">🩺</span>Zdrowie</a>
+    <a href="/strony/automatyczne/" data-p="automatyczne"><span class="ik" aria-hidden="true">⚙️</span>Automatyczne</a>
+    <a href="/strony/zawodowe/" data-p="zawodowe"><span class="ik" aria-hidden="true">🤖</span>Zawodowe</a>
   </nav>
 </header>
 <main id="main" class="wrap" style="padding:0;width:100%"></main>
-<footer id="foot">Strona dostępna tylko przez Tailscale. Dane odświeżają się same.</footer>
+<footer id="foot">Przez Tailscale bez hasła, z sieci domowej po zalogowaniu. Dane odświeżają się same.</footer>
 </div>
 <script>
-const PAGE="%%PAGE%%", PORT=%%PORT%%, TERMINAL_PORT=%%TPORT%%;
+const PAGE="%%PAGE%%", PORT=%%PORT%%, TERMINAL_PORT=%%TPORT%%, VNC_WS_PORT=%%VPORT%%;
 document.querySelectorAll('nav a').forEach(a=>{if(a.dataset.p===PAGE)a.classList.add('on')});
+fetch('/api/dostep').then(r=>r.json()).then(d=>{if(d.siec==='domowa'){const a=document.createElement('a');a.href='/wyloguj';a.innerHTML='<span class="ik" aria-hidden="true">🚪</span>Wyloguj';a.title='Zapomnij to urządzenie (wejście z sieci domowej)';document.querySelector('nav').append(a)}}).catch(()=>{});
 function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v] of Object.entries(attrs||{})){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v)}for(const k of kids.flat(9)){if(k==null||k===false)continue;e.append(k instanceof Node?k:document.createTextNode(String(k)))}return e}
 const main=document.getElementById('main');
 function dur(s){if(s==null)return'–';s=Math.floor(s);const d=Math.floor(s/86400),g=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);if(d)return d+' d '+g+' h';if(g)return g+' h '+m+' min';if(m)return m+' min';return s+' s'}
@@ -751,7 +764,30 @@ async function getJSON(u){const r=await fetch(u,{cache:'no-store'});if(!r.ok)thr
 function setSub(s){document.getElementById('h-sub').textContent=s.model+' · '+s.system+' · działa od '+dur(s.uptime)}
 
 /* ---------- START ---------- */
-function renderStart(d){
+/* Minecraft włączany ręcznie: stan i przycisk Włącz/Wyłącz (POST /api/minecraft) */
+let MC=null;
+function mcKarta(){
+  const box=h('section',{class:'zad',id:'mcKarta',style:'display:flex;align-items:center;gap:12px;flex-wrap:wrap'});
+  mcRysuj(box);return box;
+}
+function mcRysuj(box){
+  box=box||document.getElementById('mcKarta');if(!box)return;
+  const m=MC;box.replaceChildren();
+  if(!m){box.append(h('span',{text:'🎮 Minecraft: sprawdzam…'}));return}
+  const opis=m.trwa==='start'?'włącza się (ok. 30 s)…':m.trwa==='stop'?'zapisuje świat i się wyłącza…':m.dziala?
+    `działa${m.od?' od '+m.od.slice(11,16):''}${m.ram_mb?' · '+m.ram_mb+' MB RAM':''}${m.gracze!=null?' · gracze: '+m.gracze:''}`:
+    (m.stan==='failed'?'wysypał się – włącz ponownie':'wyłączony (nie zajmuje RAM ani procesora)');
+  box.append(h('div',{style:'flex:1;min-width:200px'},h('b',{text:'🎮 Minecraft '}),h('span',{class:'s',text:opis})));
+  if(!m.trwa)box.append(h('button',{class:'btn',text:m.dziala?'⏹ Wyłącz':'▶ Włącz',onclick:async()=>{
+    if(m.dziala&&m.gracze>0&&!confirm(`Grają ${m.gracze} osoby. Wyłączyć serwer?`))return;
+    MC=Object.assign({},m,{trwa:m.dziala?'stop':'start'});mcRysuj();
+    try{MC=await(await fetch('/api/minecraft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({akcja:m.dziala?'stop':'start'})})).json()}catch(e){}
+    mcRysuj();mcOdswiez();}}));
+}
+let mcT=0;
+async function mcOdswiez(){clearTimeout(mcT);try{MC=await(await fetch('/api/minecraft',{cache:'no-store'})).json()}catch(e){}mcRysuj();mcT=setTimeout(mcOdswiez,MC&&MC.trwa?3000:15000)}
+if(PAGE==='start')mcOdswiez();
+function renderStart(d,zad,obc){
   const s=d.system;setSub(s);
   const ram=pct(s.ram_uzyte,s.ram_total),disk=pct(s.dysk_uzyte,s.dysk_total),cpu=s.cpu,t=s.temp;
   const tiles=h('div',{class:'tiles'},
@@ -794,11 +830,13 @@ function renderStart(d){
   const au=s.autoupdate;
   main.replaceChildren(
     h('section',null,tiles,...alerts),
+    mcKarta(),
+    zad&&window.Zadania||obc&&window.Obciazenie?h('section',{class:'zad-sek'},zad&&window.Zadania?h('div',{class:'zad'},Zadania.panel(zad)):null,obc&&window.Obciazenie?h('div',{class:'zad'},Obciazenie.panel(obc)):null):null,
     h('section',null,h('h2',{text:'Strony na tym serwerze'}),h('p',{class:'sec-note',text:'Wszystko, co Pi udostępnia w przeglądarce. Nową stronę dodasz, wrzucając folder z plikiem index.html do ~/portal/sites/.'}),cards),
     h('section',null,h('h2',{text:'Działające programy ('+d.uslugi.length+')'}),h('p',{class:'sec-note',text:'Wszystkie usługi systemd, które teraz działają, pogrupowane według przeznaczenia.'}),...svc),
     h('section',null,h('h2',{text:'Co teraz najbardziej obciąża Pi'}),h('p',{class:'sec-note',text:'CPU mierzone między kolejnymi odświeżeniami strony (100 % = jeden pełny rdzeń).'}),procs)
   );
-  document.getElementById('foot').textContent='Auto-aktualizacja serwera MC: następna '+(au.nastepne||'–')+', ostatnia '+(au.ostatnie||'–')+'. Strona dostępna tylko przez Tailscale, odświeża się co 5 s.';
+  document.getElementById('foot').textContent='Auto-aktualizacja serwera MC: następna '+(au.nastepne||'–')+', ostatnia '+(au.ostatnie||'–')+'. Przez Tailscale bez hasła, z sieci domowej po zalogowaniu; odświeża się co 5 s.';
 }
 
 /* ---------- SIEC ---------- */
@@ -843,11 +881,11 @@ let lastSys=null;function setSubFromCache(){if(lastSys)setSub(lastSys)}
 
 /* ---------- TERMINAL ---------- */
 function loadAsset(tag,attrs){return new Promise((ok,bad)=>{const e=document.createElement(tag);Object.assign(e,attrs);e.onload=ok;e.onerror=()=>bad(new Error('nie udało się pobrać '+(attrs.src||attrs.href)));document.head.append(e)})}
-function renderTerminal(){
+function renderTerminal(cel){
   const direct=location.protocol+'//'+location.hostname+':'+TERMINAL_PORT+'/';
   const box=h('div',{class:'term',style:'padding:8px'});
   const status=h('span',{class:'chip',text:'łączenie…'});
-  main.replaceChildren(h('section',null,
+  (cel||main).replaceChildren(h('section',null,
     h('p',{class:'sec-note',text:'Zaloguj się nazwą użytkownika (tonyg) i hasłem Linuksa. Każda karta to osobna sesja; zamknięcie karty lub przejście na inną stronę kończy sesję. Terminal działa tylko przez Tailscale.'}),
     box,
     h('div',{class:'btns'},status,h('a',{class:'btn alt',href:location.pathname,text:'Nowa sesja'}),h('a',{class:'btn alt',href:direct,target:'_blank',rel:'noopener',text:'Otwórz sam terminal w nowej karcie'}))));
@@ -878,19 +916,57 @@ function renderTerminal(){
 
 async function tick(){
   try{
-    if(PAGE==='start'){renderStart(await getJSON('/api/status'))}
+    if(PAGE==='start'){const [d,zad,obc]=await Promise.all([getJSON('/api/status'),getJSON('/api/zadania').catch(()=>null),getJSON('/api/obciazenie').catch(()=>null)]);renderStart(d,zad,obc)}
     else if(PAGE==='siec'){const [n,s]=await Promise.all([getJSON('/api/siec'),getJSON('/api/status?lekki=1')]);lastSys=s.system;renderSiec(n)}
   }catch(e){main.replaceChildren(h('div',{class:'err',text:'Nie udało się pobrać danych z serwera ('+e.message+'). Ponawiam…'}))}
 }
-if(PAGE==='terminal')renderTerminal();else{tick();setInterval(tick,PAGE==='start'?5000:15000)}
+/* ---------- ZDALNE: terminal i pulpit VNC (oba logowanie hasłem Linuksa, oba tylko przez Tailscale) ---------- */
+function renderZdalne(){
+  const cel=h('div'), tryb=new URLSearchParams(location.search).get('tryb')==='vnc'?'vnc':'terminal';
+  const zak=(k,n)=>h('a',{class:'btn'+(k===tryb?'':' alt'),href:'/zdalne?tryb='+k,text:n});
+  main.replaceChildren(h('div',{class:'btns',style:'margin:0 0 12px'},zak('terminal','💻 Terminal'),zak('vnc','🖥️ Pulpit (VNC)')),cel);
+  if(tryb==='terminal')renderTerminal(cel);else renderVnc(cel);
+}
+function renderVnc(cel){
+  const status=h('span',{class:'chip',text:'niepołączony'});
+  const ekran=h('div',{style:'width:100%;height:calc(100vh - 230px);min-height:320px;background:#111;border-radius:8px;overflow:hidden'});
+  const haslo=h('input',{type:'password',placeholder:'hasło Linuksa (tonyg)',autocomplete:'current-password',style:'font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:7px;width:14em'});
+  const pol=h('button',{class:'btn',text:'Połącz'}), roz=h('button',{class:'btn alt',type:'button',text:'Rozłącz',disabled:''}), pelny=h('button',{class:'btn alt',type:'button',text:'⛶ Pełny ekran'});
+  // pole użytkownika: Hasła Apple (pęk kluczy) rozpoznają formularz logowania i podpowiadają hasło tonyg
+  const uzyt=h('input',{type:'text',name:'username',value:'tonyg',autocomplete:'username',autocapitalize:'off',style:'font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:7px;width:7em'});
+  haslo.name='password';
+  const form=h('form',{class:'btns',style:'margin:0 0 10px;align-items:center',autocomplete:'on',method:'post',action:'/zdalne?tryb=vnc'},uzyt,haslo,pol,roz,pelny,status);
+  cel.replaceChildren(h('section',null,h('p',{class:'sec-note',text:'Pulpit Raspberry Pi. Wpisz hasło Linuksa (to samo co do terminala). Na telefonie: dotknięcie = klik, przeciągnięcie = ruch myszy.'}),form,ekran));
+  let rfb=null;
+  pelny.onclick=()=>{(ekran.requestFullscreen||ekran.webkitRequestFullscreen||(()=>{})).call(ekran)};
+  roz.onclick=()=>{if(rfb)rfb.disconnect()};
+  form.onsubmit=async e=>{
+    e.preventDefault();if(rfb)return;
+    status.className='chip';status.textContent='sprawdzam hasło…';pol.disabled=true;
+    try{
+      const r=await fetch('/api/zdalne/vnc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({haslo:haslo.value})});
+      const d=await r.json();haslo.value='';
+      if(!d.token)throw new Error(d.blad||'odmowa');
+      status.textContent='łączenie…';
+      const {default:RFB}=await import('/strony/zdalne/novnc/core/rfb.js');
+      rfb=new RFB(ekran,(location.protocol==='https:'?'wss://':'ws://')+location.hostname+':'+VNC_WS_PORT+'/?token='+d.token);
+      rfb.scaleViewport=true;rfb.resizeSession=false;rfb.focusOnClick=true;
+      rfb.addEventListener('connect',()=>{status.className='chip ok';status.textContent='połączono';roz.removeAttribute('disabled')});
+      rfb.addEventListener('disconnect',ev=>{status.className=ev.detail.clean?'chip':'chip bad';status.textContent=ev.detail.clean?'rozłączono':'połączenie przerwane';
+        rfb=null;pol.disabled=false;roz.setAttribute('disabled','')});
+    }catch(err){status.className='chip bad';status.textContent=err.message;pol.disabled=false;rfb=null}
+  };
+}
+if(PAGE==='terminal')renderTerminal();else if(PAGE==='zdalne')renderZdalne();else{tick();setInterval(tick,PAGE==='start'?5000:15000)}
 </script></body></html>"""
 
-TITLES = {"start": "Serwerek domowy", "siec": "Sieć i adresy · serwerek", "terminal": "Terminal · serwerek"}
+TITLES = {"start": "Serwerek domowy", "siec": "Sieć i adresy · serwerek", "terminal": "Terminal · serwerek", "zdalne": "Zdalne · serwerek"}
+VNC_WS_PORT = 6080      # websockify (serwerek-vnc-ws): przeglądarka -> wayvnc na 127.0.0.1:5900, tylko na adresie Tailscale
 
 
 def page(name):
     html = (PAGE.replace("%%TITLE%%", TITLES[name]).replace("%%PAGE%%", name)
-            .replace("%%PORT%%", str(PORT)).replace("%%TPORT%%", str(TERMINAL_PORT)))
+            .replace("%%PORT%%", str(PORT)).replace("%%TPORT%%", str(TERMINAL_PORT)).replace("%%VPORT%%", str(VNC_WS_PORT)))
     return Response(html, mimetype="text/html")
 
 
@@ -911,7 +987,7 @@ DIODA_TAG = b'<script src="/strony/zdrowie/dioda.js" defer></script>'
 def wstaw_diode(resp):
     """dioda stanu serwera na kazdej stronie HTML (portal i /strony/*): skrypt doklejany przed </body>"""
     from flask import request
-    if resp.mimetype != "text/html" or resp.status_code != 200 or request.path.startswith("/api/"):
+    if resp.mimetype != "text/html" or resp.status_code != 200 or request.path.startswith("/api/") or request.path == "/logowanie":
         return resp
     resp.direct_passthrough = False
     body = resp.get_data()
@@ -919,6 +995,206 @@ def wstaw_diode(resp):
         i = body.rfind(b"</body>")
         resp.set_data(body[:i] + DIODA_TAG + body[i:])
     return resp
+
+
+# ---------- Dostep z sieci domowej: haslo + ciasteczko (Tailscale i samo Pi bez hasla) ----------
+# dane/dostep.json (600, tylko na Pi): {"hash": skrot hasla (werkzeug, scrypt), "klucz": klucz podpisu ciasteczek,
+# "wersja": n}. Zmiana hasla (komenda portal-haslo) podbija wersje, co wylogowuje wszystkie urzadzenia.
+# Ciasteczko „portal_sesja”: podpisane, HttpOnly, SameSite=Lax, wazne rok. Po 5 zlych haslach z jednego adresu: 5 min blokady.
+import ipaddress
+
+DOSTEP = BASE / "dane" / "dostep.json"
+SESJA = "portal_sesja"
+SESJA_DNI = 365
+ZAUFANE_SIECI = [ipaddress.ip_network(n) for n in ("100.64.0.0/10", "fd7a:115c:a1e0::/48", "127.0.0.0/8", "::1/128")]
+LOGOWANIE_PROBY = {}
+LOGOWANIE_LOCK = threading.Lock()
+WEJSCIA = BASE / "dane" / "wejscia.jsonl"      # dla bota Telegram: kazde zapytanie z sieci domowej i logowania
+
+
+def wejscie_zapisz(rodzaj, **dane):
+    from flask import request
+    rek = {"czas": time.strftime("%Y-%m-%dT%H:%M:%S"), "rodzaj": rodzaj, "ip": request.remote_addr,
+           "ua": (request.user_agent.string or "")[:200], **dane}
+    try:
+        with open(WEJSCIA, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rek, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def dostep_dane():
+    return cached("dostep", 5, lambda: json.loads(DOSTEP.read_text(encoding="utf-8")) if DOSTEP.exists() else None)
+
+
+def przez_tailscale():
+    """Tailscale (100.64.0.0/10; nftables Tailscale odrzuca takie adresy spoza tailscale0) albo samo Pi"""
+    from flask import request
+    try:
+        ip = ipaddress.ip_address(request.remote_addr or "")
+    except ValueError:
+        return False
+    return any(ip in n for n in ZAUFANE_SIECI)
+
+
+def sesja_podpis():
+    from itsdangerous import URLSafeTimedSerializer
+    d = dostep_dane()
+    return URLSafeTimedSerializer(d["klucz"], salt="portal-sesja") if d else None
+
+
+def zalogowany():
+    from flask import request
+    from itsdangerous import BadData
+    s, d = sesja_podpis(), dostep_dane()
+    tok = request.cookies.get(SESJA)
+    if not (s and tok):
+        return False
+    try:
+        return s.loads(tok, max_age=SESJA_DNI * 86400).get("w") == d.get("wersja", 1)
+    except BadData:
+        return False
+
+
+@app.before_request
+def wymagaj_hasla():
+    from flask import request
+    if przez_tailscale():
+        return None
+    if request.path in ("/logowanie", "/wyloguj") or zalogowany():
+        return None
+    if request.path.startswith("/api/"):
+        return jsonify({"blad": "zaloguj się", "logowanie": "/logowanie"}), 401
+    if request.method != "GET":
+        abort(401)
+    nast = request.full_path.rstrip("?") if request.query_string else request.path
+    from urllib.parse import quote
+    return redirect("/logowanie?nast=" + quote(nast, safe="/"))
+
+
+LOGOWANIE_HTML = """<!doctype html><html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Serwerek: logowanie</title>
+<style>
+:root{--bg:#EEF1EF;--card:#FAFBFA;--ink:#17201C;--muted:#5B6862;--line:#D0D8D3;--acc:#1f7a4d;--accInk:#fff;--bad:#b42335;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0E1412;--card:#151D1A;--ink:#E2EAE6;--muted:#93A39B;--line:#26322D;--acc:#3fae74;--accInk:#06140c;--bad:#ef6b7b;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);
+  font:17px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+form{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 22px}
+h1{margin:0 0 4px;font-size:26px} p{margin:0 0 18px;color:var(--muted);font-size:15px}
+label{display:block;font-weight:600;margin-bottom:6px}
+input{width:100%;font:inherit;font-size:18px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input:focus{outline:3px solid color-mix(in srgb,var(--acc) 45%,transparent);border-color:var(--acc)}
+button{width:100%;margin-top:14px;font:inherit;font-weight:700;padding:12px;border:0;border-radius:10px;background:var(--acc);color:var(--accInk);cursor:pointer}
+.err{color:var(--bad);font-weight:600;margin:12px 0 0}
+small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
+.pole{position:relative} .pole input{padding-right:84px}
+#pokaz{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:auto;margin:0;padding:6px 12px;font-size:15px;
+  background:transparent;color:var(--acc);border:1.5px solid var(--line);border-radius:8px}
+</style></head><body>
+<form method="post" action="/logowanie" id="logowanie" name="logowanie" autocomplete="on">
+  <h1>Serwerek domowy</h1>
+  <p>Wejście z sieci domowej. Hasło wpisujesz raz: to urządzenie zostanie zapamiętane na rok.</p>
+  <input type="hidden" name="nast" value="%%NAST%%">
+  <label for="u">Użytkownik</label>
+  <input id="u" type="text" name="username" value="serwerek" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-bottom:14px">
+  <label for="h">Hasło</label>
+  <div class="pole"><input id="h" name="haslo" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus required>
+    <button type="button" id="pokaz" aria-controls="h" aria-pressed="false">Pokaż</button></div>
+  <button type="submit">Wejdź</button>
+  %%BLAD%%
+  <small>Przez Tailscale hasło nie jest potrzebne.</small>
+</form>
+<script>
+const h = document.getElementById("h"), b = document.getElementById("pokaz");
+b.onclick = () => { const p = h.type === "password"; h.type = p ? "text" : "password"; b.textContent = p ? "Ukryj" : "Pokaż";
+  b.setAttribute("aria-pressed", p); h.focus(); };
+</script></body></html>"""
+
+
+def logowanie_strona(blad="", nast="/", kod=200):
+    from html import escape
+    html = LOGOWANIE_HTML.replace("%%NAST%%", escape(nast)).replace("%%BLAD%%", f'<p class="err">{escape(blad)}</p>' if blad else "")
+    return Response(html, status=kod, mimetype="text/html")
+
+
+def nast_ok(n):
+    return n if isinstance(n, str) and n.startswith("/") and not n.startswith("//") and "\\" not in n and n != "/logowanie" else "/"
+
+
+@app.route("/logowanie", methods=["GET", "POST"])
+def logowanie():
+    from flask import request
+    from werkzeug.security import check_password_hash
+    nast = nast_ok(request.values.get("nast"))
+    if przez_tailscale() or (request.method == "GET" and zalogowany()):
+        return redirect(nast)
+    d = dostep_dane()
+    if d is None:
+        return logowanie_strona("Hasło nie jest jeszcze ustawione (komenda portal-haslo na Pi).", nast, 503)
+    if request.method == "GET":
+        wejscie_zapisz("panel_logowania")
+        return logowanie_strona(nast=nast)
+    ip, teraz = request.remote_addr or "?", time.time()
+    with LOGOWANIE_LOCK:
+        proby = [t for t in LOGOWANIE_PROBY.get(ip, []) if t > teraz - 300]
+        LOGOWANIE_PROBY[ip] = proby
+        if len(proby) >= 5:
+            if not LOGOWANIE_PROBY.get(ip + ":zgloszone"):
+                LOGOWANIE_PROBY[ip + ":zgloszone"] = [teraz]
+                wejscie_zapisz("blokada")
+            return logowanie_strona(f"Za dużo złych haseł. Spróbuj za {int(300 - (teraz - proby[0])) // 60 + 1} min.", nast, 429)
+    import unicodedata
+    surowe = request.form.get("haslo", "")
+    haslo = unicodedata.normalize("NFKC", surowe).strip()      # spacja na koncu, znaki z klawiatury iOS
+    if not (0 < len(haslo) <= 200 and check_password_hash(d["hash"], haslo)):
+        with LOGOWANIE_LOCK:
+            LOGOWANIE_PROBY.setdefault(ip, []).append(teraz)
+            LOGOWANIE_PROBY.pop(ip + ":zgloszone", None)
+            wejscie_zapisz("zle_haslo", proba=len(LOGOWANIE_PROBY[ip]))
+        # podpowiedz do dziennika bez zapisywania hasla: dlugosc i czy pasowaloby z inna wielkoscia liter
+        wl = next((n for n, w in (("odwrocona wielkosc liter", haslo.swapcase()), ("pierwsza litera mala", haslo[:1].lower() + haslo[1:]),
+                                  ("pierwsza litera wielka", haslo[:1].upper() + haslo[1:])) if w != haslo and check_password_hash(d["hash"], w)), "")
+        try:
+            zdrowie_log(f"LOGOWANIE zle haslo z {ip} (dlugosc {len(surowe)}{', pasowaloby: ' + wl if wl else ''})")
+        except OSError:
+            pass
+        time.sleep(1)
+        return logowanie_strona("Złe hasło.", nast, 401)
+    with LOGOWANIE_LOCK:
+        LOGOWANIE_PROBY.pop(ip, None)
+    wejscie_zapisz("logowanie_ok")
+    try:
+        zdrowie_log(f"LOGOWANIE ok z {ip} ({(request.user_agent.string or '')[:80]})")
+    except OSError:
+        pass
+    resp = redirect(nast)
+    resp.set_cookie(SESJA, sesja_podpis().dumps({"w": d.get("wersja", 1)}), max_age=SESJA_DNI * 86400,
+                    httponly=True, samesite="Lax", path="/")
+    return resp
+
+
+@app.after_request
+def wejscia_sciezka(resp):
+    """kazde zapytanie (sciezka, metoda, wynik) do sladu wizyt w bocie Telegram; z Tailscale tylko zapis, bez powiadomien"""
+    from flask import request
+    if not (request.remote_addr or "").startswith("127."):      # bot i skrypty na samym Pi pomijamy
+        ts = przez_tailscale()
+        wejscie_zapisz("zapytanie", metoda=request.method, sciezka=request.full_path.rstrip("?")[:200], wynik=resp.status_code,
+                       zalogowany=ts or zalogowany() or SESJA in resp.headers.get("Set-Cookie", ""), tailscale=ts)
+    return resp
+
+
+@app.route("/wyloguj")
+def wyloguj():
+    resp = redirect("/logowanie")
+    resp.delete_cookie(SESJA, path="/")
+    return resp
+
+
+@app.route("/api/dostep")
+def api_dostep():
+    return jsonify({"siec": "tailscale" if przez_tailscale() else "domowa"})
 
 
 @app.route("/")
@@ -931,9 +1207,67 @@ def siec():
     return page("siec")
 
 
+@app.route("/zdalne")
+def zdalne():
+    if not przez_tailscale():
+        return Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+                        '<title>Zdalne</title><body style="font:17px system-ui;padding:24px;max-width:520px;margin:auto">'
+                        '<h1>Terminal i pulpit tylko przez Tailscale</h1><p>Ze względów bezpieczeństwa nie działają z sieci domowej. '
+                        'Włącz Tailscale na tym urządzeniu i wejdź na <b>http://100.108.241.58/zdalne</b>.</p>'
+                        '<p><a href="/">← Strona główna</a></p></body>', mimetype="text/html")
+    return page("zdalne")
+
+
+# Pulpit VNC: przeglądarka (noVNC) -> websockify (serwerek-vnc-ws, Tailscale :6080, wtyczka TokenFile) -> wayvnc
+# z Raspberry Pi Connect (gniazdo unix tylko dla tonyg, bez hasła). Hasło sprawdza portal (PAM, hasło Linuksa tonyg),
+# a websockify wpuszcza tylko z jednorazowym biletem (plik w dane/vnc_tokeny, ważny 60 s).
+VNC_GNIAZDO = "/run/user/1000/rpi-connect-wayvnc.sock"
+VNC_TOKENY = BASE / "dane" / "vnc_tokeny"
+VNC_PROBY = {}          # ip -> [czasy nieudanych prób]
+
+
+def haslo_linuksa_ok(haslo):
+    import PAM
+    p = PAM.pam()
+    p.start("login")
+    p.set_item(PAM.PAM_USER, pwd.getpwuid(os.getuid()).pw_name)
+    p.set_item(PAM.PAM_CONV, lambda auth, query, data: [(haslo, 0) if t == PAM.PAM_PROMPT_ECHO_OFF else ("", 0) for q, t in query])
+    try:
+        p.authenticate()
+        p.acct_mgmt()
+        return True
+    except PAM.error:
+        return False
+
+
+@app.route("/api/zdalne/vnc", methods=["POST"])
+def api_zdalne_vnc():
+    from flask import request
+    if not przez_tailscale():
+        abort(403)
+    ip, teraz = request.remote_addr, time.time()
+    VNC_PROBY[ip] = [t for t in VNC_PROBY.get(ip, []) if teraz - t < 300]
+    if len(VNC_PROBY[ip]) >= 5:
+        return jsonify({"blad": "za dużo złych haseł, spróbuj za 5 minut"}), 429
+    b = request.get_json(silent=True) or {}
+    if not isinstance(b.get("haslo"), str) or not haslo_linuksa_ok(b["haslo"]):
+        VNC_PROBY[ip].append(teraz)
+        time.sleep(1)
+        return jsonify({"blad": "złe hasło"}), 403
+    if not os.path.exists(VNC_GNIAZDO):
+        return jsonify({"blad": "pulpit (Raspberry Pi Connect) nie działa"}), 503
+    VNC_TOKENY.mkdir(parents=True, exist_ok=True)
+    for p in VNC_TOKENY.glob("*"):                          # stare bilety
+        if teraz - p.stat().st_mtime > 60:
+            p.unlink(missing_ok=True)
+    tok = uuid_hex()
+    (VNC_TOKENY / tok).write_text(f"{tok}: unix_socket:{VNC_GNIAZDO}\n")
+    return jsonify({"token": tok})
+
+
 @app.route("/terminal")
 def terminal():
-    return page("terminal")
+    return redirect("/zdalne?tryb=terminal")
 
 
 @app.route("/api/status")
@@ -955,6 +1289,259 @@ def api_status():
 @app.route("/api/siec")
 def api_siec():
     return jsonify(cached("siec", 10, network))
+
+
+# ---------- Minecraft włączany ręcznie (komenda /usr/local/bin/minecraft, przycisk na stronie głównej i w bocie) ----------
+MC_STAN = {"trwa": None}
+
+
+def mc_stan():
+    st = usluga_stan("powernukkitx")
+    d = {"dziala": st.get("ActiveState") == "active", "stan": st.get("ActiveState"), "trwa": MC_STAN["trwa"]}
+    if d["dziala"]:
+        pid = sh(["systemctl", "show", "-p", "MainPID", "--value", "powernukkitx"]).strip()
+        m = re.search(r"VmRSS:\s+(\d+)", read(f"/proc/{pid}/status"))
+        d["ram_mb"] = int(m.group(1)) // 1024 if m else None
+        m = re.search(r"@(\d+)", sh(["systemctl", "show", "--timestamp=unix", "-p", "ActiveEnterTimestamp", "--value", "powernukkitx"]))
+        d["od"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(int(m.group(1)))) if m else None
+        try:
+            mc = next((x for x in cached("siec", 10, network)["minecraft"] if x.get("status")), None)
+            d["gracze"] = (mc or {}).get("status", {}).get("gracze")
+        except Exception:
+            d["gracze"] = None
+    return d
+
+
+@app.route("/api/minecraft", methods=["GET", "POST"])
+def api_minecraft():
+    from flask import request
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        akcja = b.get("akcja")
+        if akcja not in ("start", "stop"):
+            abort(400)
+        if MC_STAN["trwa"]:
+            return jsonify(mc_stan()), 409
+
+        def wykonaj():
+            MC_STAN["trwa"] = akcja
+            try:
+                subprocess.run(["sudo", "/usr/local/bin/minecraft", akcja], capture_output=True, timeout=240)
+            finally:
+                MC_STAN["trwa"] = None
+        threading.Thread(target=wykonaj, daemon=True).start()
+        time.sleep(0.3)
+    return jsonify(mc_stan())
+
+
+# ---------- Zadania (todo) z przypomnieniami: strona /strony/todo/ i bot Telegram ----------
+# dane/todo.json: [{id, tekst, termin "RRRR-MM-DDTHH:MM" albo null, powtarzaj null|dzien|tydzien|miesiac, zrobione iso|null,
+#   utworzono, wyslano iso|null (przypomnienie dla obecnego terminu juz poszlo), dzwon (bot dodatkowo dzwoni przez Linphone)}].
+#   Przypomnienia wysyla bot (co 30 s).
+TODO = BASE / "dane" / "todo.json"
+TODO_LOCK = threading.Lock()
+TODO_POWT = (None, "dzien", "tydzien", "miesiac")
+
+
+def todo_lista():
+    try:
+        return json.loads(TODO.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def todo_termin_ok(v):
+    if v is None:
+        return True
+    try:
+        time.strptime(v, "%Y-%m-%dT%H:%M")
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def todo_nastepny(termin, powt):
+    """kolejny termin zadania powtarzanego"""
+    from datetime import datetime, timedelta
+    t = datetime.strptime(termin, "%Y-%m-%dT%H:%M")
+    if powt == "dzien":
+        t += timedelta(days=1)
+    elif powt == "tydzien":
+        t += timedelta(days=7)
+    elif powt == "miesiac":
+        import calendar
+        r, m = (t.year + 1, 1) if t.month == 12 else (t.year, t.month + 1)
+        t = t.replace(year=r, month=m, day=min(t.day, calendar.monthrange(r, m)[1]))
+    return t.strftime("%Y-%m-%dT%H:%M")
+
+
+@app.route("/api/todo", methods=["GET", "POST"])
+def api_todo():
+    from flask import request
+    if request.method == "GET":
+        return jsonify({"zadania": todo_lista()})
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not isinstance(b.get("tekst"), str) or not 0 < len(b["tekst"].strip()) <= 500:
+        abort(400)
+    if not todo_termin_ok(b.get("termin")) or b.get("powtarzaj") not in TODO_POWT or (b.get("powtarzaj") and not b.get("termin")):
+        abort(400)
+    z = {"id": uuid_hex()[:12], "tekst": b["tekst"].strip(), "termin": b.get("termin"), "powtarzaj": b.get("powtarzaj"),
+         "zrobione": None, "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S"), "wyslano": None, "dzwon": b.get("dzwon") is True}
+    with TODO_LOCK:
+        lista = todo_lista()
+        lista.append(z)
+        zapisz_json(TODO, lista)
+    return jsonify(z)
+
+
+@app.route("/api/todo/<zid>", methods=["POST"])
+def api_todo_zmien(zid):
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict):
+        abort(400)
+    with TODO_LOCK:
+        lista = todo_lista()
+        z = next((x for x in lista if x["id"] == zid), None)
+        if z is None:
+            abort(404)
+        if b.get("usun") is True:
+            lista.remove(z)
+            zapisz_json(TODO, lista)
+            return jsonify({"ok": True})
+        if "tekst" in b:
+            if not isinstance(b["tekst"], str) or not 0 < len(b["tekst"].strip()) <= 500:
+                abort(400)
+            z["tekst"] = b["tekst"].strip()
+        if "termin" in b:
+            if not todo_termin_ok(b["termin"]):
+                abort(400)
+            z["termin"], z["wyslano"] = b["termin"], None
+        if "dzwon" in b:
+            z["dzwon"] = b["dzwon"] is True
+        if "powtarzaj" in b:
+            if b["powtarzaj"] not in TODO_POWT:
+                abort(400)
+            z["powtarzaj"] = b["powtarzaj"]
+        if b.get("odloz_min"):
+            from datetime import datetime, timedelta
+            minuty = int(b["odloz_min"])
+            if not 0 < minuty <= 60 * 24 * 30:
+                abort(400)
+            z["termin"], z["wyslano"] = (datetime.now() + timedelta(minutes=minuty)).strftime("%Y-%m-%dT%H:%M"), None
+        if "wyslano" in b:
+            z["wyslano"] = time.strftime("%Y-%m-%dT%H:%M:%S") if b["wyslano"] else None
+        if "zrobione" in b:
+            if b["zrobione"] and z.get("powtarzaj") and z.get("termin"):
+                z["termin"], z["wyslano"] = todo_nastepny(z["termin"], z["powtarzaj"]), None      # powtarzane: przesun termin
+                z["ostatnio_zrobione"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            else:
+                z["zrobione"] = time.strftime("%Y-%m-%dT%H:%M:%S") if b["zrobione"] else None
+        if z.get("powtarzaj") and not z.get("termin"):
+            z["powtarzaj"] = None
+        zapisz_json(TODO, lista)
+    return jsonify(z)
+
+
+# ---------- Budziki: Pi dzwoni o ustalonej porze i czyta poranny przegląd (bot: petla_budzikow) ----------
+# dane/alarmy.json: [{id, godzina "HH:MM", data "RRRR-MM-DD"|null (jednorazowy), dni [0..6]|null (powtarzany:
+#   0 = poniedziałek), aktywny, opis, ostatnio "RRRR-MM-DD" (kiedy ostatnio zadzwonił)}]
+ALARMY = BASE / "dane" / "alarmy.json"
+ALARMY_LOCK = threading.Lock()
+
+
+def alarmy_lista():
+    try:
+        return json.loads(ALARMY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def alarm_ok(b):
+    if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(b.get("godzina", ""))):
+        return False
+    if b.get("data") is not None and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(b["data"])):
+        return False
+    d = b.get("dni")
+    return d is None or (isinstance(d, list) and 0 < len(d) <= 7 and all(isinstance(x, int) and 0 <= x <= 6 for x in d))
+
+
+@app.route("/api/alarmy", methods=["GET", "POST"])
+def api_alarmy():
+    from flask import request
+    if request.method == "GET":
+        return jsonify({"alarmy": alarmy_lista()})
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not alarm_ok(b) or (b.get("data") is None and not b.get("dni")):
+        abort(400)
+    a = {"id": uuid_hex()[:10], "godzina": b["godzina"], "data": b.get("data"), "dni": b.get("dni") if b.get("data") is None else None,
+         "aktywny": True, "opis": str(b.get("opis") or "")[:100], "ostatnio": None, "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    with ALARMY_LOCK:
+        lista = alarmy_lista()
+        lista.append(a)
+        zapisz_json(ALARMY, lista)
+    return jsonify(a)
+
+
+@app.route("/api/alarmy/<aid>", methods=["POST"])
+def api_alarm_zmien(aid):
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict):
+        abort(400)
+    with ALARMY_LOCK:
+        lista = alarmy_lista()
+        a = next((x for x in lista if x["id"] == aid), None)
+        if a is None:
+            abort(404)
+        if b.get("usun") is True:
+            lista.remove(a)
+        else:
+            for k in ("aktywny", "ostatnio", "opis"):
+                if k in b:
+                    a[k] = b[k]
+            if "godzina" in b:
+                if not alarm_ok({**a, "godzina": b["godzina"]}):
+                    abort(400)
+                a["godzina"] = b["godzina"]
+        zapisz_json(ALARMY, lista)
+    return jsonify(a if b.get("usun") is not True else {"ok": True})
+
+
+# ---------- Mobidziennik i poczta: stan z bota (tylko odczyt; hasła zostają w /etc/serwerek-bot) ----------
+BOT_DANE = Path("/home/tonyg/bot")
+
+
+@app.route("/api/mobi")
+def api_mobi():
+    try:
+        st = json.loads((BOT_DANE / "mobi" / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return jsonify({"skonfigurowany": False})
+    dzis = time.strftime("%Y-%m-%d")
+    return jsonify({"skonfigurowany": True, "czas": st.get("czas"), "plan": [x for x in st.get("plan", []) if x["data"] >= dzis],
+                    "sprawdziany": sorted(st.get("sprawdziany", {}).values(), key=lambda x: x["data"]), "zadania": st.get("zadania", [])})
+
+
+@app.route("/api/mobi/odswiez", methods=["POST"])
+def api_mobi_odswiez():
+    """przycisk „Sprawdź teraz”: znacznik dla bota (petla_mobi sprawdza go co kilka sekund)"""
+    try:
+        (BOT_DANE / "mobi" / "odswiez").write_text(str(time.time()))
+    except OSError:
+        abort(503)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/poczta")
+def api_poczta():
+    try:
+        st = json.loads((BOT_DANE / "poczta" / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return jsonify({"skonfigurowana": False})
+    return jsonify({"skonfigurowana": True,
+                    "wazne": [{k: w.get(k) for k in ("konto", "od", "temat", "s")} for w in st.get("wazne", [])],
+                    "inne": {k: len(v) for k, v in st.get("inne", {}).items()}, "bledy": st.get("bledy", {})})
 
 
 @app.route("/strony/<site>")
@@ -1135,9 +1722,258 @@ def api_nauka_ustawienia():
     return jsonify(u)
 
 
+# ---------- NAS: zdjecia, filmy i logi od razu na NAS, Pi tylko jako bufor, gdy NAS niedostepny ----------
+# /mnt/nas = //172.23.0.28/Tony-Folder (fstab + nas-montuj). Znacznik Raspberry/.nas odroznia zamontowany NAS
+# od pustego katalogu na karcie. Sprawdzenie w osobnym watku z limitem czasu: zawieszony NAS nie blokuje portalu.
+NAS = Path("/mnt/nas/Raspberry")
+NAS_ZDJ, NAS_FILMY, NAS_LOGI = NAS / "Progres-zdjecia", NAS / "Progres-filmy", NAS / "Logi"
+NAS_STAN = {"ok": False, "t": -1e9}
+NAS_BUDZIK = threading.Event()
+
+
+def nas_ok(ttl=15):
+    if time.monotonic() - NAS_STAN["t"] < ttl:
+        return NAS_STAN["ok"]
+    wynik = []
+    th = threading.Thread(target=lambda: wynik.append(os.path.ismount("/mnt/nas") and (NAS / ".nas").is_file()), daemon=True)
+    th.start()
+    th.join(5)
+    NAS_STAN.update(ok=bool(wynik and wynik[0]), t=time.monotonic())
+    return NAS_STAN["ok"]
+
+
+def nas_blad():
+    NAS_STAN.update(ok=False, t=time.monotonic())
+
+
+def nas_zapisz(cel, dane=None, zrodlo=None):
+    """zapis na NAS przez plik .tmp (przerwany zapis nie zostawia polowy pliku pod wlasciwa nazwa)"""
+    cel.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cel.with_name(cel.name + ".tmp")
+    try:
+        if zrodlo is not None:
+            shutil.copyfile(zrodlo, tmp)
+        else:
+            tmp.write_bytes(dane)
+        os.replace(tmp, cel)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def nas_przenies(zrodlo, cel):
+    nas_zapisz(cel, zrodlo=zrodlo)
+
+
+# ---------- Komunikacja miejska (ZTM Poznań) i lokalizacja Antka ----------
+# ztm.py: rozkład GTFS (codziennie), opóźnienia na żywo, odjazdy i trasy. Lokalizacja przychodzi z OwnTracks na iPhonie
+# (HTTP przez Tailscale), z Telegrama (bot: zwykła albo „na żywo”) albo ze skrótu iOS; trzymana jest tylko ostatnia
+# (dane/lokalizacja.json, nigdy w repo). Miejsca („dom”, „szkoła”…): dane/miejsca.json.
+import ztm                                  # noqa: E402
+
+LOKALIZACJA = BASE / "dane" / "lokalizacja.json"
+LOKALIZACJA_MAX_MIN = 30        # min: starsza w dzień (7–22) = żółty problem w monitorze zdrowia
+MIEJSCA = BASE / "dane" / "miejsca.json"
+
+
+def miejsca():
+    try:
+        return json.loads(MIEJSCA.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def lokalizacja_google_blad():
+    """błąd ostatniego odczytu z Google Maps (google_lokalizacja.py) do opisu alarmu"""
+    try:
+        g = json.loads((BASE / "dane" / "lokalizacja_google.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    if g.get("ok"):
+        return ""
+    b = g.get("blad", "")
+    rada = " Ciasteczka konta Google wygasły: trzeba je wgrać ponownie." if "Cookie" in b or "cookie" in b or "401" in b else ""
+    return f" Odczyt z Google: {b[:150]}.{rada}"
+
+
+def lokalizacja():
+    try:
+        return json.loads(LOKALIZACJA.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+@app.route("/api/lokalizacja", methods=["GET", "POST"])
+def api_lokalizacja():
+    from flask import request
+    if request.method == "GET":
+        return jsonify({"lokalizacja": lokalizacja(), "miejsca": miejsca()})
+    b = request.get_json(silent=True, force=True)
+    if not isinstance(b, dict):
+        abort(400)
+    if b.get("_type") not in (None, "location"):          # OwnTracks wysyła też inne komunikaty: odpowiedz pustą listą
+        return jsonify([])
+    try:
+        lat, lon = float(b["lat"]), float(b["lon"])
+    except (KeyError, TypeError, ValueError):
+        abort(400)
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        abort(400)
+    tst = b.get("tst")
+    nz = b.get("na_zywo_do")
+    zapisz_json(LOKALIZACJA, {"lat": lat, "lon": lon, "dokladnosc_m": b.get("acc"),
+                              "na_zywo_do": nz if isinstance(nz, (int, float)) else None,
+                              "czas": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(tst if isinstance(tst, (int, float)) else None)),
+                              "zrodlo": str(b.get("zrodlo") or ("owntracks" if "_type" in b else "inne"))[:20]})
+    return jsonify([]) if "_type" in b else jsonify({"ok": True})
+
+
+@app.route("/api/miejsca", methods=["POST"])
+def api_miejsca():
+    """{nazwa, lat, lon} albo {nazwa, tu: true} (ostatnia lokalizacja) albo {nazwa, adres} albo {nazwa, usun: true}"""
+    from flask import request
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict) or not isinstance(b.get("nazwa"), str) or not 0 < len(b["nazwa"].strip()) <= 40:
+        abort(400)
+    nazwa, m = ztm.norm(b["nazwa"]), miejsca()
+    if b.get("usun"):
+        m.pop(nazwa, None)
+    else:
+        if b.get("tu"):
+            l = lokalizacja()
+            if not l:
+                return jsonify({"blad": "nie znam jeszcze Twojej lokalizacji"}), 409
+            lat, lon, opis = l["lat"], l["lon"], "z lokalizacji"
+        elif b.get("adres"):
+            g = ztm.geokoduj(str(b["adres"])[:200])
+            if not g:
+                return jsonify({"blad": "nie znalazłem tego adresu"}), 404
+            lat, lon, opis = g
+        else:
+            try:
+                lat, lon, opis = float(b["lat"]), float(b["lon"]), ""
+            except (KeyError, TypeError, ValueError):
+                abort(400)
+        m[nazwa] = {"lat": lat, "lon": lon, "opis": opis, "nazwa": b["nazwa"].strip()}
+    zapisz_json(MIEJSCA, m)
+    return jsonify({"miejsca": m})
+
+
+def ztm_punkt(tekst):
+    """„tu” / miejsce („dom”) / przystanek / adres -> (punkt dla ztm, opis) albo (None, powód)"""
+    t = (tekst or "tu").strip()
+    if ztm.norm(t) in ("tu", "tutaj", "ja", "moja lokalizacja", "stad", "stąd", ""):
+        l = lokalizacja()
+        if not l:
+            return None, "nie znam Twojej lokalizacji (wyślij ją w Telegramie albo włącz OwnTracks)"
+        wiek = time.time() - time.mktime(time.strptime(l["czas"], "%Y-%m-%dT%H:%M:%S"))
+        return {"lat": l["lat"], "lon": l["lon"]}, f"Twoja lokalizacja ({'teraz' if wiek < 300 else 'sprzed ' + str(int(wiek // 60)) + ' min'})"
+    mj, k = miejsca(), ztm.norm(t)
+    m = mj.get(k) or next((v for n, v in mj.items() if len(k) > 3 and n[:-1] == k[:-1]), None)   # „szkoły” = „szkoła”
+    if m:
+        return {"lat": m["lat"], "lon": m["lon"]}, m["nazwa"]
+    if k in ("dom", "domu", "do domu"):
+        return None, "nie znam jeszcze Twojego domu: napisz „zapisz dom” (gdy jesteś w domu) albo „zapisz dom ul. … 5”"
+    s = ztm.szukaj_przystanku(t)
+    if s:
+        return {"slupki": s}, ztm.rozklad()["przystanki"][s[0]][0]
+    try:
+        g = ztm.geokoduj(t)
+    except OSError:
+        g = None
+    if g:
+        return {"lat": g[0], "lon": g[1]}, g[2]
+    return None, f"nie znam miejsca „{t}”"
+
+
+@app.route("/api/ztm/odjazdy")
+def api_ztm_odjazdy():
+    """?przystanek=Junikowo albo ?skad=tu|dom|adres (przystanki do 500 m); &ile=10"""
+    from flask import request
+    try:
+        ile = max(1, min(30, int(request.args.get("ile", 10))))
+        if request.args.get("przystanek"):
+            s = ztm.szukaj_przystanku(request.args["przystanek"])
+            if not s:
+                return jsonify({"blad": f"nie ma przystanku „{request.args['przystanek']}”", "tekst": ""}), 404
+            nazwa = ztm.rozklad()["przystanki"][s[0]][0]
+            w = ztm.odjazdy(s, ile)
+            return jsonify({"przystanek": nazwa, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"🚏 {nazwa}:")})
+        p, opis = ztm_punkt(request.args.get("skad", "tu"))
+        if p is None:
+            return jsonify({"blad": opis, "tekst": opis}), 409
+        if "slupki" in p:
+            w = ztm.odjazdy(p["slupki"], ile)
+            return jsonify({"przystanek": opis, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"🚏 {opis}:")})
+        bl = ztm.najblizsze(p["lat"], p["lon"], 500)
+        w = ztm.odjazdy([s for s, _ in bl], ile, dojscie=dict(bl))
+        return jsonify({"skad": opis, "odjazdy": w, "tekst": ztm.tekst_odjazdow(w, f"Najbliżej · {opis}:")})
+    except RuntimeError as ex:
+        return jsonify({"blad": str(ex), "tekst": str(ex)}), 503
+
+
+@app.route("/api/ztm/trasa")
+def api_ztm_trasa():
+    """?skad=tu&dokad=dom (tu / miejsce / przystanek / adres)"""
+    from flask import request
+    try:
+        a, opa = ztm_punkt(request.args.get("skad", "tu"))
+        b, opb = ztm_punkt(request.args.get("dokad", "dom"))
+        if a is None or b is None:
+            pow_ = opa if a is None else opb
+            return jsonify({"blad": pow_, "tekst": pow_}), 409
+        w = ztm.trasa(a, b)
+        return jsonify({"skad": opa, "dokad": opb, "warianty": w, "tekst": f"🗺 {opa} → {opb}\n" + ztm.tekst_trasy(w, opb)})
+    except RuntimeError as ex:
+        return jsonify({"blad": str(ex), "tekst": str(ex)}), 503
+
+
+# ---------- Zawodowe: program od nauczyciela (ASTORINO Web Lab) prosto z NAS ----------
+# Nowa wersja: wrzucic plik .html (dowolna nazwa) do Tony-Folder/Raspberry/Zawodowe/ i usunac stary. Strona pokazuje
+# najnowszy plik .html z tego folderu i trzyma jego kopie w sites/zawodowe/index.html (dziala tez bez NAS).
+ZAWODOWE_NAS = NAS / "Zawodowe"
+ZAWODOWE = SITES / "zawodowe"
+
+
+def zawodowe_odswiez():
+    if not nas_ok():
+        return
+    try:
+        pliki = [p for p in ZAWODOWE_NAS.glob("*.htm*") if p.is_file() and not p.name.startswith(".")]
+        if not pliki:
+            return
+        naj = max(pliki, key=lambda p: p.stat().st_mtime)
+        st = naj.stat()
+        podpis = f"{naj.name}|{st.st_size}|{int(st.st_mtime)}"
+        znacznik = ZAWODOWE / "zrodlo.txt"
+        if read(znacznik).strip() == podpis and (ZAWODOWE / "index.html").is_file():
+            return
+        ZAWODOWE.mkdir(exist_ok=True)
+        tmp = ZAWODOWE / "index.html.tmp"
+        shutil.copyfile(naj, tmp)
+        os.replace(tmp, ZAWODOWE / "index.html")
+        znacznik.write_text(podpis + "\n", encoding="utf-8")
+    except OSError:
+        nas_blad()
+
+
+@app.route("/strony/zawodowe/")
+def zawodowe():
+    zawodowe_odswiez()
+    if not (ZAWODOWE / "index.html").is_file():
+        return Response("Brak programu: wrzuć plik .html do Tony-Folder/Raspberry/Zawodowe na NAS.", 404,
+                        mimetype="text/plain; charset=utf-8")
+    return send_from_directory(ZAWODOWE, "index.html", max_age=0)
+    zrodlo.unlink()
+
+
 # ---------- Progres: dziennik sylwetki (pomiary z wagi i zdjecia) ----------
-# Wszystko tylko na Pi: dane/progres/dane.json + dane/progres/zdjecia/<id>.jpg i <id>_m.jpg (miniatura).
-# Usuniete zdjecia trafiaja do dane/progres/kosz/ (nie sa kasowane od razu).
+# Dane: dane/progres/dane.json na Pi (kopia na NAS: Progres-zdjecia/dane.json). Zdjecia <id>.jpg i <id>_m.jpg
+# (miniatura) od razu na NAS w Progres-zdjecia/; dane/progres/zdjecia/ to tylko bufor, gdy NAS niedostepny.
+# Usuniete zdjecia trafiaja do Progres-zdjecia/Usuniete/ (albo dane/progres/kosz/ na Pi), nie sa kasowane.
 PROGRES = BASE / "dane" / "progres"
 PROGRES_ZDJ = PROGRES / "zdjecia"
 PROGRES_LOCK = threading.Lock()
@@ -1250,9 +2086,8 @@ def api_progres_zdjecie_nowe():
     except OSError:
         abort(400)
     zid = uuid.uuid4().hex
-    PROGRES_ZDJ.mkdir(parents=True, exist_ok=True)
-    (PROGRES_ZDJ / f"{zid}.jpg").write_bytes(duze)
-    (PROGRES_ZDJ / f"{zid}_m.jpg").write_bytes(male)
+    progres_zapisz_zdjecie(f"{zid}.jpg", duze)
+    progres_zapisz_zdjecie(f"{zid}_m.jpg", male)
     rec = {"id": zid, "data": data, "typ": typ, "w": w, "h": h, "dodano": time.strftime("%Y-%m-%dT%H:%M:%S")}
     if pose:
         rec["pose"] = pose
@@ -1279,11 +2114,17 @@ def api_progres_zdjecie_zmien(zid):
         if rec is None:
             abort(404)
         if b.get("usun") is True:
-            kosz = PROGRES / "kosz"
-            kosz.mkdir(parents=True, exist_ok=True)
             for nazwa in (f"{zid}.jpg", f"{zid}_m.jpg"):
                 if (PROGRES_ZDJ / nazwa).exists():
-                    os.replace(PROGRES_ZDJ / nazwa, kosz / nazwa)
+                    (PROGRES / "kosz").mkdir(parents=True, exist_ok=True)
+                    os.replace(PROGRES_ZDJ / nazwa, PROGRES / "kosz" / nazwa)
+                elif nas_ok():
+                    try:
+                        if (NAS_ZDJ / nazwa).exists():
+                            (NAS_ZDJ / "Usuniete").mkdir(exist_ok=True)
+                            os.replace(NAS_ZDJ / nazwa, NAS_ZDJ / "Usuniete" / nazwa)
+                    except OSError:
+                        nas_blad()      # zostanie na NAS bez wpisu w dane.json: nas_petla przeniesie go do Usuniete
             d["zdjecia"] = [z for z in d["zdjecia"] if z["id"] != zid]
         else:
             if "data" in b:
@@ -1313,11 +2154,40 @@ def api_progres_zdjecie_zmien(zid):
     return jsonify(d)
 
 
+def progres_zapisz_zdjecie(nazwa, dane):
+    """na NAS; gdy sie nie da, na Pi (bufor) i od razu czerwona dioda"""
+    if nas_ok():
+        try:
+            nas_zapisz(NAS_ZDJ / nazwa, dane)
+            return
+        except OSError:
+            nas_blad()
+    PROGRES_ZDJ.mkdir(parents=True, exist_ok=True)
+    (PROGRES_ZDJ / nazwa).write_bytes(dane)
+    ZDROWIE_BUDZIK.set()
+
+
+def progres_gdzie(lokalny, na_nas, nazwa):
+    """katalog, w ktorym jest plik: najpierw bufor na Pi, potem NAS"""
+    if (lokalny / nazwa).is_file():
+        return lokalny
+    if nas_ok():
+        try:
+            if (na_nas / nazwa).is_file():
+                return na_nas
+        except OSError:
+            nas_blad()
+    return None
+
+
 @app.route("/api/progres/plik/<nazwa>")
 def api_progres_plik(nazwa):
     if not re.fullmatch(r"[0-9a-f]{32}(_m)?\.jpg", nazwa):
         abort(404)
-    resp = send_from_directory(PROGRES_ZDJ, nazwa, mimetype="image/jpeg")
+    katalog = progres_gdzie(PROGRES_ZDJ, NAS_ZDJ, nazwa)
+    if katalog is None:
+        abort(503 if not nas_ok() else 404)
+    resp = send_from_directory(katalog, nazwa, mimetype="image/jpeg")
     resp.headers["Cache-Control"] = "private, max-age=31536000, immutable"
     return resp
 
@@ -1372,7 +2242,7 @@ def render_petla():
             if z["id"] in (m.get("geo") or {}):
                 z["geo"] = m["geo"][z["id"]]
         wej = PROGRES_FILMY / f"{m['id']}.wejscie.json"
-        zapisz_json(wej, {"film": m["film"], "kl": kl, "wpisy": d["wpisy"], "katalog": str(PROGRES_ZDJ)})
+        zapisz_json(wej, {"film": m["film"], "kl": kl, "wpisy": d["wpisy"], "katalogi": [str(PROGRES_ZDJ), str(NAS_ZDJ)]})
         tmp, post = PROGRES_FILMY / f"{m['id']}.tmp.mp4", PROGRES_FILMY / f"{m['id']}.postep"
         t0 = time.time()
         try:
@@ -1383,8 +2253,16 @@ def render_petla():
             ok, blad = False, str(e)[-400:]
         m = film_meta(m["id"]) or m
         if ok:
-            os.replace(tmp, PROGRES_FILMY / f"{m['id']}.mp4")
-            m.update(status="gotowe", rozmiar=(PROGRES_FILMY / f"{m['id']}.mp4").stat().st_size, czas_renderu=round(time.time() - t0))
+            gotowy = PROGRES_FILMY / f"{m['id']}.mp4"
+            os.replace(tmp, gotowy)
+            m.update(status="gotowe", rozmiar=gotowy.stat().st_size, czas_renderu=round(time.time() - t0))
+            if nas_ok():
+                try:
+                    nas_przenies(gotowy, NAS_FILMY / gotowy.name)
+                except OSError:
+                    nas_blad()
+            if gotowy.exists():
+                ZDROWIE_BUDZIK.set()
         else:
             m.update(status="blad", blad=blad or "nieznany blad")
             tmp.unlink(missing_ok=True)
@@ -1452,7 +2330,10 @@ def api_progres_filmy():
 def api_progres_film_plik(nazwa):
     if not re.fullmatch(r"[0-9a-f]{32}\.mp4", nazwa):
         abort(404)
-    resp = send_from_directory(PROGRES_FILMY, nazwa, mimetype="video/mp4", conditional=True)
+    katalog = progres_gdzie(PROGRES_FILMY, NAS_FILMY, nazwa)
+    if katalog is None:
+        abort(503 if not nas_ok() else 404)
+    resp = send_from_directory(katalog, nazwa, mimetype="video/mp4", conditional=True)
     resp.headers["Cache-Control"] = "private, max-age=86400"
     return resp
 
@@ -1472,6 +2353,11 @@ def api_progres_film_zmien(fid):
         abort(409)
     for nazwa in (f"{fid}.json", f"{fid}.mp4", f"{fid}.tmp.mp4", f"{fid}.postep", f"{fid}.wejscie.json"):
         (PROGRES_FILMY / nazwa).unlink(missing_ok=True)
+    if nas_ok():
+        try:
+            (NAS_FILMY / f"{fid}.mp4").unlink(missing_ok=True)
+        except OSError:
+            nas_blad()
     return jsonify({"ok": True})
 
 
@@ -1482,6 +2368,7 @@ render_start()
 # dane/zdrowie/incydenty.json: kazdy problem {id, klucz, tytul, opis, poziom (warn/crit, najgorszy), od, do, wartosc,
 #   przejrzane}; zakonczony problem czeka na „Przejrzane”, wiec nic nie znika bez sladu.
 # dane/zdrowie/dziennik.log: kazda zmiana jako linia tekstu (start, pogorszenie, koniec).
+# Oba pliki sa od razu kopiowane na NAS (Logi/zdrowie-dziennik.log, Logi/zdrowie-incydenty.json) przez nas_petla.
 # Progi mozna nadpisac w config.json: {"zdrowie": {"temp": [70, 80], ...}}.
 ZDROWIE = BASE / "dane" / "zdrowie"
 ZDROWIE_LOCK = threading.Lock()
@@ -1492,11 +2379,14 @@ ZDROWIE_PROGI = {
     "swap": [80, 95],            # % uzycia swap (zram)
     "cpu": [85, 95],             # % sredniego obciazenia: zolta po 10 min, czerwona po 30 min
     "cpu_min": [10, 30],
-    "uslugi_kryt": ["powernukkitx", "playit", "tailscaled", "home-portal"],
-    "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama"],
+    "uslugi_kryt": ["playit", "tailscaled", "home-portal"],
+    "uslugi_reczne": ["powernukkitx"],      # włączane ręcznie (minecraft start): wyłączone = OK, czerwona tylko po awarii
+    "uslugi": ["pi-dashboard", "home-terminal", "smbd", "nmbd", "wayvnc", "ollama", "serwerek-bot", "serwerek-telefon"],
     "zadania": ["mc-autoupdate"],    # usluga uruchamiana timerem: ostatni przebieg zakonczony bledem -> zolta
 }
 ZDROWIE_STAN = {"sprawdzono": None, "pomiary": {}, "liczniki": {}, "cpu": [], "cpu_prev": None}
+ZDROWIE_BUDZIK = threading.Event()      # pomiar od razu (np. zdjecie zapisane na Pi, bo NAS niedostepny)
+KOPIA_STAN = Path("/var/lib/kopia-pi")  # stan nocnej kopii systemu (skrypt kopia-pi)
 
 
 def zdrowie_progi():
@@ -1516,6 +2406,7 @@ def zdrowie_log(linia):
     ZDROWIE.mkdir(parents=True, exist_ok=True)
     with open(ZDROWIE / "dziennik.log", "a", encoding="utf-8") as f:
         f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " " + linia + "\n")
+    NAS_BUDZIK.set()
 
 
 def zdrowie_cpu():
@@ -1611,6 +2502,13 @@ def zdrowie_problemy(prog):
             if st.get("ActiveState") != "active":
                 opis = SERVICE_INFO.get(u, ("", u))[1]
                 pr.append((f"usluga:{u}", poziom, f"Usługa nie działa: {u}", f"{opis}. Stan: {st.get('ActiveState')}/{st.get('SubState')}.", 1))
+    for u in prog.get("uslugi_reczne", []):
+        st = usluga_stan(u)
+        if st.get("LoadState") != "loaded":
+            continue
+        uslugi[u] = st.get("ActiveState") if st.get("ActiveState") in ("active", "failed") else "recznie"
+        if st.get("ActiveState") == "failed":
+            pr.append((f"usluga:{u}", "crit", f"Usługa się wysypała: {u}", f"{SERVICE_INFO.get(u, ('', u))[1]}. Włącz ponownie: minecraft start.", 1))
     for u in prog["zadania"]:
         st = usluga_stan(u)
         if st.get("LoadState") == "loaded" and st.get("Result") not in (None, "", "success"):
@@ -1619,8 +2517,48 @@ def zdrowie_problemy(prog):
         nazwa = u.removesuffix(".service")
         if nazwa not in uslugi and nazwa not in prog["zadania"]:
             pr.append((f"failed:{u}", "warn", f"Jednostka systemd z błędem: {u}", "systemctl --failed", 1))
+    nas = nas_ok(ttl=0)
+    pom["nas"] = "ok" if nas else "brak"
+    if not nas:
+        pr.append(("nas", "crit", "NAS niedostępny", "Zdjęcia, filmy i logi zapisują się na Pi, nocna kopia systemu się nie zrobi. "
+                   "Sprawdź, czy NAS (172.23.0.28) jest włączony.", 1))
+    bufor = [p for p in list(PROGRES_ZDJ.glob("*.jpg")) + list(PROGRES_FILMY.glob("*.mp4")) if not p.name.endswith(".tmp.mp4")]
+    pom["bufor"] = len(bufor)
+    if bufor:
+        pr.append(("nas_bufor", "crit", "Zdjęcia lub filmy tylko na Pi (nie ma ich na NAS)",
+                   f"{len(bufor)} plików czeka na Pi. Przeniosą się same, gdy NAS będzie dostępny.", len(bufor), "natychmiast"))
+    try:
+        st = json.loads((KOPIA_STAN / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        st = None
+    try:
+        ok_ = json.loads((KOPIA_STAN / "ostatnia-udana.json").read_text(encoding="utf-8"))
+        wiek = (time.time() - time.mktime(time.strptime(ok_["czas"], "%Y-%m-%dT%H:%M:%S"))) / 3600
+        pom["kopia"] = ok_["czas"]
+    except (OSError, ValueError, KeyError):
+        wiek = None
+    if st and st.get("wynik") == "blad":
+        pr.append(("kopia", "crit", "Nocna kopia systemu nie udała się", f"Próba {st.get('start', '?')}. Szczegóły: NAS → Raspberry/Logi/kopia-systemu.log.", 1))
+    elif st and (wiek is None or wiek > 26):
+        poziom = "crit" if wiek is None or wiek > 50 else "warn"
+        pr.append(("kopia_stara", poziom, "Dawno nie było kopii systemu",
+                   f"Ostatnia udana: {pom.get('kopia', 'nigdy')}.", round(wiek or 0)))
     if Path("/var/run/reboot-required").exists():
         pr.append(("restart", "warn", "Potrzebny restart Pi", "Po aktualizacji systemu. Zrób go, gdy nikt nie gra.", 1))
+    # lokalizacja Antka (komunikacja miejska): w dzień najpóźniej co LOKALIZACJA_MAX_MIN, chyba że trwa „na żywo” z Telegrama
+    # tylko gdy działa automatyczne źródło (Google Maps); przy wysyłaniu jednorazowym z Telegrama alarm nie ma sensu
+    if 7 <= time.localtime().tm_hour < 22 and (BASE / "dane" / "google_cookies.txt").exists():
+        l = lokalizacja()
+        try:
+            wiek_l = (time.time() - time.mktime(time.strptime(l["czas"], "%Y-%m-%dT%H:%M:%S"))) / 60 if l else None
+        except (KeyError, ValueError):
+            wiek_l = None
+        na_zywo = l and (l.get("na_zywo_do") or 0) > time.time()
+        if not na_zywo and (wiek_l is None or wiek_l > LOKALIZACJA_MAX_MIN):
+            pr.append(("lokalizacja", "warn", "Brak aktualnej lokalizacji",
+                       (f"Ostatnia: {l['czas'][11:16]} ({l.get('zrodlo', '?')}). " if l else "Pi jeszcze nie dostało lokalizacji. ")
+                       + "Sprawdź udostępnianie lokalizacji w Google Maps (i czy Google Maps ma lokalizację „Zawsze”)."
+                       + lokalizacja_google_blad(), 1))
     pom["uslugi"] = uslugi
     return pr, pom
 
@@ -1639,7 +2577,8 @@ def zdrowie_krok(teraz=None):
         widziane = set()
         for pr in problemy:
             klucz, poziom, tytul, opis, wartosc = pr[:5]
-            jednorazowy = len(pr) > 5
+            jednorazowy = pr[5:] == ("jednorazowo",)
+            prog_startu = 1 if pr[5:] == ("natychmiast",) else 2
             widziane.add(klucz)
             licz[klucz] = licz.get(klucz, 0) + 1 if licz.get(klucz, 0) >= 0 else 1
             if jednorazowy:
@@ -1655,7 +2594,7 @@ def zdrowie_krok(teraz=None):
                 if poziom == "crit" and a["poziom"] != "crit":
                     a["poziom"] = "crit"
                     zdrowie_log(f"POGORSZENIE crit {klucz}: {tytul} - {opis}")
-            elif licz[klucz] >= 2:
+            elif licz[klucz] >= prog_startu:
                 inc.append({"id": uuid_hex(), "klucz": klucz, "tytul": tytul, "opis": opis, "poziom": poziom, "teraz": poziom,
                             "od": teraz, "do": None, "ostatnio": teraz, "wartosc": wartosc, "przejrzane": False})
                 zdrowie_log(f"START {poziom} {klucz}: {tytul} - {opis}")
@@ -1692,7 +2631,8 @@ def zdrowie_petla():
                 zdrowie_log(f"BLAD MONITORA {type(e).__name__}: {e}")
             except OSError:
                 pass
-        time.sleep(60)
+        ZDROWIE_BUDZIK.wait(60)
+        ZDROWIE_BUDZIK.clear()
 
 
 def zdrowie_podsumowanie():
@@ -1743,18 +2683,382 @@ def api_zdrowie_dziennik():
     return jsonify(linie[::-1])
 
 
+# ---------- Obciazenie: kazdy przedzial czasu z CPU > 60 %, temperatura > 55 °C, RAM > 60 % ----------
+# Watek co 5 s. Przedzial zaczyna sie po 2 kolejnych pomiarach ponad progiem (>= 10 s), konczy po 3 ponizej (15 s).
+# Zapis: dane/zdrowie/obciazenie.json (lista przedzialow) + czytelne logi cpu.log, temperatura.log, ram.log
+# (START od razu, KONIEC z maksimum, srednia i glownymi „zjadaczami”), kopiowane na NAS do Logi/ przez nas_petla.
+# Progi: config.json "obciazenie": {"cpu": 60, "temp": 55, "ram": 60}.
+OBC_PROGI = {"cpu": 60, "temp": 55, "ram": 60}
+OBC_TYPY = {"cpu": ("cpu.log", "CPU", "%"), "temp": ("temperatura.log", "Temperatura", " °C"), "ram": ("ram.log", "RAM", "%")}
+OBC_LOCK = threading.Lock()
+OBC_STAN = {"trwa": {}, "licz": {}, "pomiar": {}}
+
+
+def obc_progi():
+    p = dict(OBC_PROGI)
+    p.update(config().get("obciazenie") or {})
+    return p
+
+
+def obc_epizody():
+    try:
+        return json.loads((ZDROWIE / "obciazenie.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def obc_procesy(prev):
+    """czas CPU (tiki) i RAM kazdego procesu; nazwa = program (usluga)"""
+    cur = {}
+    for d in os.listdir("/proc"):
+        if not d.isdigit():
+            continue
+        try:
+            st = Path(f"/proc/{d}/stat").read_text()
+            rp = st.rfind(")")
+            f = st[rp + 2:].split()
+            klucz = (int(d), f[19])                     # pid + czas startu (pid moze zostac uzyty ponownie)
+            nazwa = prev[klucz][2] if klucz in prev else st[st.find("(") + 1:rp]
+            if klucz not in prev:
+                u = unit_of(d)
+                nazwa = f"{nazwa} ({u})" if u and u != nazwa else nazwa
+            cur[klucz] = (int(f[11]) + int(f[12]), int(f[21]) * PAGE_SIZE, nazwa)
+        except (OSError, ValueError, IndexError):
+            continue
+    return cur
+
+
+def obc_czas(sek):
+    sek = int(round(sek))
+    return f"{sek} s" if sek < 60 else f"{sek // 60} min {sek % 60} s" if sek < 3600 else f"{sek // 3600} h {sek % 3600 // 60} min"
+
+
+def obc_top(e, n=5):
+    if e["typ"] == "ram":
+        lista = sorted(e["ram_max"].items(), key=lambda x: -x[1])[:n]
+        return [{"nazwa": k, "mb": round(v / 1048576)} for k, v in lista]
+    dl = max(1.0, e["sek"])
+    lista = sorted(e["cpu_s"].items(), key=lambda x: -x[1])[:n]
+    return [{"nazwa": k, "cpu": round(v / dl * 100)} for k, v in lista if v > 0]
+
+
+def obc_opis_top(top):
+    return ", ".join(f"{t['nazwa']} {t['mb']} MB" if "mb" in t else f"{t['nazwa']} {t['cpu']}%" for t in top) or "–"
+
+
+def obc_log(typ, linia):
+    ZDROWIE.mkdir(parents=True, exist_ok=True)
+    with open(ZDROWIE / OBC_TYPY[typ][0], "a", encoding="utf-8") as f:
+        f.write(linia + "\n")
+    NAS_BUDZIK.set()
+
+
+def obc_dodaj(e, v, procesy, teraz):
+    e["suma"] += v
+    e["n"] += 1
+    if v >= e["max"]:
+        e["max"], e["max_czas"] = v, time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(teraz))
+    for nazwa, (cpu_s, rss) in procesy.items():
+        if cpu_s > 0:
+            e["cpu_s"][nazwa] = e["cpu_s"].get(nazwa, 0) + cpu_s
+        if rss > e["ram_max"].get(nazwa, 0):
+            e["ram_max"][nazwa] = rss
+
+
+def obc_krok(wart, procesy, dt, teraz):
+    """jeden pomiar: wart = {"cpu": %, "temp": °C, "ram": %}, procesy = {nazwa: (sekundy CPU w ostatnich dt, RAM)}"""
+    prog = obc_progi()
+    with OBC_LOCK:
+        poprz = OBC_STAN.get("poprz") or {}
+        for typ, v in wart.items():
+            if v is None:
+                continue
+            licz, e = OBC_STAN["licz"], OBC_STAN["trwa"].get(typ)
+            if v > prog[typ]:
+                licz[typ] = max(0, licz.get(typ, 0)) + 1
+                if e is None and licz[typ] >= 2:
+                    t0 = teraz - 2 * dt         # przedzial zaczal sie przy poprzednim pomiarze
+                    e = OBC_STAN["trwa"][typ] = {"typ": typ, "od": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(t0)), "t0": t0,
+                                                 "max": 0, "max_czas": None, "suma": 0.0, "n": 0, "prog": prog[typ], "sek": 0.0,
+                                                 "cpu_s": {}, "ram_max": {}, "ponizej": 0, "ostatnio": teraz}
+                    if typ in poprz:
+                        obc_dodaj(e, poprz[typ][0], poprz[typ][1], teraz - dt)
+                    _, nazwa, jedn = OBC_TYPY[typ]
+                    obc_log(typ, f"{e['od'].replace('T', ' ')} START {nazwa} > {prog[typ]}{jedn} (teraz {v:.0f}{jedn})")
+                if e:
+                    e["ponizej"], e["ostatnio"] = 0, teraz
+                    obc_dodaj(e, v, procesy, teraz)
+                    e["sek"] = teraz - e["t0"]
+            else:
+                licz[typ] = min(0, licz.get(typ, 0)) - 1
+                if e:
+                    e["ponizej"] += 1
+                    if e["ponizej"] >= 3:
+                        obc_zakoncz(e, e["ostatnio"])
+                        del OBC_STAN["trwa"][typ]
+        OBC_STAN["poprz"] = {typ: (v, procesy) for typ, v in wart.items() if v is not None}
+
+
+def obc_zakoncz(e, koniec):
+    _, nazwa, jedn = OBC_TYPY[e["typ"]]
+    e["sek"] = max(0, koniec - e["t0"])
+    rek = {"typ": e["typ"], "od": e["od"], "do": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(koniec)),
+           "sek": round(e["sek"]), "max": round(e["max"], 1), "max_czas": e["max_czas"],
+           "srednia": round(e["suma"] / max(1, e["n"]), 1), "prog": e["prog"], "top": obc_top(e)}
+    obc_log(e["typ"], f"{rek['od'].replace('T', ' ')} – {rek['do'][11:]} ({obc_czas(rek['sek'])}) {nazwa} max {rek['max']:.0f}{jedn}"
+                      f" o {(rek['max_czas'] or '')[11:]}, średnio {rek['srednia']:.0f}{jedn} · najwięcej: {obc_opis_top(rek['top'])}")
+    lista = obc_epizody()
+    lista.append(rek)
+    zapisz_json(ZDROWIE / "obciazenie.json", lista[-3000:], indent=None)
+
+
+OBC_MAKS = ZDROWIE / "maksima.json"     # {"RRRR-MM-DD": {"cpu": [wartosc, "HH:MM"], "temp": [...], "ram": [...]}}, 60 dni
+
+
+def obc_maksima(wart, teraz):
+    """najwyzsze wartosci kazdego dnia (pomiar co 5 s), zapis na karte co minute"""
+    m = OBC_STAN.get("maks")
+    if m is None:
+        try:
+            m = json.loads(OBC_MAKS.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            m = {}
+        OBC_STAN["maks"] = m
+    dzien, godz = time.strftime("%Y-%m-%d"), time.strftime("%H:%M")
+    d = m.setdefault(dzien, {})
+    for k, v in wart.items():
+        if v is not None and (k not in d or v > d[k][0]):
+            d[k] = [round(v, 1), godz]
+    if teraz - OBC_STAN.get("maks_zapis", 0) > 60:
+        OBC_STAN["maks_zapis"] = teraz
+        for stary in sorted(m)[:-60]:
+            del m[stary]
+        zapisz_json(OBC_MAKS, m, indent=None)
+
+
+def obc_maks_okres(dni):
+    """maksimum z ostatnich dni (dzis wlacznie): {typ: [wartosc, "RRRR-MM-DD HH:MM"]}"""
+    m = OBC_STAN.get("maks") or {}
+    granica = time.strftime("%Y-%m-%d", time.localtime(time.time() - (dni - 1) * 86400))
+    wynik = {}
+    for dzien, d in m.items():
+        if dzien >= granica:
+            for k, (v, g) in d.items():
+                if k not in wynik or v > wynik[k][0]:
+                    wynik[k] = [v, f"{dzien} {g}"]
+    return wynik
+
+
+def obc_petla():
+    prev_cpu, prev_proc, t_prev = None, {}, None
+    while True:
+        try:
+            teraz = time.time()
+            vals = [int(x) for x in read("/proc/stat").splitlines()[0].split()[1:]]
+            cur_cpu = (vals[3] + vals[4], sum(vals))
+            cur_proc = obc_procesy(prev_proc)
+            if prev_cpu and t_prev and cur_cpu[1] > prev_cpu[1]:
+                dt = teraz - t_prev
+                cpu = 100.0 * (1 - (cur_cpu[0] - prev_cpu[0]) / (cur_cpu[1] - prev_cpu[1]))
+                try:
+                    temp = int(read("/sys/class/thermal/thermal_zone0/temp", "0")) / 1000 or None
+                except ValueError:
+                    temp = None
+                mi = meminfo()
+                ram = (mi["MemTotal"] - mi.get("MemAvailable", 0)) / mi["MemTotal"] * 100 if mi.get("MemTotal") else None
+                procesy = {}
+                for k, (tiki, rss, nazwa) in cur_proc.items():
+                    cpu_s = (tiki - prev_proc[k][0]) / HZ if k in prev_proc else 0.0
+                    a = procesy.get(nazwa, (0.0, 0))
+                    procesy[nazwa] = (a[0] + cpu_s, a[1] + rss)
+                OBC_STAN["pomiar"] = {"cpu": round(cpu, 1), "temp": temp and round(temp, 1), "ram": ram and round(ram, 1),
+                                      "czas": time.strftime("%Y-%m-%dT%H:%M:%S")}
+                obc_krok({"cpu": cpu, "temp": temp, "ram": ram}, procesy, dt, teraz)
+                obc_maksima({"cpu": cpu, "temp": temp, "ram": ram}, teraz)
+            prev_cpu, prev_proc, t_prev = cur_cpu, cur_proc, teraz
+        except Exception as e:      # pomiar nie moze zatrzymac portalu
+            try:
+                zdrowie_log(f"BLAD OBCIAZENIA {type(e).__name__}: {e}")
+            except OSError:
+                pass
+            time.sleep(55)
+        time.sleep(5)
+
+
+@app.route("/api/obciazenie")
+def api_obciazenie():
+    with OBC_LOCK:
+        trwa = [{"typ": e["typ"], "od": e["od"], "sek": round(e["sek"]), "max": round(e["max"], 1), "max_czas": e["max_czas"],
+                 "srednia": round(e["suma"] / max(1, e["n"]), 1), "prog": e["prog"], "top": obc_top(e)} for e in OBC_STAN["trwa"].values()]
+    lista = obc_epizody()
+    granica = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(time.time() - 86400))
+    doba = {}
+    for typ in OBC_TYPY:
+        ep = [e for e in lista if e["typ"] == typ and e["do"] >= granica]
+        doba[typ] = {"ile": len(ep), "sek": sum(e["sek"] for e in ep), "max": max((e["max"] for e in ep), default=None)}
+    return jsonify({"progi": obc_progi(), "teraz": OBC_STAN["pomiar"], "trwa": trwa, "doba": doba, "przedzialy": lista[::-1][:150],
+                    "maks": {"dzis": obc_maks_okres(1), "tydzien": obc_maks_okres(7)}})
+
+
+# ---------- Zadania w tle: kopia systemu, render, NAS, logi, aktualizacje (panel na /strony/zdrowie/) ----------
+ZADANIA = [   # (usluga, timer, nazwa, opis)
+    ("kopia-pi", "kopia-pi.timer", "Kopia całego systemu na NAS", "Co noc o 02:00, tylko zmiany, do NAS → Raspberry/Kopia-systemu"),
+    ("logi-na-nas", "logi-na-nas.timer", "Dziennik systemu na NAS", "Co minutę do NAS → Raspberry/Logi/system"),
+    ("nas-montuj", "nas-montuj.timer", "Połączenie z NAS", "Sprawdzane co 2 minuty, po zerwaniu łączy od nowa"),
+    ("mc-autoupdate", "mc-autoupdate.timer", "Aktualizacja serwera Minecraft", "Automatyczna aktualizacja PowerNukkitX"),
+    ("apt-daily-upgrade", "apt-daily-upgrade.timer", "Aktualizacje systemu", "Automatyczne poprawki bezpieczeństwa (apt)"),
+]
+
+
+def zadania_timery():
+    try:
+        return {t["unit"]: t for t in json.loads(sh(["systemctl", "list-timers", "--all", "--output=json", "--no-pager"]) or "[]")}
+    except ValueError:
+        return {}
+
+
+def usec_iso(v):
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(v / 1e6)) if isinstance(v, (int, float)) and v > 0 else None
+
+
+def kopia_postep():
+    """postep trwajacej kopii: z postep.json skryptu, a gdy go nie ma, szacunek z zajetosci pliku kopii"""
+    try:
+        p = json.loads((KOPIA_STAN / "postep.json").read_text(encoding="utf-8"))
+        return {"faza": p.get("faza"), "procent": p.get("procent"), "pliki": p.get("pliki"), "start": p.get("start")}
+    except (OSError, ValueError):
+        pass
+    try:
+        kopia = shutil.disk_usage("/mnt/pi-kopia")
+        if not os.path.ismount("/mnt/pi-kopia"):
+            return {"faza": "przygotowanie", "procent": None}
+        zrodlo = shutil.disk_usage("/").used + shutil.disk_usage("/boot/firmware").used - 2 * 1024 ** 3
+        return {"faza": "kopiowanie", "procent": min(99, round(kopia.used / max(1, zrodlo) * 100)), "szacunek": True}
+    except OSError:
+        return {"faza": "przygotowanie", "procent": None}
+
+
+def zadania_lista():
+    timery, lista = zadania_timery(), []
+    for usluga, timer, nazwa, opis in ZADANIA:
+        st = usluga_stan(usluga)
+        if st.get("LoadState") != "loaded":
+            continue
+        t = timery.get(timer, {})
+        z = {"id": usluga, "nazwa": nazwa, "opis": opis, "trwa": st.get("ActiveState") in ("activating", "active", "deactivating"),
+             "wynik": st.get("Result") or None, "ostatnio": usec_iso(t.get("last")), "nastepnie": usec_iso(t.get("next"))}
+        if usluga == "kopia-pi":
+            for plik, klucz in (("stan.json", "ostatni"), ("ostatnia-udana.json", "udana")):
+                try:
+                    z[klucz] = json.loads((KOPIA_STAN / plik).read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    z[klucz] = None
+            if z["trwa"]:
+                z.update(kopia_postep())
+                if not z.get("start"):
+                    m = re.search(r"@(\d+)", sh(["systemctl", "show", "--timestamp=unix", "-p", "ExecMainStartTimestamp", "--value", "kopia-pi"]))
+                    z["start"] = usec_iso(int(m.group(1)) * 1e6) if m else z["ostatnio"]
+        lista.append(z)
+    filmy = [m for m in (film_meta(p.stem) for p in PROGRES_FILMY.glob("*.json") if not p.name.endswith(".wejscie.json")) if m]
+    trwa = next((m for m in filmy if m.get("status") == "renderuje"), None)
+    render = {"id": "render", "nazwa": "Render filmów (Progres)", "opis": "Filmy z postępu sylwetki, jeden naraz, niski priorytet",
+              "trwa": bool(trwa), "kolejka": sum(m.get("status") == "oczekuje" for m in filmy)}
+    if trwa:
+        try:
+            render["procent"] = int((PROGRES_FILMY / f"{trwa['id']}.postep").read_text())
+        except (OSError, ValueError):
+            render["procent"] = 0
+        render.update(faza="renderuje", start=trwa.get("start"), cel=trwa.get("opis") or "")
+    gotowe = [m for m in filmy if m.get("status") in ("gotowe", "blad")]
+    if gotowe:
+        ost = max(gotowe, key=lambda m: m["utworzono"])
+        render.update(ostatnio=ost.get("start") or ost["utworzono"], wynik="success" if ost["status"] == "gotowe" else "blad")
+    lista.insert(1, render)
+    bufor = [p for p in list(PROGRES_ZDJ.glob("*.jpg")) + list(PROGRES_FILMY.glob("*.mp4")) if not p.name.endswith(".tmp.mp4")]
+    lista.insert(2, {"id": "nas-bufor", "nazwa": "Zdjęcia i filmy na NAS", "opis": "Zapis od razu na NAS; gdy był niedostępny, Pi przenosi zaległe co 30 s",
+                     "trwa": bool(bufor) and nas_ok(), "czeka": len(bufor), "wynik": "success" if not bufor else None})
+    nas = {"ok": nas_ok()}
+    if nas["ok"]:
+        try:
+            du = shutil.disk_usage("/mnt/nas")
+            nas.update(wolne_gb=round(du.free / 1e9), razem_gb=round(du.total / 1e9))
+        except OSError:
+            pass
+    return {"zadania": lista, "nas": nas, "teraz": time.strftime("%Y-%m-%dT%H:%M:%S")}
+
+
+@app.route("/api/zadania")
+def api_zadania():
+    return jsonify(zadania_lista())
+
+
+# ---------- NAS: przenoszenie bufora z Pi i kopie logow (co 30 s albo od razu po zmianie) ----------
+NAS_KOPIE = {}      # plik -> zawartosc ostatnio wyslana na NAS
+
+
+def nas_lustro(zrodlo, cel):
+    try:
+        dane = zrodlo.read_bytes()
+    except OSError:
+        return
+    if NAS_KOPIE.get(cel) != dane:
+        nas_zapisz(cel, dane)
+        NAS_KOPIE[cel] = dane
+
+
+def nas_krok(sprzatanie=False):
+    if not nas_ok():
+        return
+    try:
+        for p in sorted(PROGRES_ZDJ.glob("*.jpg")):
+            nas_przenies(p, NAS_ZDJ / p.name)
+        for p in sorted((PROGRES / "kosz").glob("*.jpg")):
+            nas_przenies(p, NAS_ZDJ / "Usuniete" / p.name)
+        for p in sorted(PROGRES_FILMY.glob("*.mp4")):
+            if not p.name.endswith(".tmp.mp4"):
+                nas_przenies(p, NAS_FILMY / p.name)
+        nas_lustro(ZDROWIE / "dziennik.log", NAS_LOGI / "zdrowie-dziennik.log")
+        nas_lustro(ZDROWIE / "incydenty.json", NAS_LOGI / "zdrowie-incydenty.json")
+        nas_lustro(PROGRES / "dane.json", NAS_ZDJ / "dane.json")
+        for plik, _, _ in OBC_TYPY.values():
+            nas_lustro(ZDROWIE / plik, NAS_LOGI / plik)
+        if sprzatanie:      # pliki usuniete na stronie, gdy NAS byl niedostepny (starsze niz 10 min: nie w trakcie dodawania)
+            znane = {z["id"] for z in progres_dane()["zdjecia"]}
+            filmy = {p.stem for p in PROGRES_FILMY.glob("*.json")}
+            stare = time.time() - 600
+            for p in NAS_ZDJ.glob("*.jpg"):
+                if p.name.split(".")[0].removesuffix("_m") not in znane and p.stat().st_mtime < stare:
+                    (NAS_ZDJ / "Usuniete").mkdir(exist_ok=True)
+                    os.replace(p, NAS_ZDJ / "Usuniete" / p.name)
+            for p in NAS_FILMY.glob("*.mp4"):
+                if p.stem not in filmy and p.stat().st_mtime < stare:
+                    p.unlink()
+    except OSError:
+        nas_blad()
+
+
+def nas_petla():
+    n = 0
+    while True:
+        try:
+            nas_krok(sprzatanie=n % 20 == 0)
+        except Exception as e:      # watek nie moze zatrzymac portalu
+            try:
+                zdrowie_log(f"BLAD NAS {type(e).__name__}: {e}")
+            except OSError:
+                pass
+        n += 1
+        NAS_BUDZIK.wait(30)
+        NAS_BUDZIK.clear()
+        time.sleep(1)       # kilka zmian naraz = jedna kopia
+
+
 if not os.environ.get("PORTAL_TEST"):
     threading.Thread(target=zdrowie_petla, name="zdrowie", daemon=True).start()
-
-
-def tailscale_ipv4():
-    for _ in range(120):
-        m = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", sh(["ip", "-4", "-o", "addr", "show", "dev", "tailscale0"]))
-        if m:
-            return m.group(1)
-        time.sleep(5)
-    raise SystemExit("Brak adresu Tailscale - portal nie startuje (nie bedzie nasluchiwal w LAN).")
+    threading.Thread(target=nas_petla, name="nas", daemon=True).start()
+    threading.Thread(target=obc_petla, name="obciazenie", daemon=True).start()
+    threading.Thread(target=ztm.petla_aktualizacji, name="ztm", daemon=True).start()
 
 
 if __name__ == "__main__":
-    app.run(host=tailscale_ipv4(), port=PORT, threaded=True)
+    app.run(host="0.0.0.0", port=PORT, threaded=True)

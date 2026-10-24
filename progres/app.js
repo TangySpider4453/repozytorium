@@ -102,6 +102,17 @@ function naCanvas(img, maks){
 }
 const doBloba = (c, q) => new Promise(res => c.toBlob(res, "image/jpeg", q));
 
+/* masa tłuszczu i mięśni w kg z masy ciała i procentu (waga podaje %) */
+const kgSkladu = (w, k) => w && w.masa != null && w[k] != null ? Math.round(w.masa * w[k]) / 100 : null;
+function pokazSklad(){
+  const w = {masa:num($("fMasa").value), fat:num($("fFat").value), muscle:num($("fMuscle").value)};
+  const t = kgSkladu(w, "fat"), m = kgSkladu(w, "muscle"), cz = [];
+  if(t != null && !Number.isNaN(t)) cz.push(`tłuszcz ${pl(t)} kg`);
+  if(m != null && !Number.isNaN(m)) cz.push(`mięśnie ${pl(m)} kg`);
+  $("fSklad").hidden = !cz.length;
+  $("fSklad").textContent = cz.length ? "To jest: " + cz.join(" · ") : "";
+}
+
 /* ---------- DODAJ ---------- */
 const NOWE = [];
 function ustawFormularz(data, zachowaj){
@@ -114,6 +125,7 @@ function ustawFormularz(data, zachowaj){
   wstaw("fFat", w && w.fat != null ? pl(w.fat) : "");
   wstaw("fMuscle", w && w.muscle != null ? pl(w.muscle) : "");
   wstaw("fNotatka", w && w.notatka || "");
+  pokazSklad();
   const ile = DANE.zdjecia.filter(z => z.data === data).length;
   $("fIstnieje").hidden = !(w || ile);
   $("fIstnieje").textContent = `Dla ${krotko(data)} są już zapisane ${w ? "wyniki z wagi" : ""}${w && ile ? " i " : ""}${ile ? ile + " " + (ile === 1 ? "zdjęcie" : ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? "zdjęcia" : "zdjęć") : ""}. Zapis podmieni wyniki, a zdjęcia dopisze.`;
@@ -125,7 +137,7 @@ function uzyjDaty(d){
   ustawFormularz(d, true);
 }
 $("fData").onchange = () => ustawFormularz($("fData").value || dzis());
-["fMasa", "fFat", "fMuscle", "fNotatka"].forEach(id => $(id).addEventListener("input", () => delete $(id).dataset.auto));
+["fMasa", "fFat", "fMuscle", "fNotatka"].forEach(id => $(id).addEventListener("input", () => { delete $(id).dataset.auto; pokazSklad(); }));
 
 $("fPliki").onchange = async e => {
   const files = [...e.target.files]; e.target.value = "";
@@ -251,14 +263,17 @@ function wykres(tytul, serie, jedn, zak){
 }
 /* zakres wykresów: liczba dni (null = całość) i koniec okna (suwak); zapamiętywane w tej przeglądarce */
 const ZAKRESY = [[7, "7 dni"], [30, "Miesiąc"], [61, "2 mies."], [91, "3 mies."], [182, "6 mies."], [365, "Rok"], [null, "Całość"]];
-let WYK = {dni:null, koniec:null};
+let WYK = {dni:null, koniec:null, sklad:"proc"};
 try{ Object.assign(WYK, JSON.parse(localStorage.getItem("progres:wykres") || "{}")); }catch(e){}
 const zapiszWYK = () => { try{ localStorage.setItem("progres:wykres", JSON.stringify(WYK)); }catch(e){} };
 const DZIEN = 864e5;
 const GODZ = 36e5;
 function rysujWykresy(){
   const wpisy = Object.entries(DANE.wpisy).sort((a, b) => a[0].localeCompare(b[0]));
-  const ser = k => wpisy.filter(([, w]) => w[k] != null).map(([d, w]) => [d, w[k]]);
+  // seria wykresu; „fatKg”/„muscleKg” = masa składnika przeliczona z % i masy ciała z tego samego dnia
+  const ser = k => k.endsWith("Kg") ? wpisy.map(([d, w]) => [d, kgSkladu(w, k.slice(0, -2))]).filter(p => p[1] != null)
+    : wpisy.filter(([, w]) => w[k] != null).map(([d, w]) => [d, w[k]]);
+  const kg = WYK.sklad === "kg";
   const cs = getComputedStyle(document.documentElement), s1 = cs.getPropertyValue("--s1").trim(), s2 = cs.getPropertyValue("--s2").trim();
   const daty = wpisy.filter(([, w]) => w.masa != null || w.fat != null || w.muscle != null).map(([d]) => pd(d).getTime());
   const dmin = daty.length ? daty[0] : Date.now(), dmax = daty.length ? daty[daty.length - 1] : Date.now(), rozpietosc = Math.round((dmax - dmin) / DZIEN);
@@ -276,9 +291,14 @@ function rysujWykresy(){
   const wnetrze = el("div");
   const rysujSame = () => { wnetrze.replaceChildren(
     wykres("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg", zak),
-    wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak)); };
+    kg ? wykres("Skład ciała (kg)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fatKg")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscleKg")}], " kg", zak)
+       : wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak)); };
+  // skład ciała: procent z wagi albo przeliczona masa tłuszczu i mięśni (kg); zapamiętywane w tej przeglądarce
+  const skladChips = el("div", {class:"chips"}, ...[["proc", "% (z wagi)"], ["kg", "kg (masa składnika)"]].map(([k, n]) =>
+    el("button", {"aria-pressed":String(WYK.sklad === k || (k === "proc" && WYK.sklad !== "kg")), text:n, onclick:() => { WYK.sklad = k; zapiszWYK(); rysujWykresy(); }})));
   box.append(el("h2", {text:"Wykresy"}), el("div", {class:"f", style:"margin-bottom:6px"}, "Zakres", chips),
-    el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})), wnetrze);
+    el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})),
+    el("div", {class:"f", style:"margin-bottom:8px"}, "Skład ciała w", skladChips), wnetrze);
   rysujSame();
   // suwak od dołu: przesuwa okno w czasie co godzinę (płynnie), wspólny dla obu wykresów
   if(okno){
@@ -304,8 +324,8 @@ function rysujHistorie(){
     const dt = pd(d);
     const vals = el("div", {class:"vals"});
     if(w.masa != null) vals.append(el("span", {}, "masa ", el("b", {text:pl(w.masa) + " kg"})));
-    if(w.fat != null) vals.append(el("span", {}, "tłuszcz ", el("b", {text:pl(w.fat) + "%"})));
-    if(w.muscle != null) vals.append(el("span", {}, "mięśnie ", el("b", {text:pl(w.muscle) + "%"})));
+    if(w.fat != null) vals.append(el("span", {}, "tłuszcz ", el("b", {text:pl(w.fat) + "%"}), kgSkladu(w, "fat") != null ? ` (${pl(kgSkladu(w, "fat"))} kg)` : ""));
+    if(w.muscle != null) vals.append(el("span", {}, "mięśnie ", el("b", {text:pl(w.muscle) + "%"}), kgSkladu(w, "muscle") != null ? ` (${pl(kgSkladu(w, "muscle"))} kg)` : ""));
     if(w.notatka) vals.append(el("span", {text:"„" + w.notatka + "”"}));
     const th = el("div", {class:"thumbs"});
     zd.forEach(z => th.append(el("button", {class:"th", onclick:() => otworzZdjecie(z)}, el("img", {src:plik(z, true), alt:NAZWA[z.typ], loading:"lazy"}),
@@ -321,7 +341,13 @@ function rysujHistorie(){
 /* CEL = szablon kadru: tułów ma CEL.s wysokości kadru, jego środek jest w poziomie na środku i na CEL.y wysokości.
    Ustawiany suwakami „Przybliżenie” i „Wysokość” (FM.celS, FM.celY); po zmianie sylwetka i tak jest centrowana. */
 const CEL = {y:0.44, s:0.26};
-function synchCEL(){ CEL.s = FM.celS || 0.26; CEL.y = FM.celY || 0.44; }
+/* zdjęcia z bicepsem (biceps / tył+biceps): kadr zawsze na ręce, osobne suwaki FM.celSr (ręce = ułamek wysokości kadru)
+   i FM.celYr; przełącznik „same ręce” (FM.rece) decyduje tylko o dopasowaniu zdjęć (do rąk albo do całej sylwetki) */
+const trybRak = typ => BICEPS.includes(typ || FM.typ);
+function synchCEL(){
+  if(trybRak()){ CEL.s = FM.celSr || 0.5; CEL.y = FM.celYr || 0.45; }
+  else{ CEL.s = FM.celS || 0.26; CEL.y = FM.celY || 0.44; }
+}
 /* położenie zdjęcia w kadrze W×H: skala k i lewy górny róg (ox, oy) */
 /* ---------- wzór szkieletu dla każdego rodzaju zdjęcia i dopasowanie do niego ----------
    Wzór = średnie położenie 33 punktów MediaPipe ze wszystkich zdjęć danego rodzaju (uogólniona analiza Prokrustesa:
@@ -378,13 +404,27 @@ function wzor(typ){
   M = M.map(p => p && [(p[0] - t.c[0]) / t.L, (p[1] - t.c[1]) / t.L]);
   return WZORY[typ] = {M, n:zd.length};
 }
-/* dopasowanie zdjęcia: {s, tx, ty} (piksele zdjęcia -> jednostki wzoru) albo null */
+/* fokus na ręce: prostokąt barków, łokci i nadgarstków we wzorze (środek fc, rozmiar A w długościach tułowia).
+   W trybie rąk jednostką kadru jest A, a środkiem fc: suwak „Przybliżenie” mówi, ile wysokości kadru zajmują ręce. */
+function fokus(typ){
+  if(!trybRak(typ)) return null;
+  const wz = wzor(typ); if(!wz) return null;
+  const P = [11, 12, 13, 14, 15, 16].map(i => wz.M[i]).filter(Boolean);
+  if(P.length < 4) return null;
+  const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  return {fc:[(x0 + x1) / 2, (y0 + y1) / 2], A:Math.max(y1 - y0, (x1 - x0) * 0.8, 0.3)};
+}
+const naFokus = (p, f) => f ? [(p[0] - f.fc[0]) / f.A, (p[1] - f.fc[1]) / f.A] : p;
+/* dopasowanie zdjęcia: {s, tx, ty} (piksele zdjęcia -> jednostki kadru: wzór, a w trybie rąk wzór względem fokusu) albo null */
 function dopasowanie(z){
   sprawdzKlucz();
   if(z.id in DOPAS) return DOPAS[z.id];
   let d = null;
   const wz = maPunkty(z) && wzor(z.typ);
   if(wz) d = dopasujPunkty(z.lm.map((_, i) => px(z, i)), wz.M, wagiZdjecia(z, wagiTypu(z.typ)));
+  const f = d && fokus(z.typ);
+  if(f) d = {s:d.s / f.A, tx:(d.tx - f.fc[0]) / f.A, ty:(d.ty - f.fc[1]) / f.A};
   if(!d && z.pose && z.pose.s > 0){ const s = 1 / (z.pose.s * z.h); d = {s, tx:-z.pose.cx * z.w * s, ty:-z.pose.cy * z.h * s}; }
   return DOPAS[z.id] = d;
 }
@@ -496,17 +536,33 @@ async function kadruj(z, poZapisie){
 }
 
 /* ---------- FILM ---------- */
-let FM = {tryb:"seria", typ:"przod", od:"", do:"", co:7, sek:0.5, format:"4:5", przejscie:0.25, napisy:true, pp1:"", pp2:"", ppT:1.5, ppTr:1};
+let FM = {tryb:"seria", typ:"przod", od:"", do:"", co:7, krok:"dni", sek:0.5, format:"4:5", przejscie:0.25, napisy:true, pp1:"", pp2:"", ppT:1.5, ppTr:1};
 function formatWH(){ return {"4:5":[1080, 1350], "9:16":[1080, 1920], "1:1":[1080, 1080]}[FM.format] || [1080, 1350]; }
+/* klatki serii: zaplanowane dni (od początku zakresu co N dni albo co miesiąc ten sam dzień miesiąca) i do każdego
+   zdjęcie najbliższe zaplanowanemu dniu (przy remisie wcześniejsze). Co N dni: z okna ±N/2 dnia wokół planu;
+   co miesiąc: tylko z tego samego miesiąca kalendarzowego. Brak zdjęcia w oknie = ten termin jest pomijany. */
 function klatki(){
   const zd = DANE.zdjecia.filter(z => z.typ === FM.typ && (!FM.od || z.data >= FM.od) && (!FM.do || z.data <= FM.do)).sort((a, b) => a.data.localeCompare(b.data) || a.dodano.localeCompare(b.dodano));
   if(!zd.length) return [];
-  const co = Math.max(1, Math.round(FM.co) || 1), wyn = [];
-  let t = pd(FM.od || zd[0].data); const koniec = pd(FM.do || zd[zd.length - 1].data);
-  while(t <= koniec){
-    const a = iso(t), b = new Date(t); b.setDate(b.getDate() + co); const bi = iso(b);
-    const z = zd.find(q => q.data >= a && q.data < bi); if(z) wyn.push(z);
-    t = b;
+  const start = pd(FM.od || zd[0].data), koniec = pd(FM.do || zd[zd.length - 1].data), wyn = [];
+  const najblizsze = (plan, a, b) => {           // zdjęcie z dniem w [a, b) najbliższe dniowi „plan”
+    let best = null, bd = Infinity;
+    for(const z of zd) if(z.data >= a && z.data < b){ const d = Math.abs(pd(z.data) - plan); if(d < bd){ bd = d; best = z; } }
+    return best;
+  };
+  if(FM.krok === "miesiac"){
+    const dzien = start.getDate();
+    for(let r = start.getFullYear(), m = start.getMonth(); new Date(r, m, 1) <= koniec; m++){
+      const pierwszy = new Date(r, m, 1), nast = new Date(r, m + 1, 1);
+      const plan = new Date(r, m, Math.min(dzien, new Date(r, m + 1, 0).getDate()));      // 31 → ostatni dzień krótszego miesiąca
+      const z = najblizsze(plan, iso(pierwszy), iso(nast)); if(z) wyn.push(z);
+    }
+    return wyn;
+  }
+  const co = Math.max(1, Math.round(FM.co) || 1), przed = Math.floor(co / 2);
+  for(let t = new Date(start); t <= koniec; t.setDate(t.getDate() + co)){
+    const a = new Date(t), b = new Date(t); a.setDate(a.getDate() - przed); b.setDate(b.getDate() + co - przed);
+    const z = najblizsze(t, iso(a), iso(b)); if(z) wyn.push(z);
   }
   return wyn;
 }
@@ -578,6 +634,8 @@ function filmUstaw(){
   const ch = $("fmTyp"); ch.innerHTML = "";
   TYPY.forEach(([k, n]) => { const ile = DANE.zdjecia.filter(z => z.typ === k).length; if(!ile && k !== FM.typ) return;
     ch.append(el("button", {"aria-pressed":String(FM.typ === k), text:`${n} (${ile})`, onclick:() => { FM.typ = k; zapiszFM(); filmUstaw(); }})); });
+  const mies = FM.krok === "miesiac";
+  $("fmKrokDni").setAttribute("aria-pressed", String(!mies)); $("fmKrokMies").setAttribute("aria-pressed", String(mies)); $("fmCoPole").hidden = mies;
   $("fmOd").value = FM.od; $("fmDo").value = FM.do; $("fmCo").value = FM.co; $("fmSek").value = String(FM.sek).replace(".", ",");
   $("fmFormat").value = FM.format; $("fmPrzejscie").value = String(FM.przejscie).replace(".", ","); $("fmNapisy").checked = !!FM.napisy;
   const [W, H] = formatWH(); const c = $("fmCanvas"); if(c.width !== W || c.height !== H){ c.width = W; c.height = H; }
@@ -606,6 +664,8 @@ function zapiszFM(){ post(API + "/ustawienia", {film:FM}).catch(() => {}); DANE.
   zapiszFM(); filmUstaw();
 });
 $("fmCaly").onclick = () => { FM.od = ""; FM.do = ""; zapiszFM(); filmUstaw(); };
+$("fmKrokDni").onclick = () => { FM.krok = "dni"; zapiszFM(); filmUstaw(); };
+$("fmKrokMies").onclick = () => { FM.krok = "miesiac"; zapiszFM(); filmUstaw(); };
 $("fmTrybSeria").onclick = () => { FM.tryb = "seria"; zapiszFM(); filmUstaw(); };
 $("fmDopSyl").onclick = () => { FM.rece = false; resetWzorow(); zapiszFM(); filmUstaw(); };
 $("fmDopRece").onclick = () => { FM.rece = true; resetWzorow(); zapiszFM(); filmUstaw(); };
@@ -702,7 +762,7 @@ const POLACZENIA = [[11,12],[11,23],[12,24],[23,24],[11,13],[13,15],[12,14],[14,
 function szkielet(g, W, H, typ){
   const wz = wzor(typ || FM.typ);
   if(wz){
-    const L = CEL.s * H, X = p => [W / 2 + L * p[0], CEL.y * H + L * p[1]], M = wz.M, W8 = wagiTypu(typ || FM.typ);
+    const f = fokus(typ || FM.typ), L = CEL.s * H, X = q => { const p = naFokus(q, f); return [W / 2 + L * p[0], CEL.y * H + L * p[1]]; }, M = wz.M, W8 = wagiTypu(typ || FM.typ);
     g.save(); g.strokeStyle = "rgba(77,183,201,.95)"; g.fillStyle = "rgba(77,183,201,.95)"; g.lineWidth = Math.max(2, W / 220); g.lineCap = "round";
     POLACZENIA.forEach(([a, b]) => { if(!M[a] || !M[b]) return; const A = X(M[a]), B = X(M[b]); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke(); });
     if(M[0] && M[7] && M[8]){ const c = X(M[0]); g.beginPath(); g.arc(c[0], c[1], L * Math.max(0.12, Math.hypot(M[7][0] - M[8][0], M[7][1] - M[8][1]) * 0.75), 0, Math.PI * 2); g.stroke(); }
@@ -731,7 +791,11 @@ async function rysujSzablon(){
   synchCEL();
   const [Wf, Hf] = formatWH(); if(c.width !== Wf / 2 || c.height !== Hf / 2){ c.width = Wf / 2; c.height = Hf / 2; }
   const g = c.getContext("2d"), W = c.width, H = c.height, kl = plan().kl;
-  $("szS").value = CEL.s; $("szY").value = CEL.y; $("szSv").textContent = `(tułów = ${Math.round(CEL.s * 100)}% wysokości)`; $("szYv").textContent = `(${Math.round(CEL.y * 100)}% od góry)`;
+  const rece = trybRak();
+  $("szS").max = rece ? "0.95" : "0.55"; $("szS").min = rece ? "0.2" : "0.12";
+  $("szS").value = CEL.s; $("szY").value = CEL.y;
+  $("szSv").textContent = rece ? `(ręce = ${Math.round(CEL.s * 100)}% wysokości, mniej = więcej reszty sylwetki)` : `(tułów = ${Math.round(CEL.s * 100)}% wysokości)`;
+  $("szYv").textContent = `(${Math.round(CEL.y * 100)}% od góry)`;
   $("szPrzytnij").checked = FM.przytnij !== false;
   g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
   szNr = Math.min(Math.max(szNr, 0), Math.max(kl.length - 1, 0));
@@ -750,15 +814,15 @@ async function rysujSzablon(){
   $("szRysuj").setAttribute("aria-pressed", String(szTryb === "rysuj")); $("szRysuj").textContent = szTryb === "rysuj" ? "▭ Przeciągnij po podglądzie…" : "▭ Narysuj własną ramkę";
 }
 function szZmiana(){ zapiszFM(); rysujSzablon(); pokazKlatke(0); }
-$("szS").oninput = () => { FM.celS = +$("szS").value; rysujSzablon(); };
-$("szY").oninput = () => { FM.celY = +$("szY").value; rysujSzablon(); };
+$("szS").oninput = () => { if(trybRak()) FM.celSr = +$("szS").value; else FM.celS = +$("szS").value; rysujSzablon(); };
+$("szY").oninput = () => { if(trybRak()) FM.celYr = +$("szY").value; else FM.celY = +$("szY").value; rysujSzablon(); };
 $("szS").onchange = $("szY").onchange = szZmiana;
 $("szSzkielet").onchange = () => rysujSzablon();
 $("szPrzytnij").onchange = () => { FM.przytnij = $("szPrzytnij").checked; szZmiana(); };
 $("szPoprz").onclick = () => { szNr--; rysujSzablon(); };
 $("szNast").onclick = () => { szNr++; rysujSzablon(); };
 $("szUsun").onclick = () => { FM.ramka = null; szTryb = null; szZmiana(); };
-$("szReset").onclick = () => { FM.celS = 0.26; FM.celY = 0.44; FM.ramka = null; FM.przytnij = true; szTryb = null; szZmiana(); };
+$("szReset").onclick = () => { if(trybRak()){ FM.celSr = 0.5; FM.celYr = 0.45; } else { FM.celS = 0.26; FM.celY = 0.44; } FM.ramka = null; FM.przytnij = true; szTryb = null; szZmiana(); };
 $("szRysuj").onclick = () => { szTryb = szTryb === "rysuj" ? null : "rysuj"; rysujSzablon(); };
 (() => {
   const c = $("szCanvas"); if(!c) return;
@@ -792,7 +856,7 @@ $("szRysuj").onclick = () => { szTryb = szTryb === "rysuj" ? null : "rysuj"; rys
 function opisFilmu(){
   const k = plan().kl, typ = NAZWA[FM.typ] || FM.typ;
   if(FM.tryb === "pp") return k.length === 2 ? `${typ} · przed i po: ${krotko(k[0].data)} → ${krotko(k[1].data)}` : typ;
-  return k.length ? `${typ} · seria ${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)} · ${k.length} zdj., co ${FM.co} dni` : typ;
+  return k.length ? `${typ} · seria ${krotko(k[0].data)} → ${krotko(k[k.length - 1].data)} · ${k.length} zdj., ${FM.krok === "miesiac" ? "co miesiąc" : `co ${FM.co} dni`}` : typ;
 }
 $("fmPi").onclick = async () => {
   const k = plan().kl;

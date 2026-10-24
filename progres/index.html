@@ -149,6 +149,7 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
       <label class="f"><span>Tłuszcz <span class="u">%</span></span><input type="text" inputmode="decimal" id="fFat" placeholder="np. 15,2"></label>
       <label class="f"><span>Mięśnie <span class="u">%</span></span><input type="text" inputmode="decimal" id="fMuscle" placeholder="np. 42,1"></label>
     </div>
+    <p class="small muted" id="fSklad" style="margin:8px 0 0" hidden></p>
     <label class="f" style="margin-top:10px"><span>Notatka <span class="u">(opcjonalnie)</span></span><textarea id="fNotatka" placeholder="np. rano na czczo"></textarea></label>
     <p class="hint small" id="fIstnieje" hidden></p>
   </div>
@@ -178,10 +179,11 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
     <p class="hint small" id="fmPunkty" hidden></p>
     <div id="fmSeria">
       <div class="f" style="margin-bottom:10px">Zakres<div class="chips"><button id="fmCaly" aria-pressed="true">Cały zapis</button></div></div>
+      <div class="f" style="margin-bottom:10px">Odstęp między zdjęciami<div class="chips"><button id="fmKrokDni" aria-pressed="true">Co ileś dni</button><button id="fmKrokMies" aria-pressed="false">Co miesiąc</button></div></div>
       <div class="grid3">
         <label class="f">Od<input type="date" id="fmOd"></label>
         <label class="f">Do<input type="date" id="fmDo"></label>
-        <label class="f">Co ile dni<input type="number" id="fmCo" min="1" max="365" value="7"></label>
+        <label class="f" id="fmCoPole">Co ile dni<input type="number" id="fmCo" min="1" max="365" value="7"></label>
         <label class="f"><span>Na zdjęcie <span class="u">s</span></span><input type="text" inputmode="decimal" id="fmSek" value="0,5"></label>
         <label class="f"><span>Przejście <span class="u">s (0 = cięcie)</span></span><input type="text" inputmode="decimal" id="fmPrzejscie" value="0,25"></label>
       </div>
@@ -229,6 +231,6 @@ video{display:block;width:100%;max-width:440px;margin:10px auto;border-radius:12
 <!-- podgląd zdjęcia: typ, data, usuń, kadrowanie -->
 <div class="modal" id="modal" hidden><div class="box" id="modalBox"></div></div>
 
-<script type="module" src="app.js?v=10"></script>
+<script type="module" src="app.js?v=14"></script>
 </body>
 </html>

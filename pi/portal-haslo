@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Ustawia haslo do portalu dla wejsc z sieci domowej (komenda: portal-haslo).
+Zapisuje tylko skrot hasla w ~/portal/dane/dostep.json i wylogowuje wszystkie urzadzenia (nowa wersja ciasteczek).
+Haslo z klawiatury (niewidoczne) albo ze standardowego wejscia: echo 'haslo' | portal-haslo"""
+import getpass
+import json
+import os
+import secrets
+import sys
+from pathlib import Path
+
+from werkzeug.security import generate_password_hash
+
+PLIK = Path("/home/tonyg/portal/dane/dostep.json")
+if sys.stdin.isatty():
+    h1 = getpass.getpass("Nowe hasło do portalu: ")
+    if h1 != getpass.getpass("Powtórz hasło: "):
+        sys.exit("Hasła się różnią, nic nie zmieniono.")
+else:
+    h1 = sys.stdin.readline().rstrip("\n")
+if len(h1) < 6:
+    sys.exit("Hasło musi mieć co najmniej 6 znaków.")
+try:
+    stare = json.loads(PLIK.read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    stare = {}
+nowe = {"hash": generate_password_hash(h1), "klucz": stare.get("klucz") or secrets.token_hex(32),
+        "wersja": stare.get("wersja", 0) + 1}
+tmp = PLIK.with_name(PLIK.name + ".tmp")
+fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, "w", encoding="utf-8") as f:
+    json.dump(nowe, f)
+os.replace(tmp, PLIK)
+if os.geteuid() == 0:
+    os.chown(PLIK, 1000, 1000)
+print("Hasło zmienione. Wszystkie urządzenia w sieci domowej muszą zalogować się ponownie (Tailscale bez zmian).")

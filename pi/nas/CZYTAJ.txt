@@ -1,0 +1,13 @@
+RASPBERRY PI: co tu jest
+  komendy.txt         komendy do wpisania w terminalu Pi (wylaczanie, kopia, NAS, logi, uslugi)
+  Logi/               logi zapisywane od razu:
+     zdrowie-dziennik.log     problemy serwera (dioda): start, pogorszenie, koniec, "przejrzane"
+     zdrowie-incydenty.json   te same problemy ze szczegolami
+     kopia-systemu.log        kazda nocna kopia: kiedy, ile plikow, czy sie udala
+     system/RRRR-MM-DD.log    caly dziennik systemu Pi (co minute), jeden plik na dzien
+     wejscia/RRRR-MM-DD.log   kazde wejscie na Pi z sieci domowej: kto (IP), co otwieral i robil (30 dni)
+  Progres-zdjecia/    zdjecia z "Progres sylwetki" (<id>.jpg + miniatura <id>_m.jpg, dane.json = pomiary i opisy)
+     Usuniete/          zdjecia usuniete na stronie (nie sa kasowane na stale)
+  Progres-filmy/      filmy wyrenderowane przez Pi
+  Kopia-systemu/      kopia calej karty SD co noc o 02:00 + instrukcja przywracania (JAK-PRZYWROCIC.txt)
+Nie usuwaj pliku .nas: po nim Pi poznaje, ze to wlasciwy folder.

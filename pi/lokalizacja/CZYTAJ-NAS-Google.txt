@@ -1,0 +1,9 @@
+LOKALIZACJA Z GOOGLE MAPS - jak wgrac ciasteczka drugiego konta Google
+=====================================================================
+1. Na komputerze otworz okno incognito w Chrome i zaloguj sie na DRUGIE konto Google (to "serwerek").
+2. Wejdz na https://www.google.com/maps
+3. Zainstaluj rozszerzenie "Get cookies.txt LOCALLY" i kliknij Export (format Netscape) na stronie google.com/maps.
+4. Zapisany plik .txt wrzuc do TEGO folderu (Raspberry/Google). Pi zabierze go w ciagu 15 minut i skasuje stad.
+5. Zamknij okno incognito BEZ wylogowania (wylogowanie uniewaznia ciasteczka).
+Na iPhonie: Google Maps -> Twoje zdjecie -> Udostepnianie lokalizacji -> nowe -> drugie konto -> "Do momentu wylaczenia".
+Google Maps musi miec lokalizacje "Zawsze" (Ustawienia iPhone -> Prywatnosc -> Uslugi lokalizacji -> Google Maps).

@@ -1,0 +1,18 @@
+[Unit]
+Description=Bot Telegram serwerka (powiadomienia, przyciski, Claude)
+After=network-online.target home-portal.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tonyg
+WorkingDirectory=/home/tonyg/bot
+EnvironmentFile=/etc/serwerek-bot/token.env
+EnvironmentFile=/etc/serwerek-bot/claude.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /home/tonyg/bot/serwerek_bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

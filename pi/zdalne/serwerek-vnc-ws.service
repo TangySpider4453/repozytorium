@@ -1,0 +1,14 @@
+[Unit]
+Description=Pulpit VNC w przegladarce: websockify (Tailscale :6080, bilety z portalu) -> wayvnc Raspberry Pi Connect, strona /zdalne
+After=network-online.target tailscaled.service
+
+[Service]
+User=tonyg
+# tylko adres Tailscale (jak terminal na 7681); wpuszcza tylko z biletem, ktory portal daje po sprawdzeniu hasla Linuksa
+ExecStart=/usr/bin/websockify --token-plugin TokenFile --token-source /home/tonyg/portal/dane/vnc_tokeny 100.108.241.58:6080
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

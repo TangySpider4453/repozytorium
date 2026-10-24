@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mobidziennik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Mobidziennik: wszystko, co bot odczytał (mobi.py -> ~/bot/mobi/stan.json -> /api/mobi). Tylko odczyt. */
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF; --sel:#1d63c4; --ok:#1f8a4c; --warn:#a86b00; --bad:#c03442;
+  --serif:"Alegreya",Georgia,serif; --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+h1,h2{font-family:var(--serif);line-height:1.15;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{background:var(--nav);color:var(--navInk);padding:14px 0 18px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+header.top .back{display:inline-block;font-size:14px;opacity:.75;text-decoration:none;color:inherit;margin-bottom:8px}
+header.top h1{font-size:clamp(30px,7vw,42px);font-weight:800}
+header.top p{margin:4px 0 0;opacity:.8;font-size:15px}
+main{padding:18px 0 60px}
+.siatka{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+a.karta,div.karta{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;color:inherit;text-decoration:none}
+a.karta:hover{border-color:var(--sel)}
+.karta h2{font-size:23px;display:flex;gap:8px;align-items:center}
+.karta .opis{color:var(--muted);font-size:15px;margin:4px 0 10px}
+.karta .stan{font-weight:700;font-size:15px}
+.karta .stan .uw{color:var(--bad)} .karta .stan .dzis{color:var(--warn)}
+.karta.wkrotce{opacity:.65;border-style:dashed}
+.znaczek{font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:99px;padding:1px 8px;margin-left:auto;font-family:var(--sans)}
+ul{margin:0;padding-left:18px;font-size:15px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 14px}
+.card h2{font-size:22px;margin-bottom:8px}
+form{display:flex;gap:8px;flex-wrap:wrap}
+input{flex:1 1 160px;min-width:0;height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:inherit;font:inherit}
+button{height:44px;border:1.5px solid var(--sel);background:var(--sel);color:#fff;border-radius:10px;padding:0 14px;font:inherit;font-weight:700;cursor:pointer}
+button.jasny{background:var(--surface);color:inherit;border-color:var(--line)}
+pre{white-space:pre-wrap;font-family:var(--sans);font-size:16px;margin:10px 0 0;line-height:1.55}
+.muted{color:var(--muted);font-size:14px}
+.szybkie{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button.on{background:var(--sel);color:#fff;border-color:var(--sel)}
+.dzien{margin:0 0 14px}
+.dzien h3{font-family:var(--serif);font-size:19px;margin:0 0 6px}
+.dzien.dzis h3::after{content:" · dziś";color:var(--warn);font-family:var(--sans);font-size:15px}
+.lek{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:16px}
+.lek .g{color:var(--muted);font-variant-numeric:tabular-nums}
+.lek .p{font-weight:700}
+.lek .s{color:var(--muted);font-size:14px;font-weight:400}
+.lek.odwolana .p{text-decoration:line-through;color:var(--muted)}
+.znak{display:inline-block;font-size:12px;font-weight:700;border-radius:99px;padding:0 7px;margin-left:6px;vertical-align:1px}
+.znak.zd{background:var(--ok);color:#fff}
+.lek .zdt{font-size:14px;margin-top:2px}
+.znak.odw{background:var(--bad);color:#fff} .znak.zast{background:var(--warn);color:#fff} .znak.spr{background:var(--sel);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:15px} td,th{text-align:left;padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:700;font-size:13px}
+.jasny{background:var(--surface);color:inherit;border:1.5px solid var(--line);border-radius:10px;height:40px;padding:0 12px;font:inherit;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="back" href="/strony/automatyczne/">← Automatyczne</a>
+  <h1>📅 Mobidziennik</h1>
+  <p>Plan lekcji z zastępstwami i odwołaniami, sprawdziany i zadania domowe, odczytane z dziennika.</p>
+</div></header>
+<main><div class="wrap">
+  <div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="czas" class="muted">…</span>
+    <button type="button" class="jasny" id="odswiez" style="margin-left:auto">↻ Sprawdź teraz</button></div></div>
+  <div class="card"><h2>📅 Plan lekcji</h2><div class="tabs" id="tabs"></div><div id="plan"></div></div>
+  <div class="card"><h2>📝 Sprawdziany i kartkówki</h2><div id="spr"></div></div>
+  <div class="card"><h2>🏠 Zadania domowe</h2><div id="zd"></div></div>
+</div></main>
+<script>
+const $ = id => document.getElementById(id);
+const el = (t, a = {}, ...k) => { const e = document.createElement(t); for(const [n, v] of Object.entries(a)){ if(v == null) continue; if(n === "text") e.textContent = v; else if(n === "class") e.className = v; else if(n.startsWith("on")) e[n] = v; else e.setAttribute(n, v); } e.append(...k.filter(x => x != null)); return e; };
+const DNI = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"];
+const dataPl = iso => { const d = new Date(iso + "T00:00"); return `${DNI[(d.getDay() + 6) % 7]} ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`; };
+let D = null, TYDZ = 0;
+async function wczytaj(){
+  D = await (await fetch("/api/mobi", {cache:"no-store"})).json();
+  if(!D.skonfigurowany){ $("czas").textContent = "Mobidziennik nie jest jeszcze podłączony."; return; }
+  $("czas").textContent = `Ostatni odczyt: ${(D.czas || "").replace("T", " ").slice(0, 16)} (co 10 min, 6–22, tylko odczyt)`;
+  rysuj();
+}
+function tygodnie(){
+  const pon = [...new Set(D.plan.map(x => { const d = new Date(x.data + "T00:00"); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.toISOString().slice(0, 10); }))].sort();
+  return pon;
+}
+function rysuj(){
+  const dzis = new Date(); const dIso = `${dzis.getFullYear()}-${String(dzis.getMonth() + 1).padStart(2, "0")}-${String(dzis.getDate()).padStart(2, "0")}`;
+  const tyg = tygodnie(); if(TYDZ >= tyg.length) TYDZ = 0;
+  $("tabs").replaceChildren(...tyg.map((t, i) => el("button", {type:"button", class:"jasny" + (i === TYDZ ? " on" : ""), text:i === 0 ? "Ten tydzień" : i === 1 ? "Następny" : t,
+    onclick:() => { TYDZ = i; rysuj(); }})));
+  const spr = D.sprawdziany || [];
+  const dni = {};
+  for(const x of D.plan){
+    const d = new Date(x.data + "T00:00"); d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+    if(d.toISOString().slice(0, 10) !== tyg[TYDZ]) continue;
+    (dni[x.data] = dni[x.data] || []).push(x);
+  }
+  $("plan").replaceChildren(...Object.keys(dni).sort().map(data => el("div", {class:"dzien" + (data === dIso ? " dzis" : "")},
+    el("h3", {text:dataPl(data)}),
+    ...dni[data].map(x => {
+      const s = spr.find(y => y.data === data && y.godzina === x.od);
+      const zd = (D.zadania || []).filter(y => y.termin === data && (y.godzina ? y.godzina === x.od : y.przedmiot === x.przedmiot));
+      return el("div", {class:"lek" + (x.status === "odwołana" ? " odwolana" : "")},
+        el("div", {class:"g", text:`${x.od}–${x.do}`}),
+        el("div", {}, el("span", {class:"p", text:x.przedmiot}),
+          x.status === "odwołana" ? el("span", {class:"znak odw", text:"odwołana"}) : x.status === "zastępstwo" ? el("span", {class:"znak zast", text:"zastępstwo"}) : null,
+          s ? el("span", {class:"znak spr", text:s.rodzaj}) : null,
+          zd.length ? el("span", {class:"znak zd", text:"zadanie domowe"}) : null,
+          el("div", {class:"s", text:[x.zamiast ? "zamiast: " + x.zamiast : "", x.nauczyciel, x.sala ? "sala " + x.sala : "", x.status === "odwołana" && x.info ? x.info : ""].filter(Boolean).join(" · ")}),
+          ...zd.map(y => el("div", {class:"zdt", text:`🏠 ${y.tresc}${y.zrobione ? " ✅" : ""}`}))));
+    }))));
+  if(!Object.keys(dni).length) $("plan").replaceChildren(el("p", {class:"muted", text:"Brak lekcji w tym tygodniu."}));
+  $("spr").replaceChildren(spr.length ? el("table", {}, el("tr", {}, ...["Kiedy", "Przedmiot", "Tematyka"].map(t => el("th", {text:t}))),
+    ...spr.map(x => el("tr", {}, el("td", {text:`${dataPl(x.data)} ${x.godzina}`}), el("td", {}, el("b", {text:x.przedmiot}), el("div", {class:"muted", text:`${x.rodzaj} · ${x.nauczyciel}`})),
+      el("td", {text:x.tematyka})))) : el("p", {class:"muted", text:"Brak zapowiedzi."}));
+  const zd = D.zadania || [];
+  $("zd").replaceChildren(zd.length ? el("table", {}, el("tr", {}, ...["Termin", "Przedmiot", "Treść"].map(t => el("th", {text:t}))),
+    ...zd.map(x => el("tr", {}, el("td", {text:x.termin ? dataPl(x.termin) : "?"}), el("td", {}, el("b", {text:x.przedmiot}), el("div", {class:"muted", text:x.nauczyciel})),
+      el("td", {text:x.tresc + (x.zrobione ? " ✅" : "")})))) : el("p", {class:"muted", text:"Brak zadań."}));
+}
+$("odswiez").onclick = async () => {
+  $("odswiez").disabled = true; $("czas").textContent = "Sprawdzam w Mobidzienniku… (do minuty)";
+  const przed = D && D.czas;
+  await fetch("/api/mobi/odswiez", {method:"POST"});
+  for(let i = 0; i < 30; i++){ await new Promise(r => setTimeout(r, 3000)); const d = await (await fetch("/api/mobi", {cache:"no-store"})).json(); if(d.czas !== przed){ break; } }
+  $("odswiez").disabled = false; wczytaj();
+};
+wczytaj();
+</script>
+</body>
+</html>

@@ -7,7 +7,8 @@ Render filmu z postepu sylwetki na Raspberry Pi (wywolywany przez portal, app.py
 
 Geometria, przyciecie i os czasu sa przepisane 1:1 z progres/app.js (geom, ramkaAuto/ramkaKoncowa, plan, napis),
 wiec film z Pi wyglada tak samo jak podglad w przegladarce.
-wejscie.json: {"film": {...ustawienia...}, "kl": [{id, w, h, data, pose?, reczne?}], "wpisy": {...}, "katalog": "<zdjecia>"}
+wejscie.json: {"film": {...ustawienia...}, "kl": [{id, w, h, data, pose?, reczne?}], "wpisy": {...},
+              "katalogi": ["<bufor na Pi>", "<zdjecia na NAS>"]}   (zdjecie brane z pierwszego katalogu, w ktorym jest)
 """
 import json
 import math
@@ -140,9 +141,12 @@ class Render:
         self.film = wej["film"]
         self.kl = wej["kl"]
         self.wpisy = wej.get("wpisy") or {}
-        self.katalog = Path(wej["katalog"])
+        self.katalogi = [Path(k) for k in wej.get("katalogi") or [wej["katalog"]]]
         self.W, self.H = FORMATY.get(self.film.get("format"), FORMATY["4:5"])
-        self.cel = {"s": self.film.get("celS") or 0.26, "y": self.film.get("celY") or 0.44}
+        if self.film.get("typ") in ("biceps", "tylbiceps"):     # kadr na ręce (jak trybRak / synchCEL w app.js)
+            self.cel = {"s": self.film.get("celSr") or 0.5, "y": self.film.get("celYr") or 0.45}
+        else:
+            self.cel = {"s": self.film.get("celS") or 0.26, "y": self.film.get("celY") or 0.44}
         self.rk = ramka_koncowa(self.kl, self.W, self.H, self.cel, self.film)
         self.dl, self.stan = plan(self.film, len(self.kl))
         self.cache = {}
@@ -160,7 +164,10 @@ class Render:
         z = self.kl[i]
         W, H, r = self.W, self.H, self.rk
         q = geom(z, W, H, self.cel)
-        with Image.open(self.katalog / f"{z['id']}.jpg") as im:
+        plik = next((k / f"{z['id']}.jpg" for k in self.katalogi if (k / f"{z['id']}.jpg").is_file()), None)
+        if plik is None:
+            sys.exit(f"brak zdjecia {z['id']} (NAS niedostepny?)")
+        with Image.open(plik) as im:
             im = im.convert("RGB")
             iw, ih = im.size
             sc = W / r["w"]
