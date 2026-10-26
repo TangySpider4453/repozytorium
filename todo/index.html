@@ -93,6 +93,7 @@ details.arch[open] summary{margin-bottom:8px}
   <div class="card" id="sprawdziany-karta"><h2>📚 Sprawdziany i kartkówki</h2><div id="sprawdziany"><p class="pusto">Ładowanie…</p></div></div>
   <div class="card"><h2>Zrobione</h2><p class="small muted" style="margin:0 0 4px">Po 24 godzinach przechodzą do archiwum.</p><div id="zrobione"></div></div>
   <div class="card"><details class="arch"><summary id="archTyt">Archiwum</summary><div id="archiwum"></div></details></div>
+<div data-ustawienia="zadania,sprawdziany"></div>
 </div></main>
 <script>
 const $ = id => document.getElementById(id);
@@ -188,5 +189,6 @@ $("form").onsubmit = async ev => {
 odswiez(); sprawdziany(); setInterval(odswiez, 30000);
 document.addEventListener("visibilitychange", () => { if(!document.hidden) odswiez(); });
 </script>
+<script src="/strony/wspolne/ustawienia.js" defer></script>
 </body>
 </html>

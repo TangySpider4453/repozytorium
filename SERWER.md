@@ -366,6 +366,31 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `ipv4_z_mac`), a w nawiasie nazwę Tailscale tego urządzenia i jego adres 100.x (z `tailscale status --json`:
   CurAddr/Addrs w sieci domowej, zapamiętywane w `TS_NAZWY["lan"]`), nazwę z DNS routera, MAC i oryginalny IPv6.
 
+## Ustawienia automatyzacji na stronach (od 2026-10-26)
+- Panel „⚙️ Ustawienia” na dole stron Mobidziennik, Zadania (zadania + sprawdziany), Budziki, Komunikacja i zbiorczo na
+  Automatycznych (wszystkie moduły, też poczta i treningi). Wspólny skrypt `wspolne/ustawienia.js` (→ `sites/wspolne/`),
+  kontener `<div data-ustawienia="mobi,…">`. Zapis od razu: `POST /api/automaty/<moduł>`; schemat (`AUTOMATY_SCHEMAT` w
+  `app.py`, typy bool/godzina/liczba/wybor) i wartości `GET /api/automaty`; plik `~/portal/dane/automaty.json`.
+- Bot: `ust(moduł)` (cache 30 s). mobi: włącznik, godziny od–do, co ile minut, wiadomość przy zmianie, **telefon rano /
+  wieczorem ze zmianami** (`mobi_zmiana` zbiera zmiany w `~/bot/mobi/do_rozmowy.json`, `mobi_telefon` dzwoni o godzinie
+  do 30 min później, raz dziennie na porę, tylko gdy są zmiany; tekst układa Claude). sprawdziany: włącznik, 3 dni przed,
+  godziny. zadania: przypomnienia, domyślne dzwonienie. budziki: włącznik, poranny przegląd, liczba prób, co ile min.
+  poczta: włącznik, co ile min, ważne. treningi: włącznik, kreatyna, minuty po biegu, „poranny do”, nazwa w budziku.
+  komunikacja: odpowiedzi ZTM, liczba odjazdów (też domyślne `ile` w `/api/ztm/odjazdy`).
+
+## Oceny z Mobidziennika (od 2026-10-26)
+- `mobi.oceny()` czyta stronę `oceny` (bieżący okres): przedmiot, oceny (`Wartość oceny`, „Liczona do średniej”, kategoria,
+  opis, data, nauczyciel). Średnia **zwykła** (bez wag) z ocen liczonych i > 0 („+”, „np” = 0, nie liczone); ogólna =
+  średnia ze średnich przedmiotów. Nowa ocena → „🎓 Nowa ocena: … , średnia …” (pierwszy odczyt bez powiadomień).
+- `/api/mobi` (`oceny`, `srednia`), karta „🎓 Oceny i średnie” na `/strony/mobi/`, komendy „oceny”, „średnia”, „oceny z
+  fizyki” (`komenda_oceny`, `znajdz_przedmiot` z aliasami matma/wf/polak…), w rozmowie bez AI.
+
+## Lista zakupów łazika (inna sesja, przywrócona 2026-10-26)
+- `/strony/lazik/zakupy.html` (repo `lazik/`), dane `~/portal/data/zakupy.json`, API `/api/zakupy`, `/api/zakupy/<id>`,
+  `/api/zakupy/dodaj` w `app.py`; `site.json` „podstrony” → przyciski na stronie startowej. Inna sesja wgrała 26.10 rano
+  starszą wersję `app.py` z tym API; moje wdrożenie o 10:28 je usunęło, scalone 21:20. **Przed wgraniem app.py porównaj
+  z wersją na Pi** (`diff ~/portal/app.py`), bo zmienia go więcej niż jedna sesja.
+
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
   przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem

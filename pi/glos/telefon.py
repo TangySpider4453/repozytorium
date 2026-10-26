@@ -619,6 +619,8 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             if odp is None:
                 odp = bot.komenda_trening(t)        # treningi z intervals.icu, „kreatyna wyłącz”
             if odp is None:
+                odp = bot.komenda_oceny(t)          # oceny i średnie z Mobidziennika
+            if odp is None:
                 odp = bot.poczta.reakcja(t)         # „przeczytaj mail”, „przeczytany”, „później”, „maile”
             if odp is None:
                 odp = bot.komenda_budzik(t)         # budziki

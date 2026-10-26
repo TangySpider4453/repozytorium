@@ -72,6 +72,7 @@ pre{white-space:pre-wrap;font-family:var(--sans);font-size:16px;margin:10px 0 0;
     <form id="fTr"><input id="skad" placeholder="Skąd (puste = tu)" autocomplete="off"><input id="dokad" placeholder="Dokąd, np. dom, Rondo Kaponiera, adres" autocomplete="off"><button>Szukaj</button></form><pre id="tr"></pre></div>
   <div class="card"><h2>⭐ Miejsca</h2><div id="mj" class="muted"></div>
     <form id="fMj" style="margin-top:8px"><input id="mjN" placeholder="Nazwa, np. dom" autocomplete="off"><input id="mjA" placeholder="Adres (puste = tu, gdzie jestem)" autocomplete="off"><button>Zapisz</button></form></div>
+<div data-ustawienia="komunikacja"></div>
 </div></main>
 <script>
 const $ = id => document.getElementById(id);
@@ -84,8 +85,8 @@ async function lok(){
   $("mj").textContent = m.length ? m.map(x => `${x.nazwa}${x.opis ? " (" + x.opis + ")" : ""}`).join(" · ") : "Brak. Zapisz np. „dom”.";
 }
 document.querySelectorAll("[data-trasa]").forEach(b => b.onclick = async () => { $("szybki").textContent = "Szukam…"; $("szybki").textContent = await pobierz(`/api/ztm/trasa?skad=tu&dokad=${encodeURIComponent(b.dataset.trasa)}`); });
-document.querySelectorAll("[data-odj]").forEach(b => b.onclick = async () => { $("szybki").textContent = "Szukam…"; $("szybki").textContent = await pobierz(`/api/ztm/odjazdy?skad=tu&ile=10`); });
-$("fOdj").onsubmit = async e => { e.preventDefault(); $("odj").textContent = "Szukam…"; $("odj").textContent = await pobierz(`/api/ztm/odjazdy?skad=${encodeURIComponent($("przyst").value || "tu")}&ile=12`); };
+document.querySelectorAll("[data-odj]").forEach(b => b.onclick = async () => { $("szybki").textContent = "Szukam…"; $("szybki").textContent = await pobierz(`/api/ztm/odjazdy?skad=tu`); });
+$("fOdj").onsubmit = async e => { e.preventDefault(); $("odj").textContent = "Szukam…"; $("odj").textContent = await pobierz(`/api/ztm/odjazdy?skad=${encodeURIComponent($("przyst").value || "tu")}`); };
 $("fTr").onsubmit = async e => { e.preventDefault(); $("tr").textContent = "Szukam…"; $("tr").textContent = await pobierz(`/api/ztm/trasa?skad=${encodeURIComponent($("skad").value || "tu")}&dokad=${encodeURIComponent($("dokad").value || "dom")}`); };
 $("fMj").onsubmit = async e => {
   e.preventDefault(); const n = $("mjN").value.trim(); if(!n) return;
@@ -95,5 +96,6 @@ $("fMj").onsubmit = async e => {
 };
 lok();
 </script>
+<script src="/strony/wspolne/ustawienia.js" defer></script>
 </body>
 </html>

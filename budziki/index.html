@@ -92,6 +92,7 @@ pre{white-space:pre-wrap;font-family:var(--sans);font-size:16px;margin:10px 0 0;
       <div style="margin-top:10px;display:flex;gap:8px;align-items:center"><button>Dodaj</button><span id="info" class="muted"></span></div>
     </form>
     <p class="muted" style="margin:10px 0 0">Albo słowami w Linphone, Telegramie lub przez telefon: „budzik jutro 6:15”, „budzik w dni robocze 6:30”.</p></div>
+<div data-ustawienia="budziki"></div>
 </div></main>
 <script>
 const $ = id => document.getElementById(id);
@@ -129,5 +130,6 @@ $("f").onsubmit = async e => {
 };
 lista();
 </script>
+<script src="/strony/wspolne/ustawienia.js" defer></script>
 </body>
 </html>

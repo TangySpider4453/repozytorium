@@ -464,4 +464,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   dzisiejszy bieg (8:14) za stary na przypomnienie, więc bez telefonu.
 - **2026-10-26 (wejścia: IPv4 i Tailscale)**: Powiadomienie o nowym wejściu z sieci domowej pokazuje adres IPv4
   (także gdy wejście było z IPv6 fe80::) i nazwę Tailscale urządzenia (np. 172.23.0.33 = PC-Antek 100.77.150.92).
+- **2026-10-26 (ustawienia, oceny, zakupy)**: Panel „⚙️ Ustawienia” na dole stron automatyzacji (włączniki, godziny,
+  częstotliwość; Mobidziennik może dzwonić rano/wieczorem ze zmianami). Oceny i średnie zwykłe (bez wag) z Mobidziennika.
+  Przywrócone `/api/zakupy` (lista zakupów łazika), które moje wdrożenie przez pomyłkę usunęło. Wszystko na Pi, sprawdzone.
 

@@ -72,6 +72,9 @@ pre{white-space:pre-wrap;font-family:var(--sans);font-size:16px;margin:10px 0 0;
 table{width:100%;border-collapse:collapse;font-size:15px} td,th{text-align:left;padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:700;font-size:13px}
 .jasny{background:var(--surface);color:inherit;border:1.5px solid var(--line);border-radius:10px;height:40px;padding:0 12px;font:inherit;font-weight:700;cursor:pointer}
+.oc{display:inline-block;min-width:1.9em;text-align:center;font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 5px;margin:2px 3px 2px 0}
+.oc.nl{opacity:.5;font-weight:400}
+.srednia{font-size:17px;margin:0 0 8px} .dobra{color:var(--ok)} .slaba{color:var(--bad)}
 </style>
 </head>
 <body>
@@ -86,6 +89,8 @@ th{color:var(--muted);font-weight:700;font-size:13px}
   <div class="card"><h2>📅 Plan lekcji</h2><div class="tabs" id="tabs"></div><div id="plan"></div></div>
   <div class="card"><h2>📝 Sprawdziany i kartkówki</h2><div id="spr"></div></div>
   <div class="card"><h2>🏠 Zadania domowe</h2><div id="zd"></div></div>
+  <div class="card"><h2>🎓 Oceny i średnie</h2><div id="oc"></div></div>
+<div data-ustawienia="mobi"></div>
 </div></main>
 <script>
 const $ = id => document.getElementById(id);
@@ -96,7 +101,7 @@ let D = null, TYDZ = 0;
 async function wczytaj(){
   D = await (await fetch("/api/mobi", {cache:"no-store"})).json();
   if(!D.skonfigurowany){ $("czas").textContent = "Mobidziennik nie jest jeszcze podłączony."; return; }
-  $("czas").textContent = `Ostatni odczyt: ${(D.czas || "").replace("T", " ").slice(0, 16)} (co 10 min, 6–22, tylko odczyt)`;
+  $("czas").textContent = `Ostatni odczyt: ${(D.czas || "").replace("T", " ").slice(0, 16)} (tylko odczyt; częstotliwość w Ustawieniach na dole)`;
   rysuj();
 }
 function tygodnie(){
@@ -137,6 +142,18 @@ function rysuj(){
   $("zd").replaceChildren(zd.length ? el("table", {}, el("tr", {}, ...["Termin", "Przedmiot", "Treść"].map(t => el("th", {text:t}))),
     ...zd.map(x => el("tr", {}, el("td", {text:x.termin ? dataPl(x.termin) : "?"}), el("td", {}, el("b", {text:x.przedmiot}), el("div", {class:"muted", text:x.nauczyciel})),
       el("td", {text:x.tresc + (x.zrobione ? " ✅" : "")})))) : el("p", {class:"muted", text:"Brak zadań."}));
+  // oceny: średnia zwykła (arytmetyczna), bez wag; „+”, „np” i oceny „nieliczone do średniej” są pokazane, ale nie liczone
+  const pl = x => x == null ? "–" : x.toFixed(2).replace(".", ",");
+  const kolor = x => x == null ? "" : x >= 4.5 ? "dobra" : x >= 3 ? "" : "slaba";
+  const oc = (D.oceny || []).filter(p => p.oceny.length);
+  $("oc").replaceChildren(!D.oceny ? el("p", {class:"muted", text:"Oceny pojawią się po najbliższym odczycie."}) : el("div", {},
+    el("p", {class:"srednia"}, "Średnia ogólna: ", el("b", {class:kolor(D.srednia), text:pl(D.srednia)}),
+      el("span", {class:"muted", text:" (średnia ze średnich przedmiotów; każda średnia zwykła, bez wag)"})),
+    oc.length ? el("table", {}, el("tr", {}, ...["Przedmiot", "Oceny", "Średnia"].map(t => el("th", {text:t}))),
+      ...oc.map(p => el("tr", {}, el("td", {}, el("b", {text:p.przedmiot})),
+        el("td", {}, ...p.oceny.map(o => el("span", {class:"oc" + (o.liczona ? "" : " nl"), title:`${o.kategoria}${o.opis ? ": " + o.opis : ""} · ${o.data} · ${o.nauczyciel}${o.liczona ? "" : " · nie liczona do średniej"}`, text:o.ocena}))),
+        el("td", {}, el("b", {class:kolor(p.srednia), text:pl(p.srednia)}))))) : el("p", {class:"muted", text:"Brak ocen w tym okresie."}),
+    el("p", {class:"muted", style:"font-size:13px;margin-top:6px", text:"Szare oceny (np. „+”, „np”) nie są liczone do średniej. Przytrzymaj albo najedź na ocenę, żeby zobaczyć opis."})));
 }
 $("odswiez").onclick = async () => {
   $("odswiez").disabled = true; $("czas").textContent = "Sprawdzam w Mobidzienniku… (do minuty)";
@@ -147,5 +164,6 @@ $("odswiez").onclick = async () => {
 };
 wczytaj();
 </script>
+<script src="/strony/wspolne/ustawienia.js" defer></script>
 </body>
 </html>

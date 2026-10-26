@@ -5,7 +5,7 @@ Poranny bieg (Run/TrailRun/VirtualRun/Treadmill, start przed POZNO) -> zadanie �
 
 Klucz: INTERVALS_API_KEY (i opcjonalnie INTERVALS_ATLETA, domyślnie „0” = właściciel klucza) w
 /etc/serwerek-bot/intervals.env (root 600, EnvironmentFile bota). Stan: ~/bot/intervals/stan.json,
-ustawienia (włącznik kreatyny, zapisuje portal): ~/bot/intervals/ustawienia.json.
+ustawienia (włącznik kreatyny, minuty po biegu, „poranny do”): moduł „treningi” w /api/automaty (portal).
 """
 import base64
 import json
@@ -52,10 +52,6 @@ def _zapisz(nazwa, dane):
     os.replace(tmp, KAT / nazwa)
 
 
-def ustawienia():
-    return {"kreatyna": True, **_czytaj("ustawienia.json", {})}
-
-
 def stan():
     return _czytaj("stan.json", {})
 
@@ -78,8 +74,10 @@ def _aktywnosc(a):
             "koniec": koniec, "czas_min": round(dl / 60), "dystans_km": round((a.get("distance") or 0) / 1000, 1)}
 
 
-def sprawdz(dodaj_kreatyne):
-    """odczyt z intervals.icu, zapis stanu; dodaj_kreatyne(termin "RRRR-MM-DDTHH:MM", opis) przy porannym biegu"""
+def sprawdz(dodaj_kreatyne, u=None):
+    """odczyt z intervals.icu, zapis stanu; dodaj_kreatyne(termin "RRRR-MM-DDTHH:MM", opis) przy porannym biegu.
+    u = ustawienia „treningi” z portalu (kreatyna, po_biegu, poranny_do)"""
+    u = u or {}
     dzis = date.today()
     plan = _get("/events", oldest=dzis.isoformat(), newest=(dzis + timedelta(days=7)).isoformat(), category="WORKOUT")
     akt = _get("/activities", oldest=(dzis - timedelta(days=1)).isoformat(), newest=dzis.isoformat())
@@ -91,13 +89,13 @@ def sprawdz(dodaj_kreatyne):
     for a in st["aktywnosci"]:
         if a["typ"] not in BIEGI or not a["koniec"] or a["start"][:10] != dzis.isoformat() or zrobione.get(a["start"][:10]):
             continue
-        if int(a["start"][11:13]) >= POZNO:
+        if int(a["start"][11:13]) >= u.get("poranny_do", POZNO):
             continue
-        termin = datetime.fromisoformat(a["koniec"]) + timedelta(minutes=PO_BIEGU)
+        termin = datetime.fromisoformat(a["koniec"]) + timedelta(minutes=u.get("po_biegu", PO_BIEGU))
         if datetime.now() - termin > timedelta(hours=1):        # bieg zsynchronizowany dużo później albo przerwa w działaniu
             zrobione[a["start"][:10]] = a["id"]
             continue
-        if ustawienia()["kreatyna"]:
+        if u.get("kreatyna", True):
             termin = max(termin, datetime.now() + timedelta(minutes=1))
             dodaj_kreatyne(termin.strftime("%Y-%m-%dT%H:%M"), f"{a['nazwa'] or 'bieg'}, {a['dystans_km']} km, koniec {a['koniec'][11:16]}")
         zrobione[a["start"][:10]] = a["id"]

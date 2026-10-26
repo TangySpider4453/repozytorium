@@ -89,6 +89,18 @@ Budzik = Pi dzwoni o tej porze i czyta poranny przegląd. Ustawianie słowami ro
 -d '{"godzina":"06:15","data":"RRRR-MM-DD"}'` (jednorazowy) albo `{"godzina":"06:30","dni":[0,1,2,3,4]}` (0 = poniedziałek),
 usunięcie: `curl -s -X POST http://127.0.0.1/api/alarmy/<id> -H 'Content-Type: application/json' -d '{"usun":true}'`.
 
+## Ustawienia automatyzacji (panel „⚙️ Ustawienia” na stronach)
+Wszystkie włączniki i godziny: `curl -s http://127.0.0.1/api/automaty` (schemat + wartości). Zmiana, gdy Antek poprosi
+(np. „wyłącz sprawdzanie dziennika”, „dzwoń rano o 6:30, gdy są zmiany w dzienniku”):
+`curl -s -X POST http://127.0.0.1/api/automaty/<moduł> -H 'Content-Type: application/json' -d '{"pole": wartość}'`.
+Moduły: mobi (wlaczony, od, do, co_min, powiadomienia, dzwon_rano, rano, dzwon_wieczor, wieczor), sprawdziany (wlaczone,
+za3, wieczor, rano), zadania (przypomnienia, domyslnie_dzwon), budziki (wlaczone, przeglad, proby, co_min), poczta
+(wlaczona, co_min, wazne), treningi (wlaczony, kreatyna, po_biegu, poranny_do, w_budziku), komunikacja (wlaczona, odjazdow).
+
+## Oceny (Mobidziennik)
+Oceny i średnie (zwykłe, arytmetyczne, BEZ wag: nauczyciele wag nie używają) są w `curl -s http://127.0.0.1/api/mobi`
+(pola `oceny` i `srednia` = średnia ze średnich przedmiotów). Szybkie komendy: „oceny”, „średnia”, „oceny z fizyki”.
+
 ## Treningi (intervals.icu) i kreatyna
 Bot co 5 min czyta intervals.icu (tylko odczyt, nic tam nie zmieniasz). Plan i ostatnie aktywności:
 `curl -s "http://127.0.0.1/api/intervals?data=RRRR-MM-DD"` (bez `data` = najbliższe 7 dni). Po porannym biegu bot sam

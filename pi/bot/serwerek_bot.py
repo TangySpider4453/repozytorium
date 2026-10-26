@@ -134,6 +134,21 @@ def wyslij(tekst, html_=False, przyciski=None, chat=None, kto="bot"):
                 print(f"pamiec: {ex}", flush=True)
 
 
+AUTOMATY = {"t": 0.0, "w": {}}
+
+
+def ust(modul):
+    """ustawienia automatyzacji ze stron (panel „⚙️ Ustawienia”, portal /api/automaty), odświeżane co 30 s;
+    gdy portal nie odpowiada, zostają ostatnie znane (a bez nich wartości domyślne przy .get)"""
+    if time.time() - AUTOMATY["t"] > 30:
+        try:
+            AUTOMATY["w"] = portal("/api/automaty")["wartosci"]
+            AUTOMATY["t"] = time.time()
+        except (OSError, ValueError, KeyError):
+            AUTOMATY["t"] = time.time() - 20            # spróbuj znowu za 10 s
+    return AUTOMATY["w"].get(modul, {})
+
+
 def portal(sciezka, dane=None):
     req = urllib.request.Request(PORTAL + sciezka, data=json.dumps(dane).encode() if dane is not None else None,
                                  headers={"Content-Type": "application/json"})
@@ -663,7 +678,8 @@ def szybka_odpowiedz(tekst):
 def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glosem=False):
     """jedna wiadomosc do Claude (wspolna sesja dla czatu, glosowek i telefonu) -> (odpowiedz, akcje) albo wyjatek RuntimeError.
     Najpierw szybkie odpowiedzi bez AI (plan, sprawdziany, godzina…), gdy pytanie jest rozpoznane."""
-    if not odpowiedz_na and kanal != "plik" and (sz := szybka_odpowiedz(tekst) or komenda_trening(tekst, krotko=kanal == "telefon")):
+    if not odpowiedz_na and kanal != "plik" and (sz := szybka_odpowiedz(tekst) or komenda_trening(tekst, krotko=kanal == "telefon")
+                                                                 or komenda_oceny(tekst, krotko=kanal == "telefon")):
         if kanal not in ("telegram", "glosowka_zapisana"):
             pamiec.zapisz("antek", kanal, tekst)
         return sz, []
@@ -780,17 +796,18 @@ def powiadomienia():
         aktualne = {"inc:" + i["id"] for i in wszystkie}
         for k in [k for k in w if (k.startswith("inc:") and k not in aktualne) or (k.startswith("dzwon:") and "inc:" + k[6:] not in aktualne)]:
             del w[k]
-    dzis, us = date.today(), s["ustawienia"]
-    for x in sprawdziany():
+    dzis, us = date.today(), ust("sprawdziany")
+    wiecz, rano = us.get("wieczor", s["ustawienia"]["nauka_wieczor"]), us.get("rano", s["ustawienia"]["nauka_rano"])
+    for x in sprawdziany() if us.get("wlaczone", True) else []:
         if not x.get("data"):
             continue
         d = (date.fromisoformat(x["data"]) - dzis).days
         co = None
-        if d == 1 and czas_minal(us["nauka_wieczor"]):
+        if d == 1 and czas_minal(wiecz):
             co, tekst = "jutro", f"📚 <b>Jutro {e(x['typ'])} z {e(x['przedmiot'].lower())}</b>"
-        elif d == 3 and x["typ"] == "sprawdzian" and czas_minal(us["nauka_wieczor"]):
+        elif d == 3 and x["typ"] == "sprawdzian" and us.get("za3", True) and czas_minal(wiecz):
             co, tekst = "za3", f"📚 <b>Za 3 dni sprawdzian z {e(x['przedmiot'].lower())}</b>"
-        elif d == 0 and czas_minal(us["nauka_rano"]) and datetime.now().hour < 12:
+        elif d == 0 and czas_minal(rano) and datetime.now().hour < 12:
             co, tekst = "dzis", f"☀️ <b>Dziś {e(x['typ'])} z {e(x['przedmiot'].lower())}</b>. Powodzenia!"
         if co and w.get(f"nauka:{x['id']}:{x['data']}:{co}") is None:
             powiadom(f"{tekst}\n{e(x['tytul'])}\nPowtórz zakładkę „Najważniejsze”: {link_sprawdzianu(x)}", html_=True)
@@ -1305,7 +1322,8 @@ def nowe_zadanie(tekst):
     opis, termin, powt = parsuj_zadanie(tekst)
     if not opis:
         return None
-    dzwon = bool(termin) and not tylko_napisz     # domyślnie: przypomnienie z godziną = Pi dzwoni
+    # domyślnie (ustawienie „zadania: domyslnie_dzwon”): przypomnienie z godziną = Pi dzwoni; „zadzwoń/ważne” zawsze
+    dzwon = bool(termin) and not tylko_napisz and (dzwon or ust("zadania").get("domyslnie_dzwon", True))
     z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon})
     return z, opis, termin, powt, dzwon and bool(termin)
 
@@ -1372,7 +1390,7 @@ def przygotuj_rozmowe(z):
 
 
 def przypomnienia():
-    if not stan()["wlasciciel"]:
+    if not stan()["wlasciciel"] or not ust("zadania").get("przypomnienia", True):
         return
     teraz = datetime.now().strftime("%Y-%m-%dT%H:%M")
     za_chwile = (datetime.now() + timedelta(minutes=4)).strftime("%Y-%m-%dT%H:%M")
@@ -1529,7 +1547,7 @@ def komenda_budzik(tekst):
 def mobi_dzis():
     if mobi.skonfigurowany() and time.time() - mobi.OSTATNIO["t"] > 300:
         try:
-            mobi.sprawdz(powiadom, mobi_nowy_sprawdzian)
+            mobi.sprawdz(mobi_zmiana, mobi_nowy_sprawdzian)
         except Exception as ex:
             print(f"mobi: {type(ex).__name__}: {ex}", flush=True)
     return mobi.dzis()
@@ -1558,15 +1576,66 @@ def mobi_nowy_sprawdzian(x):
     threading.Thread(target=praca, daemon=True).start()
 
 
+MOBI_ZMIANY = KATALOG / "mobi" / "do_rozmowy.json"     # zmiany zebrane do telefonu rano / wieczorem
+
+
+def mobi_zmiana(tekst):
+    """zmiana w dzienniku: wiadomość od razu (gdy włączone) i zapis do najbliższego telefonu (rano/wieczór)"""
+    u = ust("mobi")
+    if u.get("powiadomienia", True):
+        powiadom(tekst)
+    try:
+        d = json.loads(MOBI_ZMIANY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        d = {"zmiany": [], "dzwoniono": {}}
+    d["zmiany"] = (d["zmiany"] + [{"t": datetime.now().isoformat(timespec="minutes"), "tekst": tekst}])[-30:]
+    MOBI_ZMIANY.parent.mkdir(exist_ok=True)
+    MOBI_ZMIANY.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def mobi_telefon(u):
+    """o godzinie „rano” / „wieczor” (do 30 min później): telefon ze zmianami od ostatniego telefonu, jeśli jakieś są"""
+    teraz = datetime.now()
+    try:
+        d = json.loads(MOBI_ZMIANY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    for pora in ("rano", "wieczor"):
+        if not u.get("dzwon_" + pora):
+            continue
+        g = datetime.combine(teraz.date(), datetime.strptime(u.get(pora, "07:00"), "%H:%M").time())
+        if not (g <= teraz < g + timedelta(minutes=30)) or d.get("dzwoniono", {}).get(pora) == teraz.date().isoformat():
+            continue
+        d.setdefault("dzwoniono", {})[pora] = teraz.date().isoformat()
+        zmiany = [z["tekst"] for z in d.get("zmiany", []) if z["t"] >= (teraz - timedelta(days=2)).isoformat()]
+        d["zmiany"] = []
+        MOBI_ZMIANY.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+        if not zmiany:
+            continue
+        czyste = "; ".join(re.sub(r"[^\w\s.,:;()/+–-]", "", z).replace("\n", ", ").strip() for z in zmiany)
+        tekst = claude_jednorazowo(
+            "[Za chwilę Pi dzwoni do Antka, bo w Mobidzienniku są zmiany. Ułóż DOKŁADNIE to, co powiesz (czytane głosem): "
+            "krótko, naturalnie, po kolei same zmiany (dzień, lekcja, co się zmieniło), 10–40 sekund, bez list, emotek i "
+            "formułek na końcu.]\n\nZmiany:\n" + "\n".join(zmiany), limit=90) or f"Zmiany w dzienniku: {czyste}."
+        tekst = szczegoly_na_czat(tekst, mowione=True)
+        pamiec.zapisz("bot", "telefon", f"Dzwonię ze zmianami w dzienniku ({pora}): {tekst}")
+        zadzwon(tekst, f"zmiany w dzienniku ({pora})")
+
+
 def petla_mobi():
     time.sleep(30)
     while True:
         try:
+            u = ust("mobi")
             na_zadanie = (mobi.KAT / "odswiez").exists()       # przycisk „Sprawdź teraz” na stronie
             if na_zadanie:
                 (mobi.KAT / "odswiez").unlink(missing_ok=True)
-            if mobi.skonfigurowany() and (na_zadanie or 6 <= datetime.now().hour < 22 and time.time() - mobi.OSTATNIO["t"] >= 590):
-                mobi.sprawdz(powiadom, mobi_nowy_sprawdzian)
+            godz = datetime.now().hour
+            if mobi.skonfigurowany() and (na_zadanie or u.get("wlaczony", True) and u.get("od", 6) <= godz < u.get("do", 22)
+                                          and time.time() - mobi.OSTATNIO["t"] >= u.get("co_min", 10) * 60 - 10):
+                mobi.sprawdz(mobi_zmiana, mobi_nowy_sprawdzian)
+            if u.get("wlaczony", True):
+                mobi_telefon(u)
         except Exception as ex:
             print(f"mobi: {type(ex).__name__}: {ex}", flush=True)
         time.sleep(5)
@@ -1586,7 +1655,7 @@ def komenda_mobi(tekst):
         d = date.today() + timedelta(days=(DNI_TYG[kiedy] - date.today().weekday()) % 7)
     if time.time() - mobi.OSTATNIO["t"] > 300:
         try:
-            mobi.sprawdz(powiadom, mobi_nowy_sprawdzian)
+            mobi.sprawdz(mobi_zmiana, mobi_nowy_sprawdzian)
         except Exception as ex:
             return f"⚠️ Mobidziennik: {ex}"
     return f"📅 {DNI_NAZWY[d.weekday()].capitalize()} {d.strftime('%d.%m')}: " + (mobi.dzis(d) or "brak danych")
@@ -1603,8 +1672,9 @@ def petla_intervals():
     time.sleep(45)
     while True:
         try:
-            if intervals.skonfigurowany() and time.time() - intervals.OSTATNIO["t"] >= intervals.CO - 5:
-                intervals.sprawdz(dodaj_kreatyne)
+            u = ust("treningi")
+            if intervals.skonfigurowany() and u.get("wlaczony", True) and time.time() - intervals.OSTATNIO["t"] >= intervals.CO - 5:
+                intervals.sprawdz(dodaj_kreatyne, u)
         except Exception as ex:
             print(f"intervals: {type(ex).__name__}: {ex}", flush=True)
             intervals.OSTATNIO["t"] = time.time()
@@ -1640,7 +1710,7 @@ def komenda_trening(tekst, krotko=False):
         d = date.today() + timedelta(days=(DNI_TYG[kiedy] - date.today().weekday()) % 7)
     if intervals.skonfigurowany() and time.time() - intervals.OSTATNIO["t"] > 120:
         try:
-            intervals.sprawdz(dodaj_kreatyne)
+            intervals.sprawdz(dodaj_kreatyne, ust("treningi"))
         except Exception as ex:
             return f"⚠️ intervals.icu: {ex}"
     kto = "Dziś" if d == date.today() else "Jutro" if d == date.today() + timedelta(days=1) else f"{DNI_NAZWY[d.weekday()].capitalize()} {d.strftime('%d.%m')}"
@@ -1650,6 +1720,58 @@ def komenda_trening(tekst, krotko=False):
     return f"🏃 {kto}: {tr}" if krotko else f"🏃 {kto}:\n{tr}"
 
 
+OCENY_RE = re.compile(r"(?:🎓\s*)?/?(?:(?:jakie|pokaż|pokaz|podaj)\s+(?:mam\s+)?)?(?:moje\s+|moja\s+|moją\s+)?(oceny|ocenę|ocene|średnia|średnią|srednia|srednia|średnie|srednie)"
+                      r"(?:\s+(?:mam|ocen|ogólna|ogolna))?(?:\s+(?:z|ze)\s+(.+))?")
+
+
+def komenda_oceny(tekst, krotko=False):
+    """„oceny”, „średnia”, „oceny z fizyki”, „jaka jest moja średnia z chemii” -> tekst albo None.
+    Średnia zwykła (arytmetyczna) bez wag, liczona w mobi.py; ogólna = średnia ze średnich przedmiotów."""
+    t = re.sub(r"^(?:a\s+|jaka\s+(?:jest\s+)?|jaką\s+mam\s+|ile\s+(?:wynosi|mam)\s+)", "", tekst.lower().strip(" ?.!"))
+    m = OCENY_RE.fullmatch(t)
+    if not m:
+        return None
+    st = mobi.wczytaj("stan", {})
+    if not st.get("oceny"):
+        return "🎓 Ocen jeszcze nie odczytałem z Mobidziennika (pojawią się po najbliższym sprawdzeniu)."
+    pl = lambda x: "brak" if x is None else f"{x:.2f}".replace(".", ",")
+    if m.group(2):
+        nazwa = znajdz_przedmiot(m.group(2), [p["przedmiot"] for p in st["oceny"]])
+        p = next((p for p in st["oceny"] if p["przedmiot"] == nazwa), None)
+        if not p:
+            return f"🎓 Nie znalazłem przedmiotu „{m.group(2)}”."
+        if not p["oceny"]:
+            return f"🎓 {p['przedmiot']}: brak ocen w tym okresie."
+        return (f"🎓 {p['przedmiot']}: " + ", ".join(o["ocena"] for o in p["oceny"]) + f". Średnia {pl(p['srednia'])}."
+                + ("" if krotko else "\n" + "\n".join(f"• {o['ocena']} – {o['kategoria']}" + (f": {o['opis']}" if o["opis"] else "") + f" ({o['data'][8:]}.{o['data'][5:7]})"
+                                                       + ("" if o["liczona"] else " · nie liczona") for o in p["oceny"])))
+    z_ocenami = [p for p in st["oceny"] if p["oceny"]]
+    if krotko or m.group(1).startswith(("śr", "sr")):
+        return (f"🎓 Średnia ogólna: {pl(st.get('srednia'))}. " + "; ".join(f"{p['przedmiot']} {pl(p['srednia'])}" for p in z_ocenami if p["srednia"] is not None)
+                + ". (Średnie zwykłe, bez wag.)")
+    return f"🎓 Średnia ogólna: {pl(st.get('srednia'))} (zwykła, bez wag)\n" + "\n".join(
+        f"• {p['przedmiot']}: {' '.join(o['ocena'] for o in p['oceny'])} → {pl(p['srednia'])}" for p in z_ocenami)
+
+
+def bez_ogonkow(t):
+    for a, b in (("ą", "a"), ("ć", "c"), ("ę", "e"), ("ł", "l"), ("ń", "n"), ("ó", "o"), ("ś", "s"), ("ź", "z"), ("ż", "z")):
+        t = t.replace(a, b)
+    return t.lower()
+
+
+def znajdz_przedmiot(zapytanie, przedmioty):
+    """„fizyki”, „polskiego”, „angielskiego zawodowego” -> nazwa z listy: każde słowo zapytania (pierwsze 4 litery,
+    bez „język”) musi być początkiem któregoś słowa przedmiotu; przy kilku pasujących najkrótsza nazwa"""
+    zapytanie = {"matmy": "matematyki", "matma": "matematyka", "wf": "wychowania fizycznego", "wf-u": "wychowania fizycznego",
+                 "polaka": "polskiego", "niemca": "niemieckiego", "anglika": "angielskiego", "infy": "informatyki",
+                 "geografii": "geografii", "edb": "edukacji bezpieczeństwa", "wosu": "edukacji obywatelskiej"}.get(zapytanie.strip().lower(), zapytanie)
+    slowa = [w[:4] for w in re.findall(r"\w+", bez_ogonkow(zapytanie)) if w not in ("jezyka", "jezyk", "z", "ze") and len(w) >= 3]
+    if not slowa:
+        return None
+    pas = [p for p in przedmioty if all(any(x.startswith(w) for x in re.findall(r"\w+", bez_ogonkow(p))) for w in slowa)]
+    return min(pas, key=len) if pas else None
+
+
 def poczta_podsumowanie():
     return poczta.podsumowanie()
 
@@ -1657,12 +1779,14 @@ def poczta_podsumowanie():
 def petla_poczty():
     time.sleep(60)
     while True:
+        u = {}
         try:
-            if poczta.konta():
-                poczta.sprawdz(powiadom, claude_bez_narzedzi, cisza_nocna(stan()))
+            u = ust("poczta")
+            if poczta.konta() and u.get("wlaczona", True):
+                poczta.sprawdz(powiadom if u.get("wazne", True) else (lambda *a, **k: None), claude_bez_narzedzi, cisza_nocna(stan()))
         except Exception as ex:
             print(f"poczta: {type(ex).__name__}: {ex}", flush=True)
-        time.sleep(poczta.CO)
+        time.sleep(u.get("co_min", poczta.CO // 60) * 60)
 
 
 def poranne_dane():
@@ -1677,7 +1801,7 @@ def poranne_dane():
                       + (" Problemy: " + "; ".join(i["tytul"] for i in z["aktywne"]) if z.get("aktywne") else " Bez problemów."))
     except (OSError, ValueError, KeyError):
         czesci.append("Serwer: nie udało się sprawdzić stanu.")
-    if intervals.stan().get("czas"):
+    if intervals.stan().get("czas") and ust("treningi").get("w_budziku", True):
         tr = intervals.treningi_na(date.today())
         czesci.append(f"Trening na dziś (powiedz TYLKO nazwę, bez szczegółów): {tr}" if tr else "Trening na dziś: brak.")
     for nazwa, f in (("Poczta", "poczta_podsumowanie"), ("Lekcje", "mobi_dzis")):
@@ -1726,11 +1850,18 @@ def budziki():
     while BUDZIK_PONOW and BUDZIK_PONOW[0][0] <= time.time():
         _, zl = BUDZIK_PONOW.pop(0)
         zadzwon(zl["tekst"], "budzik", budzik=zl["budzik"], proba=zl["proba"])
+    u = ust("budziki")
     for a in portal("/api/alarmy")["alarmy"]:
         t = nastepny_alarm(a, teraz)
         if not t:
             continue
         na = t.strftime("%Y-%m-%dT%H:%M")
+        if not u.get("wlaczone", True):              # budziki wyłączone: termin mija bez telefonu (bez dzwonienia później)
+            if teraz >= t:
+                portal(f"/api/alarmy/{a['id']}", {"ostatnio": t.date().isoformat(), **({"aktywny": False} if a.get("data") else {})})
+            continue
+        if not u.get("przeglad", True):
+            BUDZIK_TEKST[a["id"]] = {"na": na, "tekst": "Dzień dobry! Pora wstawać."}
         if t - teraz <= timedelta(minutes=3) and BUDZIK_TEKST.get(a["id"], {}).get("na") != na:
             BUDZIK_TEKST[a["id"]] = {"na": na, "tekst": None}
             threading.Thread(target=przygotuj_budzik, args=(a, na), daemon=True).start()
@@ -1840,11 +1971,16 @@ def komenda_miejsca(tekst):
 def komenda_ztm(tekst):
     """odjazdy / trasa / miejsca (Telegram i Linphone) -> tekst odpowiedzi albo None (to nie ta komenda)"""
     t = " ".join(tekst.strip().split())
+    u = ust("komunikacja")
     if m := re.fullmatch(r"(?:🚏\s*)?/?(?:odjazdy|odjazd)(?:\s+(?:z|ze|spod)?\s*(.+))?", t, re.I):
-        return ztm_api("/api/ztm/odjazdy", skad=(m.group(1) or "tu").strip(" ?.!"), ile=10).get("tekst") or "Brak danych."
+        if not u.get("wlaczona", True):
+            return "🚏 Komunikacja ZTM jest wyłączona (Ustawienia na dole strony Komunikacja)."
+        return ztm_api("/api/ztm/odjazdy", skad=(m.group(1) or "tu").strip(" ?.!"), ile=u.get("odjazdow", 10)).get("tekst") or "Brak danych."
     if m := re.fullmatch(r"(?:🏠\s*)?(?:/?trasa|jak dojadę|jak dojade|dojazd)?\s*(?:z\s+(.+?)\s+)?do\s+(domu|dom)\s*[?.!]*", t, re.I) \
             or re.fullmatch(r"(?:🗺\s*)?(?:/?trasa|jak dojadę|jak dojade|dojazd)\s+(?:z\s+(.+?)\s+)?do\s+(.+?)\s*[?.!]*", t, re.I):
         dokad = "dom" if m.group(2).lower() in ("domu", "dom") else m.group(2)
+        if not u.get("wlaczona", True):
+            return "🗺 Komunikacja ZTM jest wyłączona (Ustawienia na dole strony Komunikacja)."
         return ztm_api("/api/ztm/trasa", skad=m.group(1) or "tu", dokad=dokad).get("tekst") or "Brak danych."
     if (odp := komenda_miejsca(t)) is not None:
         return odp
@@ -1974,10 +2110,10 @@ def petla_telefonu():
                 p.unlink()
                 if w.get("stan") == "brak_konfiguracji":
                     powiadom(f"📞 Chciałem zadzwonić ({w.get('powod')}), ale telefon nie jest jeszcze skonfigurowany (konto Linphone).\n{w.get('tekst', '')}")
-                elif w.get("stan") == "nieodebrane" and w.get("budzik") and int(w.get("proba", 1)) < BUDZIK_PROB:
-                    BUDZIK_PONOW.append((time.time() + BUDZIK_CO, {"tekst": w.get("tekst", ""), "budzik": w["budzik"],
+                elif w.get("stan") == "nieodebrane" and w.get("budzik") and int(w.get("proba", 1)) < ust("budziki").get("proby", BUDZIK_PROB):
+                    BUDZIK_PONOW.append((time.time() + ust("budziki").get("co_min", BUDZIK_CO // 60) * 60, {"tekst": w.get("tekst", ""), "budzik": w["budzik"],
                                                                  "proba": int(w.get("proba", 1)) + 1}))
-                    print(f"budzik nieodebrany (próba {w.get('proba')}), ponowię za {BUDZIK_CO // 60} min", flush=True)
+                    print(f"budzik nieodebrany (próba {w.get('proba')}), ponowię za {ust("budziki").get("co_min", BUDZIK_CO // 60)} min", flush=True)
                 elif w.get("stan") == "nieodebrane":
                     powiadom(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}"
                              + (f"\n\n{w['czat']}" if w.get("czat") else ""))
@@ -2274,6 +2410,8 @@ def obsluz(u):
         wyslij(odp_m)
     elif (odp_t := komenda_trening(tekst)) is not None:
         wyslij(odp_t)
+    elif (odp_o := komenda_oceny(tekst)) is not None:
+        wyslij(odp_o)
     elif (odp_p := poczta.reakcja(tekst)) is not None:
         wyslij(odp_p)
     elif (odp_b := komenda_budzik(tekst)) is not None:

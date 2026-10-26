@@ -39,6 +39,7 @@ from flask import Flask, Response, abort, jsonify, redirect, send_from_directory
 BASE = Path(__file__).resolve().parent
 SITES = BASE / "sites"
 CONFIG_FILE = BASE / "config.json"
+ZAKUPY_FILE = BASE / "data" / "zakupy.json"          # lista zakupów łazika (/strony/lazik/zakupy.html)
 PORT = 80
 TERMINAL_PORT = 7681
 DASHBOARD_PORT = 8090
@@ -386,8 +387,11 @@ def site_list():
                     meta = json.loads((d / "site.json").read_text(encoding="utf-8"))
                 except Exception:
                     pass
+                extra = [{"nazwa": x.get("nazwa", ""), "sciezka": f"/strony/{d.name}/{x.get('plik', '')}"}
+                         for x in meta.get("podstrony", []) if isinstance(x, dict)]
                 pages.append({"nazwa": meta.get("tytul", d.name), "opis": meta.get("opis", ""),
-                              "port": PORT, "sciezka": f"/strony/{d.name}/", "dziala": True, "typ": "strona"})
+                              "port": PORT, "sciezka": f"/strony/{d.name}/", "dziala": True, "typ": "strona",
+                              "dodatkowe": extra})
     return pages
 
 
@@ -1520,7 +1524,8 @@ def api_mobi():
         return jsonify({"skonfigurowany": False})
     dzis = time.strftime("%Y-%m-%d")
     return jsonify({"skonfigurowany": True, "czas": st.get("czas"), "plan": [x for x in st.get("plan", []) if x["data"] >= dzis],
-                    "sprawdziany": sorted(st.get("sprawdziany", {}).values(), key=lambda x: x["data"]), "zadania": st.get("zadania", [])})
+                    "sprawdziany": sorted(st.get("sprawdziany", {}).values(), key=lambda x: x["data"]), "zadania": st.get("zadania", []),
+                    "oceny": st.get("oceny"), "srednia": st.get("srednia")})
 
 
 @app.route("/api/mobi/odswiez", methods=["POST"])
@@ -1533,25 +1538,117 @@ def api_mobi_odswiez():
     return jsonify({"ok": True})
 
 
+# ---------- Ustawienia automatyzacji: panel „⚙️ Ustawienia” na dole stron (wspólny skrypt /strony/wspolne/ustawienia.js) ----
+# dane/automaty.json = {modul: {pole: wartość}}; bot czyta GET /api/automaty (co ~30 s). Schemat = jedno źródło prawdy
+# dla walidacji i formularza: (pole, typ, domyślnie, etykieta, opcje) typ: bool | godzina | liczba (min, max) | wybor [lista].
+AUTOMATY = BASE / "dane" / "automaty.json"
+AUTOMATY_LOCK = threading.Lock()
+AUTOMATY_SCHEMAT = {
+    "mobi": {"nazwa": "Mobidziennik", "pola": [
+        ("wlaczony", "bool", True, "Sprawdzanie dziennika", None),
+        ("od", "liczba", 6, "Od godziny", (0, 23)),
+        ("do", "liczba", 22, "Do godziny", (1, 24)),
+        ("co_min", "wybor", 10, "Co ile minut", [5, 10, 15, 30, 60]),
+        ("powiadomienia", "bool", True, "Wiadomość od razu przy każdej zmianie", None),
+        ("dzwon_rano", "bool", False, "Telefon rano, gdy w dzienniku coś się zmieniło", None),
+        ("rano", "godzina", "06:45", "Godzina telefonu rano", None),
+        ("dzwon_wieczor", "bool", False, "Telefon wieczorem, gdy w dzienniku coś się zmieniło", None),
+        ("wieczor", "godzina", "19:00", "Godzina telefonu wieczorem", None)]},
+    "sprawdziany": {"nazwa": "Sprawdziany i kartkówki", "pola": [
+        ("wlaczone", "bool", True, "Przypomnienia o sprawdzianach", None),
+        ("za3", "bool", True, "Także 3 dni przed sprawdzianem", None),
+        ("wieczor", "godzina", "18:00", "Wieczorem (dzień przed i 3 dni przed)", None),
+        ("rano", "godzina", "07:00", "Rano w dniu sprawdzianu", None)]},
+    "zadania": {"nazwa": "Zadania i przypomnienia", "pola": [
+        ("przypomnienia", "bool", True, "Przypomnienia o zadaniach", None),
+        ("domyslnie_dzwon", "bool", True, "„Przypomnij mi…” z godziną = telefon (bez tego tylko wiadomość)", None)]},
+    "budziki": {"nazwa": "Budziki", "pola": [
+        ("wlaczone", "bool", True, "Budziki dzwonią", None),
+        ("przeglad", "bool", True, "Poranny przegląd (lekcje, maile, zadania, trening)", None),
+        ("proby", "liczba", 3, "Ile razy dzwonić, gdy nie odbierzesz", (1, 6)),
+        ("co_min", "liczba", 5, "Co ile minut ponawiać", (1, 30))]},
+    "poczta": {"nazwa": "Poczta", "pola": [
+        ("wlaczona", "bool", True, "Sprawdzanie skrzynek", None),
+        ("co_min", "wybor", 10, "Co ile minut", [5, 10, 15, 30, 60]),
+        ("wazne", "bool", True, "Powiadomienie o ważnych mailach", None)]},
+    "treningi": {"nazwa": "Treningi (intervals.icu)", "pola": [
+        ("wlaczony", "bool", True, "Sprawdzanie intervals.icu (co 5 min)", None),
+        ("kreatyna", "bool", True, "Telefon „weź kreatynę” po porannym biegu", None),
+        ("po_biegu", "liczba", 10, "Ile minut po końcu biegu", (0, 120)),
+        ("poranny_do", "liczba", 12, "Bieg poranny = zaczęty przed godziną", (5, 23)),
+        ("w_budziku", "bool", True, "Nazwa treningu w budziku", None)]},
+    "komunikacja": {"nazwa": "Komunikacja miejska", "pola": [
+        ("wlaczona", "bool", True, "Odpowiedzi o odjazdach i trasach (czat, telefon)", None),
+        ("odjazdow", "liczba", 10, "Ile odjazdów pokazywać", (1, 20))]},
+}
+
+
+def automaty_wartosci():
+    try:
+        zapisane = json.loads(AUTOMATY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        zapisane = {}
+    return {m: {pole: (zapisane.get(m) or {}).get(pole, dom) for pole, _, dom, _, _ in sch["pola"]}
+            for m, sch in AUTOMATY_SCHEMAT.items()}
+
+
+def automaty_waliduj(modul, b):
+    pola = {p[0]: p for p in AUTOMATY_SCHEMAT[modul]["pola"]}
+    out = {}
+    for k, v in b.items():
+        if k not in pola:
+            abort(400)
+        _, typ, _, _, opc = pola[k]
+        if typ == "bool" and isinstance(v, bool):
+            out[k] = v
+        elif typ == "godzina" and isinstance(v, str) and re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", v):
+            out[k] = v
+        elif typ == "liczba" and isinstance(v, int) and not isinstance(v, bool) and opc[0] <= v <= opc[1]:
+            out[k] = v
+        elif typ == "wybor" and v in opc:
+            out[k] = v
+        else:
+            abort(400)
+    return out
+
+
+def automaty_zapisz(modul, zmiany):
+    with AUTOMATY_LOCK:
+        w = automaty_wartosci()
+        w[modul].update(zmiany)
+        zapisz_json(AUTOMATY, w)
+    return w[modul]
+
+
+@app.route("/api/automaty")
+def api_automaty():
+    return jsonify({"wartosci": automaty_wartosci(), "schemat": {m: {"nazwa": s_["nazwa"], "pola": [
+        {"pole": p, "typ": t, "domyslnie": d, "etykieta": e, "opcje": o} for p, t, d, e, o in s_["pola"]]} for m, s_ in AUTOMATY_SCHEMAT.items()}})
+
+
+@app.route("/api/automaty/<modul>", methods=["POST"])
+def api_automaty_modul(modul):
+    from flask import request
+    if modul not in AUTOMATY_SCHEMAT:
+        abort(404)
+    b = request.get_json(silent=True)
+    if not isinstance(b, dict):
+        abort(400)
+    return jsonify(automaty_zapisz(modul, automaty_waliduj(modul, b)))
+
+
 @app.route("/api/intervals", methods=["GET", "POST"])
 def api_intervals():
     """intervals.icu (bot czyta co 5 min, tylko odczyt): treningi, ostatnie aktywności; POST {kreatyna: bool} = włącznik
     telefonu o kreatynie po porannym biegu (wyłączany np. na wyjazd)"""
     from flask import request
     kat = BOT_DANE / "intervals"
-    try:
-        ust = json.loads((kat / "ustawienia.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        ust = {}
-    ust = {"kreatyna": True, **ust}
     if request.method == "POST":
         b = request.get_json(silent=True) or {}
         if not isinstance(b.get("kreatyna"), bool):
             abort(400)
-        ust["kreatyna"] = b["kreatyna"]
-        kat.mkdir(exist_ok=True)
-        (kat / "ustawienia.json.tmp").write_text(json.dumps(ust), encoding="utf-8")
-        os.replace(kat / "ustawienia.json.tmp", kat / "ustawienia.json")
+        automaty_zapisz("treningi", {"kreatyna": b["kreatyna"]})
+    ust = {"kreatyna": automaty_wartosci()["treningi"]["kreatyna"]}
     try:
         st = json.loads((kat / "stan.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -1588,6 +1685,97 @@ def site_files(site, path):
             return redirect(f"/strony/{site}/{path}/")
         path += "index.html"
     return send_from_directory(SITES / site, path)
+
+
+# ---------------------------------------------------------------- lista zakupow lazika
+# Stan trzymany na Pi (data/zakupy.json), wiec odznaczenia widac z kazdego urzadzenia.
+# Zapis tylko z Content-Type application/json: obca strona nie wysle takiego zadania bez CORS.
+
+ZAKUPY_LOCK = threading.Lock()
+STATUSY = ("brak", "zamowione", "mam")
+
+
+def zakupy_load():
+    return json.loads(ZAKUPY_FILE.read_text(encoding="utf-8"))
+
+
+def zakupy_save(data):
+    data["zmieniono"] = time.strftime("%Y-%m-%d %H:%M")
+    tmp = ZAKUPY_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    os.replace(tmp, ZAKUPY_FILE)
+
+
+def zakupy_find(data, item_id):
+    for kat in data["kategorie"]:
+        for i, poz in enumerate(kat["pozycje"]):
+            if poz["id"] == item_id:
+                return kat, i, poz
+    abort(404)
+
+
+def zakupy_body():
+    from flask import request
+    body = request.get_json(silent=True)
+    if not request.is_json or not isinstance(body, dict):
+        abort(415)
+    return body
+
+
+def zakupy_tekst(v, limit):
+    return str(v or "").strip()[:limit]
+
+
+@app.route("/api/zakupy")
+def api_zakupy():
+    with ZAKUPY_LOCK:
+        return jsonify(zakupy_load())
+
+
+@app.route("/api/zakupy/<item_id>", methods=["POST", "DELETE"])
+def api_zakupy_item(item_id):
+    from flask import request
+    with ZAKUPY_LOCK:
+        data = zakupy_load()
+        kat, i, poz = zakupy_find(data, item_id)
+        if request.method == "DELETE":
+            if not poz.get("wlasne"):
+                abort(403)
+            del kat["pozycje"][i]
+            zakupy_save(data)
+            return jsonify({"ok": True})
+        body = zakupy_body()
+        if "status" in body:
+            if body["status"] not in STATUSY:
+                abort(400)
+            if body["status"] != poz.get("status"):
+                poz["status"] = body["status"]
+                poz["kiedy"] = time.strftime("%Y-%m-%d %H:%M")
+        if "notatka" in body:
+            poz["notatka"] = zakupy_tekst(body["notatka"], 300)
+        if "ilosc" in body:
+            poz["ilosc"] = zakupy_tekst(body["ilosc"], 20)
+        zakupy_save(data)
+        return jsonify(poz)
+
+
+@app.route("/api/zakupy/dodaj", methods=["POST"])
+def api_zakupy_add():
+    body = zakupy_body()
+    nazwa = zakupy_tekst(body.get("nazwa"), 120)
+    if not nazwa:
+        abort(400)
+    with ZAKUPY_LOCK:
+        data = zakupy_load()
+        kat = next((k for k in data["kategorie"] if k["id"] == body.get("kategoria")), None)
+        if kat is None:
+            abort(404)
+        poz = {"id": "w" + format(int(time.time() * 1000), "x"), "nazwa": nazwa, "opis": zakupy_tekst(body.get("opis"), 300),
+               "ilosc": zakupy_tekst(body.get("ilosc"), 20) or "1", "priorytet": "rec", "etap": "", "status": "brak",
+               "notatka": "", "wlasne": True, "kiedy": time.strftime("%Y-%m-%d %H:%M")}
+        kat["pozycje"].append(poz)
+        zakupy_save(data)
+        return jsonify(poz)
 
 
 # ---------- Nauka: postepy (fiszki, quizy) i zmiana daty sprawdzianu ----------
@@ -1923,7 +2111,7 @@ def api_ztm_odjazdy():
     """?przystanek=Junikowo albo ?skad=tu|dom|adres (przystanki do 500 m); &ile=10"""
     from flask import request
     try:
-        ile = max(1, min(30, int(request.args.get("ile", 10))))
+        ile = max(1, min(30, int(request.args.get("ile", automaty_wartosci()["komunikacja"]["odjazdow"]))))
         if request.args.get("przystanek"):
             s = ztm.szukaj_przystanku(request.args["przystanek"])
             if not s:
