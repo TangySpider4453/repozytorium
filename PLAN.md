@@ -459,4 +459,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   „trening”, w budziku sama nazwa), po porannym biegu telefon „weź kreatynę” 10 min po końcu (wyłącznik na stronie
   Automatyczne). Klucz tylko na Pi (`/etc/serwerek-bot/intervals.env`). Odczyt API sprawdzony (aktywności widoczne,
   kalendarz treningów na razie pusty).
+- **2026-10-26 (intervals wdrożone)**: Wgrane na Pi razem ze średnimi w Progresie. Klucz w `/etc/serwerek-bot/intervals.env`,
+  usługa bota z `EnvironmentFile=-…/intervals.env`. Treningi widoczne (np. 27.10 „Poranny bieg — lekki rozruch”);
+  dzisiejszy bieg (8:14) za stary na przypomnienie, więc bez telefonu.
 
