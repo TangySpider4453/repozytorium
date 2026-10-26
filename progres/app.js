@@ -261,9 +261,80 @@ function wykres(tytul, serie, jedn, zak){
   if(serie.length > 1) box.append(el("div", {class:"legend"}, ...serie.map(s => el("span", {}, el("i", {style:`background:${s.kolor}`}), s.nazwa))));
   return box;
 }
+/* średnie w słupkach: tydzień (pon–nd), miesiąc, rok kalendarzowy; średnia ze wszystkich pomiarów w tym okresie
+   (także tych poza oknem wykresu, więc słupek przy krawędzi pokazuje średnią z całego tygodnia/miesiąca) */
+const SREDNIE = {tydzien:"Średnia z tygodnia", miesiac:"Średnia z miesiąca", rok:"Średnia z roku"};
+function okres(t, sr){
+  const d = new Date(t); let od, dalej;
+  if(sr === "tydzien"){ od = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 6) % 7); dalej = new Date(od.getFullYear(), od.getMonth(), od.getDate() + 7); }
+  else if(sr === "miesiac"){ od = new Date(d.getFullYear(), d.getMonth(), 1); dalej = new Date(d.getFullYear(), d.getMonth() + 1, 1); }
+  else { od = new Date(d.getFullYear(), 0, 1); dalej = new Date(d.getFullYear() + 1, 0, 1); }
+  return [od.getTime(), dalej.getTime()];
+}
+function nazwaOkresu(od, dalej, sr){
+  const a = new Date(od), b = new Date(dalej - DZIEN);
+  if(sr === "rok") return String(a.getFullYear());
+  if(sr === "miesiac") return `${MIES[a.getMonth()]} ${a.getFullYear()}`;
+  return a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${MIES[b.getMonth()]}` : `${a.getDate()} ${MIES[a.getMonth()]} – ${b.getDate()} ${MIES[b.getMonth()]}`;
+}
+function srednie(pkt, sr){
+  const m = new Map();
+  pkt.forEach(([d, v]) => { const [od, dalej] = okres(pd(d).getTime(), sr), k = m.get(od) || {od, dalej, suma:0, n:0}; k.suma += v; k.n++; m.set(od, k); });
+  return [...m.values()].sort((a, b) => a.od - b.od).map(k => Object.assign(k, {v:k.suma / k.n}));
+}
+function wykresSlupki(tytul, serie, jedn, zak, sr){
+  const box = el("div", {class:"chart"}, el("h3", {text:`${tytul} · ${SREDNIE[sr].toLowerCase()}`}));
+  serie = serie.map(s => Object.assign({}, s, {sl:srednie(s.pkt, sr)}));
+  const wsz = serie.flatMap(s => s.sl);
+  if(!wsz.length){ box.append(el("p", {class:"muted small", text:"Brak pomiarów."})); return box; }
+  let x0, x1;
+  if(zak){ x0 = zak.x0; x1 = zak.x1 + DZIEN; } else { x0 = Math.min(...wsz.map(k => k.od)); x1 = Math.max(...wsz.map(k => k.dalej)); }
+  // całe okresy: słupek jest, gdy jego środek mieści się w oknie, a oś obejmuje pełne okresy (bez uciętych słupków)
+  serie.forEach(s => s.sl = s.sl.filter(k => (k.od + k.dalej) / 2 >= x0 && (k.od + k.dalej) / 2 < x1));
+  const all = serie.flatMap(s => s.sl);
+  if(all.length){ x0 = Math.min(...all.map(k => k.od)); x1 = Math.max(...all.map(k => k.dalej)); }
+  if(!all.length){ box.append(el("p", {class:"muted small", text:"Brak pomiarów w tym okresie. Przesuń suwak albo wybierz dłuższy zakres."})); return box; }
+  const W = Math.max(300, Math.round(($("wykresy").clientWidth || 600) - 34)), H = 190, L = 40, R = 14, T = 18, B = 24;
+  const ys = all.map(k => k.v);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys); const pad_ = Math.max((y1 - y0) * 0.25, 0.5); y0 = Math.max(0, y0 - pad_ * 2); y1 += pad_;
+  const X = t => L + (t - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
+  const ns = "http://www.w3.org/2000/svg", S = (t, a) => { const e = document.createElementNS(ns, t); for(const k in a) e.setAttribute(k, a[k]); return e; };
+  const svg = S("svg", {viewBox:`0 0 ${W} ${H}`, role:"img", "aria-label":tytul});
+  for(let i = 0; i <= 3; i++){
+    const v = y0 + (y1 - y0) * i / 3, y = Y(v);
+    svg.append(S("line", {x1:L, x2:W - R, y1:y, y2:y, stroke:"var(--grid)", "stroke-width":1}));
+    const t = S("text", {x:L - 6, y:y + 4, "text-anchor":"end", "font-size":12, fill:"var(--muted)"}); t.textContent = pl(v); svg.append(t);
+  }
+  [x0, x1 - DZIEN].forEach((t, i) => { const e = S("text", {x:i ? W - R : L, y:H - 6, "text-anchor":i ? "end" : "start", "font-size":12, fill:"var(--muted)"}); e.textContent = krotko(iso(new Date(t))); svg.append(e); });
+  const clipId = "c" + Math.random().toString(36).slice(2);
+  const defs = S("defs", {}), cp = S("clipPath", {id:clipId}); cp.append(S("rect", {x:L, y:0, width:W - L - R, height:H})); defs.append(cp); svg.append(defs);
+  const g = S("g", {"clip-path":`url(#${clipId})`}); svg.append(g);
+  const n = serie.length;
+  serie.forEach((s, i) => s.sl.forEach(k => {
+    const a = X(k.od), b = X(k.dalej), szer = b - a, przerwa = Math.min(szer * 0.15, 6), w = (szer - 2 * przerwa) / n;
+    const x = a + przerwa + i * w, y = Y(k.v);
+    g.append(S("rect", {x:x.toFixed(1), y:y.toFixed(1), width:Math.max(1, w - (n > 1 ? 1 : 0)).toFixed(1), height:Math.max(1, H - B - y).toFixed(1), rx:Math.min(3, w / 4), fill:s.kolor, opacity:.85}));
+    if(w >= 30){ const t = S("text", {x:(x + w / 2).toFixed(1), y:(y - 4).toFixed(1), "text-anchor":"middle", "font-size":11, fill:"var(--ink)", "font-weight":700}); t.textContent = pl(k.v); g.append(t); }
+  }));
+  const wrap = el("div", {class:"chartwrap"}, svg), tip = el("div", {class:"tip", hidden:""}); wrap.append(tip);
+  const okresy = [...new Map(all.map(k => [k.od, k])).values()].sort((a, b) => a.od - b.od);
+  const pokaz = ev => {
+    const r = svg.getBoundingClientRect(), t = x0 + ((ev.clientX - r.left) / r.width * W - L) / (W - L - R) * (x1 - x0);
+    const k = okresy.find(q => t >= q.od && t < q.dalej); if(!k){ tip.hidden = true; return; }
+    tip.hidden = false; tip.innerHTML = ""; tip.append(el("b", {text:nazwaOkresu(k.od, k.dalej, sr)}));
+    serie.forEach(s => { const q = s.sl.find(z => z.od === k.od); if(q) tip.append(el("div", {}, el("span", {style:`display:inline-block;width:10px;height:10px;background:${s.kolor};margin-right:6px;vertical-align:middle;border-radius:2px`}),
+      `${s.nazwa}: ${pl(q.v)}${jedn} (${q.n} ${q.n === 1 ? "pomiar" : q.n % 10 >= 2 && q.n % 10 <= 4 && (q.n % 100 < 10 || q.n % 100 >= 20) ? "pomiary" : "pomiarów"})`)); });
+    const px = (X(k.od) + X(k.dalej)) / 2 / W * r.width; tip.style.left = Math.min(Math.max(px - 80, 0), r.width - 180) + "px"; tip.style.top = "-6px";
+  };
+  svg.addEventListener("pointermove", pokaz); svg.addEventListener("pointerdown", pokaz);
+  svg.addEventListener("pointerleave", () => { tip.hidden = true; });
+  box.append(wrap);
+  if(n > 1) box.append(el("div", {class:"legend"}, ...serie.map(s => el("span", {}, el("i", {style:`background:${s.kolor}`}), s.nazwa))));
+  return box;
+}
 /* zakres wykresów: liczba dni (null = całość) i koniec okna (suwak); zapamiętywane w tej przeglądarce */
 const ZAKRESY = [[7, "7 dni"], [30, "Miesiąc"], [61, "2 mies."], [91, "3 mies."], [182, "6 mies."], [365, "Rok"], [null, "Całość"]];
-let WYK = {dni:null, koniec:null, sklad:"proc"};
+let WYK = {dni:null, koniec:null, sklad:"proc", sr:"zywo"};
 try{ Object.assign(WYK, JSON.parse(localStorage.getItem("progres:wykres") || "{}")); }catch(e){}
 const zapiszWYK = () => { try{ localStorage.setItem("progres:wykres", JSON.stringify(WYK)); }catch(e){} };
 const DZIEN = 864e5;
@@ -288,16 +359,25 @@ function rysujWykresy(){
   const wlasne = el("input", {type:"number", min:2, max:3650, inputmode:"numeric", placeholder:"np. 45", style:"width:90px;height:38px", value:ZAKRESY.some(([d]) => d === WYK.dni) ? "" : WYK.dni});
   wlasne.onchange = () => { const v = parseInt(wlasne.value); if(v >= 2){ WYK.dni = Math.min(v, 3650); WYK.koniec = null; zapiszWYK(); rysujWykresy(); } };
   // same wykresy są w osobnym pojemniku: suwak przerysowuje tylko je, więc można go płynnie przeciągać
+  // na żywo (każdy pomiar jako kropka) albo średnie w słupkach; dostępne średnie zależą od długości zakresu:
+  // miesiąc → tydzień, rok → tydzień i miesiąc, całość → tydzień, miesiąc i rok
+  const dlugosc = WYK.dni || rozpietosc + 1;
+  const mozliwe = ["zywo", ...(dlugosc >= 21 ? ["tydzien"] : []), ...(dlugosc >= 60 ? ["miesiac"] : []), ...(!WYK.dni || dlugosc >= 730 ? ["rok"] : [])];
+  const sr = mozliwe.includes(WYK.sr) ? WYK.sr : "zywo";
+  const srChips = el("div", {class:"chips"}, ...mozliwe.map(k => el("button", {"aria-pressed":String(sr === k), text:k === "zywo" ? "Na żywo (każdy pomiar)" : SREDNIE[k],
+    onclick:() => { WYK.sr = k; zapiszWYK(); rysujWykresy(); }})));
+  const W_ = (t, se, j) => sr === "zywo" ? wykres(t, se, j, zak) : wykresSlupki(t, se, j, zak, sr);
   const wnetrze = el("div");
   const rysujSame = () => { wnetrze.replaceChildren(
-    wykres("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg", zak),
-    kg ? wykres("Skład ciała (kg)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fatKg")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscleKg")}], " kg", zak)
-       : wykres("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%", zak)); };
+    W_("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg"),
+    kg ? W_("Skład ciała (kg)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fatKg")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscleKg")}], " kg")
+       : W_("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%")); };
   // skład ciała: procent z wagi albo przeliczona masa tłuszczu i mięśni (kg); zapamiętywane w tej przeglądarce
   const skladChips = el("div", {class:"chips"}, ...[["proc", "% (z wagi)"], ["kg", "kg (masa składnika)"]].map(([k, n]) =>
     el("button", {"aria-pressed":String(WYK.sklad === k || (k === "proc" && WYK.sklad !== "kg")), text:n, onclick:() => { WYK.sklad = k; zapiszWYK(); rysujWykresy(); }})));
   box.append(el("h2", {text:"Wykresy"}), el("div", {class:"f", style:"margin-bottom:6px"}, "Zakres", chips),
     el("label", {class:"row small", style:"margin-bottom:8px;font-weight:700"}, "Własny zakres:", wlasne, el("span", {class:"muted", style:"font-weight:400", text:"dni"})),
+    el("div", {class:"f", style:"margin-bottom:8px"}, "Pokaż", srChips),
     el("div", {class:"f", style:"margin-bottom:8px"}, "Skład ciała w", skladChips), wnetrze);
   rysujSame();
   // suwak od dołu: przesuwa okno w czasie co godzinę (płynnie), wspólny dla obu wykresów

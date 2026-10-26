@@ -453,4 +453,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   teraz rozmowy przy zatrzymaniu usługi.
 - **2026-10-23 (Hasła Apple)**: logowanie do portalu z sieci domowej i hasło pulpitu VNC mają pola użytkownik + hasło
   rozpoznawane przez Hasła Apple (zapis i autouzupełnianie). Wdrożone, strona sprawdzona curl.
+- **2026-10-26 (Progres: średnie)**: Wykresy Progresu: „Na żywo” albo średnie z tygodnia / miesiąca / roku w słupkach
+  (opcje zależą od zakresu). Sprawdzone w Playwright na danych testowych (bez błędów konsoli). Szczegóły w `PROGRES.md`.
 

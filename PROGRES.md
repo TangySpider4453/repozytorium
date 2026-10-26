@@ -33,6 +33,10 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   (`WYK.sklad`, localStorage). Masa tłuszczu i mięśni = masa ciała × % / 100 z tego samego dnia (`kgSkladu` w `app.js`,
   liczone w przeglądarce, nie zapisywane). Lista dni pokazuje oba: „tłuszcz 18,0% (14,4 kg)”; formularz pokazuje kg na
   żywo pod polami. Lista dni z miniaturami, edycja typu/daty, kosz.
+- **Średnie w słupkach (od 2026-10-26):** „Pokaż”: „Na żywo (każdy pomiar)” albo średnia z tygodnia (pon–nd, zakres
+  ≥ 21 dni), z miesiąca (≥ 60 dni), z roku (Całość albo ≥ 730 dni) = `WYK.sr` (`zywo`/`tydzien`/`miesiac`/`rok`,
+  localStorage). `wykresSlupki` w `app.js`: średnia ze wszystkich pomiarów okresu, słupek, gdy środek okresu jest
+  w oknie, oś obejmuje pełne okresy (miesiąc = 4–5 słupków tygodniowych), dymek z liczbą pomiarów.
 - **Film:** typ zdjęcia, zakres dat, odstęp `FM.krok`: „co ileś dni” (`FM.co`; plan co N dni od początku zakresu,
   z okna ±N/2 wokół planu zdjęcie najbliższe planowi) albo „co miesiąc” (ten sam dzień miesiąca co początek zakresu,
   31 → ostatni dzień krótszego miesiąca; zdjęcie najbliższe planowi, ale tylko z tego miesiąca; miesiąc bez zdjęć
@@ -111,3 +115,4 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   w trybie miesięcznym zawsze z tego samego miesiąca. `app.js?v=12`.
 - **2026-10-23**: Tryb „Same ręce”: kadr centruje i przybliża ręce (barki, łokcie, nadgarstki), suwak „Przybliżenie” = ile kadru zajmują ręce (osobne ustawienia `celSr`/`celYr`). `app.js?v=13`.
 - **2026-10-23 (2)**: Kadr na ręce działa dla każdego zdjęcia biceps / tył+biceps (wcześniej tylko z przełącznikiem „same ręce”, który zostaje dla sposobu dopasowania). `app.js?v=14`.
+- **2026-10-26**: Wykresy: wybór „na żywo” albo średnie z tygodnia / miesiąca / roku w słupkach. `app.js?v=15`.
