@@ -883,43 +883,68 @@ def mac_ip(ip):
         return ""
 
 
-TS_NAZWY = {"t": 0, "nazwy": {}}
+TS_NAZWY = {"t": 0, "nazwy": {}, "lan": {}}
 
 
-def nazwa_tailscale(ip):
-    """nazwa urzadzenia Tailscale po adresie 100.x (lista odswiezana co 5 min)"""
+def _tailscale_odswiez():
+    """lista urządzeń Tailscale (co 5 min): 100.x -> nazwa oraz adres w sieci domowej (CurAddr/Addrs) -> (nazwa, 100.x)"""
     if time.time() - TS_NAZWY["t"] > 300:
         try:
             d = json.loads(subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, timeout=10).stdout)
-            TS_NAZWY["nazwy"] = {a: p.get("HostName", "?") for p in list((d.get("Peer") or {}).values()) + [d.get("Self") or {}]
-                                 for a in p.get("TailscaleIPs") or []}
+            peers = list((d.get("Peer") or {}).values()) + [d.get("Self") or {}]
+            TS_NAZWY["nazwy"] = {a: p.get("HostName", "?") for p in peers for a in p.get("TailscaleIPs") or []}
+            lan = {}
+            for p in peers:
+                ts4 = next((a for a in p.get("TailscaleIPs") or [] if "." in a), "")
+                for adr in [p.get("CurAddr") or ""] + list(p.get("Addrs") or []):
+                    host = adr.rsplit(":", 1)[0].strip("[]") if adr else ""
+                    if host.startswith(("172.", "192.168.", "10.")):
+                        lan[host] = (p.get("HostName", "?"), ts4)
+            TS_NAZWY["lan"].update(lan)        # CurAddr jest tylko przy aktywnym połączeniu: pamiętamy wcześniejsze
             TS_NAZWY["t"] = time.time()
         except (OSError, ValueError, subprocess.TimeoutExpired):
             pass
+
+
+def nazwa_tailscale(ip):
+    """nazwa urzadzenia Tailscale po adresie 100.x"""
+    _tailscale_odswiez()
     return TS_NAZWY["nazwy"].get(ip, "?")
 
 
-def urzadzenie(ip):
-    """MAC z tablicy ARP i nazwa z DNS routera (jesli jest)"""
-    import socket
-    mac = ""
+def ipv4_z_mac(mac):
+    """adres IPv4 w sieci domowej dla MAC (z tablicy sąsiadów), np. gdy wejście przyszło z adresu IPv6 fe80::…"""
     try:
-        out = subprocess.run(["ip", "neigh", "show", ip], capture_output=True, text=True, timeout=5).stdout
-        if "lladdr" in out:
-            mac = out.split("lladdr")[1].split()[0]
-    except (OSError, subprocess.TimeoutExpired):
+        for linia in subprocess.run(["ip", "-4", "neigh"], capture_output=True, text=True, timeout=5).stdout.splitlines():
+            cz = linia.split()
+            if "lladdr" in cz and cz[cz.index("lladdr") + 1].lower() == mac.lower():
+                return cz[0]
+    except (OSError, subprocess.TimeoutExpired, IndexError):
         pass
+    return ""
+
+
+def urzadzenie(ip):
+    """(adres do pokazania, opis): IPv4 w sieci domowej (także dla wejść z IPv6), nazwa Tailscale tego urządzenia
+    (po adresie domowym z listy Tailscale), nazwa z DNS routera i MAC"""
+    import socket
+    mac = mac_ip(ip)
+    ip4 = ip if "." in ip else (ipv4_z_mac(mac) if mac else "")
+    _tailscale_odswiez()
+    ts = TS_NAZWY["lan"].get(ip4) if ip4 else None
     wynik = []
 
     def szukaj():
         try:
-            wynik.append(socket.gethostbyaddr(ip)[0])
+            wynik.append(socket.gethostbyaddr(ip4 or ip)[0])
         except OSError:
             pass
     t = threading.Thread(target=szukaj, daemon=True)
     t.start()
     t.join(2)
-    return ", ".join(x for x in (wynik[0] if wynik else "", f"MAC {mac}" if mac else "") if x)
+    opis = ", ".join(x for x in (f"Tailscale: {ts[0]} {ts[1]}" if ts else "", wynik[0] if wynik else "", f"MAC {mac}" if mac else "",
+                                 f"IPv6 {ip}" if ip4 and ip4 != ip else "") if x)
+    return ip4 or ip, opis
 
 
 def system_z_ua(ua):
@@ -939,22 +964,24 @@ def zdarzenie(ip, krok, alarm=None, rodzaj_alarmu=None, przerwa=0):
     teraz = time.time()
     if ip not in WIZYTY:
         if ip.startswith("100."):
-            urz_nowe, mac, cichy = f"Tailscale: {nazwa_tailscale(ip)}", "", True
+            urz_nowe, mac, cichy, ip_pokaz = f"Tailscale: {nazwa_tailscale(ip)}", "", True, ip
         else:
             mac = mac_ip(ip)
             zaufane = stan().get("zaufane", {})
-            urz_nowe, cichy = urzadzenie(ip), bool(mac) and mac in zaufane
+            ip_pokaz, urz_nowe = urzadzenie(ip)
+            cichy = bool(mac) and mac in zaufane
             if cichy:
                 urz_nowe = f"zaufane: {zaufane[mac]}, " + urz_nowe
     else:
         urz_nowe = mac = None
         cichy = WIZYTY[ip].get("cichy", False)
+        ip_pokaz = WIZYTY[ip].get("ip_pokaz", ip)
     with WIZYTY_LOCK:
         w = WIZYTY.get(ip)
         nowa = w is None
         if nowa:
             w = WIZYTY[ip] = {"od": teraz, "ostatnio": teraz, "kroki": [], "alarmy": {}, "urz": urz_nowe or "", "liczniki": {},
-                              "cichy": cichy, "mac": mac}
+                              "cichy": cichy, "mac": mac, "ip_pokaz": ip_pokaz}
         w["ostatnio"] = teraz
         if not w["kroki"] or w["kroki"][-1][1] != krok:
             w["kroki"].append((time.strftime("%H:%M:%S"), krok))
@@ -969,16 +996,17 @@ def zdarzenie(ip, krok, alarm=None, rodzaj_alarmu=None, przerwa=0):
     log_nas(f"{time.strftime('%H:%M:%S')} {ip} {krok}")
     if not stan()["wlasciciel"] or w.get("cichy"):
         return
-    kto = f"IP: <code>{e(ip)}</code>" + (f" ({e(urz)})" if urz else "")
+    ip_p = w.get("ip_pokaz", ip)
+    kto = f"IP: <code>{e(ip_p)}</code>" + (f" ({e(urz)})" if urz else "")
     if nowa:
         przyc = {"inline_keyboard": [[{"text": "✅ To moje urządzenie (nie powiadamiaj)", "callback_data": f"zaufaj:{w['mac']}"}]]} if w.get("mac") else None
         powiadom(f"🚪 <b>Nowe wejście na Pi z sieci domowej</b>\n{kto}\nPierwszy krok: {e(krok)}", html_=True, przyciski=przyc,
-                 linphone=f"🚪 Nowe wejście na Pi z sieci domowej\nIP: {ip}" + (f" ({urz})" if urz else "") + f"\nPierwszy krok: {krok}"
+                 linphone=f"🚪 Nowe wejście na Pi z sieci domowej\nIP: {ip_p}" + (f" ({urz})" if urz else "") + f"\nPierwszy krok: {krok}"
                  + ("\nTo Twoje urządzenie? Odpisz „to moje”." if w.get("mac") else ""))
         if w.get("mac"):
             with LOCK:
                 s2 = stan()
-                s2["ostatnie_urzadzenie"] = {"mac": w["mac"], "nazwa": urz or ip}
+                s2["ostatnie_urzadzenie"] = {"mac": w["mac"], "nazwa": urz or ip_p}
                 zapisz(s2)
     if wyslac:
         ikona, tytul, dodatek = alarm

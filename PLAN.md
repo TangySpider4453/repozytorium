@@ -462,4 +462,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-26 (intervals wdrożone)**: Wgrane na Pi razem ze średnimi w Progresie. Klucz w `/etc/serwerek-bot/intervals.env`,
   usługa bota z `EnvironmentFile=-…/intervals.env`. Treningi widoczne (np. 27.10 „Poranny bieg — lekki rozruch”);
   dzisiejszy bieg (8:14) za stary na przypomnienie, więc bez telefonu.
+- **2026-10-26 (wejścia: IPv4 i Tailscale)**: Powiadomienie o nowym wejściu z sieci domowej pokazuje adres IPv4
+  (także gdy wejście było z IPv6 fe80::) i nazwę Tailscale urządzenia (np. 172.23.0.33 = PC-Antek 100.77.150.92).
 

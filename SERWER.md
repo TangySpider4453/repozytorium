@@ -361,6 +361,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   co miesiąc). Przypomnienia co 30 s, o każdej porze (godzinę wybiera właściciel), przyciski ✅ / +15 min / +1 h / jutro.
   Claude w bocie też dodaje zadania przez API (`instrukcja.md`).
 
+## Powiadomienia o wejściach: adres do rozpoznania (od 2026-10-26)
+- „🚪 Nowe wejście” pokazuje IPv4 z sieci domowej także dla wejść z IPv6 (`fe80::…` → MAC → `ip -4 neigh`,
+  `ipv4_z_mac`), a w nawiasie nazwę Tailscale tego urządzenia i jego adres 100.x (z `tailscale status --json`:
+  CurAddr/Addrs w sieci domowej, zapamiętywane w `TS_NAZWY["lan"]`), nazwę z DNS routera, MAC i oryginalny IPv6.
+
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
   przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem
