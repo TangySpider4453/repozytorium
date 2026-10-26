@@ -467,4 +467,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-26 (ustawienia, oceny, zakupy)**: Panel „⚙️ Ustawienia” na dole stron automatyzacji (włączniki, godziny,
   częstotliwość; Mobidziennik może dzwonić rano/wieczorem ze zmianami). Oceny i średnie zwykłe (bez wag) z Mobidziennika.
   Przywrócone `/api/zakupy` (lista zakupów łazika), które moje wdrożenie przez pomyłkę usunęło. Wszystko na Pi, sprawdzone.
+- **2026-10-26 (kalendarz, semestry, symulacja ocen)**: Kalendarz `/strony/kalendarz/` (wszystko razem albo osobno:
+  nauka, lekcje, treningi, zadania, budziki). Oceny z obu okresów + cały rok, średnia ze średnich i ze wszystkich ocen,
+  symulacja „co jeśli” na stronie Mobidziennik. Sprawdzone na Pi w przeglądarce (Playwright, bez błędów).
 

@@ -79,12 +79,14 @@ def sprawdz(dodaj_kreatyne, u=None):
     u = ustawienia „treningi” z portalu (kreatyna, po_biegu, poranny_do)"""
     u = u or {}
     dzis = date.today()
-    plan = _get("/events", oldest=dzis.isoformat(), newest=(dzis + timedelta(days=7)).isoformat(), category="WORKOUT")
-    akt = _get("/activities", oldest=(dzis - timedelta(days=1)).isoformat(), newest=dzis.isoformat())
+    # zakres dla kalendarza: plan ±5 tygodni, wykonane 5 tygodni wstecz
+    plan = _get("/events", oldest=(dzis - timedelta(days=35)).isoformat(), newest=(dzis + timedelta(days=35)).isoformat(), category="WORKOUT")
+    akt = _get("/activities", oldest=(dzis - timedelta(days=35)).isoformat(), newest=dzis.isoformat())
     st = stan()
     st.update({"czas": datetime.now().isoformat(timespec="seconds"), "blad": None,
                "treningi": [_trening(e) for e in plan if isinstance(e, dict)],
-               "aktywnosci": sorted((_aktywnosc(a) for a in akt if isinstance(a, dict)), key=lambda a: a["start"])[-10:]})
+               "kalendarz_aktywnosci": sorted((_aktywnosc(a) for a in akt if isinstance(a, dict)), key=lambda a: a["start"])})
+    st["aktywnosci"] = st["kalendarz_aktywnosci"][-10:]
     zrobione = st.setdefault("kreatyna", {})            # data -> id biegu, po którym już przypomniano (raz na dzień)
     for a in st["aktywnosci"]:
         if a["typ"] not in BIEGI or not a["koniec"] or a["start"][:10] != dzis.isoformat() or zrobione.get(a["start"][:10]):

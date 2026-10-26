@@ -66,6 +66,15 @@ const json = url => fetch(url, {cache:"no-store"}).then(r => { if(!r.ok) throw n
 
 // Każda automatyzacja: karta z linkiem i krótkim stanem (stan() zwraca listę elementów albo tekst).
 const AUTOMATY = [
+  {ikona:"🗓️", nazwa:"Kalendarz", link:"/strony/kalendarz/",
+   opis:"Wszystko z terminem razem albo osobno: nauka, lekcje, treningi, zadania, budziki.",
+   stan: async () => {
+     const d = new Date(), i = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+     const z = (await json(`/api/kalendarz?od=${i(d)}&do=${i(d)}`)).zdarzenia.filter(x => x.kat !== "lekcje");
+     const kal = [["nauka", "📚 nauka"], ["treningi", "🏃 treningi"], ["lekcje", "📅 lekcje"], ["zadania", "📝 zadania"], ["budziki", "⏰ budziki"]];
+     return [el("div", {text:z.length ? `Dziś: ${z.slice(0, 3).map(x => x.tytul).join(" · ")}` : "Dziś poza lekcjami nic."}),
+       el("div", {class:"opis", style:"margin:6px 0 0"}, ...kal.map(([k, n], j) => [j ? " · " : "", el("a", {href:"/strony/kalendarz/#" + k, text:n})]).flat())];
+   }},
   {ikona:"📝", nazwa:"Zadania", link:"/strony/todo/",
    opis:"Lista do zrobienia z przypomnieniami w Telegramie i Linphone; „📞 Bardzo ważne” = Pi dzwoni.",
    stan: async () => {

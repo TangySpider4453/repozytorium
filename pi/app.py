@@ -1525,7 +1525,8 @@ def api_mobi():
     dzis = time.strftime("%Y-%m-%d")
     return jsonify({"skonfigurowany": True, "czas": st.get("czas"), "plan": [x for x in st.get("plan", []) if x["data"] >= dzis],
                     "sprawdziany": sorted(st.get("sprawdziany", {}).values(), key=lambda x: x["data"]), "zadania": st.get("zadania", []),
-                    "oceny": st.get("oceny"), "srednia": st.get("srednia")})
+                    "oceny": st.get("oceny"), "srednia": st.get("srednia"), "srednia_ocen": st.get("srednia_ocen"),
+                    "okres": st.get("okres"), "oceny_okresy": st.get("oceny_okresy"), "oceny_rok": st.get("oceny_rok")})
 
 
 @app.route("/api/mobi/odswiez", methods=["POST"])
@@ -1635,6 +1636,109 @@ def api_automaty_modul(modul):
     if not isinstance(b, dict):
         abort(400)
     return jsonify(automaty_zapisz(modul, automaty_waliduj(modul, b)))
+
+
+# ---------- Kalendarz: wszystko z terminem w jednym miejscu (strona /strony/kalendarz/, filtr kategorii) ----------
+# Kategorie: lekcje (plan z Mobidziennika), nauka (sprawdziany i kartkówki, sesje nauki z zadań, zadania domowe),
+# treningi (plan i wykonane z intervals.icu), zadania (todo), budziki. Zdarzenie: {data, od?, do?, tytul, opis, kat, rodzaj,
+# link?, zrobione?}. Tylko odczyt: zmiany robi się na stronach poszczególnych rzeczy.
+KAL_NAUKA_RE = re.compile(r"(?i)powt[oó]rz|fiszk|quiz|nauk|naucz|kartk[oó]wk|sprawdzian|zak[łl]adk")
+
+
+def kal_zdarzenia(od, do):
+    from datetime import date as _d, timedelta as _td
+    wyn = []
+
+    def dodaj(**z):
+        if od <= z["data"] <= do:
+            wyn.append(z)
+    try:
+        mobi = json.loads((BOT_DANE / "mobi" / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        mobi = {}
+    for x in mobi.get("plan", []):
+        dodaj(data=x["data"], od=x.get("od"), do=x.get("do"), kat="lekcje", rodzaj=x.get("status", "lekcja"),
+              tytul=x["przedmiot"] + (" (odwołana)" if x.get("status") == "odwołana" else " (zastępstwo)" if x.get("status") == "zastępstwo" else ""),
+              opis=" · ".join(v for v in (x.get("nauczyciel"), "sala " + x["sala"] if x.get("sala") else "", x.get("zamiast") and "zamiast: " + x["zamiast"]) if v),
+              link="/strony/mobi/")
+    def slowa(t):
+        return {w[:4] for w in re.findall(r"\w+", (t or "").lower()) if w not in ("język", "jezyk")}
+    znane = []
+    try:
+        spis = nauka_spis()
+    except (OSError, ValueError):
+        spis = []
+    przedmioty = {x.get("przedmiot", "").lower() for x in spis} | {x["przedmiot"].lower() for x in mobi.get("plan", [])}
+    for x in spis:
+        if x.get("data"):
+            znane.append((x["data"], slowa(x.get("przedmiot"))))
+            dodaj(data=x["data"], kat="nauka", rodzaj=x.get("typ", "sprawdzian"), tytul=f"{x.get('przedmiot', '')}: {x.get('typ', 'sprawdzian')}",
+                  opis=x.get("tytul", ""), link=f"/strony/nauka/{x.get('folder', x.get('id', ''))}/")
+    for x in (mobi.get("sprawdziany") or {}).values():
+        if not any(d == x["data"] and w & slowa(x.get("przedmiot")) for d, w in znane):   # ten sam test ze strony Nauki
+            dodaj(data=x["data"], od=x.get("godzina"), kat="nauka", rodzaj=x.get("rodzaj", "sprawdzian"),
+                  tytul=f"{x.get('przedmiot', '')}: {x.get('rodzaj', 'sprawdzian')}", opis=x.get("tematyka", ""), link="/strony/mobi/")
+    for x in mobi.get("zadania", []):
+        if x.get("termin"):
+            dodaj(data=x["termin"], od=x.get("godzina"), kat="nauka", rodzaj="zadanie domowe", tytul=f"🏠 {x.get('przedmiot', '')}",
+                  opis=(x.get("tresc") or "")[:300], link="/strony/mobi/", zrobione=bool(x.get("zrobione")))
+    try:
+        iv = json.loads((BOT_DANE / "intervals" / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        iv = {}
+    for t in iv.get("treningi", []):
+        dodaj(data=t["data"], kat="treningi", rodzaj="plan", tytul=t["nazwa"],
+              opis=" · ".join(v for v in (t.get("typ"), f"{t['czas_min']} min" if t.get("czas_min") else "") if v) + ("\n" + t["opis"] if t.get("opis") else ""))
+    for a in iv.get("kalendarz_aktywnosci", iv.get("aktywnosci", [])):
+        dodaj(data=a["start"][:10], od=a["start"][11:16], do=(a.get("koniec") or "")[11:16] or None, kat="treningi", rodzaj="wykonany",
+              tytul="✅ " + (a.get("nazwa") or a.get("typ") or "trening"), opis=" · ".join(v for v in (a.get("typ"), f"{a['czas_min']} min",
+              f"{a['dystans_km']} km".replace(".", ",") if a.get("dystans_km") else "") if v), zrobione=True)
+    for z in todo_lista():
+        if not z.get("termin"):
+            continue
+        pocz = z["tekst"].split(":", 1)[0].strip().lower()
+        kat = "nauka" if KAL_NAUKA_RE.search(z["tekst"]) or (":" in z["tekst"] and pocz in przedmioty) else "zadania"
+        t0 = time.strptime(z["termin"], "%Y-%m-%dT%H:%M")
+        pierwszy = _d(t0.tm_year, t0.tm_mon, t0.tm_mday)
+        krok = {"dzien": 1, "tydzien": 7}.get(z.get("powtarzaj"))
+        daty = [pierwszy]
+        if z.get("powtarzaj") and not z.get("zrobione"):
+            d, n = pierwszy, 0
+            while d.isoformat() <= do and n < 400:
+                n += 1
+                if krok:
+                    d = d + _td(days=krok)
+                else:                                   # co miesiąc: ten sam dzień (albo ostatni dzień miesiąca)
+                    m = d.month % 12 + 1
+                    r = d.year + (d.month == 12)
+                    import calendar
+                    d = _d(r, m, min(pierwszy.day, calendar.monthrange(r, m)[1]))
+                daty.append(d)
+        for d in daty:
+            dodaj(data=d.isoformat(), od=z["termin"][11:16], kat=kat, rodzaj="zadanie", tytul=("📞 " if z.get("dzwon") else "") + z["tekst"],
+                  opis={"dzien": "codziennie", "tydzien": "co tydzień", "miesiac": "co miesiąc"}.get(z.get("powtarzaj"), ""),
+                  link="/strony/todo/", zrobione=bool(z.get("zrobione")) and d == pierwszy)
+    d, kon = _d.fromisoformat(od), _d.fromisoformat(do)
+    alarmy = [a for a in alarmy_lista() if a.get("aktywny", True)]
+    while d <= kon:
+        for a in alarmy:
+            if (a.get("data") == d.isoformat()) or (not a.get("data") and d.weekday() in (a.get("dni") or [])):
+                dodaj(data=d.isoformat(), od=a["godzina"], kat="budziki", rodzaj="budzik", tytul="⏰ Budzik" + (f": {a['opis']}" if a.get("opis") else ""),
+                      opis="poranny przegląd przez telefon", link="/strony/budziki/")
+        d += _td(days=1)
+    wyn.sort(key=lambda z: (z["data"], z.get("od") or "99:99", z["kat"]))
+    return wyn
+
+
+@app.route("/api/kalendarz")
+def api_kalendarz():
+    from flask import request
+    od, do = request.args.get("od", ""), request.args.get("do", "")
+    if not (re.fullmatch(r"\d{4}-\d{2}-\d{2}", od) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", do)) or od > do:
+        abort(400)
+    kat = request.args.get("kat")
+    z = kal_zdarzenia(od, do)
+    return jsonify({"zdarzenia": [x for x in z if not kat or kat == "wszystko" or x["kat"] == kat]})
 
 
 @app.route("/api/intervals", methods=["GET", "POST"])

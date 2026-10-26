@@ -74,7 +74,15 @@ th{color:var(--muted);font-weight:700;font-size:13px}
 .jasny{background:var(--surface);color:inherit;border:1.5px solid var(--line);border-radius:10px;height:40px;padding:0 12px;font:inherit;font-weight:700;cursor:pointer}
 .oc{display:inline-block;min-width:1.9em;text-align:center;font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 5px;margin:2px 3px 2px 0}
 .oc.nl{opacity:.5;font-weight:400}
-.srednia{font-size:17px;margin:0 0 8px} .dobra{color:var(--ok)} .slaba{color:var(--bad)}
+.srednia{font-size:17px;margin:0 0 4px}
+.oc{font:inherit;font-size:15px;color:inherit;background:transparent;cursor:pointer;height:auto;min-width:2.1em;line-height:1.35;padding:2px 6px;font-weight:700}
+.oc.zm{border-color:var(--sel);color:var(--sel)} .oc.dod{border-style:dashed;border-color:var(--sel);color:var(--sel)}
+.oc.plus{color:var(--muted);border-style:dashed}
+.sym{color:var(--sel)!important} .nw{white-space:nowrap}
+.edyt{display:inline-flex;gap:4px;align-items:center;margin:2px 4px 2px 0}
+.edyt select{font:inherit;font-size:16px;padding:2px 4px;border-radius:6px;border:1px solid var(--sel);background:var(--surface);color:var(--ink)}
+.maly{height:auto;font:inherit;font-size:13px;font-weight:400;padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.symbar{font-size:14px;background:var(--soft);border-radius:8px;padding:6px 10px;margin:6px 0 8px} .dobra{color:var(--ok)} .slaba{color:var(--bad)}
 </style>
 </head>
 <body>
@@ -142,18 +150,70 @@ function rysuj(){
   $("zd").replaceChildren(zd.length ? el("table", {}, el("tr", {}, ...["Termin", "Przedmiot", "Treść"].map(t => el("th", {text:t}))),
     ...zd.map(x => el("tr", {}, el("td", {text:x.termin ? dataPl(x.termin) : "?"}), el("td", {}, el("b", {text:x.przedmiot}), el("div", {class:"muted", text:x.nauczyciel})),
       el("td", {text:x.tresc + (x.zrobione ? " ✅" : "")})))) : el("p", {class:"muted", text:"Brak zadań."}));
-  // oceny: średnia zwykła (arytmetyczna), bez wag; „+”, „np” i oceny „nieliczone do średniej” są pokazane, ale nie liczone
-  const pl = x => x == null ? "–" : x.toFixed(2).replace(".", ",");
-  const kolor = x => x == null ? "" : x >= 4.5 ? "dobra" : x >= 3 ? "" : "slaba";
-  const oc = (D.oceny || []).filter(p => p.oceny.length);
-  $("oc").replaceChildren(!D.oceny ? el("p", {class:"muted", text:"Oceny pojawią się po najbliższym odczycie."}) : el("div", {},
-    el("p", {class:"srednia"}, "Średnia ogólna: ", el("b", {class:kolor(D.srednia), text:pl(D.srednia)}),
-      el("span", {class:"muted", text:" (średnia ze średnich przedmiotów; każda średnia zwykła, bez wag)"})),
-    oc.length ? el("table", {}, el("tr", {}, ...["Przedmiot", "Oceny", "Średnia"].map(t => el("th", {text:t}))),
-      ...oc.map(p => el("tr", {}, el("td", {}, el("b", {text:p.przedmiot})),
-        el("td", {}, ...p.oceny.map(o => el("span", {class:"oc" + (o.liczona ? "" : " nl"), title:`${o.kategoria}${o.opis ? ": " + o.opis : ""} · ${o.data} · ${o.nauczyciel}${o.liczona ? "" : " · nie liczona do średniej"}`, text:o.ocena}))),
-        el("td", {}, el("b", {class:kolor(p.srednia), text:pl(p.srednia)}))))) : el("p", {class:"muted", text:"Brak ocen w tym okresie."}),
-    el("p", {class:"muted", style:"font-size:13px;margin-top:6px", text:"Szare oceny (np. „+”, „np”) nie są liczone do średniej. Przytrzymaj albo najedź na ocenę, żeby zobaczyć opis."})));
+  rysujOceny();
+}
+// ---------- oceny: okresy (I, II, cały rok) i symulacja „co jeśli” (tylko w tej karcie, nic nie idzie do dziennika) ----------
+// Średnia zwykła (arytmetyczna) bez wag: oceny „liczone do średniej” z wartością > 0 („+”, „np” nie są liczone).
+const WART = {"1":1, "1+":1.5, "2-":1.75, "2":2, "2+":2.5, "3-":2.75, "3":3, "3+":3.5, "4-":3.75, "4":4, "4+":4.5, "5-":4.75, "5":5, "5+":5.5, "6-":5.75, "6":6};
+let OKR = null, SYM = {}, EDYT = null;          // SYM[okres][przedmiot] = {zmiany: {id: "4+"|null(usunięta)}, dodane: ["5", …]}
+const plOc = x => x == null ? "–" : x.toFixed(2).replace(".", ",");
+const kolorOc = x => x == null ? "" : x >= 4.5 ? "dobra" : x >= 3 ? "" : "slaba";
+const sr = l => l.length ? Math.round(l.reduce((a, b) => a + b, 0) / l.length * 100) / 100 : null;
+function listaOkresu(){ return OKR === "rok" ? (D.oceny_rok || D.oceny || []) : ((D.oceny_okresy || {})[OKR] || (OKR === (D.okres || "1") ? D.oceny : []) || []); }
+function wartosci(p, sym){
+  const s = sym && (SYM[OKR] || {})[p.przedmiot] || {zmiany:{}, dodane:[]};
+  const w = [];
+  for(const o of p.oceny){
+    if(o.id in s.zmiany){ if(s.zmiany[o.id]) w.push(WART[s.zmiany[o.id]]); }
+    else if(o.liczona) w.push(o.wartosc);
+  }
+  return w.concat(s.dodane.map(x => WART[x]));
+}
+function wybor(akt, ok, usun){
+  const sel = el("select", {"aria-label":"Ocena na próbę"}, el("option", {value:"", text:"—"}), ...Object.keys(WART).map(k => el("option", {value:k, text:k, ...(k === akt ? {selected:""} : {})})));
+  sel.onchange = () => { if(sel.value) ok(sel.value); };
+  return el("span", {class:"edyt"}, sel, usun ? el("button", {type:"button", class:"maly", text:"usuń", onclick:usun}) : null,
+    el("button", {type:"button", class:"maly", text:"✕", "aria-label":"Zamknij", onclick:() => { EDYT = null; rysujOceny(); }}));
+}
+function rysujOceny(){
+  if(!D.oceny){ $("oc").replaceChildren(el("p", {class:"muted", text:"Oceny pojawią się po najbliższym odczycie."})); return; }
+  OKR = OKR || D.okres || "1";
+  const lista = listaOkresu().filter(p => p.oceny.length || ((SYM[OKR] || {})[p.przedmiot] || {dodane:[]}).dodane.length);
+  const wszystkie = listaOkresu();
+  const jestSym = Object.values(SYM[OKR] || {}).some(s => s.dodane.length || Object.keys(s.zmiany).length);
+  const srPrzed = sym => sr(wszystkie.map(p => sr(wartosci(p, sym))).filter(x => x != null));
+  const srOcen = sym => sr(wszystkie.flatMap(p => wartosci(p, sym)));
+  const liczba = (a, b) => [el("b", {class:kolorOc(a), text:plOc(a)}), jestSym && b !== a ? [" → ", el("b", {class:"sym " + kolorOc(b), text:plOc(b)})] : null].flat();
+  const tabsOk = el("div", {class:"tabs"}, ...[["1", "I okres"], ["2", "II okres"], ["rok", "Cały rok"]].map(([k, n]) =>
+    el("button", {type:"button", class:"jasny" + (k === OKR ? " on" : ""), text:n + (k === (D.okres || "1") ? " (teraz)" : ""), onclick:() => { OKR = k; EDYT = null; rysujOceny(); }})));
+  const wiersze = lista.map(p => {
+    const s = ((SYM[OKR] = SYM[OKR] || {})[p.przedmiot] = SYM[OKR][p.przedmiot] || {zmiany:{}, dodane:[]});
+    const a = sr(wartosci(p, false)), b = sr(wartosci(p, true));
+    const chipy = p.oceny.map(o => {
+      const k = `${p.przedmiot}|${o.id}`, zm = o.id in s.zmiany;
+      if(EDYT === k) return wybor(zm ? s.zmiany[o.id] : o.ocena, v => { s.zmiany[o.id] = v; EDYT = null; rysujOceny(); }, () => { s.zmiany[o.id] = null; EDYT = null; rysujOceny(); });
+      const tekst = zm ? (s.zmiany[o.id] ? `${o.ocena}→${s.zmiany[o.id]}` : `${o.ocena}✕`) : o.ocena;
+      return el("button", {type:"button", class:"oc" + (o.liczona || zm ? "" : " nl") + (zm ? " zm" : ""), text:tekst,
+        title:`${o.kategoria}${o.opis ? ": " + o.opis : ""} · ${o.data} · ${o.nauczyciel}${o.liczona ? "" : " · nie liczona do średniej"}. Dotknij, żeby zmienić na próbę.`,
+        onclick:() => { EDYT = k; rysujOceny(); }});
+    });
+    const dod = s.dodane.map((v, i) => el("button", {type:"button", class:"oc dod", text:v, title:"Ocena dodana na próbę: dotknij, żeby usunąć",
+      onclick:() => { s.dodane.splice(i, 1); rysujOceny(); }}));
+    const kNowa = `${p.przedmiot}|+`;
+    const plus = OKR === "rok" ? null : EDYT === kNowa ? wybor(null, v => { s.dodane.push(v); EDYT = null; rysujOceny(); }, null)
+      : el("button", {type:"button", class:"oc plus", text:"＋ ocena", title:"Dodaj ocenę na próbę", "aria-label":`Dodaj ocenę na próbę: ${p.przedmiot}`, onclick:() => { EDYT = kNowa; rysujOceny(); }});
+    return el("tr", {}, el("td", {}, el("b", {text:p.przedmiot})), el("td", {}, ...chipy, ...dod, plus), el("td", {class:"nw"}, ...liczba(a, b)));
+  });
+  $("oc").replaceChildren(tabsOk,
+    el("p", {class:"srednia"}, "Średnia ze średnich przedmiotów: ", ...liczba(srPrzed(false), srPrzed(true))),
+    el("p", {class:"srednia"}, "Średnia ze wszystkich ocen: ", ...liczba(srOcen(false), srOcen(true)),
+      el("span", {class:"muted", text:" (średnie zwykłe, bez wag)"})),
+    jestSym ? el("p", {class:"symbar"}, "🧪 Symulacja: niebieskie liczby to średnie z Twoimi zmianami (nic nie trafia do dziennika). ",
+      el("button", {type:"button", class:"maly", text:"Wyczyść symulację", onclick:() => { SYM[OKR] = {}; EDYT = null; rysujOceny(); }})) : null,
+    lista.length ? el("table", {}, el("tr", {}, ...["Przedmiot", "Oceny", "Średnia"].map(t => el("th", {text:t}))), ...wiersze)
+      : el("p", {class:"muted", text:"Brak ocen w tym okresie."}),
+    el("p", {class:"muted", style:"font-size:13px;margin-top:6px", text:OKR === "rok" ? "Cały rok: oceny z obu okresów razem. Symulacja działa w zakładkach okresów."
+      : "Dotknij ocenę, żeby na próbę ją zmienić albo usunąć; „＋ ocena” dodaje ocenę na próbę. Szare oceny (np. „+”, „np”) nie są liczone do średniej."}));
 }
 $("odswiez").onclick = async () => {
   $("odswiez").disabled = true; $("czas").textContent = "Sprawdzam w Mobidzienniku… (do minuty)";

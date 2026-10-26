@@ -1747,9 +1747,10 @@ def komenda_oceny(tekst, krotko=False):
                                                        + ("" if o["liczona"] else " · nie liczona") for o in p["oceny"])))
     z_ocenami = [p for p in st["oceny"] if p["oceny"]]
     if krotko or m.group(1).startswith(("śr", "sr")):
-        return (f"🎓 Średnia ogólna: {pl(st.get('srednia'))}. " + "; ".join(f"{p['przedmiot']} {pl(p['srednia'])}" for p in z_ocenami if p["srednia"] is not None)
+        return (f"🎓 Średnia ze średnich przedmiotów: {pl(st.get('srednia'))}, ze wszystkich ocen: {pl(st.get('srednia_ocen'))}. " + "; ".join(f"{p['przedmiot']} {pl(p['srednia'])}" for p in z_ocenami if p["srednia"] is not None)
                 + ". (Średnie zwykłe, bez wag.)")
-    return f"🎓 Średnia ogólna: {pl(st.get('srednia'))} (zwykła, bez wag)\n" + "\n".join(
+    return (f"🎓 Średnia ze średnich przedmiotów: {pl(st.get('srednia'))}\nŚrednia ze wszystkich ocen: {pl(st.get('srednia_ocen'))}"
+            " (zwykłe, bez wag)\n") + "\n".join(
         f"• {p['przedmiot']}: {' '.join(o['ocena'] for o in p['oceny'])} → {pl(p['srednia'])}" for p in z_ocenami)
 
 

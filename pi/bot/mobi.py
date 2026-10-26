@@ -169,6 +169,12 @@ def srednia_ogolna(lista):
     return round(sum(sr) / len(sr), 2) if sr else None
 
 
+def srednia_wszystkich(lista):
+    """średnia ze wszystkich ocen liczonych do średniej, ze wszystkich przedmiotów razem"""
+    w = [o["wartosc"] for p in lista for o in p["oceny"] if o["liczona"]]
+    return round(sum(w) / len(w), 2) if w else None
+
+
 def wczytaj(nazwa, domyslne):
     try:
         return json.loads((KAT / f"{nazwa}.json").read_text(encoding="utf-8"))
@@ -216,7 +222,7 @@ def sprawdz(powiadom, nowy_sprawdzian):
     if date.today().weekday() >= 5:                         # w weekend „ten tydzień” = następny
         pon += timedelta(days=7)
     tyg = [f"planlekcji?typ=podstawowy&tydzien={(pon + timedelta(days=7 * n)).isoformat()}" for n in (0, 1)]
-    strony = pobierz(tyg + ["zastepstwa", "sprawdziany", "zadaniadomowe", "oceny"])
+    strony = pobierz(tyg + ["zastepstwa", "sprawdziany", "zadaniadomowe", "oceny/?semestr=1", "oceny/?semestr=2"])
     p = plan(strony[tyg[0]], pon) + plan(strony[tyg[1]], pon + timedelta(days=7))
     z = zastepstwa(strony["zastepstwa"])
     for x in p:                                             # przy zastępstwie: jaka lekcja była w planie
@@ -261,10 +267,13 @@ def sprawdz(powiadom, nowy_sprawdzian):
                                   f" {x['godzina']}.")
             elif k not in spr_stare and not pierwszy:
                 nowy_sprawdzian(x)
-        oc = oceny(strony["oceny"])
-        stare_oc = {o["id"] for p_ in stary.get("oceny", []) for o in p_["oceny"]}
+        # oceny z obu okresów (semestrów); bieżący = II, gdy ma już jakieś oceny, inaczej I
+        okresy = {o: oceny(strony[f"oceny/?semestr={o}"]) for o in ("1", "2")}
+        okres = "2" if any(p_["oceny"] for p_ in okresy["2"]) else "1"
+        oc = okresy[okres]
+        stare_oc = {o["id"] for lista in (stary.get("oceny_okresy") or {"1": stary.get("oceny") or []}).values() for p_ in lista for o in p_["oceny"]}
         if stary.get("oceny") is not None and not pierwszy:      # pierwszy odczyt ocen: bez powiadomień o wszystkich
-            for p_ in oc:
+            for p_ in [x for lista in okresy.values() for x in lista]:
                 for o in p_["oceny"]:
                     if o["id"] not in stare_oc:
                         sr = f", średnia {p_['srednia']:.2f}".replace(".", ",") if p_["srednia"] is not None else ""
@@ -274,8 +283,14 @@ def sprawdz(powiadom, nowy_sprawdzian):
         nowe_zd = [x for x in zd if x["id"] not in stare_zd]
         if nowe_zd and not pierwszy:
             wiadomosci.append("📝 Nowe zadanie domowe:\n" + "\n".join(f"{x['przedmiot']} na {x['termin']}: {x['tresc']}" for x in nowe_zd))
-        zapisz("stan", {"plan": p, "zastepstwa": z, "sprawdziany": spr_nowe, "zadania": zd, "oceny": oc,
-                        "srednia": srednia_ogolna(oc), "czas": time.strftime("%Y-%m-%dT%H:%M:%S")})
+        rok = [{"przedmiot": p_["przedmiot"], "oceny": p_["oceny"] + next((q["oceny"] for q in okresy["2"] if q["przedmiot"] == p_["przedmiot"]), [])}
+               for p_ in okresy["1"]]
+        for p_ in rok:
+            licz = [o["wartosc"] for o in p_["oceny"] if o["liczona"]]
+            p_["srednia"] = round(sum(licz) / len(licz), 2) if licz else None
+        zapisz("stan", {"plan": p, "zastepstwa": z, "sprawdziany": spr_nowe, "zadania": zd, "oceny": oc, "okres": okres,
+                        "oceny_okresy": okresy, "oceny_rok": rok,
+                        "srednia": srednia_ogolna(oc), "srednia_ocen": srednia_wszystkich(oc), "czas": time.strftime("%Y-%m-%dT%H:%M:%S")})
         OSTATNIO["t"] = time.time()
     for w in wiadomosci:
         powiadom(w)

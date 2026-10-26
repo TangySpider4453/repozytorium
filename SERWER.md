@@ -385,6 +385,19 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - `/api/mobi` (`oceny`, `srednia`), karta „🎓 Oceny i średnie” na `/strony/mobi/`, komendy „oceny”, „średnia”, „oceny z
   fizyki” (`komenda_oceny`, `znajdz_przedmiot` z aliasami matma/wf/polak…), w rozmowie bez AI.
 
+## Kalendarz (od 2026-10-26)
+- `/strony/kalendarz/` (repo `kalendarz/`): miesiąc (na telefonie kropki kategorii) + lista wybranego dnia i 6 następnych.
+  Osobne kalendarze przez `#nauka`, `#lekcje`, `#treningi`, `#zadania`, `#budziki`, razem `#wszystko`; karta 🗓️ na
+  Automatycznych z linkami. API `GET /api/kalendarz?od&do&kat` (`kal_zdarzenia` w `app.py`): plan lekcji z Mobidziennika,
+  sprawdziany (Nauka + Mobidziennik bez duplikatów), zadania domowe, sesje nauki (zadania z przedmiotem albo „powtórz/
+  fiszki/quiz…”), treningi plan i wykonane (intervals czyta teraz ±35 dni, `kalendarz_aktywnosci`), zadania (z
+  powtarzaniem), budziki. Tylko podgląd.
+
+## Oceny: okresy i symulacja (od 2026-10-26)
+- `mobi.py` czyta `oceny/?semestr=1` i `=2`: `oceny_okresy`, `okres` (II, gdy ma oceny), `oceny_rok` (oba razem),
+  `srednia` (ze średnich przedmiotów), `srednia_ocen` (ze wszystkich ocen). Strona Mobidziennik: zakładki I / II / cały rok,
+  symulacja „co jeśli” (dotknięcie oceny = zmiana/usunięcie na próbę, „＋ ocena” = dodanie), tylko w przeglądarce.
+
 ## Lista zakupów łazika (inna sesja, przywrócona 2026-10-26)
 - `/strony/lazik/zakupy.html` (repo `lazik/`), dane `~/portal/data/zakupy.json`, API `/api/zakupy`, `/api/zakupy/<id>`,
   `/api/zakupy/dodaj` w `app.py`; `site.json` „podstrony” → przyciski na stronie startowej. Inna sesja wgrała 26.10 rano
