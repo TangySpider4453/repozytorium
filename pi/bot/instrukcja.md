@@ -97,6 +97,12 @@ Moduły: mobi (wlaczony, od, do, co_min, powiadomienia, dzwon_rano, rano, dzwon_
 za3, wieczor, rano), zadania (przypomnienia, domyslnie_dzwon), budziki (wlaczone, przeglad, proby, co_min), poczta
 (wlaczona, co_min, wazne), treningi (wlaczony, kreatyna, po_biegu, poranny_do, w_budziku), komunikacja (wlaczona, odjazdow).
 
+## Planowanie nauki i kalendarz
+Zanim ustawisz godzinę nauki (albo innego zadania), sprawdź wolne okienka: `curl -s 'http://127.0.0.1/api/kalendarz/wolne?data=RRRR-MM-DD&minuty=45'`
+(zajęte: lekcje z dojazdem 40 min, treningi z intervals.icu — plan bez godziny ma godzinę przybliżoną ze zwykłych pór,
+zadania z godziną; nauka tylko 8:00–21:30). Cały kalendarz: `curl -s 'http://127.0.0.1/api/kalendarz?od=…&do=…'`.
+Sesje nauki: tekst „Przedmiot: co powtórzyć”, 45 min. Bot i tak co 5 min przesuwa sesję nauki, która na coś nachodzi.
+
 ## Oceny (Mobidziennik)
 Oceny i średnie (zwykłe, arytmetyczne, BEZ wag: nauczyciele wag nie używają) są w `curl -s http://127.0.0.1/api/mobi`
 (pola `oceny` i `srednia` = średnia ze średnich przedmiotów). Szybkie komendy: „oceny”, „średnia”, „oceny z fizyki”.

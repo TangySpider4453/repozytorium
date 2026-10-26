@@ -1426,12 +1426,79 @@ def przypomnienia():
         portal(f"/api/todo/{z['id']}", {"wyslano": True})
 
 
+NAUKA_PILNUJ = {"t": 0.0}
+NAUKA_DL = 45           # min: zakładana długość sesji nauki
+
+
+def pilnuj_nauki():
+    """sesje nauki (zadania z kategorii „nauka” w kalendarzu) nie mogą nachodzić na lekcje, treningi i inne zadania:
+    kolizja -> przesunięcie na najbliższe wolne okienko tego dnia (portal: /api/kalendarz/wolne) i wiadomość.
+    Termin zmieniony ręcznie po przesunięciu przez bota zostaje (stan["nauka_przes"][id] != termin)."""
+    if time.time() - NAUKA_PILNUJ["t"] < 300:
+        return
+    NAUKA_PILNUJ["t"] = time.time()
+    teraz = datetime.now()
+    od, do = teraz.date().isoformat(), (teraz.date() + timedelta(days=14)).isoformat()
+    sesje = [z for z in portal(f"/api/kalendarz?od={od}&do={do}&kat=nauka")["zdarzenia"]
+             if z.get("rodzaj") == "zadanie" and z.get("id") and z.get("od") and not z.get("zrobione")]
+    with LOCK:
+        przes = dict(stan().get("nauka_przes", {}))
+    zmienione = False
+    for z in sesje:
+        termin = f"{z['data']}T{z['od']}"
+        if termin <= (teraz + timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M"):
+            continue
+        if z["id"] in przes and przes[z["id"]] != termin:       # Antek zmienił godzinę sam: nie ruszamy
+            continue
+        w = portal(f"/api/kalendarz/wolne?data={z['data']}&minuty={NAUKA_DL}&bez={z['id']}")
+        m = lambda t: int(t[:2]) * 60 + int(t[3:5])
+        start = m(z["od"])
+        kol = [x for x in w["zajete"] if m(x["od"]) < start + NAUKA_DL and start < m(x["do"])]
+        if not kol:
+            continue
+        # najbliższy początek w wolnym okienku tego dnia (wcześniej albo później), a gdy go nie ma: wcześniejsze dni do dziś
+        dzien, kandydaci = date.fromisoformat(z["data"]), []
+        while not kandydaci and dzien >= teraz.date():
+            ww = w if dzien.isoformat() == z["data"] else portal(f"/api/kalendarz/wolne?data={dzien.isoformat()}&minuty={NAUKA_DL}&bez={z['id']}")
+            min_start = teraz.hour * 60 + teraz.minute + 20 if dzien == teraz.date() else 0
+            for o in ww["wolne"]:
+                a, b = max(m(o["od"]), min_start), m(o["do"]) - NAUKA_DL
+                if a <= b:
+                    k = min(max(start, a), b)
+                    kandydaci.append(k if k % 5 == 0 or (k + 4) // 5 * 5 > b else (k + 4) // 5 * 5)    # pełne 5 minut
+            if not kandydaci:
+                dzien -= timedelta(days=1)
+        if not kandydaci:
+            powiadom(f"📚 „{z['tytul']}” ({z['data'][8:]}.{z['data'][5:7]} {z['od']}) nachodzi na: {kol[0]['co']}, a tego dnia nie ma "
+                     "wolnego okienka. Przestaw ją sam albo napisz, kiedy ma być.")
+            przes[z["id"]] = termin
+            zmienione = True
+            continue
+        nowy = min(kandydaci, key=lambda k: abs(k - start))
+        nowy_t = f"{dzien.isoformat()}T{nowy // 60:02d}:{nowy % 60:02d}"
+        portal(f"/api/todo/{z['id']}", {"termin": nowy_t})
+        przes[z["id"]] = nowy_t
+        zmienione = True
+        powiadom(f"📚 Przesunąłem naukę „{z['tytul']}” z {z['data'][8:]}.{z['data'][5:7]} {z['od']} na {nowy_t[8:10]}.{nowy_t[5:7]} {nowy_t[11:]}, "
+                 f"bo o tej porze: {kol[0]['co']}.")
+        print(f"nauka: {z['id']} {termin} -> {nowy_t} (kolizja: {kol[0]['co']})", flush=True)
+    if zmienione:
+        with LOCK:
+            s2 = stan()
+            s2["nauka_przes"] = {k: v for k, v in przes.items() if v >= od}
+            zapisz(s2)
+
+
 def petla_przypomnien():
     while True:
         try:
             przypomnienia()
         except Exception as ex:
             print(f"przypomnienia: {type(ex).__name__}: {ex}", flush=True)
+        try:
+            pilnuj_nauki()
+        except Exception as ex:
+            print(f"nauka (kalendarz): {type(ex).__name__}: {ex}", flush=True)
         time.sleep(30)
 
 
@@ -1566,8 +1633,10 @@ def mobi_nowy_sprawdzian(x):
             f"grupa {x['grupa']}, nauczyciel {x['nauczyciel']}. Tematyka (wpis nauczyciela): „{x['tematyka']}”.\n"
             "Oceń, czy ten opis wystarcza, żeby przygotować materiały (konkretny dział, temat, zakres albo strony). "
             "JEŚLI TAK: zrób stronę w Nauce dokładnie według instrukcji (wpis w sprawdziany.json, typ i data jak wyżej, "
-            "kontrola sprawdz_strone.js), potem dodaj przez API todo 2–3 sesje nauki przed terminem (np. o 18:00 w dni "
-            "przed sprawdzianem, ostatnia dzień przed; każda z krótkim opisem, co powtórzyć) i napisz Antkowi KRÓTKO: "
+            "kontrola sprawdz_strone.js), potem dodaj przez API todo 2–3 sesje nauki (po 45 min) przed terminem, ostatnia dzień przed; "
+            "GODZINĘ każdej wybierz z wolnych okienek kalendarza: curl -s 'http://127.0.0.1/api/kalendarz/wolne?data=RRRR-MM-DD&minuty=45' "
+            "(omija lekcje z dojazdem, treningi i inne zadania); tekst zadania zacznij od nazwy przedmiotu i dwukropka, potem "
+            "krótko, co powtórzyć. Potem napisz Antkowi KRÓTKO: "
             "„📚 Dodano: …” (temat, link do strony) i listę dodanych sesji (dzień, godzina, co). "
             "JEŚLI NIE: niczego nie twórz, napisz krótko, czego brakuje i o co prosisz (np. zdjęcia stron z podręcznika "
             "albo notatki, do wysłania w Telegramie). Nie pisz do nikogo poza Antkiem.]", limit=1800)

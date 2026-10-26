@@ -470,4 +470,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-26 (kalendarz, semestry, symulacja ocen)**: Kalendarz `/strony/kalendarz/` (wszystko razem albo osobno:
   nauka, lekcje, treningi, zadania, budziki). Oceny z obu okresów + cały rok, średnia ze średnich i ze wszystkich ocen,
   symulacja „co jeśli” na stronie Mobidziennik. Sprawdzone na Pi w przeglądarce (Playwright, bez błędów).
+- **2026-10-26 (nauka współpracuje z kalendarzem)**: Sesje nauki nie nachodzą na lekcje (z dojazdem), treningi i inne
+  zadania: wolne okienka z `/api/kalendarz/wolne`, bot przesuwa kolidujące sesje i pisze o tym; godziny planowanych
+  treningów szacowane ze zwykłych pór i omijają szkołę. Sprawdzone na Pi (27.10: sesja 18:00 w czasie lekcji do 19:20,
+  dzień pełny → wiadomość z prośbą o decyzję).
 

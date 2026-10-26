@@ -393,6 +393,14 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   fiszki/quiz…”), treningi plan i wykonane (intervals czyta teraz ±35 dni, `kalendarz_aktywnosci`), zadania (z
   powtarzaniem), budziki. Tylko podgląd.
 
+- **Planowanie nauki z kalendarzem**: `GET /api/kalendarz/wolne?data&minuty[&bez=id]` (`kal_zajete`, `kal_wolne`): zajęte =
+  lekcje z dojazdem 40 min (`KAL_DOJAZD`), treningi (plan bez godziny = zwykła pora tego typu z historii, mediana; gdy
+  wypada w szkole albo na innym treningu: najbliższa wolna pora przed/po; `kal_godzina_treningu`), zadania z godziną;
+  nauka 8:00–21:30 (`KAL_DZIEN`), odstęp 10 min. Zaplanowany trening już wykonany (ten sam typ i dzień) nie jest
+  pokazywany. Bot `pilnuj_nauki` (co 5 min): sesja nauki nachodząca na coś → najbliższe wolne okienko tego dnia albo
+  wcześniejszego (do dziś), wiadomość „📚 Przesunąłem…”; bez okienka: wiadomość z prośbą. Ręczna zmiana godziny po
+  przesunięciu nie jest ruszana (`stan["nauka_przes"]`). Claude układa nowe sesje z `/api/kalendarz/wolne`.
+
 ## Oceny: okresy i symulacja (od 2026-10-26)
 - `mobi.py` czyta `oceny/?semestr=1` i `=2`: `oceny_okresy`, `okres` (II, gdy ma oceny), `oceny_rok` (oba razem),
   `srednia` (ze średnich przedmiotów), `srednia_ocen` (ze wszystkich ocen). Strona Mobidziennik: zakładki I / II / cały rok,

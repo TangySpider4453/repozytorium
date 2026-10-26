@@ -1686,10 +1686,32 @@ def kal_zdarzenia(od, do):
         iv = json.loads((BOT_DANE / "intervals" / "stan.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         iv = {}
+    akt = iv.get("kalendarz_aktywnosci", iv.get("aktywnosci", []))
+    zrobione_typy = {(a["start"][:10], a.get("typ")) for a in akt}
+    mm = lambda t: int(t[:2]) * 60 + int(t[3:5])
+    szkola = {}                                          # data -> (od, do) lekcji z dojazdem
+    for x in mobi.get("plan", []):
+        if x.get("status") != "odwołana" and x.get("od") and x.get("do"):
+            a, b = szkola.get(x["data"], (24 * 60, 0))
+            szkola[x["data"]] = (min(a, mm(x["od"]) - KAL_DOJAZD), max(b, mm(x["do"]) + KAL_DOJAZD))
+    zajete_tr = {}                                       # data -> [(od, do)] już ustawionych treningów tego dnia
     for t in iv.get("treningi", []):
-        dodaj(data=t["data"], kat="treningi", rodzaj="plan", tytul=t["nazwa"],
-              opis=" · ".join(v for v in (t.get("typ"), f"{t['czas_min']} min" if t.get("czas_min") else "") if v) + ("\n" + t["opis"] if t.get("opis") else ""))
-    for a in iv.get("kalendarz_aktywnosci", iv.get("aktywnosci", [])):
+        if (t["data"], t.get("typ")) in zrobione_typy:      # już wykonany (jest w aktywnościach): nie pokazuj planu drugi raz
+            continue
+        g = kal_godzina_treningu(t.get("typ"), akt)          # plan nie ma godziny: zwykła pora z Twoich treningów tego typu
+        dl = t.get("czas_min") or 60
+        # pora bez kolizji ze szkołą i z innym treningiem tego dnia: zwykła, a jeśli wypada w szkole albo na innym
+        # treningu, najbliższa z: przed szkołą (od 5:30), po szkole, po innym treningu
+        zaj = sorted(zajete_tr.get(t["data"], []) + ([szkola[t["data"]]] if t["data"] in szkola else []))
+        wolna = lambda x: x >= 5 * 60 + 30 and x + dl <= 23 * 60 and all(not (x < b - 0 and a < x + dl) for a, b in zaj)
+        kand = [g] + [b + KAL_PRZERWA for _, b in zaj] + [(a - dl - KAL_PRZERWA) // 15 * 15 for a, _ in zaj]
+        g = min((x for x in kand if wolna(x)), key=lambda x: abs(x - g), default=g)
+        zajete_tr.setdefault(t["data"], []).append((g, g + dl))
+        dodaj(data=t["data"], od=f"{g // 60:02d}:{g % 60:02d}", do=f"{min(g + dl, 1439) // 60:02d}:{min(g + dl, 1439) % 60:02d}",
+              kat="treningi", rodzaj="plan", tytul=t["nazwa"], przyblizona=True,
+              opis="~ godzina przybliżona (zwykle o tej porze) · " + " · ".join(v for v in (t.get("typ"), f"{dl} min") if v)
+              + ("\n" + t["opis"] if t.get("opis") else ""))
+    for a in akt:
         dodaj(data=a["start"][:10], od=a["start"][11:16], do=(a.get("koniec") or "")[11:16] or None, kat="treningi", rodzaj="wykonany",
               tytul="✅ " + (a.get("nazwa") or a.get("typ") or "trening"), opis=" · ".join(v for v in (a.get("typ"), f"{a['czas_min']} min",
               f"{a['dystans_km']} km".replace(".", ",") if a.get("dystans_km") else "") if v), zrobione=True)
@@ -1715,7 +1737,7 @@ def kal_zdarzenia(od, do):
                     d = _d(r, m, min(pierwszy.day, calendar.monthrange(r, m)[1]))
                 daty.append(d)
         for d in daty:
-            dodaj(data=d.isoformat(), od=z["termin"][11:16], kat=kat, rodzaj="zadanie", tytul=("📞 " if z.get("dzwon") else "") + z["tekst"],
+            dodaj(data=d.isoformat(), od=z["termin"][11:16], kat=kat, rodzaj="zadanie", id=z["id"], tytul=("📞 " if z.get("dzwon") else "") + z["tekst"],
                   opis={"dzien": "codziennie", "tydzien": "co tydzień", "miesiac": "co miesiąc"}.get(z.get("powtarzaj"), ""),
                   link="/strony/todo/", zrobione=bool(z.get("zrobione")) and d == pierwszy)
     d, kon = _d.fromisoformat(od), _d.fromisoformat(do)
@@ -1728,6 +1750,59 @@ def kal_zdarzenia(od, do):
         d += _td(days=1)
     wyn.sort(key=lambda z: (z["data"], z.get("od") or "99:99", z["kat"]))
     return wyn
+
+
+def kal_godzina_treningu(typ, akt):
+    """zwykła godzina rozpoczęcia treningu danego typu (mediana z ostatnich aktywności), w minutach od północy"""
+    g = sorted(int(a["start"][11:13]) * 60 + int(a["start"][14:16]) for a in akt if a.get("typ") == typ and len(a.get("start", "")) >= 16)
+    if g:
+        return g[len(g) // 2] // 15 * 15
+    return 7 * 60 + 30 if typ in ("Run", "TrailRun", "VirtualRun", "Treadmill") else 17 * 60
+
+
+KAL_DZIEN = (8 * 60, 21 * 60 + 30)      # nauka tylko między 8:00 a 21:30
+KAL_DOJAZD = 40                         # min przed pierwszą i po ostatniej lekcji (droga do szkoły i ze szkoły)
+KAL_PRZERWA = 10                        # min odstępu od innych rzeczy
+
+
+def kal_zajete(data, bez_id=None):
+    """zajęte przedziały dnia [(od_min, do_min, opis)]: lekcje (+ dojazd), treningi (wykonane i planowane), zadania z godziną"""
+    m = lambda t: int(t[:2]) * 60 + int(t[3:5])
+    zaj = []
+    lekcje = [z for z in kal_zdarzenia(data, data) if z["kat"] == "lekcje" and z.get("od") and z.get("do") and z.get("rodzaj") != "odwołana"]
+    if lekcje:
+        zaj.append((min(m(z["od"]) for z in lekcje) - KAL_DOJAZD, max(m(z["do"]) for z in lekcje) + KAL_DOJAZD, "szkoła (z dojazdem)"))
+    for z in kal_zdarzenia(data, data):
+        if z["kat"] == "lekcje" or not z.get("od") or (bez_id and z.get("id") == bez_id) or (z.get("zrobione") and z["kat"] != "treningi"):
+            continue
+        od = m(z["od"])
+        do = m(z["do"]) if z.get("do") else od + (45 if z["kat"] == "nauka" else 5 if z["kat"] == "budziki" else 20)
+        zaj.append((od, do, z["tytul"]))
+    return sorted(zaj)
+
+
+def kal_wolne(data, minuty, bez_id=None):
+    """wolne okienka dnia (w KAL_DZIEN, z odstępem KAL_PRZERWA od zajętych) o długości >= minuty -> [(od_min, do_min)]"""
+    wolne, kursor = [], KAL_DZIEN[0]
+    for od, do, _ in kal_zajete(data, bez_id) + [(KAL_DZIEN[1] + KAL_PRZERWA, 24 * 60, "")]:
+        koniec = min(od - KAL_PRZERWA, KAL_DZIEN[1])
+        if koniec - kursor >= minuty:
+            wolne.append((kursor, koniec))
+        kursor = max(kursor, do + KAL_PRZERWA)
+    return wolne
+
+
+@app.route("/api/kalendarz/wolne")
+def api_kalendarz_wolne():
+    """?data=RRRR-MM-DD&minuty=45[&bez=<id zadania>]: zajęte i wolne okienka (do planowania nauki)"""
+    from flask import request
+    data = request.args.get("data", "")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", data):
+        abort(400)
+    minuty = max(5, min(240, int(request.args.get("minuty", 45))))
+    g = lambda x: f"{x // 60:02d}:{x % 60:02d}"
+    return jsonify({"data": data, "zajete": [{"od": g(max(a, 0)), "do": g(min(b, 1439)), "co": c} for a, b, c in kal_zajete(data, request.args.get("bez"))],
+                    "wolne": [{"od": g(a), "do": g(b)} for a, b in kal_wolne(data, minuty, request.args.get("bez"))]})
 
 
 @app.route("/api/kalendarz")
