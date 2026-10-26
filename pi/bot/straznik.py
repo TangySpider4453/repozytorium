@@ -21,7 +21,7 @@ ZASADY = [
      r"|uprawnienia\.json|chattr",
      "kodu bota, telefonu, portalu i strażnika nie zmieniaj (robi to sesja Claude Code w chmurze)"),
     (r"/etc/serwerek-bot|token\.env|claude\.env|nas-credentials|/proc/[^ ]*/environ|\.ssh/|\.claude/\.credentials"
-     r"|dostep\.json|/var/lib/tailscale|/playit/|/etc/shadow|CLAUDE_CODE_OAUTH_TOKEN|TELEGRAM_TOKEN|SIP_HASLO|POCZTA_|MOBI_|mobi\.env|poczta\.env|google_cookies",
+     r"|dostep\.json|/var/lib/tailscale|/playit/|/etc/shadow|CLAUDE_CODE_OAUTH_TOKEN|TELEGRAM_TOKEN|SIP_HASLO|POCZTA_|MOBI_|INTERVALS_|mobi\.env|poczta\.env|intervals\.env|google_cookies",
      "to plik albo zmienna z hasłem/tokenem: nie czytaj ani nie ujawniaj sekretów"),
     (r"(^|[;&|(\s])(sudo\s+)?(env|printenv|export\s+-p|set)\s*($|[;&|)])", "wypisanie zmiennych środowiska ujawniłoby token"),
     (r"(^|[;&|(\s])(sudo\s+)?(reboot|shutdown|poweroff|halt|raspiproszewylaczsie)\b|systemctl\s+(reboot|poweroff|halt|kexec)"

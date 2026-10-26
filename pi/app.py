@@ -1533,6 +1533,35 @@ def api_mobi_odswiez():
     return jsonify({"ok": True})
 
 
+@app.route("/api/intervals", methods=["GET", "POST"])
+def api_intervals():
+    """intervals.icu (bot czyta co 5 min, tylko odczyt): treningi, ostatnie aktywności; POST {kreatyna: bool} = włącznik
+    telefonu o kreatynie po porannym biegu (wyłączany np. na wyjazd)"""
+    from flask import request
+    kat = BOT_DANE / "intervals"
+    try:
+        ust = json.loads((kat / "ustawienia.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        ust = {}
+    ust = {"kreatyna": True, **ust}
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        if not isinstance(b.get("kreatyna"), bool):
+            abort(400)
+        ust["kreatyna"] = b["kreatyna"]
+        kat.mkdir(exist_ok=True)
+        (kat / "ustawienia.json.tmp").write_text(json.dumps(ust), encoding="utf-8")
+        os.replace(kat / "ustawienia.json.tmp", kat / "ustawienia.json")
+    try:
+        st = json.loads((kat / "stan.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return jsonify({"skonfigurowany": False, **ust})
+    data = request.args.get("data")
+    tr = [t for t in st.get("treningi", []) if not data or t["data"] == data]
+    return jsonify({"skonfigurowany": True, "czas": st.get("czas"), "blad": st.get("blad"), "treningi": tr,
+                    "aktywnosci": st.get("aktywnosci", []), "kreatyna_dzis": st.get("kreatyna", {}).get(time.strftime("%Y-%m-%d")), **ust})
+
+
 @app.route("/api/poczta")
 def api_poczta():
     try:

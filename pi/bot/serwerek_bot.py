@@ -36,6 +36,7 @@ from pathlib import Path
 import pamiec
 import poczta
 import mobi
+import intervals
 import szybkie
 import klaud
 
@@ -463,7 +464,7 @@ def claude_polecenie(prompt=None, dodatek=""):
            "--append-system-prompt", instrukcja_pelna(dodatek), "--allowedTools", *u["allow"], "--disallowedTools", *u["deny"],
            "--settings", json.dumps({"hooks": u.get("hooks", {})})]
     env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")
-           and not k.startswith(("POCZTA_", "MOBI_"))}            # hasła do poczty i dziennika nie trafiają do Claude
+           and not k.startswith(("POCZTA_", "MOBI_", "INTERVALS_"))}   # hasła do poczty, dziennika i intervals nie trafiają do Claude
     env["HOME"] = "/home/tonyg"
     return cmd, env
 
@@ -485,7 +486,7 @@ def claude_bez_narzedzi(prompt, limit=180):
     cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
            "--tools", "", "--strict-mcp-config"]
     env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")
-           and not k.startswith("POCZTA_") and not k.startswith("MOBI_")}
+           and not k.startswith(("POCZTA_", "MOBI_", "INTERVALS_"))}
     env["HOME"] = "/home/tonyg"
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=limit, cwd="/tmp", env=env)
@@ -662,7 +663,7 @@ def szybka_odpowiedz(tekst):
 def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glosem=False):
     """jedna wiadomosc do Claude (wspolna sesja dla czatu, glosowek i telefonu) -> (odpowiedz, akcje) albo wyjatek RuntimeError.
     Najpierw szybkie odpowiedzi bez AI (plan, sprawdziany, godzina…), gdy pytanie jest rozpoznane."""
-    if not odpowiedz_na and kanal != "plik" and (sz := szybka_odpowiedz(tekst)):
+    if not odpowiedz_na and kanal != "plik" and (sz := szybka_odpowiedz(tekst) or komenda_trening(tekst, krotko=kanal == "telefon")):
         if kanal not in ("telegram", "glosowka_zapisana"):
             pamiec.zapisz("antek", kanal, tekst)
         return sz, []
@@ -1563,6 +1564,64 @@ def komenda_mobi(tekst):
     return f"📅 {DNI_NAZWY[d.weekday()].capitalize()} {d.strftime('%d.%m')}: " + (mobi.dzis(d) or "brak danych")
 
 
+# ---------------------------------------------------------------- intervals.icu: treningi i kreatyna po porannym biegu
+def dodaj_kreatyne(termin, opis):
+    """poranny bieg -> zadanie z dzwonieniem 10 min po końcu (odhaczanie głosem / „zrobione” jak przy innych zadaniach)"""
+    portal("/api/todo", {"tekst": "💊 Weź kreatynę (po porannym biegu)", "termin": termin, "dzwon": True})
+    print(f"intervals: poranny bieg ({opis}), kreatyna o {termin[11:]}", flush=True)
+
+
+def petla_intervals():
+    time.sleep(45)
+    while True:
+        try:
+            if intervals.skonfigurowany() and time.time() - intervals.OSTATNIO["t"] >= intervals.CO - 5:
+                intervals.sprawdz(dodaj_kreatyne)
+        except Exception as ex:
+            print(f"intervals: {type(ex).__name__}: {ex}", flush=True)
+            intervals.OSTATNIO["t"] = time.time()
+            try:
+                intervals.blad(f"{type(ex).__name__}: {ex}"[:200])
+            except OSError:
+                pass
+        time.sleep(10)
+
+
+TRENING_RE = re.compile(r"(?:🏃\s*)?/?(?:(?:jaki|jakie|co)\s+(?:mam\s+)?(?:za\s+)?)?(?:trening|treningi|plan treningowy|plan treningu)"
+                        r"(?:\s+(?:mam|na|jest))*(?:\s+(dziś|dzis|dzisiaj|jutro|pojutrze|(?:w|we)\s+(?:poniedziałek|poniedzialek|wtorek|środę|srode|czwartek|piątek|piatek|sobotę|sobote|niedzielę|niedziele)))?")
+TRENING2_RE = re.compile(r"co\s+(?:mam\s+)?(?:(dziś|dzis|dzisiaj|jutro)\s+)?(?:do\s+)?(?:trenowania|potrenować|potrenowac|biegania|pobiegać|pobiegac|trenować|trenowac)"
+                         r"(?:\s+(dziś|dzis|dzisiaj|jutro))?")
+
+
+def komenda_trening(tekst, krotko=False):
+    """„trening”, „jaki mam trening jutro”, „treningi w sobotę”, „kreatyna wyłącz/włącz” -> tekst albo None"""
+    t = tekst.lower().strip(" ?.!")
+    m = re.fullmatch(r"kreatyn[aęy]\s+(wyłącz|wylacz|włącz|wlacz|off|on)|(wyłącz|wylacz|włącz|wlacz)\s+(?:przypominanie\s+o\s+)?kreatyn[aęy]", t)
+    if m:
+        wl = (m.group(1) or m.group(2)) in ("włącz", "wlacz", "on")
+        portal("/api/intervals", {"kreatyna": wl})
+        return "💊 Przypominanie o kreatynie po porannym biegu: " + ("włączone." if wl else "wyłączone (np. na wyjazd).")
+    m = TRENING_RE.fullmatch(t) or TRENING2_RE.fullmatch(t)
+    if not m:
+        return None
+    if not intervals.stan().get("czas"):        # telefon.py nie ma klucza: korzysta ze stanu zapisanego przez bota
+        return "intervals.icu nie jest jeszcze podłączone."
+    kiedy = re.sub(r"^we?\s+", "", next((g for g in m.groups() if g), "dziś"))
+    d = date.today() + timedelta(days={"dziś": 0, "dzis": 0, "dzisiaj": 0, "jutro": 1, "pojutrze": 2}.get(kiedy, 0))
+    if kiedy in DNI_TYG:
+        d = date.today() + timedelta(days=(DNI_TYG[kiedy] - date.today().weekday()) % 7)
+    if intervals.skonfigurowany() and time.time() - intervals.OSTATNIO["t"] > 120:
+        try:
+            intervals.sprawdz(dodaj_kreatyne)
+        except Exception as ex:
+            return f"⚠️ intervals.icu: {ex}"
+    kto = "Dziś" if d == date.today() else "Jutro" if d == date.today() + timedelta(days=1) else f"{DNI_NAZWY[d.weekday()].capitalize()} {d.strftime('%d.%m')}"
+    tr = intervals.treningi_na(d, szczegoly=not krotko)
+    if not tr:
+        return f"🏃 {kto}: brak zaplanowanego treningu w intervals.icu."
+    return f"🏃 {kto}: {tr}" if krotko else f"🏃 {kto}:\n{tr}"
+
+
 def poczta_podsumowanie():
     return poczta.podsumowanie()
 
@@ -1590,6 +1649,9 @@ def poranne_dane():
                       + (" Problemy: " + "; ".join(i["tytul"] for i in z["aktywne"]) if z.get("aktywne") else " Bez problemów."))
     except (OSError, ValueError, KeyError):
         czesci.append("Serwer: nie udało się sprawdzić stanu.")
+    if intervals.stan().get("czas"):
+        tr = intervals.treningi_na(date.today())
+        czesci.append(f"Trening na dziś (powiedz TYLKO nazwę, bez szczegółów): {tr}" if tr else "Trening na dziś: brak.")
     for nazwa, f in (("Poczta", "poczta_podsumowanie"), ("Lekcje", "mobi_dzis")):
         fn = globals().get(f)
         if fn:
@@ -1621,7 +1683,7 @@ def przygotuj_budzik(a, na):
     tekst = claude_jednorazowo(
         f"[Budzik o {a['godzina']}: za chwilę Pi dzwoni do Antka, żeby go obudzić. Ułóż DOKŁADNIE to, co powiesz (czytane "
         "głosem przez telefon): krótkie „dzień dobry”, dzień tygodnia i godzina, potem po kolei tylko to, co ważne: "
-        "lekcje i zmiany planu, sprawdziany i kartkówki, ważne maile, zadania na dziś, a stan serwera jednym zdaniem "
+        "lekcje i zmiany planu, sprawdziany i kartkówki, trening na dziś (sama nazwa, bez szczegółów), ważne maile, zadania na dziś, a stan serwera jednym zdaniem "
         "(tylko gdy coś jest nie tak, powiedz co). 30–60 sekund mówienia, naturalnie i ciepło, bez list, emotek, "
         "Markdown i adresów. Adresów, numerów i szczegółów krok po kroku nie czytaj: krótko co, a szczegóły w [[CZAT: …]] "
         "(pójdą na czat) i powiedz, że są na czacie. Bez pytań i formułek na końcu. Nic poza samą wypowiedzią.]\n\nDane:\n" + dane, limit=150)
@@ -2182,6 +2244,8 @@ def obsluz(u):
         wyslij(t, html_=True, przyciski=p)
     elif (odp_m := komenda_mobi(tekst)) is not None:
         wyslij(odp_m)
+    elif (odp_t := komenda_trening(tekst)) is not None:
+        wyslij(odp_t)
     elif (odp_p := poczta.reakcja(tekst)) is not None:
         wyslij(odp_p)
     elif (odp_b := komenda_budzik(tekst)) is not None:
@@ -2236,6 +2300,7 @@ def main():
     threading.Thread(target=petla_budzikow, daemon=True).start()
     threading.Thread(target=petla_poczty, daemon=True).start()
     threading.Thread(target=petla_mobi, daemon=True).start()
+    threading.Thread(target=petla_intervals, daemon=True).start()
     threading.Thread(target=rozgrzej, daemon=True).start()
     threading.Thread(target=petla_telefonu, daemon=True).start()
     threading.Thread(target=petla_minecrafta, daemon=True).start()

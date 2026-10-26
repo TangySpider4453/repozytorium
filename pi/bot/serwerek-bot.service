@@ -9,6 +9,10 @@ User=tonyg
 WorkingDirectory=/home/tonyg/bot
 EnvironmentFile=/etc/serwerek-bot/token.env
 EnvironmentFile=/etc/serwerek-bot/claude.env
+EnvironmentFile=-/etc/serwerek-bot/poczta.env
+EnvironmentFile=-/etc/serwerek-bot/mobi.env
+EnvironmentFile=-/etc/serwerek-bot/sip.env
+EnvironmentFile=-/etc/serwerek-bot/intervals.env
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 /home/tonyg/bot/serwerek_bot.py
 Restart=always

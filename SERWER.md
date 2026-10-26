@@ -169,6 +169,19 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ważne → `powiadom()` i czekanie („przeczytaj mail”, „przeczytany”, „później” = za 3 h; bez reakcji przypomnienie
   po 30 min; w nocy czeka), inne → poranny przegląd. Nigdy nie wysyła (bez SMTP). `/api/poczta`, komenda „maile”.
 
+## Treningi intervals.icu i kreatyna (od 2026-10-26)
+- `pi/bot/intervals.py`, tylko odczyt (GET `/api/v1/athlete/0/events?category=WORKOUT` i `/activities`, Basic
+  `API_KEY:<klucz>`), co 5 min (`petla_intervals`). Klucz `INTERVALS_API_KEY` w `/etc/serwerek-bot/intervals.env`
+  (root 600, `EnvironmentFile=-` w `serwerek-bot.service`); odcięty od Claude (`INTERVALS_` w env i strażniku).
+- Stan `~/bot/intervals/stan.json` (treningi 7 dni, ostatnie aktywności, `kreatyna` = data → id biegu), włącznik
+  `~/bot/intervals/ustawienia.json` (`kreatyna`, zapisuje portal). API portalu `GET/POST /api/intervals` (`?data=`).
+- **Kreatyna**: bieg (Run/TrailRun/VirtualRun/Treadmill) zaczęty przed 12:00 dziś → zadanie „💊 Weź kreatynę (po
+  porannym biegu)” z `dzwon: true` na koniec biegu + 10 min (raz dziennie). Bieg wykryty później niż godzinę po tym
+  terminie = bez przypomnienia. Wyłącznik na stronie Automatyczne (karta 🏃) albo „kreatyna wyłącz / włącz”.
+- Komendy (Telegram, Linphone, w rozmowie bez AI): „trening”, „jaki mam trening jutro / we wtorek”, „co mam dziś do
+  biegania”. W rozmowie same nazwy, na czacie ze szczegółami. Budzik: sama nazwa treningu na dziś (`poranne_dane`).
+  telefon.py nie ma klucza: komendy czytają stan zapisany przez bota.
+
 ## Claude w bocie: dwa stałe procesy, Haiku i Sonnet (od 2026-10-23)
 - `pi/bot/klaud.py`: Claude Code w trybie `--input-format/--output-format stream-json` startuje raz i dostaje kolejne
   wiadomości (bez ok. 6 s startu przy każdej). Procesy: „szybki” = `claude-haiku-5-5 --effort low`, „madry” =

@@ -89,6 +89,14 @@ Budzik = Pi dzwoni o tej porze i czyta poranny przegląd. Ustawianie słowami ro
 -d '{"godzina":"06:15","data":"RRRR-MM-DD"}'` (jednorazowy) albo `{"godzina":"06:30","dni":[0,1,2,3,4]}` (0 = poniedziałek),
 usunięcie: `curl -s -X POST http://127.0.0.1/api/alarmy/<id> -H 'Content-Type: application/json' -d '{"usun":true}'`.
 
+## Treningi (intervals.icu) i kreatyna
+Bot co 5 min czyta intervals.icu (tylko odczyt, nic tam nie zmieniasz). Plan i ostatnie aktywności:
+`curl -s "http://127.0.0.1/api/intervals?data=RRRR-MM-DD"` (bez `data` = najbliższe 7 dni). Po porannym biegu bot sam
+dodaje zadanie „💊 Weź kreatynę” z telefonem 10 min po końcu biegu. Włącznik (np. wyjazd bez kreatyny):
+`curl -s -X POST http://127.0.0.1/api/intervals -H 'Content-Type: application/json' -d '{"kreatyna": false}'` (true = włącz).
+Szybkie komendy (bez Ciebie): „trening”, „jaki mam trening jutro”, „kreatyna wyłącz/włącz”. W budziku mów tylko nazwę
+treningu, bez szczegółów. Klucza do intervals nie masz i nie szukaj.
+
 ## Komunikacja miejska (ZTM Poznań) i lokalizacja Antka
 Pytania o autobusy, tramwaje, „jak dojechać”, „kiedy wyjść” odpowiadaj przez API portalu (opóźnienia na żywo),
 pole "tekst" jest gotowe do pokazania (skróć je przy telefonie):

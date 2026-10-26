@@ -455,4 +455,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   rozpoznawane przez Hasła Apple (zapis i autouzupełnianie). Wdrożone, strona sprawdzona curl.
 - **2026-10-26 (Progres: średnie)**: Wykresy Progresu: „Na żywo” albo średnie z tygodnia / miesiąca / roku w słupkach
   (opcje zależą od zakresu). Sprawdzone w Playwright na danych testowych (bez błędów konsoli). Szczegóły w `PROGRES.md`.
+- **2026-10-26 (intervals.icu)**: Bot czyta intervals.icu co 5 min (tylko odczyt): treningi na dziś/jutro (komenda
+  „trening”, w budziku sama nazwa), po porannym biegu telefon „weź kreatynę” 10 min po końcu (wyłącznik na stronie
+  Automatyczne). Klucz tylko na Pi (`/etc/serwerek-bot/intervals.env`). Odczyt API sprawdzony (aktywności widoczne,
+  kalendarz treningów na razie pusty).
 

@@ -45,6 +45,8 @@ a.karta:hover{border-color:var(--sel)}
 .karta.wkrotce{opacity:.65;border-style:dashed}
 .znaczek{font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:99px;padding:1px 8px;margin-left:auto;font-family:var(--sans)}
 ul{margin:0;padding-left:18px;font-size:15px}
+.przelacz{font:inherit;font-size:15px;font-weight:700;padding:8px 14px;border-radius:99px;border:2px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.przelacz[aria-pressed="true"]{background:var(--sel);border-color:var(--sel);color:#fff}
 </style>
 </head>
 <body>
@@ -109,6 +111,30 @@ const AUTOMATY = [
      return [el("div", {}, el("span", {class:d.wazne.length ? "uw" : "", text:`ważne: ${d.wazne.length}`}), ` · inne nieprzeczytane: ${inne}`),
        ...d.wazne.slice(0, 3).map(w => el("div", {class:"opis", style:"margin:2px 0 0", text:`${w.konto}: ${w.temat}`})),
        ...Object.entries(d.bledy).map(([k, b]) => el("div", {class:"uw", text:`${k}: ${b}`}))];
+   }},
+  {ikona:"🏃", nazwa:"Treningi (intervals.icu)", link:null,
+   opis:"Plan treningów sprawdzany co 5 minut (tylko odczyt). Po porannym biegu Pi dzwoni 10 minut po jego końcu: „weź kreatynę”. W budziku tylko nazwa treningu na dziś.",
+   stan: async () => {
+     const d = await json("/api/intervals");
+     const przelacz = el("button", {type:"button", class:"przelacz", "aria-pressed":String(d.kreatyna),
+       text:d.kreatyna ? "💊 Kreatyna po biegu: włączona" : "💊 Kreatyna po biegu: wyłączona"});
+     przelacz.onclick = async ev => {
+       ev.preventDefault(); przelacz.disabled = true;
+       try{
+         const n = await fetch("/api/intervals", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({kreatyna:!d.kreatyna})}).then(r => r.json());
+         d.kreatyna = n.kreatyna; przelacz.setAttribute("aria-pressed", String(d.kreatyna));
+         przelacz.textContent = d.kreatyna ? "💊 Kreatyna po biegu: włączona" : "💊 Kreatyna po biegu: wyłączona";
+       }catch(e){ przelacz.textContent = "Nie udało się zapisać"; }
+       przelacz.disabled = false;
+     };
+     if(!d.skonfigurowany) return ["Czeka na pierwsze połączenie z intervals.icu.", przelacz];
+     const dz = teraz().slice(0, 10), jut = new Date(Date.now() + 864e5), jutro = `${jut.getFullYear()}-${String(jut.getMonth() + 1).padStart(2, "0")}-${String(jut.getDate()).padStart(2, "0")}`;
+     const na = x => d.treningi.filter(t => t.data === x).map(t => t.nazwa).join(", ") || "brak";
+     const bieg = [...d.aktywnosci].reverse().find(a => /Run|Treadmill/.test(a.typ));
+     return [el("div", {}, el("span", {class:"dzis", text:"dziś"}), ` · ${na(dz)}`), el("div", {}, `jutro · ${na(jutro)}`),
+       bieg ? el("div", {class:"opis", style:"margin:4px 0 0", text:`Ostatni bieg: ${bieg.start.slice(8, 10)}.${bieg.start.slice(5, 7)} ${bieg.start.slice(11)}, ${String(bieg.dystans_km).replace(".", ",")} km`}) : null,
+       d.blad ? el("div", {class:"uw", text:`Błąd: ${d.blad}`}) : null,
+       el("div", {class:"opis", style:"margin:4px 0 8px", text:`Sprawdzono: ${(d.czas || "").slice(11, 16)}`}), przelacz];
    }},
   {ikona:"🚌", nazwa:"Komunikacja miejska", link:"/strony/komunikacja/",
    opis:"ZTM Poznań: odjazdy obok Ciebie, trasa do domu, opóźnienia na żywo.",
