@@ -1443,6 +1443,7 @@ def pilnuj_nauki():
              if z.get("rodzaj") == "zadanie" and z.get("id") and z.get("od") and not z.get("zrobione")]
     with LOCK:
         przes = dict(stan().get("nauka_przes", {}))
+        zgl = dict(stan().get("nauka_zgloszone", {}))       # id -> termin, o którym już napisano „brak okienka” (raz)
     zmienione = False
     for z in sesje:
         termin = f"{z['data']}T{z['od']}"
@@ -1469,10 +1470,12 @@ def pilnuj_nauki():
             if not kandydaci:
                 dzien -= timedelta(days=1)
         if not kandydaci:
+            if zgl.get(z["id"]) == termin:              # już zgłoszone: nie pisz co 5 minut
+                continue
+            zgl[z["id"]] = termin
+            zmienione = True
             powiadom(f"📚 „{z['tytul']}” ({z['data'][8:]}.{z['data'][5:7]} {z['od']}) nachodzi na: {kol[0]['co']}, a tego dnia nie ma "
                      "wolnego okienka. Przestaw ją sam albo napisz, kiedy ma być.")
-            przes[z["id"]] = termin
-            zmienione = True
             continue
         nowy = min(kandydaci, key=lambda k: abs(k - start))
         nowy_t = f"{dzien.isoformat()}T{nowy // 60:02d}:{nowy % 60:02d}"
@@ -1486,6 +1489,7 @@ def pilnuj_nauki():
         with LOCK:
             s2 = stan()
             s2["nauka_przes"] = {k: v for k, v in przes.items() if v >= od}
+            s2["nauka_zgloszone"] = {k: v for k, v in zgl.items() if v >= od}
             zapisz(s2)
 
 
