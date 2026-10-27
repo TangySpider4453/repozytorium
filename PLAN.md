@@ -474,4 +474,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   zadania: wolne okienka z `/api/kalendarz/wolne`, bot przesuwa kolidujące sesje i pisze o tym; godziny planowanych
   treningów szacowane ze zwykłych pór i omijają szkołę. Sprawdzone na Pi (27.10: sesja 18:00 w czasie lekcji do 19:20,
   dzień pełny → wiadomość z prośbą o decyzję).
+- **2026-10-27 (spam „brak okienka”)**: `pilnuj_nauki` przy braku wolnego okienka pisało co 5 min (ponad 100 wiadomości).
+  Teraz raz na zadanie i termin (`stan["nauka_zgloszone"]`). Wgrane 7:41, po 6 min brak nowych wiadomości i błędów.
 
