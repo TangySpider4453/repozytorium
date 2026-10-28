@@ -1644,6 +1644,49 @@ def api_automaty_modul(modul):
     return jsonify(automaty_zapisz(modul, automaty_waliduj(modul, b)))
 
 
+# ---------- Głośnik AirPlay 2: shairport-sync (usługa użytkownika airplay.service), wyjście AUX albo Bluetooth ----------
+# Wszystko robi ~/airplay/airplay.py (repo pi/airplay/); portal tylko go woła. Strona /strony/glosnik/.
+AIRPLAY = Path("/home/tonyg/airplay/airplay.py")
+
+
+def airplay(*arg, limit=30):
+    r = subprocess.run(["/usr/bin/python3", str(AIRPLAY), *arg], capture_output=True, text=True, timeout=limit)
+    if r.returncode != 0:
+        abort(Response(json.dumps({"blad": (r.stderr or r.stdout or "błąd").strip().splitlines()[-1][:300]}, ensure_ascii=False),
+                       status=500, mimetype="application/json"))
+    return r.stdout
+
+
+@app.route("/api/glosnik", methods=["GET", "POST"])
+def api_glosnik():
+    from flask import request
+    if not AIRPLAY.exists():
+        return jsonify({"zainstalowany": False})
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        if b.get("wlaczony") in (True, False):
+            airplay("wlacz" if b["wlaczony"] else "wylacz")
+        if b.get("tryb") in ("aux", "bt"):
+            airplay("tryb", b["tryb"], limit=60)
+        if b.get("wybierz"):
+            if not re.fullmatch(r"[0-9A-F:]{17}", str(b["wybierz"])):
+                abort(400)
+            airplay("wybierz", b["wybierz"], limit=90)
+        if isinstance(b.get("opoznienie_bt"), (int, float)) and -1 <= b["opoznienie_bt"] <= 1:
+            u = json.loads((AIRPLAY.parent / "ustawienia.json").read_text(encoding="utf-8")) if (AIRPLAY.parent / "ustawienia.json").exists() else {}
+            u["opoznienie_bt"] = round(float(b["opoznienie_bt"]), 2)
+            zapisz_json(AIRPLAY.parent / "ustawienia.json", u)
+            airplay("tryb", u.get("tryb", "aux"), limit=60)
+    return jsonify({"zainstalowany": True, **json.loads(airplay("stan"))})
+
+
+@app.route("/api/glosnik/skanuj", methods=["POST"])
+def api_glosnik_skanuj():
+    if not AIRPLAY.exists():
+        abort(404)
+    return jsonify(json.loads(airplay("skanuj", limit=40)))
+
+
 # ---------- Kalendarz: wszystko z terminem w jednym miejscu (strona /strony/kalendarz/, filtr kategorii) ----------
 # Kategorie: lekcje (plan z Mobidziennika), nauka (sprawdziany i kartkówki, sesje nauki z zadań, zadania domowe),
 # treningi (plan i wykonane z intervals.icu), zadania (todo), budziki. Zdarzenie: {data, od?, do?, tytul, opis, kat, rodzaj,

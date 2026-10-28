@@ -417,6 +417,23 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   starszą wersję `app.py` z tym API; moje wdrożenie o 10:28 je usunęło, scalone 21:20. **Przed wgraniem app.py porównaj
   z wersją na Pi** (`diff ~/portal/app.py`), bo zmienia go więcej niż jedna sesja.
 
+## Głośnik AirPlay 2 (od 2026-10-28)
+- shairport-sync 4.3.7 zbudowany ze źródeł z AirPlay 2 (`~/airplay/buduj_airplay.sh`, repo `pi/airplay/`; Debian ma tylko
+  AirPlay 1) + `nqptp` 1.2.4 (usługa systemowa, porty UDP 319/320) = multiroom, widoczny też w aplikacji Dom jako
+  „Serwerek”. Działa jako usługa użytkownika `airplay.service` (`~/.config/systemd/user/`, linger włączony) przez
+  PipeWire (backend pa, gra na domyślne wyjście). TCP 7000 + porty dynamiczne, tylko sieć domowa (mDNS/avahi).
+- `~/airplay/airplay.py`: `stan`, `wlacz/wylacz`, `tryb aux|bt`, `skanuj`, `wybierz MAC` (parowanie raz + trust),
+  `start/stop` (hooki shairport-sync: przed graniem łączy głośnik BT i ustawia go jako wyjście `wpctl set-default`;
+  `active_state_timeout` 20 s po końcu sesji rozłącza BT i wraca na AUX). Gdy BT niedostępny: gra przez AUX z uwagą.
+  Ustawienia `~/airplay/ustawienia.json` (wlaczony, tryb, bt_mac, bt_nazwa, nazwa, opoznienie_bt =
+  `audio_backend_latency_offset_in_seconds` w trybie BT), konfiguracja generowana `~/airplay/shairport-sync.conf`.
+- Portal: `GET/POST /api/glosnik` ({wlaczony}, {tryb}, {wybierz: MAC}, {opoznienie_bt}), `POST /api/glosnik/skanuj`;
+  strona `/strony/glosnik/` (repo `glosnik/`), karta 🔊 na Automatycznych.
+- **Bluetooth w Pi wyłączony** w `/boot/firmware/config.txt` (`dtoverlay=disable-bt`, od instalacji; nic nie używa
+  ttyAMA0). Włączenie: usunąć tę linię (UART zostaje jako mini-UART przez `enable_uart=1`) i restart Pi — za zgodą Antka.
+- Uwaga: połączenia AirPlay (port 7000 i dynamiczne) trafiają do logu jako SERWEREK-SKAN; zmiana reguły nft
+  (wyjątek dla AirPlay) czeka na decyzję Antka (zmiana logowania bezpieczeństwa).
+
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
   przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem

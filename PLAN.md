@@ -478,4 +478,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   Teraz raz na zadanie i termin (`stan["nauka_zgloszone"]`). Wgrane 7:41, po 6 min brak nowych wiadomości i błędów.
 - **2026-10-28 (przypomnienia z kalendarza)**: 10 min przed lekcją / nauką (opcjonalnie zadaniem) wiadomość na Linphone;
   ustawienia (minuty, kategorie) na stronie Kalendarz. Wgrane, bot bez błędów.
+- **2026-10-28 (głośnik AirPlay 2)**: Pi jako głośnik AirPlay 2 z multiroomem (shairport-sync z AirPlay 2 + nqptp),
+  strona `/strony/glosnik/`: włącznik, wyjście AUX/Bluetooth, wybór głośnika BT (raz), BT łączony tylko na czas grania.
+  Działa przez AUX; Bluetooth czeka na zgodę na restart Pi (BT wyłączony w config.txt).
 

@@ -146,6 +146,14 @@ const AUTOMATY = [
        d.blad ? el("div", {class:"uw", text:`Błąd: ${d.blad}`}) : null,
        el("div", {class:"opis", style:"margin:4px 0 8px", text:`Sprawdzono: ${(d.czas || "").slice(11, 16)}`}), przelacz];
    }},
+  {ikona:"🔊", nazwa:"Głośnik AirPlay", link:"/strony/glosnik/",
+   opis:"Pi jako głośnik AirPlay 2 (multiroom, tylko w domu): dźwięk przez AUX albo głośnik Bluetooth.",
+   stan: async () => {
+     const d = await json("/api/glosnik");
+     if(!d.zainstalowany) return ["Jeszcze nie zainstalowany."];
+     return [el("span", {class:d.gra ? "dzis" : "", text:!d.wlaczony ? "wyłączony" : d.gra ? "▶ gra" : "gotowy"}),
+       ` · wyjście: ${d.tryb === "bt" ? "Bluetooth" + (d.bt_nazwa ? " (" + d.bt_nazwa + ")" : "") : "AUX"}`];
+   }},
   {ikona:"🚌", nazwa:"Komunikacja miejska", link:"/strony/komunikacja/",
    opis:"ZTM Poznań: odjazdy obok Ciebie, trasa do domu, opóźnienia na żywo.",
    stan: async () => {

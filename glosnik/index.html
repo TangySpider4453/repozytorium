@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Głośnik AirPlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Głośnik AirPlay 2 (shairport-sync na Pi): włącznik, wyjście AUX/Bluetooth, wybór głośnika BT (GET/POST /api/glosnik). */
+:root{
+  --lekcje:#5b6b82; --nauka:#8a3fb5; --treningi:#1f8a4c; --zadania:#c26a00; --budziki:#c03442;
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#16202C; --muted:#56606E; --line:#D5DBE3; --soft:#E4E9F0;
+  --nav:#1F3A5F; --navInk:#FFFFFF; --sel:#1d63c4; --ok:#1f8a4c; --warn:#a86b00; --bad:#c03442;
+  --serif:"Alegreya",Georgia,serif; --sans:"Alegreya Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+    --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1722; --surface:#172231; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2A3A4E; --soft:#1E2B3C;
+  --nav:#0B1420; --navInk:#E7ECF2; --sel:#1f6fd6; --ok:#5BBE83; --warn:#E9A23B; --bad:#E06C79; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5}
+h1,h2{font-family:var(--serif);line-height:1.15;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{background:var(--nav);color:var(--navInk);padding:14px 0 18px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+header.top .back{display:inline-block;font-size:14px;opacity:.75;text-decoration:none;color:inherit;margin-bottom:8px}
+header.top h1{font-size:clamp(30px,7vw,42px);font-weight:800}
+header.top p{margin:4px 0 0;opacity:.8;font-size:15px}
+main{padding:18px 0 60px}
+
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:22px;margin-bottom:6px}
+.muted{color:var(--muted)} .ok{color:var(--ok)} .bad{color:var(--bad)}
+.wiersz{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;min-height:44px}
+.przel{position:relative;width:54px;height:32px;flex:none;border-radius:99px;border:0;background:var(--line);cursor:pointer;padding:0}
+.przel::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.przel[aria-checked=true]{background:var(--ok)} .przel[aria-checked=true]::after{left:25px}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:17px;font-weight:700;padding:12px 8px;border:0;background:var(--surface);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--sel);color:#fff}
+.btn{font:inherit;font-size:16px;font-weight:700;padding:9px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:disabled{opacity:.5}
+.lista{list-style:none;margin:8px 0 0;padding:0}
+.lista li{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
+.stan{font-size:18px;font-weight:700}
+.info{font-size:14px;margin-top:8px}
+input[type=range]{width:100%}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="back" href="/strony/automatyczne/">← Automatyczne</a>
+  <h1>🔊 Głośnik AirPlay</h1>
+  <p>Pi jako głośnik AirPlay 2 (multiroom, też w aplikacji Dom). Działa tylko w sieci domowej.</p>
+</div></header>
+<main><div class="wrap">
+  <div class="card"><div class="wiersz"><div><div class="stan" id="stan">…</div><div class="muted info" id="stanOpis"></div></div>
+    <button type="button" class="przel" role="switch" id="wl" aria-checked="false" aria-label="AirPlay włączony"></button></div></div>
+  <div class="card"><h2>Wyjście dźwięku</h2>
+    <div class="seg" role="group" aria-label="Wyjście"><button type="button" id="tAux">🎧 AUX (gniazdo)</button><button type="button" id="tBt">🔵 Bluetooth</button></div>
+    <p class="muted info">Wybór zostaje, dopóki go nie zmienisz. Na Bluetooth Pi łączy się z głośnikiem dopiero, gdy zaczniesz grać, i zwalnia go 20 s po rozłączeniu AirPlay.</p></div>
+  <div class="card"><h2>Głośnik Bluetooth</h2>
+    <div id="btInfo" class="info"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn" id="skan">🔍 Szukaj głośników</button></div>
+    <ul class="lista" id="lista"></ul>
+    <div style="margin-top:12px"><label for="opozn"><b>Wyrównanie opóźnienia BT</b> <span id="opoznW" class="muted"></span></label>
+      <input type="range" id="opozn" min="-0.5" max="0.2" step="0.05" value="0">
+      <p class="muted info">Gdy grasz na kilku głośnikach naraz i BT jest spóźniony, przesuń w lewo (np. −0,2 s).</p></div>
+  </div>
+  <p class="muted info" id="blad" role="status"></p>
+</div></main>
+<script>
+const $ = id => document.getElementById(id);
+const el = (t, a = {}, ...k) => { const e = document.createElement(t); for(const [n, v] of Object.entries(a)){ if(v == null) continue; if(n === "text") e.textContent = v; else if(n === "class") e.className = v; else if(n.startsWith("on")) e[n] = v; else e.setAttribute(n, v); } e.append(...k.filter(x => x != null)); return e; };
+let S = null;
+async function api(url, body){
+  const r = await fetch(url, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {cache:"no-store"});
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(d.blad || ("serwer odpowiedział " + r.status));
+  return d;
+}
+async function zmien(body, opis){
+  $("blad").textContent = opis || "Zapisuję…";
+  try{ S = await api("/api/glosnik", body); $("blad").textContent = ""; rysuj(); }
+  catch(e){ $("blad").textContent = "⚠️ " + e.message; wczytaj(); }
+}
+function rysuj(){
+  if(!S.zainstalowany){ $("stan").textContent = "Jeszcze nie zainstalowany na Pi."; return; }
+  $("wl").setAttribute("aria-checked", String(!!S.wlaczony));
+  $("stan").textContent = !S.wlaczony ? "Wyłączony" : !S.dziala ? "Uruchamia się…" : S.gra ? "▶ Gra" : "Gotowy: „" + S.nazwa + "” w AirPlay";
+  $("stan").className = "stan " + (S.wlaczony && S.dziala ? "ok" : "");
+  $("stanOpis").textContent = (S.gra ? "Wyjście: " + (S.tryb === "bt" ? "Bluetooth" + (S.bt_polaczony ? " (połączony)" : " (łączę…)") : "AUX") : "")
+    + (S.uwaga ? " " + S.uwaga : "");
+  $("tAux").setAttribute("aria-pressed", String(S.tryb === "aux")); $("tBt").setAttribute("aria-pressed", String(S.tryb === "bt"));
+  $("btInfo").replaceChildren(!S.bt_dostepny ? el("span", {class:"bad", text:"Bluetooth w Pi jest wyłączony (ustawienia startowe). Włączenie wymaga jednego restartu Pi."})
+    : S.bt_mac ? el("span", {}, "Wybrany: ", el("b", {text:S.bt_nazwa || S.bt_mac}), el("span", {class:"muted", text:` (${S.bt_mac})${S.bt_polaczony ? " · połączony" : " · wolny"}`}))
+    : el("span", {class:"muted", text:"Nie wybrano głośnika. Włącz w nim tryb parowania i dotknij „Szukaj”."}));
+  $("skan").disabled = !S.bt_dostepny;
+  $("opozn").value = S.opoznienie_bt || 0; $("opoznW").textContent = `${(S.opoznienie_bt || 0).toFixed(2).replace(".", ",")} s`;
+}
+async function wczytaj(){ try{ S = await api("/api/glosnik"); rysuj(); }catch(e){ $("stan").textContent = "Nie udało się wczytać: " + e.message; } }
+$("wl").onclick = () => zmien({wlaczony: !(S && S.wlaczony)}, S && S.wlaczony ? "Wyłączam…" : "Włączam…");
+$("tAux").onclick = () => zmien({tryb:"aux"}, "Przełączam na AUX…");
+$("tBt").onclick = () => zmien({tryb:"bt"}, "Przełączam na Bluetooth…");
+$("opozn").onchange = () => zmien({opoznienie_bt: parseFloat($("opozn").value)});
+$("skan").onclick = async () => {
+  $("skan").disabled = true; $("lista").replaceChildren(el("li", {class:"muted", text:"Szukam przez 10 s… (głośnik w trybie parowania)"}));
+  try{
+    const d = await api("/api/glosnik/skanuj", {});
+    $("lista").replaceChildren(...(d.urzadzenia.length ? d.urzadzenia.map(u => el("li", {},
+      el("span", {}, el("b", {text:u.nazwa}), el("span", {class:"muted", text:` ${u.sparowany ? "· sparowany" : ""}`})),
+      el("button", {type:"button", class:"btn", text:u.mac === S.bt_mac ? "✓ Wybrany" : "Wybierz",
+        onclick:() => zmien({wybierz:u.mac}, `Paruję z „${u.nazwa}”… (do 30 s)`)})))
+      : [el("li", {class:"muted", text:"Nic nie znaleziono. Włącz tryb parowania w głośniku i spróbuj jeszcze raz."})]));
+  }catch(e){ $("lista").replaceChildren(el("li", {class:"bad", text:e.message})); }
+  $("skan").disabled = false;
+};
+wczytaj(); setInterval(wczytaj, 10000);
+</script>
+</body>
+</html>
