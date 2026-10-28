@@ -72,9 +72,12 @@ input[type=range]{width:100%}
     <div id="btInfo" class="info"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn" id="skan">🔍 Szukaj głośników</button></div>
     <ul class="lista" id="lista"></ul>
-    <div style="margin-top:12px"><label for="opozn"><b>Wyrównanie opóźnienia BT</b> <span id="opoznW" class="muted"></span></label>
+    <div style="margin-top:12px"><div class="wiersz"><b>Ręczne wyrównanie opóźnienia BT</b>
+      <button type="button" class="przel" role="switch" id="opoznWl" aria-checked="false" aria-label="Ręczne wyrównanie opóźnienia"></button></div>
+      <div id="opoznBox" hidden><label for="opozn">Przesunięcie <span id="opoznW" class="muted"></span></label>
       <input type="range" id="opozn" min="-0.5" max="0.2" step="0.05" value="0">
-      <p class="muted info">Gdy grasz na kilku głośnikach naraz i BT jest spóźniony, przesuń w lewo (np. −0,2 s).</p></div>
+      <p class="muted info">Tylko gdy grasz na kilku głośnikach naraz i BT jest spóźniony: przesuń w lewo (np. −0,2 s).</p></div>
+      <p class="muted info">Domyślnie wyłączone: Pi gra z najmniejszym możliwym opóźnieniem.</p></div>
   </div>
   <p class="muted info" id="blad" role="status"></p>
 </div></main>
@@ -106,12 +109,18 @@ function rysuj(){
     : el("span", {class:"muted", text:"Nie wybrano głośnika. Włącz w nim tryb parowania i dotknij „Szukaj”."}));
   $("skan").disabled = !S.bt_dostepny;
   $("opozn").value = S.opoznienie_bt || 0; $("opoznW").textContent = `${(S.opoznienie_bt || 0).toFixed(2).replace(".", ",")} s`;
+  if(!$("opoznBox").dataset.otwarte){ const wl = !!S.opoznienie_bt; $("opoznWl").setAttribute("aria-checked", String(wl)); $("opoznBox").hidden = !wl; }
 }
 async function wczytaj(){ try{ S = await api("/api/glosnik"); rysuj(); }catch(e){ $("stan").textContent = "Nie udało się wczytać: " + e.message; } }
 $("wl").onclick = () => zmien({wlaczony: !(S && S.wlaczony)}, S && S.wlaczony ? "Wyłączam…" : "Włączam…");
 $("tAux").onclick = () => zmien({tryb:"aux"}, "Przełączam na AUX…");
 $("tBt").onclick = () => zmien({tryb:"bt"}, "Przełączam na Bluetooth…");
 $("opozn").onchange = () => zmien({opoznienie_bt: parseFloat($("opozn").value)});
+$("opoznWl").onclick = () => {
+  const wl = $("opoznWl").getAttribute("aria-checked") !== "true";
+  $("opoznWl").setAttribute("aria-checked", String(wl)); $("opoznBox").hidden = !wl; $("opoznBox").dataset.otwarte = wl ? "1" : "";
+  if(!wl && S.opoznienie_bt) zmien({opoznienie_bt: 0}, "Wyłączam przesunięcie…");
+};
 $("skan").onclick = async () => {
   $("skan").disabled = true; $("lista").replaceChildren(el("li", {class:"muted", text:"Szukam przez 10 s… (głośnik w trybie parowania)"}));
   try{

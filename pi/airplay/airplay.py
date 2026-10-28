@@ -117,6 +117,7 @@ general = {{
   interpolation = "soxr";
   volume_range_db = 60;
   audio_backend_latency_offset_in_seconds = {opozn:.2f};
+  audio_backend_buffer_desired_length_in_seconds = 0.10;   // jak najmniejszy bufor wyjścia (domyślnie 0,2 s)
 }};
 sessioncontrol = {{
   run_this_before_entering_active_state = "{py} start";
@@ -257,7 +258,8 @@ if __name__ == "__main__":
         start()
     elif k == "stop":
         stop()
-    elif k == "konfiguracja":
+    elif k == "konfiguracja":              # ExecStartPre usługi: świeża konfiguracja, po starcie nic jeszcze nie gra
         konfiguracja(ustawienia())
+        zapisz(STAN, {"gra": False, "t": time.time()})
     else:
         raise SystemExit(__doc__)

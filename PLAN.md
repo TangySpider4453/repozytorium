@@ -485,4 +485,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   działa (widać głośnik TP-Link_Music).
 - **2026-10-28 (AirPlay: nazwa i wyjątek)**: Głośnik nazywa się „Antek Pokój rpi”. Za zgodą Antka reguła logowania wejść
   pomija port 7000 i porty >= 32768 (AirPlay), żeby granie nie było brane za skanowanie portów.
+- **2026-10-28 (AirPlay: opóźnienie)**: Mniejszy bufor wyjścia (0,1 s), przesunięcie BT domyślnie wyłączone (przełącznik
+  na stronie), stan „gra” zerowany przy starcie usługi.
 
