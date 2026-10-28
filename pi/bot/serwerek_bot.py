@@ -2269,6 +2269,25 @@ def zadzwon(tekst, powod="prośba", **dodatki):
     os.replace(TELEFON / "kolejka" / (nazwa + ".tmp"), TELEFON / "kolejka" / nazwa)
 
 
+def ponow_zadanie(todo_id, minuty=None, powod=""):
+    """przypomnienie z telefonem bez „zrobione”: następny telefon za `minuty` (podane przez Antka) albo za ponow_min
+    (ustawienie „zadania”); termin przesuwa się od teraz za każdym razem. Wyłączalne: zadania.ponawiaj = false."""
+    u = ust("zadania")
+    if not u.get("ponawiaj", True):
+        return
+    try:
+        z = next((x for x in portal("/api/todo")["zadania"] if x["id"] == todo_id), None)
+        if not z or z.get("zrobione") or not z.get("dzwon"):
+            return
+        m = int(minuty or u.get("ponow_min", 10))
+        z = portal(f"/api/todo/{todo_id}", {"odloz_min": m})
+        print(f"przypomnienie {todo_id} ponowię za {m} min ({powod})", flush=True)
+        powiadom(f"⏰ „{z['tekst']}”: zadzwonię znowu o {z['termin'][11:16]} ({powod}). Odpisz „zrobione”, jeśli już.",
+                 todo_id=todo_id)
+    except (OSError, ValueError, KeyError) as ex:
+        print(f"ponow_zadanie: {ex}", flush=True)
+
+
 def petla_telefonu():
     """wyniki polaczen i rozmow z uslugi telefonu -> wiadomosci w Telegramie"""
     while True:
@@ -2284,6 +2303,8 @@ def petla_telefonu():
                                                                  "proba": int(w.get("proba", 1)) + 1}))
                     print(f"budzik nieodebrany (próba {w.get('proba')}), ponowię za {ust("budziki").get("co_min", BUDZIK_CO // 60)} min", flush=True)
                 elif w.get("stan") == "nieodebrane":
+                    if w.get("todo_id"):            # przypomnienie bez odpowiedzi: zadzwoń znowu za ponow_min
+                        threading.Thread(target=ponow_zadanie, args=(w["todo_id"], None, "nie odebrałeś"), daemon=True).start()
                     powiadom(f"📞 Dzwoniłem, ale nie odebrałeś ({w.get('powod')}):\n{w.get('tekst', '')}"
                              + (f"\n\n{w['czat']}" if w.get("czat") else ""))
                 elif w.get("stan") == "rozmowa":

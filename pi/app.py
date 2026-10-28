@@ -1562,7 +1562,9 @@ AUTOMATY_SCHEMAT = {
         ("rano", "godzina", "07:00", "Rano w dniu sprawdzianu", None)]},
     "zadania": {"nazwa": "Zadania i przypomnienia", "pola": [
         ("przypomnienia", "bool", True, "Przypomnienia o zadaniach", None),
-        ("domyslnie_dzwon", "bool", True, "„Przypomnij mi…” z godziną = telefon (bez tego tylko wiadomość)", None)]},
+        ("domyslnie_dzwon", "bool", True, "„Przypomnij mi…” z godziną = telefon (bez tego tylko wiadomość)", None),
+        ("ponawiaj", "bool", True, "Dzwoń znowu, dopóki nie powiem „zrobione” (bez odpowiedzi / „sprawdź za chwilę”)", None),
+        ("ponow_min", "liczba", 10, "Po ilu minutach dzwonić znowu (gdy nie podam czasu)", (2, 180))]},
     "budziki": {"nazwa": "Budziki", "pola": [
         ("wlaczone", "bool", True, "Budziki dzwonią", None),
         ("przeglad", "bool", True, "Poranny przegląd (lekcje, maile, zadania, trening)", None),

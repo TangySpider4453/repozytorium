@@ -496,4 +496,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-28 (rozłączanie, zadania w tle, prosta treść przypomnień)**: Pi rozłącza się po pożegnaniu, gdy pasuje to do
   rozmowy (sam koniec albo `[[ROZLACZ]]` od Claude), zadania „w tle” robi po rozmowie i przysyła raport, rozumie kilka
   poleceń w jednej wypowiedzi, a treść przypomnień skraca do formy „Weź kreatynę”. Wgrane, bez błędów.
+- **2026-10-28 (ponawianie przypomnień)**: Bez „zrobione” Pi dzwoni znowu (za podany czas albo 10 min; nieodebrane też),
+  termin przesuwa się za każdym razem; wyłącznik i minuty w ustawieniach Zadań.
 

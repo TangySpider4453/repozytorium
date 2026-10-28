@@ -321,9 +321,38 @@ class Rozmowa:
         finally:
             AKCJE.put((rozlacz, (self.p,)))
 
+    def ponowienie(self):
+        """koniec rozmowy z przypomnieniem bez „zrobione” (todo_id dalej w zleceniu): kiedy dzwonić znowu.
+        „sprawdź / zadzwoń / przypomnij za 20 minut / za godzinę” = tyle; „za chwilę”, „sprawdź czy zrobię”, cisza = domyślnie
+        (None); „nie przypominaj / odpuść / anuluj” = wcale (False)"""
+        powiedzial = " ".join(z[4:] for z in self.zapis if z.startswith("Ty: ")).lower()
+        if re.search(r"nie (przypominaj|dzwoń|dzwon)|odpu[śs][ćc]|anuluj|usu[ńn] (to|przypomnienie)|już nie trzeba|juz nie trzeba", powiedzial):
+            return False
+        m = re.search(r"za\s+(\d+|pół|pol|jedn\w*|dwie|dwa|trzy|pięć|piec|dziesięć|dziesiec|piętnaście|pietnascie|dwadzieścia|dwadziescia|trzydzieści|trzydziesci)?\s*"
+                      r"(minut\w*|min|godzin\w*|h)\b", powiedzial)
+        if m:
+            liczby = {"pół": 0.5, "pol": 0.5, "dwie": 2, "dwa": 2, "trzy": 3, "pięć": 5, "piec": 5, "dziesięć": 10, "dziesiec": 10,
+                      "piętnaście": 15, "pietnascie": 15, "dwadzieścia": 20, "dwadziescia": 20, "trzydzieści": 30, "trzydziesci": 30}
+            l = m.group(1) or "1"
+            n = float(l) if l.isdigit() else liczby.get(l, 1)
+            return max(1, int(n * (60 if m.group(2).startswith(("godz", "h")) else 1)))
+        return None
+
     def zakonczona(self):
         self.koniec.set()
         trwala = int(time.time() - self.start)
+        tid = self.zlecenie.get("todo_id")
+        if tid and self.kierunek == "od Pi" and self.p is not None and getattr(self.p, "odebrane", False):
+            minuty = self.ponowienie()
+            if minuty is not False:
+                powod = f"prosiłeś za {minuty} min" if minuty else "bez „zrobione”"
+                def _(t=tid, mi=minuty, pw=powod):
+                    try:
+                        import serwerek_bot as bot
+                        bot.ponow_zadanie(t, mi, pw)
+                    except Exception as ex:
+                        log(f"ponowienie przypomnienia: {ex}")
+                threading.Thread(target=_, daemon=True).start()
         if self.zapis:
             wynik(stan="rozmowa", kierunek=self.kierunek, czas=f"{trwala // 60} min {trwala % 60} s", zapis="\n".join(self.zapis))
         import shutil
