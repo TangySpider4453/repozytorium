@@ -140,14 +140,34 @@ class Rozmowa:
             self.przygotowanie = threading.Thread(target=self.przygotuj, args=(powitanie,), daemon=True)
             self.przygotowanie.start()
 
+    @staticmethod
+    def kawalki(tekst, maks=180):
+        """długi tekst -> kawałki po kilka zdań: pierwszy jest gotowy po 1–2 s, reszta syntezuje się w trakcie mówienia
+        (wcześniej 40 s wypowiedzi syntezowało się ponad pół minuty i w słuchawce była cisza)"""
+        zdania = [z for z in re.split(r"(?<=[.!?…:])\s+", tekst.strip()) if z]
+        out = []
+        for z in zdania:
+            if out and len(out[-1]) + len(z) < maks and len(out) > 1:     # pierwszy kawałek krótki (szybki start)
+                out[-1] += " " + z
+            else:
+                out.append(z)
+        return out or [tekst]
+
+    def wav_dla(self, kawalek):
+        return self.tmp / f"gotowe-{abs(hash(kawalek))}.wav"
+
     def przygotuj(self, tekst):
-        """synteza z wyprzedzeniem (np. powitanie, gdy telefon jeszcze dzwoni)"""
-        wav = self.tmp / f"gotowe-{abs(hash(tekst))}.wav"
-        try:
-            glos.powiedz(tekst, wav.with_suffix(".tmp.wav"), czestotliwosc=HZ)
-            os.replace(wav.with_suffix(".tmp.wav"), wav)
-        except Exception as ex:
-            log(f"Piper (z wyprzedzeniem): {ex}")
+        """synteza z wyprzedzeniem (np. powitanie, gdy telefon jeszcze dzwoni), kawałek po kawałku"""
+        for k in self.kawalki(tekst):
+            wav = self.wav_dla(k)
+            if wav.exists():
+                continue
+            try:
+                glos.powiedz(k, wav.with_suffix(".tmp.wav"), czestotliwosc=HZ)
+                os.replace(wav.with_suffix(".tmp.wav"), wav)
+            except Exception as ex:
+                log(f"Piper (z wyprzedzeniem): {ex}")
+                return
 
     def wyslij_szczegoly(self, tekst):
         """wiadomość ze szczegółami (numer, adres, kroki) na czat: w chwili, gdy Pi mówi „wysyłam teraz”"""
@@ -162,29 +182,38 @@ class Rozmowa:
         threading.Thread(target=_, daemon=True).start()
 
     def mow(self, tekst, czat=None):
-        """synteza (Piper) i odtworzenie w rozmowie; czeka do końca wypowiedzi. czat = szczegóły wysyłane na czat,
-        kiedy Pi zaczyna to mówić"""
+        """synteza (Piper) i odtworzenie w rozmowie kawałkami (kolejny syntezuje się, gdy poprzedni gra); czeka do końca
+        wypowiedzi. czat = szczegóły wysyłane na czat, kiedy Pi zaczyna to mówić"""
         self.zapis.append(f"Pi: {tekst}")
-        wav = self.tmp / f"gotowe-{abs(hash(tekst))}.wav"
-        for _ in range(100):                    # synteza z wyprzedzeniem jeszcze trwa: poczekaj na nią (max 10 s)
-            if wav.exists() or not self.przygotowanie or not self.przygotowanie.is_alive():
-                break
-            time.sleep(0.1)
-        if not wav.exists():
-            wav = self.tmp / f"mowa-{time.time():.3f}.wav"
-            try:
-                glos.powiedz(tekst, wav, czestotliwosc=HZ)
-            except Exception as ex:
-                log(f"Piper: {ex}")
+        kaw = self.kawalki(tekst)
+        if not (self.przygotowanie and self.przygotowanie.is_alive()) and not all(self.wav_dla(k).exists() for k in kaw):
+            self.przygotowanie = threading.Thread(target=self.przygotuj, args=(tekst,), daemon=True)
+            self.przygotowanie.start()
+        razem = 0.0
+        for n, k in enumerate(kaw):
+            wav = self.wav_dla(k)
+            for _ in range(300):                # czekaj na syntezę tego kawałka (max 30 s)
+                if wav.exists() or self.koniec.is_set() or not self.przygotowanie.is_alive():
+                    break
+                time.sleep(0.1)
+            if self.koniec.is_set():
                 return
-        gotowe = threading.Event()
-        AKCJE.put((graj, (self.p, wav, gotowe)))
-        if not gotowe.wait(10):
-            log("mowa: główny wątek nie odtworzył w 10 s")
-        log(f"mówię ({czas_wav(wav):.1f} s): {tekst[:60]}")
-        if czat:
-            self.wyslij_szczegoly(czat)
-        self.koniec.wait(czas_wav(wav) + 0.3)
+            if not wav.exists():                # wątek syntezy padł: ten kawałek tutaj
+                wav = self.tmp / f"mowa-{time.time():.3f}.wav"
+                try:
+                    glos.powiedz(k, wav, czestotliwosc=HZ)
+                except Exception as ex:
+                    log(f"Piper: {ex}")
+                    return
+            gotowe = threading.Event()
+            AKCJE.put((graj, (self.p, wav, gotowe)))
+            if not gotowe.wait(10):
+                log("mowa: główny wątek nie odtworzył w 10 s")
+            if n == 0 and czat:
+                self.wyslij_szczegoly(czat)
+            razem += czas_wav(wav)
+            self.koniec.wait(czas_wav(wav) + 0.15)
+        log(f"mówię ({razem:.1f} s, {len(kaw)} cz.): {tekst[:60]}")
 
     def praca(self):
         try:

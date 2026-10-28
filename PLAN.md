@@ -491,4 +491,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   podłączeniu; bez karty gra przez AUX).
 - **2026-10-28 (AirPlay: cisza przez BT)**: Bufor wyjścia 0,1 s psuł dźwięk przez Bluetooth; wycofany (domyślny), usługa
   zrestartowana. Wyjście PipeWire było poprawne (AirPlay → TP-Link_Music).
+- **2026-10-28 (telefon: cisza przy długiej wiadomości)**: Telefon o zmianach w dzienniku milczał ~30 s (synteza 44 s mowy
+  naraz). Teraz synteza i odtwarzanie zdaniami: start po 1–2 s. AirPlay nieruszany (prośba Antka: bez zgody nie zmieniać).
 
