@@ -45,7 +45,16 @@ PONOW = []          # [(kiedy, zlecenie)]: iPhone czasem od razu odrzuca (603), 
 MAX_ROZMOWA = 20 * 60
 CISZA_KONIEC = 90                                       # s ciszy: rozłącz
 PAUZA_KONIEC = 3.0                                      # s ciszy = koniec wypowiedzi (krótsze pauzy w zdaniu nie przerywają)
-POZEGNANIA = ("do widzenia", "rozłącz", "rozlacz", "koniec rozmowy", "na razie", "pa pa", "cześć to wszystko")
+# Całe zdanie to tylko zakończenie rozmowy (bez innej prośby) -> „Do usłyszenia” i rozłączenie bez pytania Claude.
+# Jeśli w zdaniu jest coś więcej („dzięki, a jeszcze…”, „zrób X w tle i to wszystko”), decyduje Claude znacznikiem [[ROZLACZ]].
+ZAMKNIECIE_RE = re.compile(
+    r"^(?:(?:dobra|dobrze|ok|okej|okay|super|świetnie|swietnie|spoko|jasne|w porządku|w porzadku|to|no|i|a|na|teraz|już|juz|jest|"
+    r"dzięki|dzieki|dziękuję|dziekuje|wielkie dzięki|thx|to wszystko|to już wszystko|to juz wszystko|to tyle|wszystko|na teraz|"
+    r"na razie|narazie|cześć|czesc|pa|pa pa|do widzenia|do usłyszenia|do uslyszenia|rozłącz się|rozlacz sie|rozłącz|rozlacz|"
+    r"możesz się rozłączyć|mozesz sie rozlaczyc|koniec|koniec rozmowy|clear|nic więcej|nic wiecej|nie trzeba nic więcej|"
+    r"nara|trzymaj się|trzymaj sie)[\s,.!]*)+$", re.I)
+ZAMKNIECIE_MOCNE = re.compile(r"dzięk|dziek|wszystko|tyle|rozłącz|rozlacz|widzenia|usłyszenia|uslyszenia|koniec|clear|\bpa\b|nara|"
+                              r"trzymaj|nic więcej|nic wiecej", re.I)       # samo „cześć” / „ok” to jeszcze nie koniec
 
 AKCJE = queue.Queue()        # (funkcja, argumenty) do wykonania w głównym wątku pjsua2
 
@@ -262,9 +271,10 @@ class Rozmowa:
                     self.mow(odp_m)
                     s.pomin_do_konca()
                     continue
-                if any(x in tekst.lower() for x in POZEGNANIA):
+                ostatnie_pi = next((z for z in reversed(self.zapis[:-1]) if z.startswith("Pi: ")), "")
+                if ZAMKNIECIE_RE.match(tekst.strip()) and ZAMKNIECIE_MOCNE.search(tekst) and not self.czeka and not ostatnie_pi.rstrip().endswith("?"):
                     pamiec.zapisz("antek", "telefon", tekst)
-                    self.mow("Na razie, trzymaj się!")
+                    self.mow("Do usłyszenia!")
                     break
                 if self.czeka:                  # odpowiedź na „Mam to zrobić?”: tak / nie
                     tl = tekst.lower()
@@ -294,12 +304,17 @@ class Rozmowa:
                 odp = re.sub(r"\s*\[\[CZAT:\s*(.+?)\s*\]\]", "", odp, flags=re.S).strip()
                 if szczeg and not re.search(r"wysy[łl]am|na czacie|na czat", odp, re.I):
                     odp += " Wysyłam Ci teraz szczegóły na czat."
+                rozlacz_po = "[[ROZLACZ]]" in odp                # Claude: rozmowa skończona (wszystko zrozumiane i zlecone)
+                odp = odp.replace("[[ROZLACZ]]", "").strip()
                 pamiec.zapisz("claude", "telefon", odp + (f"\n[na czat: {szczeg}]" if szczeg else ""))
                 if akcje:                       # zgoda głosem w tej samej rozmowie (bez przycisków)
                     self.czeka = akcje
                     if "?" not in odp[-60:]:
                         odp += " Mam to zrobić? Powiedz tak albo nie."
                 self.mow(odp, czat=("📋 Szczegóły:\n" + szczeg) if szczeg else None)
+                if rozlacz_po and not self.czeka:
+                    log("koniec rozmowy (Claude: [[ROZLACZ]])")
+                    break
                 s.pomin_do_konca()
         except Exception as ex:
             log(f"rozmowa: {type(ex).__name__}: {ex}")

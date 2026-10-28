@@ -488,23 +488,23 @@ def claude_jednorazowo(prompt, limit=180):
     """osobne zapytanie (bez wspólnej sesji, żeby nie mieszać jej z rozmową Antka) -> tekst albo None"""
     cmd, env = claude_polecenie(pamiec.kontekst(nowa_sesja=True) + "\n\n" + prompt)
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=limit, cwd="/home/tonyg", env=env)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=limit, stdin=subprocess.DEVNULL, cwd="/home/tonyg", env=env)
         d = json.loads(r.stdout or "{}")
     except (subprocess.TimeoutExpired, ValueError):
         return None
     return None if d.get("is_error") else (d.get("result") or "").strip() or None
 
 
-def claude_bez_narzedzi(prompt, limit=180):
+def claude_bez_narzedzi(prompt, limit=180, model=None):
     """Claude BEZ żadnych narzędzi i bez pamięci rozmów: do treści z zewnątrz (maile, strony), które mogą zawierać
     podstępne polecenia; może tylko odpowiedzieć tekstem"""
     cmd = ["setpriv", "--no-new-privs", str(CLAUDE), "-p", prompt, "--output-format", "json", "--permission-mode", "dontAsk",
-           "--tools", "", "--strict-mcp-config"]
+           "--tools", "", "--strict-mcp-config"] + (["--model", model, "--effort", "low"] if model else [])
     env = {k: v for k, v in os.environ.items() if k not in ("TELEGRAM_TOKEN", "ANTHROPIC_API_KEY", "SIP_HASLO")
            and not k.startswith(("POCZTA_", "MOBI_", "INTERVALS_"))}
     env["HOME"] = "/home/tonyg"
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=limit, cwd="/tmp", env=env)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=limit, stdin=subprocess.DEVNULL, cwd="/tmp", env=env)
         d = json.loads(r.stdout or "{}")
     except (subprocess.TimeoutExpired, ValueError):
         return None
@@ -716,9 +716,27 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     for m in re.finditer(r"\[\[SUDO:\s*(.+?)\s*\]\]", odp, re.S):
         akcje.append(sudo_zapisz(m.group(1)))
     odp = re.sub(r"\[\[SUDO:\s*(.+?)\s*\]\]", "", odp, flags=re.S)
+    for zad in re.findall(r"\[\[W_TLE:\s*(.+?)\s*\]\]", odp, re.S):        # zadanie do zrobienia po rozmowie + raport
+        zadanie_w_tle(zad, kanal)
+    odp = re.sub(r"\s*\[\[W_TLE:\s*(.+?)\s*\]\]", "", odp, flags=re.S)
+    if kanal != "telefon":                  # [[ROZLACZ]] ma sens tylko w rozmowie (obsługuje telefon.py)
+        odp = odp.replace("[[ROZLACZ]]", "")
     if kanal != "telefon":              # w rozmowie telefonicznej szczegóły wysyła telefon.py w chwili mówienia
         odp = szczegoly_na_czat(odp, mowione=glosem)
     return odp.strip(), akcje
+
+
+def zadanie_w_tle(opis, kanal="telefon"):
+    """[[W_TLE: …]]: Antek zlecił coś do zrobienia po rozmowie; osobny Claude robi to całe i wysyła raport"""
+    print(f"w tle: {opis[:100]}", flush=True)
+
+    def praca():
+        odp = claude_jednorazowo(
+            f"[Antek zlecił w rozmowie ({kanal}) zadanie do zrobienia w tle, już po rozłączeniu: {opis}\n"
+            "Zrób je całe (narzędzia i API jak zwykle; sudo i akcje tylko z jego zgodą: wtedy w raporcie napisz, "
+            "o co prosisz). Na koniec napisz KRÓTKI raport dla Antka: co zrobione i wyniki, bez wstępów. Nic poza raportem.]", limit=1800)
+        powiadom("📋 Raport: " + (odp or f"nie udało się zrobić: {opis}"))
+    threading.Thread(target=praca, daemon=True).start()
 
 
 def szczegoly_na_czat(odp, mowione):
@@ -1305,6 +1323,33 @@ def numer_z(tekst):
     return f"+48 {c[:3]} {c[3:6]} {c[6:]}"
 
 
+def uprosc_zadanie(t):
+    """„mi że mam wziąć kreatynę bo rano zapomniałem dzisiaj” -> „Wziąć kreatynę”: bez resztek polecenia („mi”, „że”,
+    „żebym”, „mam/muszę”), bez uzasadnienia („bo …”) i słów czasu, które już są w terminie; pierwsza litera duża"""
+    t = " ".join(t.split()).strip(" ,.:;-")
+    for _ in range(3):
+        t = re.sub(r"^(?:przypomnij(?:\s+mi)?|przypomnienie|mi|mnie|o\s+tym,?|o\s+tym\s+że|że|ze|żebym|zebym|żeby|zeby|abym|aby|by|"
+                   r"mam|muszę|musze|powinienem|trzeba|należy|nalezy)\b[\s,]*", "", t, flags=re.I)
+    t = re.split(r"[,]?\s+(?:bo|ponieważ|poniewaz|gdyż|gdyz|bo\s+że)\s+", t, maxsplit=1, flags=re.I)[0]
+    t = re.sub(r"[,\s]+(?:dzisiaj|dziś|dzis|jutro|wieczorem|rano|teraz)$", "", t, flags=re.I).strip(" ,.:;-")
+    return (t[:1].upper() + t[1:]) if t else t
+
+
+def uprosc_zadanie_claude(z):
+    """w tle: Haiku (bez narzędzi) przerabia treść na najkrótszą czytelną formę („Weź kreatynę”); podmienia, gdy sensowne"""
+    def praca():
+        odp = claude_bez_narzedzi(
+            "Przerób treść przypomnienia na najkrótszą, czytelną formę rozkazującą po polsku (2–8 słów), bez godziny i daty, "
+            "bez „przypomnij mi”, „że”, uzasadnień i ozdobników; zachowaj nazwy, numery telefonów, adresy i ważne szczegóły. "
+            "Odpowiedz SAMĄ nową treścią, bez cudzysłowów. Treść: " + z["tekst"], limit=60, model=MODELE["szybki"][0])
+        nowy = (odp or "").strip().strip("„”\"' .")
+        if nowy and len(nowy) <= 120 and "\n" not in nowy and nowy.lower() != z["tekst"].lower() and \
+                (not numer_z(z["tekst"]) or numer_z(nowy) == numer_z(z["tekst"])):
+            portal(f"/api/todo/{z['id']}", {"tekst": nowy[:1].upper() + nowy[1:]})
+            print(f"zadanie {z['id']}: „{z['tekst']}” -> „{nowy}”", flush=True)
+    threading.Thread(target=praca, daemon=True).start()
+
+
 def nowe_zadanie(tekst):
     """„jutro 17:00 trening (zadzwoń)” -> zapis w portalu; (zadanie, opis, termin, powt, dzwon) albo None (pusty opis).
     Wspólne dla Telegrama i czatu Linphone."""
@@ -1324,7 +1369,9 @@ def nowe_zadanie(tekst):
         return None
     # domyślnie (ustawienie „zadania: domyslnie_dzwon”): przypomnienie z godziną = Pi dzwoni; „zadzwoń/ważne” zawsze
     dzwon = bool(termin) and not tylko_napisz and (dzwon or ust("zadania").get("domyslnie_dzwon", True))
+    opis = uprosc_zadanie(opis) or opis
     z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon})
+    uprosc_zadanie_claude(z)
     return z, opis, termin, powt, dzwon and bool(termin)
 
 

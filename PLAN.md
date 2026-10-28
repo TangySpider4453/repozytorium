@@ -493,4 +493,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   zrestartowana. Wyjście PipeWire było poprawne (AirPlay → TP-Link_Music).
 - **2026-10-28 (telefon: cisza przy długiej wiadomości)**: Telefon o zmianach w dzienniku milczał ~30 s (synteza 44 s mowy
   naraz). Teraz synteza i odtwarzanie zdaniami: start po 1–2 s. AirPlay nieruszany (prośba Antka: bez zgody nie zmieniać).
+- **2026-10-28 (rozłączanie, zadania w tle, prosta treść przypomnień)**: Pi rozłącza się po pożegnaniu, gdy pasuje to do
+  rozmowy (sam koniec albo `[[ROZLACZ]]` od Claude), zadania „w tle” robi po rozmowie i przysyła raport, rozumie kilka
+  poleceń w jednej wypowiedzi, a treść przypomnień skraca do formy „Weź kreatynę”. Wgrane, bez błędów.
 

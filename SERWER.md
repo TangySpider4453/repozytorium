@@ -341,6 +341,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   szczegóły dochodzą w wiadomości „Dzwoniłem, ale nie odebrałeś”.
 - **Domyślnie telefon**: „przypomnij mi za X / o 17 …” z terminem = Pi dzwoni. Tylko wiadomość, gdy Antek podkreśli:
   „napisz”, „wiadomością”, „bez dzwonienia”, „nie dzwoń” (`nowe_zadanie`: `dzwon = bool(termin) and not tylko_napisz`).
+- **Koniec rozmowy** (od 2026-10-28): całe zdanie = samo pożegnanie (`ZAMKNIECIE_RE` + mocne słowo, np. „dziękuję, to wszystko”,
+  „rozłącz się”), nic nie czeka na „tak/nie”, a ostatnie zdanie Pi nie było pytaniem → „Do usłyszenia!” i rozłączenie.
+  Inaczej decyduje Claude: `[[ROZLACZ]]` na końcu odpowiedzi (po potwierdzeniu, co zrozumiał). `[[W_TLE: opis]]` (każdy
+  kanał) = `zadanie_w_tle`: osobny Claude robi zadanie po rozmowie i wysyła „📋 Raport”.
+- **Treść przypomnień** (`nowe_zadanie`): `uprosc_zadanie` (bez „mi/że/żebym/mam”, bez „bo …”, wielka litera), potem w tle
+  Haiku bez narzędzi (`uprosc_zadanie_claude`) przerabia na najkrótszą formę rozkazującą („Weź kreatynę”), numer zostaje.
 - **Mowa kawałkami** (od 2026-10-28): `Rozmowa.kawalki()` dzieli wypowiedź na zdania (pierwszy kawałek krótki), `przygotuj`
   syntezuje je po kolei w tle, a `mow` gra kawałek po kawałku. Wcześniej 44 s mowy (telefon o zmianach w dzienniku)
   syntezowało się 32 s i Antek słyszał ciszę.
