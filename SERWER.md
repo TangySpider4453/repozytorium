@@ -432,8 +432,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Bluetooth włączony 2026-10-28** (za zgodą Antka): w `/boot/firmware/config.txt` zakomentowane `dtoverlay=disable-bt`
   (kopia `config.txt.bak_2026-10-28_bt`), UART na GPIO to teraz `ttyS0` (`serial0`). BT był też zablokowany przez rfkill
   (zapis w `/var/lib/systemd/rfkill/*bluetooth` = 0); `airplay.py` sam robi `bluetoothctl power on`, gdy radio jest wyłączone.
-- Uwaga: połączenia AirPlay (port 7000 i dynamiczne) trafiają do logu jako SERWEREK-SKAN; zmiana reguły nft
-  (wyjątek dla AirPlay) czeka na decyzję Antka (zmiana logowania bezpieczeństwa).
+- Wyjątek w logowaniu wejść (zgoda Antka 2026-10-28): port 7000 i porty >= 32768 nie są logowane jako SERWEREK-SKAN
+  (granie AirPlay z iPhone'a otwiera kilka portów naraz). Nazwa głośnika: „Antek Pokój rpi”.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

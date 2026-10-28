@@ -7,6 +7,7 @@ table inet serwerek_log {
 	chain wejscia {
 		type filter hook input priority -5; policy accept;
 		iifname { "eth0", "wlan0" } tcp dport { 22, 139, 445, 5900, 8090 } ct state new limit rate 30/minute log prefix "SERWEREK-WEJSCIE " level info
-		iifname { "eth0", "wlan0" } tcp dport != { 22, 80, 139, 445, 5900, 8090 } ct state new limit rate 60/minute log prefix "SERWEREK-SKAN " level info
+		# wyjątek (zgoda Antka 2026-10-28): AirPlay 2 = port 7000 i porty dynamiczne (>= 32768) przy graniu z iPhone'a
+		iifname { "eth0", "wlan0" } tcp dport != { 22, 80, 139, 445, 5900, 7000, 8090 } tcp dport < 32768 ct state new limit rate 60/minute log prefix "SERWEREK-SKAN " level info
 	}
 }

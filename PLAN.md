@@ -483,4 +483,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   Działa przez AUX; Bluetooth czeka na zgodę na restart Pi (BT wyłączony w config.txt).
 - **2026-10-28 (Bluetooth)**: Bluetooth włączony (config.txt + rfkill), restart Pi 20:05, wszystkie usługi wróciły. Skan BT
   działa (widać głośnik TP-Link_Music).
+- **2026-10-28 (AirPlay: nazwa i wyjątek)**: Głośnik nazywa się „Antek Pokój rpi”. Za zgodą Antka reguła logowania wejść
+  pomija port 7000 i porty >= 32768 (AirPlay), żeby granie nie było brane za skanowanie portów.
 
