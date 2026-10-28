@@ -1578,6 +1578,12 @@ AUTOMATY_SCHEMAT = {
         ("po_biegu", "liczba", 10, "Ile minut po końcu biegu", (0, 120)),
         ("poranny_do", "liczba", 12, "Bieg poranny = zaczęty przed godziną", (5, 23)),
         ("w_budziku", "bool", True, "Nazwa treningu w budziku", None)]},
+    "kalendarz": {"nazwa": "Kalendarz: przypomnienia przed", "pola": [
+        ("wlaczone", "bool", True, "Przypomnienie na Linphone przed tym, co jest w kalendarzu", None),
+        ("minuty", "liczba", 10, "Ile minut przed", (1, 60)),
+        ("lekcje", "bool", True, "Lekcje (z planu; kolejna lekcja tego samego przedmiotu bez przypomnienia)", None),
+        ("nauka", "bool", True, "Nauka, sprawdziany z godziną, zadania domowe z godziną", None),
+        ("zadania", "bool", False, "Zadania (mają też własne przypomnienie o czasie)", None)]},
     "komunikacja": {"nazwa": "Komunikacja miejska", "pola": [
         ("wlaczona", "bool", True, "Odpowiedzi o odjazdach i trasach (czat, telefon)", None),
         ("odjazdow", "liczba", 10, "Ile odjazdów pokazywać", (1, 20))]},

@@ -56,7 +56,7 @@ ul{margin:0;padding-left:18px;font-size:15px}
   <p>To, co Pi robi za Ciebie: przypomina, dzwoni, pilnuje terminów. Kolejne automatyzacje pojawią się tutaj.</p>
 </div></header>
 <main><div class="wrap"><div class="siatka" id="siatka"></div>
-<div data-ustawienia="mobi,sprawdziany,zadania,budziki,poczta,treningi,komunikacja" data-tytul="1"></div></div></main>
+<div data-ustawienia="kalendarz,mobi,sprawdziany,zadania,budziki,poczta,treningi,komunikacja" data-tytul="1"></div></div></main>
 <script>
 const $ = id => document.getElementById(id);
 const el = (t, a = {}, ...k) => { const e = document.createElement(t); for(const [n, v] of Object.entries(a)){ if(v == null) continue; if(n === "text") e.textContent = v; else if(n === "class") e.className = v; else e.setAttribute(n, v); } e.append(...k.filter(x => x != null)); return e; };

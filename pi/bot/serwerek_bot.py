@@ -1493,6 +1493,50 @@ def pilnuj_nauki():
             zapisz(s2)
 
 
+KAL_PRZYP = {"t": 0.0, "z": [], "dzien": ""}
+
+
+def przypomnij_kalendarz():
+    """X min przed (ustawienie „kalendarz”) lekcją, nauką albo zadaniem z kalendarza: krótka wiadomość (Linphone).
+    Treningi z intervals mają tylko godzinę przybliżoną, więc o nich nie ma."""
+    u = ust("kalendarz")
+    if not u.get("wlaczone", True):
+        return
+    teraz = datetime.now()
+    dzis = teraz.date().isoformat()
+    if time.time() - KAL_PRZYP["t"] > 300 or KAL_PRZYP["dzien"] != dzis:   # kalendarz dnia co 5 min
+        KAL_PRZYP.update(t=time.time(), dzien=dzis, z=portal(f"/api/kalendarz?od={dzis}&do={dzis}")["zdarzenia"])
+    ile = u.get("minuty", 10)
+    with LOCK:
+        wysl = dict(stan().get("kal_wyslane", {}))
+    nowe = False
+    poprzednia = {}
+    for z in KAL_PRZYP["z"]:
+        if not z.get("od") or z.get("zrobione") or z.get("przyblizona") or z["kat"] not in ("lekcje", "nauka", "zadania"):
+            continue
+        if not u.get(z["kat"], z["kat"] != "zadania") or z.get("rodzaj") == "odwołana":
+            continue
+        if z["kat"] == "lekcje":            # druga lekcja tego samego przedmiotu zaraz po pierwszej: bez przypomnienia
+            p = poprzednia.get("lekcje")
+            poprzednia["lekcje"] = z
+            if p and p["tytul"] == z["tytul"] and p.get("do") and (datetime.strptime(z["od"], "%H:%M") - datetime.strptime(p["do"], "%H:%M")).seconds <= 900:
+                continue
+        start = datetime.strptime(f"{dzis} {z['od']}", "%Y-%m-%d %H:%M")
+        klucz = f"{dzis} {z['od']} {z['tytul']}"[:120]
+        if klucz in wysl or not (start - timedelta(minutes=ile) <= teraz < start - timedelta(minutes=max(ile - 3, 0))):
+            continue
+        wysl[klucz] = dzis
+        nowe = True
+        ikona = {"lekcje": "📅", "nauka": "📚", "zadania": "📝"}[z["kat"]]
+        opis = f" · {z['opis']}" if z.get("opis") and z["kat"] == "lekcje" else ""
+        powiadom(f"{ikona} Za {ile} min ({z['od']}): {z['tytul']}{opis}")
+    if nowe:
+        with LOCK:
+            s2 = stan()
+            s2["kal_wyslane"] = {k: v for k, v in wysl.items() if v >= dzis}
+            zapisz(s2)
+
+
 def petla_przypomnien():
     while True:
         try:
@@ -1503,6 +1547,10 @@ def petla_przypomnien():
             pilnuj_nauki()
         except Exception as ex:
             print(f"nauka (kalendarz): {type(ex).__name__}: {ex}", flush=True)
+        try:
+            przypomnij_kalendarz()
+        except Exception as ex:
+            print(f"kalendarz (przypomnienia): {type(ex).__name__}: {ex}", flush=True)
         time.sleep(30)
 
 

@@ -83,6 +83,7 @@ main{padding:18px 0 60px}
     <div class="siatka7" id="siatka"></div>
   </div>
   <div class="card agenda" id="agenda" aria-live="polite"></div>
+  <div data-ustawienia="kalendarz"></div>
 </div></main>
 <script>
 const $ = id => document.getElementById(id);
@@ -160,5 +161,6 @@ $("dzisBtn").onclick = () => { mies = new Date(new Date().getFullYear(), new Dat
 addEventListener("hashchange", () => { kat = location.hash.slice(1) || "wszystko"; wczytaj(); });
 wczytaj();
 </script>
+<script src="/strony/wspolne/ustawienia.js" defer></script>
 </body>
 </html>

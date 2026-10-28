@@ -476,4 +476,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   dzień pełny → wiadomość z prośbą o decyzję).
 - **2026-10-27 (spam „brak okienka”)**: `pilnuj_nauki` przy braku wolnego okienka pisało co 5 min (ponad 100 wiadomości).
   Teraz raz na zadanie i termin (`stan["nauka_zgloszone"]`). Wgrane 7:41, po 6 min brak nowych wiadomości i błędów.
+- **2026-10-28 (przypomnienia z kalendarza)**: 10 min przed lekcją / nauką (opcjonalnie zadaniem) wiadomość na Linphone;
+  ustawienia (minuty, kategorie) na stronie Kalendarz. Wgrane, bot bez błędów.
 

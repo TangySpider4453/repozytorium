@@ -401,6 +401,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   wcześniejszego (do dziś), wiadomość „📚 Przesunąłem…”; bez okienka: wiadomość z prośbą. Ręczna zmiana godziny po
   przesunięciu nie jest ruszana (`stan["nauka_przes"]`). Claude układa nowe sesje z `/api/kalendarz/wolne`.
 
+- **Przypomnienia z kalendarza** (od 2026-10-28, `przypomnij_kalendarz`, co 30 s): X min (ustawienie „kalendarz”, domyślnie 10)
+  przed lekcją, nauką i (opcjonalnie) zadaniem z godziną wiadomość „📅/📚/📝 Za 10 min (HH:MM): …” (Linphone, zapas Telegram).
+  Druga z rzędu lekcja tego samego przedmiotu bez przypomnienia; odwołane i treningi (godzina przybliżona) pomijane;
+  wysłane w `stan["kal_wyslane"]`. Ustawienia na dole strony Kalendarz i na Automatycznych.
+
 ## Oceny: okresy i symulacja (od 2026-10-26)
 - `mobi.py` czyta `oceny/?semestr=1` i `=2`: `oceny_okresy`, `okres` (II, gdy ma oceny), `oceny_rok` (oba razem),
   `srednia` (ze średnich przedmiotów), `srednia_ocen` (ze wszystkich ocen). Strona Mobidziennik: zakładki I / II / cały rok,
