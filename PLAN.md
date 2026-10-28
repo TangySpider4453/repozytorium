@@ -489,4 +489,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   na stronie), stan „gra” zerowany przy starcie usługi.
 - **2026-10-28 (AirPlay: karta USB)**: Trzeci tryb wyjścia: karta dźwiękowa USB (wykrywana na stronie, przycisk aktywny po
   podłączeniu; bez karty gra przez AUX).
+- **2026-10-28 (AirPlay: cisza przez BT)**: Bufor wyjścia 0,1 s psuł dźwięk przez Bluetooth; wycofany (domyślny), usługa
+  zrestartowana. Wyjście PipeWire było poprawne (AirPlay → TP-Link_Music).
 

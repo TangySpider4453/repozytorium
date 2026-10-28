@@ -434,8 +434,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (zapis w `/var/lib/systemd/rfkill/*bluetooth` = 0); `airplay.py` sam robi `bluetoothctl power on`, gdy radio jest wyłączone.
 - **Karta dźwiękowa USB** (od 2026-10-28): tryb `usb` (strona: „🎛️ Karta USB”, aktywny, gdy karta wykryta): wyjście
   PipeWire z `usb` w nazwie (`karty_usb()`), zapamiętane w `ustawienia.json` (`usb`); odłączona = gra przez AUX z uwagą.
-- Opóźnienie: bufor wyjścia 0,1 s (`audio_backend_buffer_desired_length_in_seconds`), przesunięcie BT domyślnie 0 i ukryte
-  za przełącznikiem na stronie. Reszta opóźnienia sterowania (pauza, następny utwór, napisy) wynika z AirPlay 2
+- Opóźnienie: przesunięcie BT domyślnie 0 i ukryte za przełącznikiem na stronie. Bufor wyjścia 0,1 s
+  (`audio_backend_buffer_desired_length_in_seconds`) psuł dźwięk przez Bluetooth — wycofany, zostaje domyślny (0,2 s). Reszta opóźnienia sterowania (pauza, następny utwór, napisy) wynika z AirPlay 2
   (iPhone buforuje ok. 2 s w trybie „buforowanym”) i z Bluetooth (ok. 0,15–0,25 s) — po stronie Pi nie da się jej usunąć.
 - Wyjątek w logowaniu wejść (zgoda Antka 2026-10-28): port 7000 i porty >= 32768 nie są logowane jako SERWEREK-SKAN
   (granie AirPlay z iPhone'a otwiera kilka portów naraz). Nazwa głośnika: „Antek Pokój rpi”.
