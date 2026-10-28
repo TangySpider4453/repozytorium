@@ -30,7 +30,8 @@ STAN = KAT / "stan.json"
 KONF = KAT / "shairport-sync.conf"
 USLUGA = "airplay.service"
 ENV = {**os.environ, "XDG_RUNTIME_DIR": "/run/user/1000", "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus"}
-DOMYSLNE = {"wlaczony": True, "tryb": "aux", "bt_mac": None, "bt_nazwa": None, "nazwa": "Serwerek", "opoznienie_bt": 0.0}
+DOMYSLNE = {"wlaczony": True, "tryb": "aux", "bt_mac": None, "bt_nazwa": None, "nazwa": "Serwerek", "opoznienie_bt": 0.0,
+            "usb": None}
 
 
 def sh(*cmd, limit=20):
@@ -71,11 +72,20 @@ def wyjscia():
     return wyn
 
 
-def ustaw_wyjscie(tryb, mac=None):
-    """domyślne wyjście PipeWire: AUX = analogowe (bcm2835 / Wbudowany dźwięk), BT = bluez_output.<MAC>"""
+def karty_usb():
+    """podłączone karty dźwiękowe USB: [{nazwa (node.name), opis}]"""
+    return [{"nazwa": n, "opis": o} for _, n, o in wyjscia() if "usb" in n.lower()]
+
+
+def ustaw_wyjscie(tryb, mac=None, usb=None):
+    """domyślne wyjście PipeWire: AUX = analogowe (bcm2835 / Wbudowany dźwięk), BT = bluez_output.<MAC>,
+    USB = karta dźwiękowa USB (zapamiętana, a gdy jej nie ma: pierwsza podłączona)"""
+    if tryb == "usb":
+        karty = karty_usb()
+        usb = next((k["nazwa"] for k in karty if k["nazwa"] == usb), karty[0]["nazwa"] if karty else None)
     for _ in range(20):                       # sink BT pojawia się chwilę po połączeniu
         for i, nazwa, opis in wyjscia():
-            if (tryb == "bt" and mac and mac.replace(":", "_").lower() in nazwa.lower()) or \
+            if (tryb == "bt" and mac and mac.replace(":", "_").lower() in nazwa.lower()) or (tryb == "usb" and usb and nazwa == usb) or \
                (tryb == "aux" and ("bcm2835" in nazwa or "analog" in nazwa.lower() or "Wbudowany" in opis or "Headphones" in opis)):
                 sh("wpctl", "set-default", i)
                 return True
@@ -153,15 +163,21 @@ def wlacz(tak):
 
 def tryb(t):
     u = ustawienia()
-    if t not in ("aux", "bt"):
-        raise SystemExit("tryb: aux albo bt")
+    if t not in ("aux", "bt", "usb"):
+        raise SystemExit("tryb: aux, bt albo usb")
     stary = u["tryb"]
     u["tryb"] = t
     zapisz(UST, u)
     konfiguracja(u)
     gra = czytaj(STAN, {"gra": False})["gra"]
-    if t == "aux":
-        ustaw_wyjscie("aux")
+    if t in ("aux", "usb"):
+        if t == "usb":
+            karty = karty_usb()
+            if karty and u.get("usb") not in [k["nazwa"] for k in karty]:
+                u["usb"] = karty[0]["nazwa"]
+                zapisz(UST, u)
+        if not ustaw_wyjscie(t, usb=u.get("usb")):
+            ustaw_wyjscie("aux")
         if stary == "bt" and bt_polaczony(u["bt_mac"]):
             bt("disconnect", u["bt_mac"])
     elif gra and u["bt_mac"]:                 # przełączenie w trakcie grania: od razu na głośnik BT
@@ -219,6 +235,10 @@ def start():
         if not ustaw_wyjscie("bt", u["bt_mac"]):
             ustaw_wyjscie("aux")              # głośnik BT niedostępny: gra przez AUX, żeby nie było ciszy
             zapisz(STAN, {"gra": True, "t": time.time(), "uwaga": "Głośnik Bluetooth niedostępny: gram przez AUX."})
+    elif u["tryb"] == "usb":
+        if not ustaw_wyjscie("usb", usb=u.get("usb")):
+            ustaw_wyjscie("aux")              # karta USB odłączona: gra przez AUX
+            zapisz(STAN, {"gra": True, "t": time.time(), "uwaga": "Karta dźwiękowa USB niepodłączona: gram przez AUX."})
     else:
         ustaw_wyjscie("aux")
 
@@ -229,7 +249,8 @@ def stop():
     zapisz(STAN, {"gra": False, "t": time.time()})
     if u["bt_mac"] and bt_polaczony(u["bt_mac"]):
         bt("disconnect", u["bt_mac"])
-    ustaw_wyjscie("aux")
+    if not (u["tryb"] == "usb" and ustaw_wyjscie("usb", usb=u.get("usb"))):
+        ustaw_wyjscie("aux")
 
 
 def stan():
@@ -239,7 +260,7 @@ def stan():
     dost = bt_dostepny()
     return {**u, "dziala": akt.strip() == "active", "gra": s.get("gra", False), "uwaga": s.get("uwaga"),
             "bt_dostepny": dost, "bt_polaczony": bt_polaczony(u["bt_mac"]) if dost else False,
-            "zbudowany": Path("/usr/local/bin/shairport-sync").exists()}
+            "zbudowany": Path("/usr/local/bin/shairport-sync").exists(), "karty_usb": karty_usb()}
 
 
 if __name__ == "__main__":

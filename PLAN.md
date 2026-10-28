@@ -487,4 +487,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   pomija port 7000 i porty >= 32768 (AirPlay), żeby granie nie było brane za skanowanie portów.
 - **2026-10-28 (AirPlay: opóźnienie)**: Mniejszy bufor wyjścia (0,1 s), przesunięcie BT domyślnie wyłączone (przełącznik
   na stronie), stan „gra” zerowany przy starcie usługi.
+- **2026-10-28 (AirPlay: karta USB)**: Trzeci tryb wyjścia: karta dźwiękowa USB (wykrywana na stronie, przycisk aktywny po
+  podłączeniu; bez karty gra przez AUX).
 

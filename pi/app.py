@@ -1666,7 +1666,7 @@ def api_glosnik():
         b = request.get_json(silent=True) or {}
         if b.get("wlaczony") in (True, False):
             airplay("wlacz" if b["wlaczony"] else "wylacz")
-        if b.get("tryb") in ("aux", "bt"):
+        if b.get("tryb") in ("aux", "bt", "usb"):
             airplay("tryb", b["tryb"], limit=60)
         if b.get("wybierz"):
             if not re.fullmatch(r"[0-9A-F:]{17}", str(b["wybierz"])):

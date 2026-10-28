@@ -47,6 +47,7 @@ main{padding:18px 0 60px}
 .seg{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
 .seg button{flex:1;font:inherit;font-size:17px;font-weight:700;padding:12px 8px;border:0;background:var(--surface);color:var(--ink);cursor:pointer}
 .seg button[aria-pressed=true]{background:var(--sel);color:#fff}
+.seg button:disabled{opacity:.4;cursor:default}
 .btn{font:inherit;font-size:16px;font-weight:700;padding:9px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .btn:disabled{opacity:.5}
 .lista{list-style:none;margin:8px 0 0;padding:0}
@@ -66,7 +67,8 @@ input[type=range]{width:100%}
   <div class="card"><div class="wiersz"><div><div class="stan" id="stan">…</div><div class="muted info" id="stanOpis"></div></div>
     <button type="button" class="przel" role="switch" id="wl" aria-checked="false" aria-label="AirPlay włączony"></button></div></div>
   <div class="card"><h2>Wyjście dźwięku</h2>
-    <div class="seg" role="group" aria-label="Wyjście"><button type="button" id="tAux">🎧 AUX (gniazdo)</button><button type="button" id="tBt">🔵 Bluetooth</button></div>
+    <div class="seg" role="group" aria-label="Wyjście"><button type="button" id="tAux">🎧 AUX</button><button type="button" id="tUsb">🎛️ Karta USB</button><button type="button" id="tBt">🔵 Bluetooth</button></div>
+    <p class="info" id="usbInfo"></p>
     <p class="muted info">Wybór zostaje, dopóki go nie zmienisz. Na Bluetooth Pi łączy się z głośnikiem dopiero, gdy zaczniesz grać, i zwalnia go 20 s po rozłączeniu AirPlay.</p></div>
   <div class="card"><h2>Głośnik Bluetooth</h2>
     <div id="btInfo" class="info"></div>
@@ -104,6 +106,11 @@ function rysuj(){
   $("stanOpis").textContent = (S.gra ? "Wyjście: " + (S.tryb === "bt" ? "Bluetooth" + (S.bt_polaczony ? " (połączony)" : " (łączę…)") : "AUX") : "")
     + (S.uwaga ? " " + S.uwaga : "");
   $("tAux").setAttribute("aria-pressed", String(S.tryb === "aux")); $("tBt").setAttribute("aria-pressed", String(S.tryb === "bt"));
+  $("tUsb").setAttribute("aria-pressed", String(S.tryb === "usb"));
+  const k = S.karty_usb || [];
+  $("tUsb").disabled = !k.length && S.tryb !== "usb";
+  $("usbInfo").textContent = k.length ? "🎛️ Wykryta karta USB: " + k.map(x => x.opis).join(", ")
+    : S.tryb === "usb" ? "⚠️ Karta USB nie jest podłączona: gram przez AUX, dopóki jej nie podłączysz." : "Karta dźwiękowa USB: nie wykryto (podłącz, a pojawi się tutaj).";
   $("btInfo").replaceChildren(!S.bt_dostepny ? el("span", {class:"bad", text:"Bluetooth w Pi jest wyłączony (ustawienia startowe). Włączenie wymaga jednego restartu Pi."})
     : S.bt_mac ? el("span", {}, "Wybrany: ", el("b", {text:S.bt_nazwa || S.bt_mac}), el("span", {class:"muted", text:` (${S.bt_mac})${S.bt_polaczony ? " · połączony" : " · wolny"}`}))
     : el("span", {class:"muted", text:"Nie wybrano głośnika. Włącz w nim tryb parowania i dotknij „Szukaj”."}));
@@ -115,6 +122,7 @@ async function wczytaj(){ try{ S = await api("/api/glosnik"); rysuj(); }catch(e)
 $("wl").onclick = () => zmien({wlaczony: !(S && S.wlaczony)}, S && S.wlaczony ? "Wyłączam…" : "Włączam…");
 $("tAux").onclick = () => zmien({tryb:"aux"}, "Przełączam na AUX…");
 $("tBt").onclick = () => zmien({tryb:"bt"}, "Przełączam na Bluetooth…");
+$("tUsb").onclick = () => zmien({tryb:"usb"}, "Przełączam na kartę USB…");
 $("opozn").onchange = () => zmien({opoznienie_bt: parseFloat($("opozn").value)});
 $("opoznWl").onclick = () => {
   const wl = $("opoznWl").getAttribute("aria-checked") !== "true";

@@ -432,6 +432,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Bluetooth włączony 2026-10-28** (za zgodą Antka): w `/boot/firmware/config.txt` zakomentowane `dtoverlay=disable-bt`
   (kopia `config.txt.bak_2026-10-28_bt`), UART na GPIO to teraz `ttyS0` (`serial0`). BT był też zablokowany przez rfkill
   (zapis w `/var/lib/systemd/rfkill/*bluetooth` = 0); `airplay.py` sam robi `bluetoothctl power on`, gdy radio jest wyłączone.
+- **Karta dźwiękowa USB** (od 2026-10-28): tryb `usb` (strona: „🎛️ Karta USB”, aktywny, gdy karta wykryta): wyjście
+  PipeWire z `usb` w nazwie (`karty_usb()`), zapamiętane w `ustawienia.json` (`usb`); odłączona = gra przez AUX z uwagą.
 - Opóźnienie: bufor wyjścia 0,1 s (`audio_backend_buffer_desired_length_in_seconds`), przesunięcie BT domyślnie 0 i ukryte
   za przełącznikiem na stronie. Reszta opóźnienia sterowania (pauza, następny utwór, napisy) wynika z AirPlay 2
   (iPhone buforuje ok. 2 s w trybie „buforowanym”) i z Bluetooth (ok. 0,15–0,25 s) — po stronie Pi nie da się jej usunąć.
