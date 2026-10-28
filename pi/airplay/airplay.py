@@ -92,6 +92,8 @@ def bt(*arg, limit=20):
 
 def bt_dostepny():
     kod, out = bt("show", limit=5)
+    if kod == 0 and "Controller" in out and "Powered: no" in out:     # np. po restarcie: włącz radio BT
+        bt("power", "on", limit=5)
     return kod == 0 and "Controller" in out
 
 
@@ -206,6 +208,7 @@ def wybierz(mac):
 def start():
     """shairport-sync: zaraz zacznie grać"""
     u = ustawienia()
+    bt_dostepny()
     zapisz(STAN, {"gra": True, "t": time.time()})
     if u["tryb"] == "bt" and u["bt_mac"]:
         for _ in range(3):

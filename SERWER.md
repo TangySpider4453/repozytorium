@@ -429,8 +429,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `audio_backend_latency_offset_in_seconds` w trybie BT), konfiguracja generowana `~/airplay/shairport-sync.conf`.
 - Portal: `GET/POST /api/glosnik` ({wlaczony}, {tryb}, {wybierz: MAC}, {opoznienie_bt}), `POST /api/glosnik/skanuj`;
   strona `/strony/glosnik/` (repo `glosnik/`), karta 🔊 na Automatycznych.
-- **Bluetooth w Pi wyłączony** w `/boot/firmware/config.txt` (`dtoverlay=disable-bt`, od instalacji; nic nie używa
-  ttyAMA0). Włączenie: usunąć tę linię (UART zostaje jako mini-UART przez `enable_uart=1`) i restart Pi — za zgodą Antka.
+- **Bluetooth włączony 2026-10-28** (za zgodą Antka): w `/boot/firmware/config.txt` zakomentowane `dtoverlay=disable-bt`
+  (kopia `config.txt.bak_2026-10-28_bt`), UART na GPIO to teraz `ttyS0` (`serial0`). BT był też zablokowany przez rfkill
+  (zapis w `/var/lib/systemd/rfkill/*bluetooth` = 0); `airplay.py` sam robi `bluetoothctl power on`, gdy radio jest wyłączone.
 - Uwaga: połączenia AirPlay (port 7000 i dynamiczne) trafiają do logu jako SERWEREK-SKAN; zmiana reguły nft
   (wyjątek dla AirPlay) czeka na decyzję Antka (zmiana logowania bezpieczeństwa).
 

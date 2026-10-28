@@ -481,4 +481,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-28 (głośnik AirPlay 2)**: Pi jako głośnik AirPlay 2 z multiroomem (shairport-sync z AirPlay 2 + nqptp),
   strona `/strony/glosnik/`: włącznik, wyjście AUX/Bluetooth, wybór głośnika BT (raz), BT łączony tylko na czas grania.
   Działa przez AUX; Bluetooth czeka na zgodę na restart Pi (BT wyłączony w config.txt).
+- **2026-10-28 (Bluetooth)**: Bluetooth włączony (config.txt + rfkill), restart Pi 20:05, wszystkie usługi wróciły. Skan BT
+  działa (widać głośnik TP-Link_Music).
 
