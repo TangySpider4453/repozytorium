@@ -1323,31 +1323,39 @@ def numer_z(tekst):
     return f"+48 {c[:3]} {c[3:6]} {c[6:]}"
 
 
+# bezokolicznik / „zadzwonił(a)” -> tryb rozkazujący („wziąć kreatynę” -> „Weź kreatynę”), bez AI
+ROZKAZ = {"wziąć": "weź", "wziac": "weź", "zadzwonić": "zadzwoń", "zadzwonic": "zadzwoń", "zadzwonił": "zadzwoń", "zadzwoniła": "zadzwoń",
+          "kupić": "kup", "kupic": "kup", "zrobić": "zrób", "zrobic": "zrób", "wyjąć": "wyjmij", "wyjac": "wyjmij", "napić": "napij",
+          "napic": "napij", "wypić": "wypij", "wypic": "wypij", "zjeść": "zjedz", "zjesc": "zjedz", "oddać": "oddaj", "oddac": "oddaj",
+          "wysłać": "wyślij", "wyslac": "wyślij", "zapłacić": "zapłać", "zaplacic": "zapłać", "sprawdzić": "sprawdź", "sprawdzic": "sprawdź",
+          "napisać": "napisz", "napisac": "napisz", "iść": "idź", "isc": "idź", "pójść": "idź", "pojsc": "idź", "wyrzucić": "wyrzuć",
+          "umyć": "umyj", "posprzątać": "posprzątaj", "zabrać": "zabierz", "nauczyć": "naucz", "powtórzyć": "powtórz",
+          "odrobić": "odrób", "przygotować": "przygotuj", "spakować": "spakuj", "zapisać": "zapisz", "wstać": "wstań",
+          "pobiegać": "pobiegaj", "zważyć": "zważ", "podlać": "podlej", "nakarmić": "nakarm", "wynieść": "wynieś",
+          "odebrać": "odbierz", "naładować": "naładuj", "włączyć": "włącz", "wyłączyć": "wyłącz", "wysuszyć": "wysusz",
+          "wyprać": "wypierz", "rozwiesić": "rozwieś", "przeczytać": "przeczytaj", "obejrzeć": "obejrzyj", "zamówić": "zamów",
+          "odpisać": "odpisz", "zgłosić": "zgłoś", "przynieść": "przynieś", "pamiętać": "pamiętaj", "wyjść": "wyjdź",
+          "zadzwonil": "zadzwoń", "zrobił": "zrób", "wziął": "weź", "kupił": "kup", "napisał": "napisz", "sprawdził": "sprawdź"}
+
+
 def uprosc_zadanie(t):
-    """„mi że mam wziąć kreatynę bo rano zapomniałem dzisiaj” -> „Wziąć kreatynę”: bez resztek polecenia („mi”, „że”,
-    „żebym”, „mam/muszę”), bez uzasadnienia („bo …”) i słów czasu, które już są w terminie; pierwsza litera duża"""
+    """„mi że mam wziąć kreatynę bo rano zapomniałem dzisiaj” -> „Weź kreatynę”: bez resztek polecenia („mi”, „że”,
+    „żebym”, „mam/muszę”), bez uzasadnienia („bo …”) i słów czasu, które już są w terminie, czasownik w trybie
+    rozkazującym (słownik ROZKAZ); bez AI, od razu"""
     t = " ".join(t.split()).strip(" ,.:;-")
     for _ in range(3):
         t = re.sub(r"^(?:przypomnij(?:\s+mi)?|przypomnienie|mi|mnie|o\s+tym,?|o\s+tym\s+że|że|ze|żebym|zebym|żeby|zeby|abym|aby|by|"
-                   r"mam|muszę|musze|powinienem|trzeba|należy|nalezy)\b[\s,]*", "", t, flags=re.I)
-    t = re.split(r"[,]?\s+(?:bo|ponieważ|poniewaz|gdyż|gdyz|bo\s+że)\s+", t, maxsplit=1, flags=re.I)[0]
+                   r"mam|muszę|musze|powinienem|powinnam|trzeba|należy|nalezy)\b[\s,]*", "", t, flags=re.I)
+    t = re.split(r"[,]?\s+(?:bo|ponieważ|poniewaz|gdyż|gdyz)\s+", t, maxsplit=1, flags=re.I)[0]
     t = re.sub(r"[,\s]+(?:dzisiaj|dziś|dzis|jutro|wieczorem|rano|teraz)$", "", t, flags=re.I).strip(" ,.:;-")
+    sie = re.match(r"(?:się|sie)\s+(.*)", t, re.I)           # „się napić wody” -> „napić się wody”
+    if sie and sie.group(1).split(" ")[0].lower() in ROZKAZ:
+        w, _, r_ = sie.group(1).partition(" ")
+        t = f"{w} się" + (" " + r_ if r_ else "")
+    pierwsze, _, reszta = t.partition(" ")
+    if pierwsze.lower() in ROZKAZ:
+        t = ROZKAZ[pierwsze.lower()] + (" " + reszta if reszta else "")
     return (t[:1].upper() + t[1:]) if t else t
-
-
-def uprosc_zadanie_claude(z):
-    """w tle: Haiku (bez narzędzi) przerabia treść na najkrótszą czytelną formę („Weź kreatynę”); podmienia, gdy sensowne"""
-    def praca():
-        odp = claude_bez_narzedzi(
-            "Przerób treść przypomnienia na najkrótszą, czytelną formę rozkazującą po polsku (2–8 słów), bez godziny i daty, "
-            "bez „przypomnij mi”, „że”, uzasadnień i ozdobników; zachowaj nazwy, numery telefonów, adresy i ważne szczegóły. "
-            "Odpowiedz SAMĄ nową treścią, bez cudzysłowów. Treść: " + z["tekst"], limit=60, model=MODELE["szybki"][0])
-        nowy = (odp or "").strip().strip("„”\"' .")
-        if nowy and len(nowy) <= 120 and "\n" not in nowy and nowy.lower() != z["tekst"].lower() and \
-                (not numer_z(z["tekst"]) or numer_z(nowy) == numer_z(z["tekst"])):
-            portal(f"/api/todo/{z['id']}", {"tekst": nowy[:1].upper() + nowy[1:]})
-            print(f"zadanie {z['id']}: „{z['tekst']}” -> „{nowy}”", flush=True)
-    threading.Thread(target=praca, daemon=True).start()
 
 
 def nowe_zadanie(tekst):
@@ -1371,7 +1379,6 @@ def nowe_zadanie(tekst):
     dzwon = bool(termin) and not tylko_napisz and (dzwon or ust("zadania").get("domyslnie_dzwon", True))
     opis = uprosc_zadanie(opis) or opis
     z = portal("/api/todo", {"tekst": opis, "termin": termin, "powtarzaj": powt, "dzwon": dzwon})
-    uprosc_zadanie_claude(z)
     return z, opis, termin, powt, dzwon and bool(termin)
 
 

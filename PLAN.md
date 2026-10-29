@@ -498,4 +498,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   poleceń w jednej wypowiedzi, a treść przypomnień skraca do formy „Weź kreatynę”. Wgrane, bez błędów.
 - **2026-10-28 (ponawianie przypomnień)**: Bez „zrobione” Pi dzwoni znowu (za podany czas albo 10 min; nieodebrane też),
   termin przesuwa się za każdym razem; wyłącznik i minuty w ustawieniach Zadań.
+- **2026-10-29 (bez AI: przypomnienia i rozłączanie)**: Treść przypomnień upraszczana regułami (słownik trybu
+  rozkazującego), bez Haiku. W rozmowie „przypomnij …” i pożegnanie na końcu wypowiedzi rozpoznawane słowami kluczowymi,
+  bez Claude.
 

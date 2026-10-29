@@ -56,6 +56,34 @@ ZAMKNIECIE_RE = re.compile(
 ZAMKNIECIE_MOCNE = re.compile(r"dzięk|dziek|wszystko|tyle|rozłącz|rozlacz|widzenia|usłyszenia|uslyszenia|koniec|clear|\bpa\b|nara|"
                               r"trzymaj|nic więcej|nic wiecej", re.I)       # samo „cześć” / „ok” to jeszcze nie koniec
 
+ZADANIE_RE = re.compile(r"^(?:(?:a|i|dobra|dobrze|to|ok|okej|jeszcze)[\s,]+)*(?:przypomnij(?:\s+mi)?|dodaj\s+(?:zadanie|przypomnienie)|"
+                        r"zapisz\s+(?:zadanie|przypomnienie))\b[\s,:]*(.+)$", re.I)
+
+
+def rozdziel_zamkniecie(tekst):
+    """„przypomnij o 20 o kreatynie, dzięki, to wszystko” -> („przypomnij o 20 o kreatynie”, True): pożegnanie na końcu
+    wypowiedzi rozpoznane po słowach (bez AI); (tekst, False), gdy go nie ma"""
+    slowa = tekst.split()
+    for i in range(len(slowa)):
+        ogon = " ".join(slowa[i:])
+        if ZAMKNIECIE_RE.match(ogon) and ZAMKNIECIE_MOCNE.search(ogon):
+            return " ".join(slowa[:i]).strip(" ,.;"), True
+    return tekst, False
+
+
+def zadanie_glosem(tekst, bot):
+    """„przypomnij mi o 20, że mam wziąć kreatynę” w rozmowie -> zadanie od razu, bez AI (krótka odpowiedź do powiedzenia)"""
+    m = ZADANIE_RE.match(tekst.strip())
+    if not m:
+        return None
+    w = bot.nowe_zadanie(m.group(1))
+    if not w:
+        return None
+    z, opis, termin, powt, dzwon = w
+    kiedy = bot.kiedy_tekst(termin) if termin else "bez godziny"
+    return f"Dobrze, zapisane: {opis}, {kiedy}" + (", zadzwonię." if dzwon else ".")
+
+
 AKCJE = queue.Queue()        # (funkcja, argumenty) do wykonania w głównym wątku pjsua2
 
 
@@ -256,26 +284,42 @@ class Rozmowa:
                     continue
                 self.zapis.append(f"Ty: {tekst}")
                 log(f"Antek: {tekst}")
+                polecenie, konczy = rozdziel_zamkniecie(tekst)    # pożegnanie na końcu: po odpowiedzi rozłącz (bez AI)
+                if konczy and polecenie:
+                    tekst = polecenie
                 tid = self.zlecenie.get("todo_id")
                 if tid and not re.search(r"\bnie\s+(\w+\s+)?(zrobi|odhacz|skończ|skoncz|załatw|zalatw)", tekst.lower()) and re.search(r"\b(odhacz|odhaczon|odchacz|odhaczy|zrobion|zrobił|zrobil|gotowe|załatwion|zalatwion|wykonan|skończon|skonczon)\w*", tekst.lower()):
                     pamiec.zapisz("antek", "telefon", tekst)
                     odp = bot.callback_zadania(f"todo_ok:{tid}")
                     self.zlecenie.pop("todo_id", None)
-                    self.mow("Odhaczone." if odp.startswith("✅ Zrobione:") else "Odhaczone. " + odp.replace("✅ Zrobione. ", ""))
+                    self.mow(("Odhaczone." if odp.startswith("✅ Zrobione:") else "Odhaczone. " + odp.replace("✅ Zrobione. ", ""))
+                             + (" Do usłyszenia!" if konczy else ""))
                     pamiec.zapisz("bot", "telefon", f"Odhaczone przez telefon: {odp}")
+                    if konczy:
+                        break
                     s.pomin_do_konca()
                     continue
                 if (odp_m := bot.komenda_miejsca(tekst) or bot.komenda_budzik(tekst) or bot.poczta.reakcja(tekst)) is not None:
                     pamiec.zapisz("antek", "telefon", tekst)
                     pamiec.zapisz("bot", "telefon", odp_m)
-                    self.mow(odp_m)
+                    self.mow(odp_m + (" Do usłyszenia!" if konczy else ""))
+                    if konczy:
+                        break
                     s.pomin_do_konca()
                     continue
                 ostatnie_pi = next((z for z in reversed(self.zapis[:-1]) if z.startswith("Pi: ")), "")
-                if ZAMKNIECIE_RE.match(tekst.strip()) and ZAMKNIECIE_MOCNE.search(tekst) and not self.czeka and not ostatnie_pi.rstrip().endswith("?"):
+                if konczy and not polecenie and not self.czeka and not ostatnie_pi.rstrip().endswith("?"):
                     pamiec.zapisz("antek", "telefon", tekst)
                     self.mow("Do usłyszenia!")
                     break
+                if (odp_z := zadanie_glosem(tekst, bot)) is not None:      # przypomnienie od razu, bez AI
+                    pamiec.zapisz("antek", "telefon", tekst)
+                    pamiec.zapisz("bot", "telefon", odp_z)
+                    self.mow(odp_z + (" Do usłyszenia!" if konczy else ""))
+                    if konczy:
+                        break
+                    s.pomin_do_konca()
+                    continue
                 if self.czeka:                  # odpowiedź na „Mam to zrobić?”: tak / nie
                     tl = tekst.lower()
                     akcje_teraz, self.czeka = self.czeka, []
@@ -311,8 +355,10 @@ class Rozmowa:
                     self.czeka = akcje
                     if "?" not in odp[-60:]:
                         odp += " Mam to zrobić? Powiedz tak albo nie."
+                if konczy and not rozlacz_po and not self.czeka:
+                    odp += " Do usłyszenia!"
                 self.mow(odp, czat=("📋 Szczegóły:\n" + szczeg) if szczeg else None)
-                if rozlacz_po and not self.czeka:
+                if (rozlacz_po or konczy) and not self.czeka:
                     log("koniec rozmowy (Claude: [[ROZLACZ]])")
                     break
                 s.pomin_do_konca()

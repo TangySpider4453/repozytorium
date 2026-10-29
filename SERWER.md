@@ -349,8 +349,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   „rozłącz się”), nic nie czeka na „tak/nie”, a ostatnie zdanie Pi nie było pytaniem → „Do usłyszenia!” i rozłączenie.
   Inaczej decyduje Claude: `[[ROZLACZ]]` na końcu odpowiedzi (po potwierdzeniu, co zrozumiał). `[[W_TLE: opis]]` (każdy
   kanał) = `zadanie_w_tle`: osobny Claude robi zadanie po rozmowie i wysyła „📋 Raport”.
-- **Treść przypomnień** (`nowe_zadanie`): `uprosc_zadanie` (bez „mi/że/żebym/mam”, bez „bo …”, wielka litera), potem w tle
-  Haiku bez narzędzi (`uprosc_zadanie_claude`) przerabia na najkrótszą formę rozkazującą („Weź kreatynę”), numer zostaje.
+- **Treść przypomnień** (`nowe_zadanie`): `uprosc_zadanie` bez AI: bez „mi/że/żebym/mam”, bez „bo …”, czasownik w trybie
+  rozkazującym ze słownika `ROZKAZ` („wziąć kreatynę” → „Weź kreatynę”, „się napić” → „Napij się”), wielka litera.
+- **Bez AI w rozmowie** (od 2026-10-29): „przypomnij (mi) …”, „dodaj zadanie …” → `zadanie_glosem` (od razu, `nowe_zadanie`);
+  pożegnanie na końcu wypowiedzi (`rozdziel_zamkniecie`: „…, dzięki, to wszystko”, „…, teraz jest clear”) → po
+  odpowiedzi „Do usłyszenia!” i rozłączenie (także po odhaczeniu i szybkich komendach); do Claude idzie tylko reszta.
 - **Mowa kawałkami** (od 2026-10-28): `Rozmowa.kawalki()` dzieli wypowiedź na zdania (pierwszy kawałek krótki), `przygotuj`
   syntezuje je po kolei w tle, a `mow` gra kawałek po kawałku. Wcześniej 44 s mowy (telefon o zmianach w dzienniku)
   syntezowało się 32 s i Antek słyszał ciszę.
