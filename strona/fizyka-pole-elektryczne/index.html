@@ -689,5 +689,7 @@ function qRestore(){
 })();
 </script>
 <script src="licz-zadania.js"></script>
+<script>/* zakładka z adresu (np. #fiszki z kalendarza): pierwszeństwo przed zapamiętaną */
+addEventListener("load",()=>{const h=decodeURIComponent(location.hash.slice(1));if(h&&typeof showTab==="function"&&document.getElementById(h))showTab(h)});</script>
 </body>
 </html>

@@ -16,7 +16,10 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   (`[]` = nie rozpoznano). Wzór rodzaju = średnia punktów ze wszystkich zdjęć tego rodzaju (Prokrustes: skala +
   przesunięcie, 3 iteracje), w jednostkach tułowia. Zdjęcie dopasowane do wzoru ważoną MNK (`WAGI` w `app.js`: barki
   i biodra 3–3,5, głowa/kolana ok. 1, ręce 0,05–0,5; bok najmniej rąk). `FM.rece` (tylko `biceps`/`tylbiceps`):
-  dopasowanie tylko do barków, łokci, nadgarstków. Wynik `{s, tx, ty}` liczy przeglądarka i wysyła do renderu jako
+  dopasowanie tylko do barków, łokci, nadgarstków. Kadr zdjęć biceps/tylbiceps (zawsze, niezależnie od `FM.rece`) jest na ręce: `fokus(typ)` = prostokąt
+  punktów 11–16 wzoru (środek `fc`, rozmiar `A`), `dopasowanie` przelicza wynik na jednostki fokusu, więc środek rąk
+  jest w środku kadru, a suwak „Przybliżenie” (`FM.celSr`, domyślnie 0,5, do 0,95) = ile wysokości kadru zajmują ręce
+  (mniej = więcej reszty sylwetki); „Wysokość” = `FM.celYr`. Render na Pi bierze `celSr/celYr`, gdy `rece` i typ biceps. Wynik `{s, tx, ty}` liczy przeglądarka i wysyła do renderu jako
   `geo` (Python go tylko stosuje). Starsze zdjęcia bez `lm` są uzupełniane automatycznie w zakładce Film.
 - **Wyrównanie w filmie:** każda klatka jest skalowana tak, by tułów miał `celS` wysokości kadru (domyślnie 26%),
   a jego środek był w poziomie na środku i na `celY` wysokości (domyślnie 44%). Oba ustawia się w karcie „Kadr filmu”
@@ -26,8 +29,18 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
   rysowana i przesuwana palcem na podglądzie. Ramka ręczna ma pierwszeństwo. Ręczna korekta per zdjęcie: `reczne = {dx, dy, z}`
   (przesunięcie w długościach tułowia i zoom), ustawiana w oknie „Kadrowanie” z półprzezroczystym poprzednim
   zdjęciem tego samego typu.
-- **Historia:** wykres masy (kg) i osobno składu ciała (%), lista dni z miniaturami, edycja typu/daty, kosz.
-- **Film:** typ zdjęcia, zakres dat, „co ile dni” (z każdego okna N dni pierwsze zdjęcie), sekundy na zdjęcie,
+- **Historia:** wykres masy (kg) i osobno składu ciała, przełącznik „Skład ciała w: % (z wagi) / kg (masa składnika)”
+  (`WYK.sklad`, localStorage). Masa tłuszczu i mięśni = masa ciała × % / 100 z tego samego dnia (`kgSkladu` w `app.js`,
+  liczone w przeglądarce, nie zapisywane). Lista dni pokazuje oba: „tłuszcz 18,0% (14,4 kg)”; formularz pokazuje kg na
+  żywo pod polami. Lista dni z miniaturami, edycja typu/daty, kosz.
+- **Średnie w słupkach (od 2026-10-26):** „Pokaż”: „Na żywo (każdy pomiar)” albo średnia z tygodnia (pon–nd, zakres
+  ≥ 21 dni), z miesiąca (≥ 60 dni), z roku (Całość albo ≥ 730 dni) = `WYK.sr` (`zywo`/`tydzien`/`miesiac`/`rok`,
+  localStorage). `wykresSlupki` w `app.js`: średnia ze wszystkich pomiarów okresu, słupek, gdy środek okresu jest
+  w oknie, oś obejmuje pełne okresy (miesiąc = 4–5 słupków tygodniowych), dymek z liczbą pomiarów.
+- **Film:** typ zdjęcia, zakres dat, odstęp `FM.krok`: „co ileś dni” (`FM.co`; plan co N dni od początku zakresu,
+  z okna ±N/2 wokół planu zdjęcie najbliższe planowi) albo „co miesiąc” (ten sam dzień miesiąca co początek zakresu,
+  31 → ostatni dzień krótszego miesiąca; zdjęcie najbliższe planowi, ale tylko z tego miesiąca; miesiąc bez zdjęć
+  jest pomijany). Remis = wcześniejsze. `klatki()` w `app.js` (render dostaje gotowe `ids`), sekundy na zdjęcie,
   format 4:5 / 9:16 / 1:1, przejście płynne/cięcie, napis z datą i wynikami. Podgląd na canvasie, nagrywanie przez
   MediaRecorder (MP4 w Safari/Chrome, inaczej WebM). Ustawienia zapisują się na Pi.
 
@@ -45,14 +58,15 @@ głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
 |---|---|
 | repo `progres/` | `index.html`, `app.js`, `site.json` (kopiowane do `~/portal/sites/progres/`) |
 | repo `pi/progres_render.py` | render filmu na Pi (kopiowany do `~/portal/progres_render.py`) |
-| Pi `~/portal/dane/progres/filmy/` | filmy z renderu na Pi (`<id>.mp4`, `<id>.json`) |
+| Pi `~/portal/dane/progres/filmy/` | opisy filmów (`<id>.json`); `<id>.mp4` tylko w trakcie renderu albo gdy NAS niedostępny |
+| NAS `Tony-Folder/Raspberry/Progres-filmy/` | gotowe filmy `<id>.mp4` (przenoszone zaraz po renderze) |
 | repo `pi/app.py` | portal z API `/api/progres*` (kopia z Pi; poprzednia wersja `pi/app.py.przed_progresem`) |
 | Pi `~/portal/dane/progres/dane.json` | `{wpisy: {data: {masa, fat, muscle, notatka}}, zdjecia: [{id, data, typ, w, h, pose?, reczne?, dodano}], ustawienia: {film}}` |
-| Pi `~/portal/dane/progres/zdjecia/` | `<id>.jpg` i `<id>_m.jpg` |
-| Pi `~/portal/dane/progres/kosz/` | usunięte zdjęcia (nie są kasowane) |
+| NAS `Tony-Folder/Raspberry/Progres-zdjecia/` | zdjęcia `<id>.jpg` i `<id>_m.jpg` (zapisywane od razu na NAS), `dane.json` (kopia), `Usuniete/` |
+| Pi `~/portal/dane/progres/zdjecia/`, `kosz/` | tylko bufor, gdy NAS niedostępny (czerwona dioda), przenoszony sam po powrocie NAS |
 
-**Zdjęcia NIGDY nie trafiają do repozytorium** (prywatne). Są tylko na karcie SD Raspberry. Warto kiedyś zrobić kopię
-zapasową `~/portal/dane/` (np. przez udział Samba na komputer).
+**Zdjęcia NIGDY nie trafiają do repozytorium** (prywatne). Są na NAS (od 2026-10-22, szczegóły w `SERWER.md`, sekcja NAS);
+na Pi tylko chwilowo, gdy NAS nie odpowiada. Render szuka zdjęć najpierw w buforze na Pi, potem na NAS (`katalogi`).
 
 ## API (portal, tylko Tailscale)
 - `GET /api/progres` – całość danych
@@ -93,3 +107,12 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   za krawędź okna (przycięte), oś Y liczona z punktów w oknie. `app.js?v=9`.
 - **2026-10-22**: Suwak wykresów można przytrzymać i płynnie przeciągać: przerysowuje tylko wykresy (nie siebie),
   krok co 1 godzinę, pozycja zapisywana po puszczeniu. `app.js?v=10`.
+- **2026-10-22 (2)**: Zdjęcia i filmy na NAS (`Tony-Folder/Raspberry/Progres-zdjecia`, `Progres-filmy`), istniejące
+  przeniesione. Gdy NAS niedostępny: zapis na Pi i od razu czerwona dioda („Zdjęcia lub filmy tylko na Pi”).
+- **2026-10-22 (3)**: Masa tłuszczu i mięśni w kg (z masy ciała i %): pod formularzem, w historii obok % i jako
+  przełączany wykres składu ciała (% albo kg). `app.js?v=11`.
+- **2026-10-22 (4)**: Film „co miesiąc” i wybór zdjęcia najbliższego planowanemu dniowi (zamiast pierwszego w oknie);
+  w trybie miesięcznym zawsze z tego samego miesiąca. `app.js?v=12`.
+- **2026-10-23**: Tryb „Same ręce”: kadr centruje i przybliża ręce (barki, łokcie, nadgarstki), suwak „Przybliżenie” = ile kadru zajmują ręce (osobne ustawienia `celSr`/`celYr`). `app.js?v=13`.
+- **2026-10-23 (2)**: Kadr na ręce działa dla każdego zdjęcia biceps / tył+biceps (wcześniej tylko z przełącznikiem „same ręce”, który zostaje dla sposobu dopasowania). `app.js?v=14`.
+- **2026-10-26**: Wykresy: wybór „na żywo” albo średnie z tygodnia / miesiąca / roku w słupkach. `app.js?v=15`.

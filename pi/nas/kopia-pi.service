@@ -1,0 +1,11 @@
+[Unit]
+Description=Nocna kopia calego systemu na NAS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Nice=15
+IOSchedulingClass=idle
+ExecStart=/usr/local/sbin/kopia-pi
+TimeoutStartSec=6h

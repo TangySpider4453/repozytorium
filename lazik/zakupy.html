@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Łazik · zakupy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Ta sama paleta co strona łazika. Stan listy trzyma Pi (/api/zakupy), więc telefon i komputer widzą to samo. */
+:root{
+  --bg:#EDF0F3; --surface:#F8FAFB; --ink:#16212B; --muted:#566676; --line:#CBD4DC;
+  --a:#A85F05; --a-soft:#F4E4CB; --b:#0B6E8A; --b-soft:#D3E9F0; --crit:#B3362B; --ok:#2E7B4E; --ok-soft:#D9EEE1;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D141B; --surface:#141D26; --ink:#E4EAF0; --muted:#93A3B2; --line:#26333F;
+  --a:#E9A23B; --a-soft:#3A2A10; --b:#52B7D4; --b-soft:#0F303B; --crit:#F07167; --ok:#6CCB91; --ok-soft:#12301F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D141B; --surface:#141D26; --ink:#E4EAF0; --muted:#93A3B2; --line:#26333F;
+  --a:#E9A23B; --a-soft:#3A2A10; --b:#52B7D4; --b-soft:#0F303B; --crit:#F07167; --ok:#6CCB91; --ok-soft:#12301F; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:900px;margin:0 auto;padding-block:24px 80px;display:flex;flex-direction:column;gap:28px;width:100%}
+h1,h2{font-family:var(--display);font-weight:600;line-height:1.05;margin:0}
+h1{font-size:clamp(40px,8vw,60px);font-weight:700}
+h2{font-size:28px}
+p{margin:0}
+a{color:var(--b)}
+.top{display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line);padding-bottom:20px}
+.back{font-family:var(--mono);font-size:13px;text-decoration:none}
+.lead{color:var(--muted);max-width:64ch}
+
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.stat b{display:block;font-family:var(--display);font-size:34px;line-height:1;font-weight:700}
+.stat span{font-size:13px;color:var(--muted)}
+.stat.mam b{color:var(--ok)} .stat.zam b{color:var(--a)}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
+.bar i{display:block;height:100%} .bar .m{background:var(--ok)} .bar .z{background:var(--a)}
+.must-left{font-size:14px;color:var(--muted)}
+
+.tools{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-size:14px;border:0;background:none;color:var(--ink);padding:6px 12px;cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tools input[type=search]{flex:1 1 180px;min-width:0;font:inherit;font-size:15px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);min-height:36px}
+.sync{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto}
+.sync.err{color:var(--crit)}
+
+.cat{display:flex;flex-direction:column;gap:10px}
+.cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.cat-head .cnt{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.cat-desc{font-size:14px;color:var(--muted)}
+.item{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.item.must{border-left-color:var(--crit)} .item.rec{border-left-color:var(--b)}
+.item.st-mam{opacity:.72} .item.st-mam .name{text-decoration:line-through;text-decoration-color:var(--muted)}
+.row1{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.name{font-weight:600}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.badge{font-family:var(--mono);font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.must{color:var(--crit);border-color:var(--crit)} .badge.rec{color:var(--b);border-color:var(--b)}
+.desc{font-size:14px;color:var(--muted)}
+.status{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.status button{font:inherit;font-size:13.5px;border:0;border-right:1px solid var(--line);background:var(--bg);color:var(--muted);padding:6px 10px;cursor:pointer;min-height:36px}
+.status button:last-child{border-right:0}
+.status button[aria-pressed="true"][data-s="brak"]{background:var(--ink);color:var(--bg)}
+.status button[aria-pressed="true"][data-s="zamowione"]{background:var(--a);color:var(--bg)}
+.status button[aria-pressed="true"][data-s="mam"]{background:var(--ok);color:var(--bg)}
+.row3{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.note{flex:1 1 200px;min-width:0;font:inherit;font-size:14px;padding:6px 10px;border:1px dashed var(--line);border-radius:6px;background:transparent;color:var(--ink)}
+.note:focus{border-style:solid;outline:2px solid var(--b-soft)}
+.when{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.del{font:inherit;font-size:13px;background:none;border:0;color:var(--crit);cursor:pointer;padding:4px}
+details.add{border:1px dashed var(--line);border-radius:8px;padding:8px 12px}
+details.add summary{cursor:pointer;color:var(--muted);font-size:14px}
+.addform{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.addform input{font:inherit;font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);min-width:0}
+.addform .n{flex:2 1 220px} .addform .o{flex:3 1 220px} .addform .q{flex:0 1 90px}
+.addform button,.btn{font:inherit;font-size:14px;border:0;border-radius:6px;background:var(--b);color:var(--bg);padding:7px 14px;cursor:pointer}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+.legend{font-size:13.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:0}
+.legend .l1::before{background:var(--crit)} .legend .l2::before{background:var(--b)} .legend .l3::before{background:var(--line)}
+@media (max-width:520px){.stat b{font-size:28px}.sync{width:100%;margin-left:0}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <a class="back" href="./">← strona projektu łazika</a>
+    <h1>Lista zakupów</h1>
+    <p class="lead">Wszystko, czego potrzebuje projekt. Zaznaczaj stan przy każdej rzeczy: <b>do kupienia</b>, <b>zamówione</b> albo <b>mam</b>. Zapis idzie na serwer, więc widać to samo na telefonie i komputerze. W notatce wpisz cenę, sklep albo numer zamówienia.</p>
+    <div class="legend"><span class="l1">konieczne</span><span class="l2">zalecane</span><span class="l3">opcjonalne / na później</span><span>E0–E11 = etap projektu, w którym to będzie potrzebne</span></div>
+  </header>
+
+  <section class="stats" id="stats" aria-live="polite"></section>
+  <div class="bar" id="bar"><i class="m"></i><i class="z"></i></div>
+  <p class="must-left" id="mustleft"></p>
+
+  <div class="tools">
+    <div class="seg" role="group" aria-label="Filtr">
+      <button data-f="wszystko" aria-pressed="false">Wszystko</button>
+      <button data-f="brak" aria-pressed="true">Do kupienia</button>
+      <button data-f="zamowione" aria-pressed="false">Zamówione</button>
+      <button data-f="mam" aria-pressed="false">Mam</button>
+    </div>
+    <input type="search" id="q" placeholder="Szukaj…" aria-label="Szukaj">
+    <span class="sync" id="sync">łączenie…</span>
+  </div>
+
+  <div id="list" style="display:flex;flex-direction:column;gap:32px"></div>
+</main>
+
+<script>
+(function(){
+  var API='/api/zakupy', data=null, filter='brak', query='', busy=0;
+  try{filter=localStorage.getItem('lazik-zakupy-filtr')||'brak'}catch(e){}
+  var PR={must:['konieczne','must'],rec:['zalecane','rec'],opt:['opcjonalne','']};
+  var ST=[['brak','Do kupienia'],['zamowione','Zamówione'],['mam','Mam']];
+  var $=function(s){return document.querySelector(s)};
+
+  function h(tag,attrs){
+    var el=document.createElement(tag);
+    if(attrs)for(var k in attrs){
+      if(k==='text')el.textContent=attrs[k];
+      else if(k.slice(0,2)==='on')el.addEventListener(k.slice(2),attrs[k]);
+      else el.setAttribute(k,attrs[k]);
+    }
+    for(var i=2;i<arguments.length;i++){var c=arguments[i];if(c)el.appendChild(c)}
+    return el;
+  }
+  function sync(msg,err){var s=$('#sync');s.textContent=msg;s.className='sync'+(err?' err':'')}
+
+  function send(method,url,body){
+    busy++;sync('zapisywanie…');
+    return fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})
+      .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+      .then(function(x){busy--;sync('zapisano '+new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}));return x})
+      .catch(function(e){busy--;sync('błąd zapisu, sprawdź Tailscale',true);load();throw e});
+  }
+
+  function load(){
+    return fetch(API,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+      .then(function(d){data=d;render();if(!busy)sync('stan z serwera, zmiana '+(d.zmieniono||'—'))})
+      .catch(function(){sync('brak połączenia z serwerem',true)});
+  }
+
+  function all(){var a=[];data.kategorie.forEach(function(k){a=a.concat(k.pozycje)});return a}
+
+  function stats(){
+    var a=all(),m=0,z=0,b=0,mustLeft=[];
+    a.forEach(function(p){if(p.status==='mam')m++;else if(p.status==='zamowione')z++;else{b++;if(p.priorytet==='must')mustLeft.push(p)}});
+    var st=$('#stats');st.textContent='';
+    st.appendChild(h('div',{class:'stat'},h('b',{text:b}),h('span',{text:'do kupienia'})));
+    st.appendChild(h('div',{class:'stat zam'},h('b',{text:z}),h('span',{text:'zamówione'})));
+    st.appendChild(h('div',{class:'stat mam'},h('b',{text:m}),h('span',{text:'mam'})));
+    var t=a.length||1;
+    $('#bar .m').style.width=(m/t*100)+'%';$('#bar .z').style.width=(z/t*100)+'%';
+    $('#mustleft').textContent=mustLeft.length?('Koniecznych do kupienia zostało '+mustLeft.length+'. Na najbliższy etap ('+nextStage(mustLeft)+'): '+mustLeft.filter(function(p){return p.etap===nextStage(mustLeft)}).map(function(p){return p.nazwa}).join(', ')+'.'):'Wszystko konieczne jest kupione lub zamówione.';
+  }
+  function nextStage(list){
+    var s=list.map(function(p){return p.etap}).filter(Boolean).sort(function(a,b){return parseInt(a.slice(1))-parseInt(b.slice(1))});
+    return s[0]||'—';
+  }
+
+  function visible(p){
+    if(filter!=='wszystko'&&p.status!==filter)return false;
+    if(query){var t=(p.nazwa+' '+p.opis+' '+(p.notatka||'')).toLowerCase();if(t.indexOf(query)<0)return false}
+    return true;
+  }
+
+  function itemEl(p){
+    var pr=PR[p.priorytet]||PR.opt;
+    var badges=h('div',{class:'badges'},h('span',{class:'badge '+pr[1],text:pr[0]}));
+    if(p.etap)badges.appendChild(h('span',{class:'badge',text:p.etap}));
+    if(p.ilosc&&p.ilosc!=='1')badges.appendChild(h('span',{class:'badge',text:'ilość: '+p.ilosc}));
+    if(p.wlasne)badges.appendChild(h('span',{class:'badge',text:'dodane przez Ciebie'}));
+    var status=h('div',{class:'status',role:'group','aria-label':'Stan: '+p.nazwa});
+    ST.forEach(function(s){
+      status.appendChild(h('button',{'data-s':s[0],'aria-pressed':String(p.status===s[0]),text:s[1],onclick:function(){
+        if(p.status===s[0])return;
+        send('POST',API+'/'+encodeURIComponent(p.id),{status:s[0]}).then(function(x){Object.assign(p,x);render()});
+      }}));
+    });
+    var note=h('input',{class:'note',type:'text',maxlength:'300',placeholder:'notatka: cena, sklep, link…','aria-label':'Notatka: '+p.nazwa});
+    note.value=p.notatka||'';
+    note.addEventListener('change',function(){
+      send('POST',API+'/'+encodeURIComponent(p.id),{notatka:note.value}).then(function(x){p.notatka=x.notatka});
+    });
+    var row3=h('div',{class:'row3'},note);
+    if(p.kiedy&&p.status!=='brak')row3.appendChild(h('span',{class:'when',text:(p.status==='mam'?'mam od ':'zamówione ')+p.kiedy}));
+    if(p.wlasne)row3.appendChild(h('button',{class:'del',text:'usuń',onclick:function(){
+      if(!confirm('Usunąć „'+p.nazwa+'” z listy?'))return;
+      send('DELETE',API+'/'+encodeURIComponent(p.id)).then(load);
+    }}));
+    return h('div',{class:'item '+pr[1]+' st-'+p.status},
+      h('div',{class:'row1'},h('div',null,h('div',{class:'name',text:p.nazwa}),badges),status),
+      p.opis?h('div',{class:'desc',text:p.opis}):null,
+      row3);
+  }
+
+  function addForm(k){
+    var n=h('input',{class:'n',placeholder:'nazwa',maxlength:'120',required:'required'});
+    var o=h('input',{class:'o',placeholder:'opis (opcjonalnie)',maxlength:'300'});
+    var q=h('input',{class:'q',placeholder:'ilość',maxlength:'20'});
+    var f=h('form',{class:'addform'},n,o,q,h('button',{type:'submit',text:'Dodaj'}));
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      send('POST',API+'/dodaj',{kategoria:k.id,nazwa:n.value,opis:o.value,ilosc:q.value}).then(function(){
+        if(filter!=='wszystko'&&filter!=='brak'){filter='brak';saveFilter()}
+        load();
+      });
+    });
+    return h('details',{class:'add'},h('summary',{text:'+ dodaj własną pozycję do „'+k.tytul+'”'}),f);
+  }
+
+  function render(){
+    if(!data)return;
+    // nie przebudowuj listy, gdy ktoś pisze notatkę
+    var a=document.activeElement;
+    if(a&&(a.classList.contains('note')||a.closest('.addform')))return;
+    stats();
+    document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.f===filter))});
+    var list=$('#list'),open={};
+    list.querySelectorAll('details.add[open]').forEach(function(d){open[d.dataset.k]=1});
+    list.textContent='';
+    data.kategorie.forEach(function(k){
+      var mam=k.pozycje.filter(function(p){return p.status==='mam'}).length;
+      var items=k.pozycje.filter(visible);
+      var sec=h('section',{class:'cat'},
+        h('div',{class:'cat-head'},h('h2',{text:k.tytul}),h('span',{class:'cnt',text:mam+' / '+k.pozycje.length+' mam'})),
+        k.opis?h('p',{class:'cat-desc',text:k.opis}):null);
+      items.forEach(function(p){sec.appendChild(itemEl(p))});
+      if(!items.length)sec.appendChild(h('p',{class:'empty',text:'Nic w tym widoku.'}));
+      var add=addForm(k);add.dataset.k=k.id;if(open[k.id])add.open=true;
+      sec.appendChild(add);
+      list.appendChild(sec);
+    });
+  }
+  function saveFilter(){try{localStorage.setItem('lazik-zakupy-filtr',filter)}catch(e){}}
+
+  document.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click',function(){filter=b.dataset.f;saveFilter();render()});
+  });
+  $('#q').addEventListener('input',function(e){query=e.target.value.trim().toLowerCase();render()});
+  load();
+  // odświeżanie, gdy ktoś zmieni listę na innym urządzeniu
+  setInterval(function(){if(!busy&&!document.hidden)load()},20000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)load()});
+})();
+</script>
+</body>
+</html>

@@ -40,6 +40,12 @@ Zasady od użytkownika:
 | Angielski: *Impulse 3 Unit 3 „Mysteries”* (sprawdzian **2026-10-22**) | ✅ na Pi, `angielski-impulse3-unit3`, z PDF podręcznika (s. 39–53, wordlist z tłumaczeniami): 142 fiszki z przełącznikiem EN↔PL, 66 pytań, 22 ćwiczenia |
 | Polski: wiersz na pamięć, Tetmajer *„Lubię, kiedy kobieta…”* (**2026-10-27**) | ✅ na Pi, `polski-tetmajer-lubie-kiedy-kobieta`: nauka na pamięć (5 poziomów), wpisywanie wersów, quiz 28. ⚠️ Tekst z pamięci Claude, **niesprawdzony z podręcznikiem (str. 90)** — poproś o zdjęcie i porównaj |
 | Edukacja obywatelska: *Masz wpływ 1*, dział 5 „Prawo i prawa człowieka”, tematy 1–5 (sprawdzian **2026-11-12**) | ✅ na Pi, `edukacja-obywatelska-dzial-5`, z PDF podręcznika (s. 187–218): 45 fiszek, 57 pytań, 20 pytań otwartych. Temat 4 oznaczony w podręczniku „F” (fakultatywny) — uwzględniony, do potwierdzenia u nauczyciela |
+| Zawodowe: ASTORINO Web Lab od nauczyciela (`/strony/zawodowe/`) | ✅ od 2026-10-22, plik z NAS `Raspberry/Zawodowe/` (nowa wersja: podmień plik, bez Claude) |
+| Budziki z porannym przeglądem, Mobidziennik (odczyt co 10 min), poczta (czeka na hasła) | ✅ od 2026-10-22 (`SERWER.md`) |
+| Claude w bocie: pełny terminal, sudo tylko po „Tak” Antka | ✅ od 2026-10-22 (`SERWER.md`, sekcja bota) |
+| Strona „⚙️ Automatyczne” (zadania, sprawdziany, budziki, Mobidziennik, poczta, komunikacja ZTM) | ✅ od 2026-10-22, `/strony/automatyczne/` |
+| Zadania (todo) w bocie Telegram i w czacie Linphone | ✅ od 2026-10-22 (przypomnienia z terminem domyślnie dzwonią, „napisz” = tylko wiadomość; numer/szczegóły wysyłane w chwili, gdy Pi o nich mówi): dodawanie, lista, przypomnienia w obu, archiwum po 24 h, „📞 Bardzo ważne” = telefon, „zrobione / +15 / +1h / +jutro” w Linphone (szczegóły w `SERWER.md`) |
+| Kopie zapasowe na NAS (172.23.0.28, `Tony-Folder/Raspberry/`) | ✅ od 2026-10-22: logi i zdjęcia Progres od razu na NAS, cały system co noc o 02:00 (szczegóły w `SERWER.md`). Postępy nauki (`dane/nauka/`) i strony są w nocnej kopii |
 
 Kalendarz sprawdzianów użytkownik wkleja jako zrzut z dziennika (Librus: „najbliższe sprawdziany”). Klasa 3 KL, technikum, zawód technik robotyk.
 
@@ -211,6 +217,8 @@ Wszystko musi się zgadzać z notatką. Gotowe narzędzie: `narzedzia/dodaj_najw
    `<a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>`
 2. Klucz wyniku quizu: `"nauka:<id>:best_"+qFilter` (w `getItem` i `setItem`). Lista czyta `nauka:<id>:best_all`.
    Bez tego wyniki różnych sprawdzianów nadpisywałyby się nawzajem.
+3. Na końcu `<body>` skrypt otwierający zakładkę z adresu (`#fiszki`, `#quiz`… — linki „📚 Ucz się” z kalendarza):
+   `addEventListener("load",()=>{const h=decodeURIComponent(location.hash.slice(1));if(h&&typeof showTab==="function"&&document.getElementById(h))showTab(h)});`
 
 **Jakość treści:**
 - Opieraj się na materiałach użytkownika (zdjęcia zeszytu i podręcznika, zakres od nauczyciela). Niczego nie zmyślaj.
@@ -222,6 +230,10 @@ Wszystko musi się zgadzać z notatką. Gotowe narzędzie: `narzedzia/dodaj_najw
 ---
 
 ## 7. Procedura: dodanie nowej kartkówki (lokalnie, z SSH)
+
+> **Strony dodane przez bota Telegram (od 2026-10-22):** Claude na Pi może sam dodać zagadnienie (ze zdjęć/PDF
+> przysłanych w Telegramie). Zapisuje je wtedy w `~/portal/sites/nauka/DODANE_PRZEZ_BOTA.txt`. **Na początku każdej
+> sesji** sprawdź ten plik i skopiuj nowe foldery oraz `sprawdziany.json` z Pi do `strona/` (żeby repo było jak Pi).
 
 ```bash
 # 0. pobierz aktualny spis z Pi (użytkownik mógł zmienić daty): scp pi:/home/tonyg/portal/sites/nauka/sprawdziany.json strona/
@@ -290,3 +302,215 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   przy każdym rysowaniu, więc zmiana daty od razu przestawia kartę. Archiwum: najświeższy termin na górze.
 - **2026-10-21 (3)**: Gwiazdka „ważne” na kartach i przełącznik „Najpierw ważne” (nowe API w `app.py`, restart tylko
   `home-portal`, wszystko `active`). Backup `app.py.bak_2026-10-21_wazne`, poprzednia wersja w repo `pi/app.py.przed_waznymi`.
+- **2026-10-22 (NAS)**: Pi połączone z NAS (Synology 172.23.0.28, udział Tony-Folder, poświadczenia tylko na Pi w
+  `/etc/nas-credentials`). Folder `Raspberry/` z `Logi/` (zdrowie, kopia, dziennik systemu co minutę),
+  `Progres-zdjecia/`, `Progres-filmy/`, `Kopia-systemu/` (cały system co noc o 02:00 + instrukcja przywracania).
+  Gdy NAS niedostępny: dioda czerwona. Skrypty w `pi/nas/`, opis w `SERWER.md`. Backup `app.py.bak_2026-10-22_nas`.
+- **2026-10-22 (wyłączanie)**: Komenda `raspiproszewylaczsie` do bezpiecznego wyłączenia Pi (zapis świata Minecraft,
+  czekanie na kopię, logi na NAS, poweroff). Sprawdzone: wszystkie usługi i timery startują same po zaniku prądu.
+- **2026-10-22 (panel)**: Panel „Kopie zapasowe i zadania w tle” (strona główna portalu i Zdrowie): stan i procenty
+  kopii systemu, renderu, zdjęć na NAS, logów i aktualizacji. Pierwsza kopia systemu zrobiona (17 GB, 8,5 min),
+  przyrostowa 31 s, sprawdzona: właściciele i uprawnienia zachowane. Backup `app.py.bak_2026-10-22_zadania`.
+- **2026-10-22 (obciążenie)**: Raport obciążenia: przedziały CPU > 60 %, temperatura > 55 °C, RAM > 60 % z maksimum
+  i głównymi procesami, logi `cpu.log`/`temperatura.log`/`ram.log` na NAS, wysuwany panel z „!” na stronie głównej
+  i Zdrowie. Test na Pi (25 s obciążenia) zapisany poprawnie. Backup `app.py.bak_2026-10-22_obciazenie`.
+- **2026-10-22 (zwijane)**: Panel „Kopie zapasowe i zadania w tle” też wysuwany (zwinięty: „!” przy błędzie lub braku
+  NAS, niebieskie znaczniki z procentem tego, co trwa, data ostatniej kopii). Kafelki raportu poprawione w trybie ciemnym.
+- **2026-10-22 (komendy)**: Na NAS `Tony-Folder/Raspberry/komendy.txt`: komendy projektu (wyłączanie, kopia, NAS, logi,
+  usługi), aktualizowany automatycznie z Pi. Nowe komendy dopisywać w `pi/nas/komendy.txt`.
+- **2026-10-22 (hasło)**: Portal dostępny też z sieci domowej (`http://172.23.0.20`) po zalogowaniu hasłem; ciasteczko
+  na rok, Tailscale bez hasła. Komenda `portal-haslo` (zmiana hasła). Sprawdzone curl z Pi: bez hasła 302/401,
+  złe hasło 401, dobre → strony, API i zdjęcia 200. Backup `app.py.bak_2026-10-22_haslo`.
+- **2026-10-22 (pokaż hasło)**: Na stronie logowania przycisk „Pokaż”/„Ukryj” hasło. Wdrożone, backup `app.py.bak_2026-10-22_pokaz`.
+- **2026-10-22 (hasło, poprawka)**: Hasło z iPada nie przechodziło, choć na serwerze było poprawne. Pole hasła ma teraz
+  wyłączoną autokorektę i wielką literę iOS, spacje na końcu są ignorowane, a dziennik przy złym haśle podaje długość
+  i podpowiedź o wielkości liter (bez samego hasła).
+- **2026-10-22 (emotki)**: Menu portalu z emotkami: 🏠 Start, 🌐 Sieć, 💻 Terminal, 🚙 Łazik, 📚 Nauka, 💪 Progres,
+  🩺 Zdrowie, 🚪 Wyloguj. Backup `app.py.bak_2026-10-22_emotki`.
+- **2026-10-22 (bot)**: Bot Telegram @SerwerekAntek_bot (usługa `serwerek-bot`, repo `pi/bot/`): alarmy z monitora
+  zdrowia, przypomnienia o sprawdzianach, przyciski (stan, kopia, restart z potwierdzeniem) i rozmowa z Claude Code
+  zalogowanym subskrypcją (ograniczone narzędzia). Tokeny tylko na Pi. Szczegóły w `SERWER.md`.
+- **2026-10-22 (bot 2)**: Bot: 🟡 od razu poza ciszą nocną, powiadomienia o każdym wejściu z sieci domowej (portal,
+  SSH, Samba, VNC, panel MC) z IP, zdjęcia/PDF → Claude robi nową stronę w Nauce (kontrola `sprawdz_strone.js`).
+- **2026-10-22 (wizyty)**: Bot śledzi wizyty z sieci domowej: od razu nowe wejście, panel logowania, przejście
+  zabezpieczeń, nieudane próby i oznaki ataku; po 10 min podsumowanie ścieżki. Pełny zapis na NAS `Logi/wejscia/`
+  (30 dni). Samba: zapis logowań i operacji na plikach. Naprawiony błąd, przez który powiadomienia o wejściach nie szły.
+- **2026-10-22 (ścieżka)**: Bot nie wysyła podsumowań wizyt; ścieżka zapisuje się na Pi i NAS, a przycisk 🧭 Ścieżka
+  pokazuje wizyty z dnia. 📊 Stan z maksimum temperatury, CPU i RAM z dziś i z 7 dni.
+- **2026-10-22 (progres kg)**: Progres: tłuszcz i mięśnie przeliczane na kg, przełącznik wykresu %/kg, historia z obiema wartościami.
+- **2026-10-22 (progres film)**: Film: odstęp „co miesiąc”, zdjęcie najbliższe planowanemu dniowi z tego samego miesiąca.
+- **2026-10-22 (zaufane)**: Wejścia przez Tailscale i z zaufanych urządzeń (MAC) tylko zapisywane w ścieżce, bez
+  powiadomień; przycisk „To moje urządzenie” i komenda `zaufane` w bocie.
+- **2026-10-22 (zadania)**: Zadania z przypomnieniami: strona `/strony/todo/` (📝 w menu), API `/api/todo`, bot dodaje
+  z polskiego tekstu („todo jutro 17:00 trening”), wysyła przypomnienia z przyciskami zrobione/odłóż. Repo `todo/`.
+- **2026-10-22 (głos)**: Wspólna pamięć rozmów bota (SQLite), wiadomości głosowe (whisper + Piper na Pi), usługa
+  telefonu SIP przez Linphone (czeka na konta Linphone), dzwonienie przy 🔴 bez reakcji i przy zadaniach „zadzwoń”.
+- **2026-10-22 (Minecraft ręcznie)**: Serwer Minecraft nie startuje sam; włączanie: komenda `minecraft start`, przycisk
+  na stronie głównej, 🎮 w bocie. Monitor nie traktuje wyłączenia jako awarii. Auto-aktualizacja zostawia stan.
+- **2026-10-22 (MC auto)**: Minecraft wyłącza się sam po 30 min bez graczy (bot), test z limitem 2 min udany.
+- **2026-10-22 (MC powiadomienia)**: Bot pisze o każdej zmianie stanu Minecrafta (włączony, wyłączony, restart, awaria,
+  ktoś gra, serwer opustoszał), także gdy zmianę zrobiono na stronie albo komendą.
+- **2026-10-22 (Linphone)**: Konto SIP Pi `antekserwerrpi4b@sip.linphone.org` zalogowane (rejestracja 200 OK); hasło tylko
+  w `/etc/serwerek-bot/sip.env`. Czeka na adres Linphone właściciela (`SIP_WLASCICIEL`); do tego czasu Pi odrzuca
+  połączenia i bot podaje adres dzwoniącego.
+- **2026-10-22 (Linphone 2)**: Właściciel `sip:za_kolaz@sip.linphone.org` wpisany do `sip.env`, telefon zarejestrowany.
+- **2026-10-22 (czat Linphone)**: Pisanie z Pi w aplikacji Linphone jak w Telegramie (komendy + Claude, wspólna pamięć);
+  test lokalny udany. Poprawione rozpoznawanie właściciela po nazwie SIP.
+- **2026-10-22 (głos/tekst)**: Bot sam wybiera głos albo tekst („przeczytaj” → głosówka, „wypisz” → tekst, inaczej jak
+  pytanie). Głosówki działają też w czacie Linphone (rozpoznanie na Pi, odpowiedź głosem przez serwer plików Linphone).
+- **2026-10-22 (telefon SRTP)**: Połączenia z Linphone kończyły się 488 (Linphone wymaga szyfrowania dźwięku): włączone
+  SRTP opcjonalne (`srtpUse` OPTIONAL, `srtpSecureSignaling` 0). Połączenie od Pi dochodzi już do iPhone'a (push),
+  test w toku. Zabezpieczone czytanie kolejki połączeń. Tymczasowo log SIP (`serwerek-telefon.service.d/diagnostyka.conf`).
+- **2026-10-22 (telefon działa)**: Pierwsza prawdziwa rozmowa przez Linphone (opus, SRTP): pytanie rozpoznane, Claude
+  odpowiedział po 7 s. Log diagnostyczny SIP wyłączony.
+- **2026-10-22 (pomoc)**: Komenda `pomoc` / `help` w Telegramie i Linphone; w czacie Linphone komendy jak przyciski
+  w Telegramie, z potwierdzeniem „tak”.
+- **2026-10-22 (poprawki czatu)**: „Napisz” zawsze daje tekst; w Linphone odpowiedzi tekstem (głosówka tylko na prośbę);
+  bez echa rozpoznanego tekstu; Claude może listować usługi i czytać /proc/meminfo (pojedyncze polecenia, bez potoków).
+- **2026-10-22 (głosówki Linphone)**: Błąd przy pustej głosówce z Linphone (sam nagłówek .mka) obsłużony komunikatem;
+  głosówki od Pi w formacie Linphone (.mka/Opus); wysłana głosówka testowa do sprawdzenia na iPhonie.
+- **2026-10-22 (krótko)**: Claude w bocie/Linphone/telefonie odpowiada krótko (1–2 zdania, bez wstępów i dodatków),
+  dłużej tylko na wyraźną prośbę (`instrukcja.md`).
+- **2026-10-22 (czytanie)**: Wyjątek od krótkich odpowiedzi: „przeczytaj / powiedz / nagraj …” → pełna treść (`CZYTAJ_PODPOWIEDZ`).
+- **2026-10-23 (szczegóły na czat)**: Głosem Pi mówi krótko, a adresy, maile, numery, kody i instrukcje krok po kroku
+  wysyła na czat (na prośbę czyta szczegóły). Test: reset hasła → krótko + kroki na czacie.
+- **2026-10-23 (numery w przypomnieniach)**: Zadanie z numerem telefonu: Pi dzwoni, mówi „zadzwoń na numer z czatu”
+  i wysyła numer osobną wiadomością.
+- **2026-10-23 (szybkie odpowiedzi o serwerze)**: Temperatura, procesor, RAM, miejsce, uptime, zasilanie, NAS, kopia,
+  usługi, co obciąża, internet, lokalizacja, „czy jutro szkoła”, „za ile dni sprawdzian”, jutrzejszy dzień: bez Claude,
+  0–0,4 s, we wszystkich kanałach (też przez telefon, także z przekręconą mową). Test 412/412.
+- **2026-10-23 (wiedza o całym serwerze)**: `wiedza_serwer.md` obejmuje wszystkie usługi (portal, bot, telefon, Minecraft, playit,
+  Tailscale, SSH/terminal/VNC, Samba, NAS, kopia, Mobidziennik, poczta, lokalizacja, ZTM, budziki, Progres) i system (karta,
+  RAM, temperatura, zasilanie, aktualizacje); więcej słów kieruje do Sonneta.
+- **2026-10-23 (szybszy i mądrzejszy Claude)**: Dwa stałe procesy Claude (Haiku low do prostych, Sonnet medium do
+  trudnych i awarii; Haiku sam przekazuje trudne), ściąga diagnozy i napraw serwera, potwierdzanie akcji głosem w rozmowie,
+  szybsze rozpoznawanie mowy. Test na Pi: proste odpowiedzi 1–2 s, przekręcona mowa („do nas” = NAS) rozumiana.
+- **2026-10-23 (zdalne)**: W menu „🖥️ Zdalne” = terminal + pulpit VNC w przeglądarce, oba za hasłem Linuksa
+  (sprawdzone: złe hasło odrzucone, bez biletu brak połączenia, z biletem pulpit 1920x1080). Progres: kadr na ręce
+  działa zawsze dla zdjęć biceps / tył+biceps (wcześniej tylko z przełącznikiem „same ręce”).
+- **2026-10-23 (pauzy w rozmowie)**: W rozmowie telefonicznej koniec wypowiedzi dopiero po 3 s ciszy (`PAUZA_KONIEC`,
+  było 0,9 s), wypowiedź do 60 s; końcowa cisza obcinana przed rozpoznaniem. Progres: kadr na ręce w trybie „Same ręce”.
+- **2026-10-23 (szybkie odpowiedzi)**: Typowe pytania (o której zaczynam, sprawdziany, zastępstwa, zadania, budzik,
+  serwer, autobus…) bot odpowiada sam z danych w ułamku sekundy, bez Claude; Claude oznacza rozpoznane pytania, a bot uczy
+  się nowych sformułowań. Test 308/308. Budzik 6:15 zadziałał (603 → ponowienie, potem 486 i kolejna próba po 5 min).
+- **2026-10-22 (zadania w planie)**: Zadania domowe widać też w planie lekcji (przy lekcji, na którą są), z pełną treścią.
+- **2026-10-22 (strony Mobidziennik i Budziki)**: `/strony/mobi/` pokazuje wszystko odczytane z dziennika (cały plan
+  z zastępstwami, sprawdziany, zadania, „Sprawdź teraz”); `/strony/budziki/` do ustawiania budzików klikając
+  (sprawdzone w przeglądarce: dodanie, wyłączenie, usunięcie).
+- **2026-10-22 (budziki, Mobidziennik, poczta)**: Budziki (Pi dzwoni z porannym przeglądem, 3 próby; pierwszy na
+  23.10 6:15), Mobidziennik co 10 min tylko do odczytu (plan, zastępstwa, odwołane, sprawdziany, zadania domowe; nowy
+  sprawdzian → strona w Nauce i sesje nauki albo prośba o materiały), poczta (kod gotowy, czeka na 4 hasła do aplikacji),
+  2,5 s ciszy po odebraniu, karty na „Automatyczne”. Sprawdzone na Pi: logowanie i odczyt Mobidziennika, poranny
+  przegląd przez Claude (ok. 6 s), Claude do maili naprawdę bez narzędzi.
+- **2026-10-22 (lokalizacja jednorazowa)**: Na razie lokalizacja jednorazowo z Telegrama (📍); żółty alarm o braku
+  lokalizacji włącza się dopiero, gdy będą ciasteczka Google.
+- **2026-10-22 (lokalizacja z Google Maps)**: Pi samo co 15 min odczytuje lokalizację udostępnioną w Google Maps
+  drugiemu kontu Google (bez VPN i bez Telegrama na iPhonie); czeka na ciasteczka tego konta (NAS Raspberry/Google).
+- **2026-10-22 (jeden kanał)**: Bot odpowiada tylko tam, gdzie Antek napisał; powiadomienia idą na Linphone (albo do
+  Telegrama, gdy tam ostatnio pisał lub gdy Linphone nie działa), bez dublowania.
+- **2026-10-22 (miejsca słowami)**: „ustaw tu jako dom/szkoła/…” w Telegramie, Linphone i przez telefon zapisuje
+  obecną lokalizację jako miejsce (też z adresem i usuwanie).
+- **2026-10-22 (pilnowanie lokalizacji)**: 🟡 w monitorze, gdy w dzień lokalizacja starsza niż 30 min (poza
+  lokalizacją „na żywo” z Telegrama).
+- **2026-10-22 (komunikacja ZTM)**: Odjazdy i trasy ZTM Poznań z opóźnieniami na żywo (`ztm.py` w portalu), lokalizacja
+  z Telegrama (📍), OwnTracks albo skrótu iOS, miejsca („dom”); bot, Linphone, Claude i strona `/strony/komunikacja/`.
+  Sprawdzone na Pi: odjazdy z Junikowa, trasy, zapis miejsca z adresu.
+- **2026-10-22 (automatyczne)**: Nowa strona „⚙️ Automatyczne” (zamiast „Zadania” w menu): zadania, sprawdziany, miejsca
+  na pocztę i komunikację miejską (wkrótce).
+- **2026-10-22 (5 s ciszy)**: Gdy Pi dzwoni, po odebraniu czeka 5 s (`CZEKAJ_PO_ODEBRANIU`), żeby zdążyć włączyć głośnomówiący.
+- **2026-10-22 (odhaczanie głosem)**: Na stronie Zadania: „do archiwum za …” przy zrobionych i karta sprawdzianów
+  i kartkówek; sprawdziany też w liście „zadania” bota i w przypomnieniach na Linphone; w rozmowie z przypomnienia
+  „odhaczone / zrobione” odhacza zadanie.
+- **2026-10-22 (bez formułki)**: Pi nie kończy wypowiedzi przez telefon formułką „jeśli chcesz coś powiedzieć…”; po niej po prostu słucha.
+- **2026-10-22 (głos w przypomnieniach)**: Naprawiona cisza w połączeniach od Pi (nowy port mediów po UPDATE). Claude
+  przygotowuje wypowiedź ok. 4 min przed terminem, synteza zaczyna się przy dzwonieniu; po powitaniu można rozmawiać.
+- **2026-10-22 (minuta dzwonienia)**: Pi dzwoni do 60 s; gdy iPhone od razu odrzuca (603, gdy Linphone jest otwarty),
+  ponawia co ok. 5 s do minuty. Test: połączenie odebrane.
+- **2026-10-22 (todo: archiwum i ważne)**: Zrobione zadania po 24 h przechodzą do „Archiwum” na stronie; „📞 Bardzo
+  ważne: zadzwoń” (strona, Telegram, Linphone „ważne [nr]”, słowa „ważne/pilne” w „todo …”) = Pi dzwoni o terminie.
+- **2026-10-22 (zawodowe)**: Strona „🤖 Zawodowe” z programem nauczyciela (ASTORINO Web Lab); portal pokazuje najnowszy
+  `.html` z NAS `Raspberry/Zawodowe/` i trzyma kopię na Pi. Sprawdzone: podmiana pliku na NAS od razu zmienia stronę.
+- **2026-10-22 (dzwonienie od Pi)**: Przypomnienie z telefonem nie dzwoniło (iPhone: „Anonymous”, odrzucone po 4 s,
+  603 Decline). Poprawka: SRTP wymagane przy połączeniach (RTP/SAVP) i nazwa „Serwer Rpi” w nadawcy; test: połączenie
+  od Pi odebrane (CONFIRMED).
+- **2026-10-22 (pełny terminal bota)**: Claude w bocie ma pełny Bash (potoki, skrypty, edycja plików); sudo tylko za
+  zgodą Antka: znacznik `[[SUDO: …]]` → przycisk „Tak” / „tak” w Linphone (Claude sam sudo nie uruchomi: `setpriv
+  --no-new-privs` + strażnik `~/bot/straznik.py`). Sprawdzone na Pi: potok działa, bezpośrednie sudo zablokowane,
+  zatwierdzone polecenie uruchamia się raz.
+- **2026-10-22 (todo w Linphone)**: Zadania działają w czacie Linphone jak w Telegramie: przypomnienia przychodzą też na
+  Linphone (`do_linphone`), odpowiedź „zrobione”, „+15”, „+1h”, „+jutro” (opcjonalnie z numerem z listy), „usuń <nr>”,
+  „cofnij”; „todo … zadzwoń” działa też tutaj (`nowe_zadanie` wspólne dla obu kanałów). Sprawdzone na Pi.
+- **2026-10-23 (wiadomość w chwili mówienia, domyślne dzwonienie)**: Pi wysyła numer/szczegóły na czat w momencie, gdy
+  mówi „wysyłam Ci teraz wiadomość…”, a przy nieodebranym połączeniu dołącza je do „Dzwoniłem, ale nie odebrałeś”.
+  Przypomnienia z terminem domyślnie dzwonią; same wiadomości tylko po „napisz / wiadomością / bez dzwonienia”.
+  Wdrożenie przerwało rozmowę o 20:56, więc restarty idą teraz przez `~/bot/bez_rozmowy.sh` (czeka na koniec rozmowy).
+- **2026-10-23 (diagnoza ciszy w rozmowie)**: Trzy połączenia od Pi (20:56, 21:00, 21:05) bez dźwięku w słuchawce, choć
+  synteza działa. Telefon loguje teraz stan mediów, odtwarzanie i brak mediów (`mówię …`, `media …`, `graj: …`). Czeka na
+  połączenie testowe.
+- **2026-10-23 („dzwoń” od razu)**: „dzwoń / zadzwoń / dzwoń asap / możesz zadzwonić?” w Linphone i Telegramie dzwonią od
+  razu bez Claude (wcześniej „Dzwoń” szło przez Claude i połączenie przyszło po minucie). Cisza w rozmowach: w obie strony
+  nie płynie dźwięk (nagranie same zera), włączony pełny zapis SIP, czeka na połączenie testowe.
+- **2026-10-23 (przyczyna ciszy)**: Pi wysyła dźwięk, iPhone go odbiera (raporty RTCP bez strat), ale nie gra i nie
+  wysyła mikrofonu. Zaczęło się po restarcie telefonu w trakcie rozmowy o 20:57 (brak rozłączenia). Telefon.py rozłącza
+  teraz rozmowy przy zatrzymaniu usługi.
+- **2026-10-23 (Hasła Apple)**: logowanie do portalu z sieci domowej i hasło pulpitu VNC mają pola użytkownik + hasło
+  rozpoznawane przez Hasła Apple (zapis i autouzupełnianie). Wdrożone, strona sprawdzona curl.
+- **2026-10-26 (Progres: średnie)**: Wykresy Progresu: „Na żywo” albo średnie z tygodnia / miesiąca / roku w słupkach
+  (opcje zależą od zakresu). Sprawdzone w Playwright na danych testowych (bez błędów konsoli). Szczegóły w `PROGRES.md`.
+- **2026-10-26 (intervals.icu)**: Bot czyta intervals.icu co 5 min (tylko odczyt): treningi na dziś/jutro (komenda
+  „trening”, w budziku sama nazwa), po porannym biegu telefon „weź kreatynę” 10 min po końcu (wyłącznik na stronie
+  Automatyczne). Klucz tylko na Pi (`/etc/serwerek-bot/intervals.env`). Odczyt API sprawdzony (aktywności widoczne,
+  kalendarz treningów na razie pusty).
+- **2026-10-26 (intervals wdrożone)**: Wgrane na Pi razem ze średnimi w Progresie. Klucz w `/etc/serwerek-bot/intervals.env`,
+  usługa bota z `EnvironmentFile=-…/intervals.env`. Treningi widoczne (np. 27.10 „Poranny bieg — lekki rozruch”);
+  dzisiejszy bieg (8:14) za stary na przypomnienie, więc bez telefonu.
+- **2026-10-26 (wejścia: IPv4 i Tailscale)**: Powiadomienie o nowym wejściu z sieci domowej pokazuje adres IPv4
+  (także gdy wejście było z IPv6 fe80::) i nazwę Tailscale urządzenia (np. 172.23.0.33 = PC-Antek 100.77.150.92).
+- **2026-10-26 (ustawienia, oceny, zakupy)**: Panel „⚙️ Ustawienia” na dole stron automatyzacji (włączniki, godziny,
+  częstotliwość; Mobidziennik może dzwonić rano/wieczorem ze zmianami). Oceny i średnie zwykłe (bez wag) z Mobidziennika.
+  Przywrócone `/api/zakupy` (lista zakupów łazika), które moje wdrożenie przez pomyłkę usunęło. Wszystko na Pi, sprawdzone.
+- **2026-10-26 (kalendarz, semestry, symulacja ocen)**: Kalendarz `/strony/kalendarz/` (wszystko razem albo osobno:
+  nauka, lekcje, treningi, zadania, budziki). Oceny z obu okresów + cały rok, średnia ze średnich i ze wszystkich ocen,
+  symulacja „co jeśli” na stronie Mobidziennik. Sprawdzone na Pi w przeglądarce (Playwright, bez błędów).
+- **2026-10-26 (nauka współpracuje z kalendarzem)**: Sesje nauki nie nachodzą na lekcje (z dojazdem), treningi i inne
+  zadania: wolne okienka z `/api/kalendarz/wolne`, bot przesuwa kolidujące sesje i pisze o tym; godziny planowanych
+  treningów szacowane ze zwykłych pór i omijają szkołę. Sprawdzone na Pi (27.10: sesja 18:00 w czasie lekcji do 19:20,
+  dzień pełny → wiadomość z prośbą o decyzję).
+- **2026-10-27 (spam „brak okienka”)**: `pilnuj_nauki` przy braku wolnego okienka pisało co 5 min (ponad 100 wiadomości).
+  Teraz raz na zadanie i termin (`stan["nauka_zgloszone"]`). Wgrane 7:41, po 6 min brak nowych wiadomości i błędów.
+- **2026-10-28 (przypomnienia z kalendarza)**: 10 min przed lekcją / nauką (opcjonalnie zadaniem) wiadomość na Linphone;
+  ustawienia (minuty, kategorie) na stronie Kalendarz. Wgrane, bot bez błędów.
+- **2026-10-28 (głośnik AirPlay 2)**: Pi jako głośnik AirPlay 2 z multiroomem (shairport-sync z AirPlay 2 + nqptp),
+  strona `/strony/glosnik/`: włącznik, wyjście AUX/Bluetooth, wybór głośnika BT (raz), BT łączony tylko na czas grania.
+  Działa przez AUX; Bluetooth czeka na zgodę na restart Pi (BT wyłączony w config.txt).
+- **2026-10-28 (Bluetooth)**: Bluetooth włączony (config.txt + rfkill), restart Pi 20:05, wszystkie usługi wróciły. Skan BT
+  działa (widać głośnik TP-Link_Music).
+- **2026-10-28 (AirPlay: nazwa i wyjątek)**: Głośnik nazywa się „Antek Pokój rpi”. Za zgodą Antka reguła logowania wejść
+  pomija port 7000 i porty >= 32768 (AirPlay), żeby granie nie było brane za skanowanie portów.
+- **2026-10-28 (AirPlay: opóźnienie)**: Mniejszy bufor wyjścia (0,1 s), przesunięcie BT domyślnie wyłączone (przełącznik
+  na stronie), stan „gra” zerowany przy starcie usługi.
+- **2026-10-28 (AirPlay: karta USB)**: Trzeci tryb wyjścia: karta dźwiękowa USB (wykrywana na stronie, przycisk aktywny po
+  podłączeniu; bez karty gra przez AUX).
+- **2026-10-28 (AirPlay: cisza przez BT)**: Bufor wyjścia 0,1 s psuł dźwięk przez Bluetooth; wycofany (domyślny), usługa
+  zrestartowana. Wyjście PipeWire było poprawne (AirPlay → TP-Link_Music).
+- **2026-10-28 (telefon: cisza przy długiej wiadomości)**: Telefon o zmianach w dzienniku milczał ~30 s (synteza 44 s mowy
+  naraz). Teraz synteza i odtwarzanie zdaniami: start po 1–2 s. AirPlay nieruszany (prośba Antka: bez zgody nie zmieniać).
+- **2026-10-28 (rozłączanie, zadania w tle, prosta treść przypomnień)**: Pi rozłącza się po pożegnaniu, gdy pasuje to do
+  rozmowy (sam koniec albo `[[ROZLACZ]]` od Claude), zadania „w tle” robi po rozmowie i przysyła raport, rozumie kilka
+  poleceń w jednej wypowiedzi, a treść przypomnień skraca do formy „Weź kreatynę”. Wgrane, bez błędów.
+- **2026-10-28 (ponawianie przypomnień)**: Bez „zrobione” Pi dzwoni znowu (za podany czas albo 10 min; nieodebrane też),
+  termin przesuwa się za każdym razem; wyłącznik i minuty w ustawieniach Zadań.
+- **2026-10-29 (bez AI: przypomnienia i rozłączanie)**: Treść przypomnień upraszczana regułami (słownik trybu
+  rozkazującego), bez Haiku. W rozmowie „przypomnij …” i pożegnanie na końcu wypowiedzi rozpoznawane słowami kluczowymi,
+  bez Claude.
+- **2026-10-29 (odłożenie bez AI)**: W rozmowie z przypomnieniem „przypomnij za 15 minut / za chwilkę / sprawdź czy zrobię”
+  rozpoznawane słowami: przesuwa telefon i rozłącza. Wgrane i sprawdzone na przykładach na Pi.
+- **2026-10-29 (dzwonienie co minutę)**: 5 kopii przypomnienia o kreatynie (Claude w rozmowach dodawał nowe zamiast odłożyć)
+  dzwoniło na zmianę. Kopie usunięte; portal scala kopie, bezpiecznik 4 min na telefon z tym samym tekstem, odłożenie
+  rozumie przekręconą mowę, „mhm” tylko przed Claude.
+- **2026-10-29 (szybsza mowa)**: Rozpoznawanie przez stały serwer whisper z modelem q8_0 (~2x szybciej), synteza przez
+  stały proces Piper (~1 s mniej na zdanie). Zmierzone na Pi.
+- **2026-10-29 (kalendarz: odhaczanie, nauka, dojazdy)**: W kalendarzu ✓ przy zadaniach, „📚 Ucz się →” prowadzi do zakładki
+  strony Nauki (strony nauki otwierają zakładkę z `#fiszki`, `#quiz`… — dodane do wszystkich 8 stron, kopie w `strona/`
+  równe Pi), dojazdy szkoła/siłownia z planem autobusów ZTM na dziś i jutro, link Kalendarz w pasku portalu.
+
