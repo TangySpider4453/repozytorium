@@ -88,6 +88,17 @@ def odlozenie(tekst):
     -> minuty (int) albo None (= domyślnie, „za chwilkę”); False = to nie odłożenie. Bez AI."""
     m = ODLOZ_RE.match(tekst.strip())
     if not m:
+        # mowa bywa przekręcona („Przypełnij mi za 15 minut”, „Bąni za 20 minut”): krótka wypowiedź z „za X minut/godzin”
+        # albo „za chwilę” też jest odłożeniem
+        if len(tekst.split()) <= 8:
+            m2 = re.search(r"\bza\s+(\d+|pół|pol|jedn\w*|jeden|dwie|dwa|trzy|pięć|piec|dziesięć|dziesiec|piętnaście|pietnascie|dwadzieścia|"
+                           r"dwadziescia|trzydzieści|trzydziesci|czterdzieści|czterdziesci)?\s*(minut\w*|min|godzin\w*|h)\b", tekst, re.I)
+            if m2:
+                l = (m2.group(1) or "1").lower()
+                n = float(l) if l.isdigit() else LICZBY_SLOW.get(l, 1)
+                return max(1, int(n * (60 if m2.group(2).lower().startswith(("godz", "h")) else 1)))
+            if re.search(r"\bza\s+(chwil|moment)", tekst, re.I):
+                return None
         return False
     if m.group(2):
         l = (m.group(1) or "1").lower()
@@ -302,7 +313,6 @@ class Rozmowa:
                     w.setsampwidth(2)
                     w.setframerate(HZ)
                     w.writeframes(pcm)
-                AKCJE.put((graj, (self.p, CHWILA, threading.Event())))         # „mhm”, żeby było wiadomo, że słucha
                 tekst = glos.rozpoznaj(wav, dokladnie=False, limit=60)
                 if not tekst:
                     s.pomin_do_konca()
@@ -373,6 +383,7 @@ class Rozmowa:
                         self.mow("Dobrze, nic nie robię.")
                         s.pomin_do_konca()
                         continue
+                AKCJE.put((graj, (self.p, CHWILA, threading.Event())))         # „mhm” tylko, gdy pytanie idzie do Claude
                 try:
                     odp, akcje = bot.claude_odpowiedz(tekst, "telefon", pisze=False)
                 except Exception as ex:

@@ -1393,6 +1393,17 @@ def api_todo():
          "zrobione": None, "utworzono": time.strftime("%Y-%m-%dT%H:%M:%S"), "wyslano": None, "dzwon": b.get("dzwon") is True}
     with TODO_LOCK:
         lista = todo_lista()
+        # to samo niezrobione zadanie już jest (np. Claude w rozmowie „przypomnę za 15 min” zamiast odłożyć istniejące):
+        # nie twórz kopii, tylko przestaw termin istniejącego (kopie dzwoniły co minutę)
+        norm = lambda t: re.sub(r"[^a-ząćęłńóśźż0-9 ]", "", t.lower()).split("(")[0].strip()
+        juz = next((x for x in lista if not x.get("zrobione") and not x.get("powtarzaj") and not z["powtarzaj"]
+                    and norm(x["tekst"]).replace("  ", " ")[:40] == norm(z["tekst"]).replace("  ", " ")[:40]), None)
+        if juz:
+            if z["termin"]:
+                juz["termin"], juz["wyslano"] = z["termin"], None
+            juz["dzwon"] = juz.get("dzwon") or z["dzwon"]
+            zapisz_json(TODO, lista)
+            return jsonify(juz)
         lista.append(z)
         zapisz_json(TODO, lista)
     return jsonify(z)

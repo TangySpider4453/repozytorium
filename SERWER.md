@@ -355,6 +355,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   „sprawdź za godzinę”, „za chwilkę”, „sprawdź czy to zrobię” → `ponow_zadanie(..., prosba=True)` (działa też przy
   wyłączonym ponawianiu), „Dobrze, zadzwonię za X minut. Do usłyszenia!” i rozłączenie. `parsuj_zadanie` ignoruje
   przecinki przy godzinie („o 20, że …”).
+- **Bezpieczniki przypomnień** (2026-10-29, po dzwonieniu co minutę przez 5 kopii „Weź kreatynę”): `POST /api/todo` nie tworzy
+  kopii niezrobionego zadania o tym samym tekście (przestawia termin istniejącego); `przypomnienia` nie dzwoni z tym
+  samym tekstem częściej niż co 4 min (`OSTATNI_TELEFON`, wtedy tylko wiadomość). Odłożenie rozpoznaje też przekręconą
+  mowę (krótka wypowiedź z „za X minut/godzin” albo „za chwilę”). „Mhm” gra tylko, gdy pytanie idzie do Claude.
 - **Bez AI w rozmowie** (od 2026-10-29): „przypomnij (mi) …”, „dodaj zadanie …” → `zadanie_glosem` (od razu, `nowe_zadanie`);
   pożegnanie na końcu wypowiedzi (`rozdziel_zamkniecie`: „…, dzięki, to wszystko”, „…, teraz jest clear”) → po
   odpowiedzi „Do usłyszenia!” i rozłączenie (także po odhaczeniu i szybkich komendach); do Claude idzie tylko reszta.

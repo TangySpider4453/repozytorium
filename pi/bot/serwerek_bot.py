@@ -1443,6 +1443,9 @@ def przygotuj_rozmowe(z):
     print(f"przygotowane przypomnienie {z['id']}: {(tekst or 'brak')[:80]}", flush=True)
 
 
+OSTATNI_TELEFON = {}        # tekst przypomnienia -> kiedy ostatnio dzwonił (bezpiecznik przeciw dzwonieniu co minutę)
+
+
 def przypomnienia():
     if not stan()["wlasciciel"] or not ust("zadania").get("przypomnienia", True):
         return
@@ -1462,7 +1465,13 @@ def przypomnienia():
                 f"📋 Szczegóły do przypomnienia:\n{z['tekst']}" if link else None)
         if czat and not z.get("dzwon"):
             powiadom(czat)
+        klucz_tel = re.sub(r"[^a-ząćęłńóśźż0-9]", "", z["tekst"].lower())[:40]
+        if z.get("dzwon") and time.time() - OSTATNI_TELEFON.get(klucz_tel, 0) < 240:
+            # bezpiecznik: ten sam tekst dzwonił mniej niż 4 min temu (kopie, błąd): tylko wiadomość, bez telefonu
+            print(f"przypomnienie {z['id']}: ten sam telefon {int(time.time() - OSTATNI_TELEFON[klucz_tel])} s temu, bez dzwonienia", flush=True)
+            z = dict(z, dzwon=False)
         if z.get("dzwon"):
+            OSTATNI_TELEFON[klucz_tel] = time.time()
             p = PRZYGOTOWANE.pop(z["id"], {})
             bez_nr = NUMER_RE.sub("", z["tekst"]).strip(" ,:-")
             powitanie = p.get("tekst") if p.get("termin") == z["termin"] and p.get("tekst") else (

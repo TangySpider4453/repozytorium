@@ -503,4 +503,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   bez Claude.
 - **2026-10-29 (odłożenie bez AI)**: W rozmowie z przypomnieniem „przypomnij za 15 minut / za chwilkę / sprawdź czy zrobię”
   rozpoznawane słowami: przesuwa telefon i rozłącza. Wgrane i sprawdzone na przykładach na Pi.
+- **2026-10-29 (dzwonienie co minutę)**: 5 kopii przypomnienia o kreatynie (Claude w rozmowach dodawał nowe zamiast odłożyć)
+  dzwoniło na zmianę. Kopie usunięte; portal scala kopie, bezpiecznik 4 min na telefon z tym samym tekstem, odłożenie
+  rozumie przekręconą mowę, „mhm” tylko przed Claude.
 
