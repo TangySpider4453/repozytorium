@@ -890,6 +890,11 @@ def rozgrzej_claude():
         bot.rozgrzej()
     except Exception as ex:
         log(f"rozgrzewanie Claude: {type(ex).__name__}: {ex}")
+    try:                                        # stały Piper: model wczytany przed pierwszą rozmową
+        glos.powiedz("Gotowe.", "/tmp/telefon-rozgrzewka.wav", czestotliwosc=HZ)
+        os.unlink("/tmp/telefon-rozgrzewka.wav")
+    except Exception as ex:
+        log(f"rozgrzewanie Pipera: {type(ex).__name__}: {ex}")
 
 
 def main():

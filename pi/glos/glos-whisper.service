@@ -1,0 +1,15 @@
+# Stały serwer rozpoznawania mowy dla telefonu (whisper.cpp, model base q8_0 w pamięci, tylko 127.0.0.1:8787).
+# glos.rozpoznaj(dokladnie=False) wysyła tu nagranie; gdy serwer nie działa, używa whisper-cli.
+[Unit]
+Description=Rozpoznawanie mowy (whisper-server, model w pamięci)
+After=network.target
+
+[Service]
+User=tonyg
+Nice=5
+ExecStart=/home/tonyg/glos/whisper.cpp/build/bin/whisper-server -m /home/tonyg/glos/modele/ggml-base-q8_0.bin -l pl -t 4 -bs 1 -bo 1 -nf --host 127.0.0.1 --port 8787
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

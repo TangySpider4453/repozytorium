@@ -362,6 +362,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Bez AI w rozmowie** (od 2026-10-29): „przypomnij (mi) …”, „dodaj zadanie …” → `zadanie_glosem` (od razu, `nowe_zadanie`);
   pożegnanie na końcu wypowiedzi (`rozdziel_zamkniecie`: „…, dzięki, to wszystko”, „…, teraz jest clear”) → po
   odpowiedzi „Do usłyszenia!” i rozłączenie (także po odhaczeniu i szybkich komendach); do Claude idzie tylko reszta.
+- **Szybsza mowa** (od 2026-10-29): rozpoznawanie w rozmowie przez `glos-whisper.service` (whisper-server, model
+  `ggml-base-q8_0.bin` stale w pamięci, 127.0.0.1:8787; `glos._serwer_asr`, okno `audio_ctx` wg długości), zapas whisper-cli;
+  nagranie 16 kHz bez ffmpeg. Synteza: `glos.StalyPiper` (Piper `--json-input`, model wczytany raz, rozgrzewany przy starcie
+  telefonu), zapas jednorazowy. Pomiar: rozpoznanie 6 s mowy 3,6 s → 1,7 s; zdanie syntezy 2,6 s → 1,6 s.
 - **Mowa kawałkami** (od 2026-10-28): `Rozmowa.kawalki()` dzieli wypowiedź na zdania (pierwszy kawałek krótki), `przygotuj`
   syntezuje je po kolei w tle, a `mow` gra kawałek po kawałku. Wcześniej 44 s mowy (telefon o zmianach w dzienniku)
   syntezowało się 32 s i Antek słyszał ciszę.

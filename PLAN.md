@@ -506,4 +506,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-29 (dzwonienie co minutę)**: 5 kopii przypomnienia o kreatynie (Claude w rozmowach dodawał nowe zamiast odłożyć)
   dzwoniło na zmianę. Kopie usunięte; portal scala kopie, bezpiecznik 4 min na telefon z tym samym tekstem, odłożenie
   rozumie przekręconą mowę, „mhm” tylko przed Claude.
+- **2026-10-29 (szybsza mowa)**: Rozpoznawanie przez stały serwer whisper z modelem q8_0 (~2x szybciej), synteza przez
+  stały proces Piper (~1 s mniej na zdanie). Zmierzone na Pi.
 
