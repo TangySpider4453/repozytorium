@@ -351,6 +351,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   kanał) = `zadanie_w_tle`: osobny Claude robi zadanie po rozmowie i wysyła „📋 Raport”.
 - **Treść przypomnień** (`nowe_zadanie`): `uprosc_zadanie` bez AI: bez „mi/że/żebym/mam”, bez „bo …”, czasownik w trybie
   rozkazującym ze słownika `ROZKAZ` („wziąć kreatynę” → „Weź kreatynę”, „się napić” → „Napij się”), wielka litera.
+- **Odłożenie w rozmowie z przypomnieniem bez AI** (`odlozenie`, `ODLOZ_RE`): „przypomnij za 15 minut, za chwilkę, to wszystko”,
+  „sprawdź za godzinę”, „za chwilkę”, „sprawdź czy to zrobię” → `ponow_zadanie(..., prosba=True)` (działa też przy
+  wyłączonym ponawianiu), „Dobrze, zadzwonię za X minut. Do usłyszenia!” i rozłączenie. `parsuj_zadanie` ignoruje
+  przecinki przy godzinie („o 20, że …”).
 - **Bez AI w rozmowie** (od 2026-10-29): „przypomnij (mi) …”, „dodaj zadanie …” → `zadanie_glosem` (od razu, `nowe_zadanie`);
   pożegnanie na końcu wypowiedzi (`rozdziel_zamkniecie`: „…, dzięki, to wszystko”, „…, teraz jest clear”) → po
   odpowiedzi „Do usłyszenia!” i rozłączenie (także po odhaczeniu i szybkich komendach); do Claude idzie tylko reszta.

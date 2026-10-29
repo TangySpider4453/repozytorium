@@ -501,4 +501,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-29 (bez AI: przypomnienia i rozłączanie)**: Treść przypomnień upraszczana regułami (słownik trybu
   rozkazującego), bez Haiku. W rozmowie „przypomnij …” i pożegnanie na końcu wypowiedzi rozpoznawane słowami kluczowymi,
   bez Claude.
+- **2026-10-29 (odłożenie bez AI)**: W rozmowie z przypomnieniem „przypomnij za 15 minut / za chwilkę / sprawdź czy zrobię”
+  rozpoznawane słowami: przesuwa telefon i rozłącza. Wgrane i sprawdzone na przykładach na Pi.
 

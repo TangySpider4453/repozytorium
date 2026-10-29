@@ -1249,7 +1249,7 @@ def parsuj_zadanie(tekst):
     """„jutro o 17 trening”, „za 20 min wyjąć pranie”, „w piątek 8:30 dentysta”, „25.10 18:00 urodziny”,
     „codziennie 21:00 leki” -> (tekst, termin "RRRR-MM-DDTHH:MM" albo None, powtarzaj)"""
     import re as r_
-    t = " " + tekst.strip() + " "
+    t = " " + r_.sub(r"(?<!\d),|,(?!\d)", " ", tekst.strip()) + " "     # „o 20, że …”: przecinek nie psuje godziny
     teraz = datetime.now()
     dzien = godz = None
     powt = None
@@ -2276,11 +2276,11 @@ def zadzwon(tekst, powod="prośba", **dodatki):
     os.replace(TELEFON / "kolejka" / (nazwa + ".tmp"), TELEFON / "kolejka" / nazwa)
 
 
-def ponow_zadanie(todo_id, minuty=None, powod=""):
+def ponow_zadanie(todo_id, minuty=None, powod="", prosba=False):
     """przypomnienie z telefonem bez „zrobione”: następny telefon za `minuty` (podane przez Antka) albo za ponow_min
     (ustawienie „zadania”); termin przesuwa się od teraz za każdym razem. Wyłączalne: zadania.ponawiaj = false."""
     u = ust("zadania")
-    if not u.get("ponawiaj", True):
+    if not u.get("ponawiaj", True) and not prosba:      # wyłączone ponawianie nie blokuje wyraźnej prośby „za 15 minut”
         return
     try:
         z = next((x for x in portal("/api/todo")["zadania"] if x["id"] == todo_id), None)

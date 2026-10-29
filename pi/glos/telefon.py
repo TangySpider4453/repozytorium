@@ -71,6 +71,31 @@ def rozdziel_zamkniecie(tekst):
     return tekst, False
 
 
+LICZBY_SLOW = {"pół": 0.5, "pol": 0.5, "jedną": 1, "jedna": 1, "jeden": 1, "dwie": 2, "dwa": 2, "trzy": 3, "pięć": 5, "piec": 5,
+               "dziesięć": 10, "dziesiec": 10, "piętnaście": 15, "pietnascie": 15, "dwadzieścia": 20, "dwadziescia": 20,
+               "trzydzieści": 30, "trzydziesci": 30, "czterdzieści": 40, "czterdziesci": 40}
+ODLOZ_RE = re.compile(
+    r"^(?:(?:dobra|dobrze|ok|okej|no|to|jeszcze|nie)[\s,]+)*(?:(?:przypomnij|sprawdź|sprawdz|zadzwoń|zadzwon|odezwij\s+się|zapytaj)"
+    r"(?:\s+(?:mi|się|mnie))?(?:\s+(?:jeszcze|ponownie|znowu|raz))*[\s,]*)?"
+    r"(?:(?:czy\s+(?:to\s+)?(?:zrobię|zrobie|zrobiłem|zrobilem))|za\s+(?:(\d+|pół|pol|jedn\w*|jeden|dwie|dwa|trzy|pięć|piec|dziesięć|dziesiec|piętnaście|"
+    r"pietnascie|dwadzieścia|dwadziescia|trzydzieści|trzydziesci|czterdzieści|czterdziesci)?\s*(minut\w*|min|godzin\w*|h)\b|"
+    r"chwil\w*|moment\w*|trochę|troche|później|pozniej))"
+    r"(?:[\s,]+(?:za\s+)?(?:chwil\w*|moment\w*|później|pozniej|czy\s+(?:to\s+)?zrobię|czy\s+(?:to\s+)?zrobie))*[\s,.!]*$", re.I)
+
+
+def odlozenie(tekst):
+    """w rozmowie z przypomnieniem: „przypomnij za 15 minut”, „sprawdź za godzinę”, „za chwilkę”, „sprawdź czy to zrobię”
+    -> minuty (int) albo None (= domyślnie, „za chwilkę”); False = to nie odłożenie. Bez AI."""
+    m = ODLOZ_RE.match(tekst.strip())
+    if not m:
+        return False
+    if m.group(2):
+        l = (m.group(1) or "1").lower()
+        n = float(l) if l.isdigit() else LICZBY_SLOW.get(l, 1)
+        return max(1, int(n * (60 if m.group(2).lower().startswith(("godz", "h")) else 1)))
+    return None
+
+
 def zadanie_glosem(tekst, bot):
     """„przypomnij mi o 20, że mam wziąć kreatynę” w rozmowie -> zadanie od razu, bez AI (krótka odpowiedź do powiedzenia)"""
     m = ZADANIE_RE.match(tekst.strip())
@@ -311,6 +336,14 @@ class Rozmowa:
                 if konczy and not polecenie and not self.czeka and not ostatnie_pi.rstrip().endswith("?"):
                     pamiec.zapisz("antek", "telefon", tekst)
                     self.mow("Do usłyszenia!")
+                    break
+                tid_teraz = self.zlecenie.get("todo_id")
+                if tid_teraz and (mi := odlozenie(tekst)) is not False:    # „przypomnij za 15 min / za chwilkę”: bez AI
+                    pamiec.zapisz("antek", "telefon", tekst)
+                    self.zlecenie.pop("todo_id", None)          # zakonczona() nie odkłada drugi raz
+                    bot.ponow_zadanie(tid_teraz, mi, f"prosiłeś za {mi} min" if mi else "za chwilę", prosba=True)
+                    ile = mi or bot.ust("zadania").get("ponow_min", 10)
+                    self.mow(f"Dobrze, zadzwonię za {ile} minut. Do usłyszenia!")
                     break
                 if (odp_z := zadanie_glosem(tekst, bot)) is not None:      # przypomnienie od razu, bez AI
                     pamiec.zapisz("antek", "telefon", tekst)
