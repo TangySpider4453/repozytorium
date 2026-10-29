@@ -434,6 +434,16 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   Druga z rzędu lekcja tego samego przedmiotu bez przypomnienia; odwołane i treningi (godzina przybliżona) pomijane;
   wysłane w `stan["kal_wyslane"]`. Ustawienia na dole strony Kalendarz i na Automatycznych.
 
+- **Dojazdy i autobusy** (od 2026-10-29): miejsca `dom` (Tarninowa 2, Dąbrowa), `silownia` (Fabryka Formy, Galeria Malwowa,
+  Skórzewo), `szkola` (CKZiU, Jawornicka 1) w `~/portal/dane/miejsca.json`. `kal_dojazdy`: w dni szkolne „🚌 Do szkoły” /
+  „Do domu” (60 min, `KAL_DOJAZD`), a z siłownią (`WeightTraining`) przed/po szkole: dom → siłownia 20 min, siłownia ↔
+  szkoła 30 min, siłownia → dom 20 min; dni bez szkoły: dom ↔ siłownia. Dziś i jutro z planem ZTM (`ztm.trasa_na`:
+  najpóźniejsze wyjście, które dowozi 5 min przed czasem; cache 30 min `KAL_TRASY`), np. „🚌 Wyjdź 08:24: 727 … 13 …”.
+  Siłownia na czas szkoły ustawiana z dojazdem 30 min, bieg z 60 min. Kategoria „🚌 Dojazdy” w kalendarzu.
+- **Kalendarz**: przycisk ✓ / ↺ przy zadaniach (odhacza w todo), link „📚 Ucz się →” przy sesjach nauki prosto do zakładki
+  strony Nauki (`kal_link_nauki`: przedmiot z „Przedmiot: …”, najbliższy sprawdzian, zakładka z treści: fiszki, quiz,
+  otwarte…; strony nauki otwierają zakładkę z `#id`). Link „🗓️ Kalendarz” w pasku portalu.
+
 ## Oceny: okresy i symulacja (od 2026-10-26)
 - `mobi.py` czyta `oceny/?semestr=1` i `=2`: `oceny_okresy`, `okres` (II, gdy ma oceny), `oceny_rok` (oba razem),
   `srednia` (ze średnich przedmiotów), `srednia_ocen` (ze wszystkich ocen). Strona Mobidziennik: zakładki I / II / cały rok,

@@ -437,6 +437,25 @@ def trasa(start, cel, od=None, warianty=2):
     return wyn
 
 
+def trasa_na(start, cel, przyjazd, zapas_min=5):
+    """połączenie, które dowozi najpóźniej na `przyjazd - zapas` (datetime): najpóźniejsze wyjście (szukanie
+    połówkowe po godzinie wyjścia, ok. 7 przeliczeń po 0,2 s) -> wariant (dict) albo None"""
+    from datetime import timedelta
+    cel_t = przyjazd - timedelta(minutes=zapas_min)
+    lo, hi, najlepszy = 5, 180, None                     # ile minut przed przyjazdem wyjść
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        w = trasa(start, cel, od=przyjazd - timedelta(minutes=mid), warianty=1)
+        ok = w and not w[0].get("pieszo_calosc") and w[0].get("na_miejscu") and w[0]["na_miejscu"] <= cel_t.strftime("%H:%M")
+        if w and w[0].get("pieszo_calosc"):
+            return w[0]
+        if ok:
+            najlepszy, hi = w[0], mid - 1                 # zdąży: spróbuj wyjść później
+        else:
+            lo = mid + 1
+    return najlepszy
+
+
 def tekst_trasy(warianty, dokad=""):
     if not warianty:
         return f"Nie znalazłem połączenia{' do ' + dokad if dokad else ''} w najbliższych 3 godzinach."

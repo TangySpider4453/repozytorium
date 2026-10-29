@@ -740,6 +740,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <a href="/siec" data-p="siec"><span class="ik" aria-hidden="true">🌐</span>Sieć i adresy</a>
     <a href="/zdalne" data-p="zdalne"><span class="ik" aria-hidden="true">🖥️</span>Zdalne</a>
     <a href="/strony/lazik/" data-p="lazik"><span class="ik" aria-hidden="true">🚙</span>Łazik</a>
+    <a href="/strony/kalendarz/" data-p="kalendarz"><span class="ik" aria-hidden="true">🗓️</span>Kalendarz</a>
     <a href="/strony/nauka/" data-p="nauka"><span class="ik" aria-hidden="true">📚</span>Nauka</a>
     <a href="/strony/progres/" data-p="progres"><span class="ik" aria-hidden="true">💪</span>Progres</a>
     <a href="/strony/zdrowie/" data-p="zdrowie"><span class="ik" aria-hidden="true">🩺</span>Zdrowie</a>
@@ -1751,12 +1752,12 @@ def kal_zdarzenia(od, do):
     akt = iv.get("kalendarz_aktywnosci", iv.get("aktywnosci", []))
     zrobione_typy = {(a["start"][:10], a.get("typ")) for a in akt}
     mm = lambda t: int(t[:2]) * 60 + int(t[3:5])
-    szkola = {}                                          # data -> (od, do) lekcji z dojazdem
+    lekcje = {}                                          # data -> (pierwsza lekcja od, ostatnia do), bez dojazdu
     for x in mobi.get("plan", []):
         if x.get("status") != "odwołana" and x.get("od") and x.get("do"):
-            a, b = szkola.get(x["data"], (24 * 60, 0))
-            szkola[x["data"]] = (min(a, mm(x["od"]) - KAL_DOJAZD), max(b, mm(x["do"]) + KAL_DOJAZD))
-    zajete_tr = {}                                       # data -> [(od, do)] już ustawionych treningów tego dnia
+            a, b = lekcje.get(x["data"], (24 * 60, 0))
+            lekcje[x["data"]] = (min(a, mm(x["od"])), max(b, mm(x["do"])))
+    zajete_tr = {}                                       # data -> [(od, do, typ)] już ustawionych treningów tego dnia
     for t in iv.get("treningi", []):
         if (t["data"], t.get("typ")) in zrobione_typy:      # już wykonany (jest w aktywnościach): nie pokazuj planu drugi raz
             continue
@@ -1764,15 +1765,22 @@ def kal_zdarzenia(od, do):
         dl = t.get("czas_min") or 60
         # pora bez kolizji ze szkołą i z innym treningiem tego dnia: zwykła, a jeśli wypada w szkole albo na innym
         # treningu, najbliższa z: przed szkołą (od 5:30), po szkole, po innym treningu
-        zaj = sorted(zajete_tr.get(t["data"], []) + ([szkola[t["data"]]] if t["data"] in szkola else []))
+        # szkoła z dojazdem: siłownia jest 30 min od szkoły, a bieg zaczyna się w domu (godzina drogi do szkoły)
+        doj = KAL_SILOWNIA_SZKOLA if t.get("typ") in KAL_SILOWNIA_TYPY else KAL_DOJAZD
+        zaj = sorted([(a, b) for a, b, _ in zajete_tr.get(t["data"], [])]
+                     + ([(lekcje[t["data"]][0] - doj, lekcje[t["data"]][1] + doj)] if t["data"] in lekcje else []))
         wolna = lambda x: x >= 5 * 60 + 30 and x + dl <= 23 * 60 and all(not (x < b - 0 and a < x + dl) for a, b in zaj)
         kand = [g] + [b + KAL_PRZERWA for _, b in zaj] + [(a - dl - KAL_PRZERWA) // 15 * 15 for a, _ in zaj]
         g = min((x for x in kand if wolna(x)), key=lambda x: abs(x - g), default=g)
-        zajete_tr.setdefault(t["data"], []).append((g, g + dl))
+        zajete_tr.setdefault(t["data"], []).append((g, g + dl, t.get("typ")))
         dodaj(data=t["data"], od=f"{g // 60:02d}:{g % 60:02d}", do=f"{min(g + dl, 1439) // 60:02d}:{min(g + dl, 1439) % 60:02d}",
               kat="treningi", rodzaj="plan", tytul=t["nazwa"], przyblizona=True,
               opis="~ godzina przybliżona (zwykle o tej porze) · " + " · ".join(v for v in (t.get("typ"), f"{dl} min") if v)
               + ("\n" + t["opis"] if t.get("opis") else ""))
+    for a in akt:
+        if a.get("typ") in KAL_SILOWNIA_TYPY and len(a.get("start", "")) >= 16 and a.get("koniec"):
+            zajete_tr.setdefault(a["start"][:10], []).append((mm(a["start"][11:16]), mm(a["koniec"][11:16]), a["typ"]))
+    kal_dojazdy(dodaj, lekcje, zajete_tr, od, do)
     for a in akt:
         dodaj(data=a["start"][:10], od=a["start"][11:16], do=(a.get("koniec") or "")[11:16] or None, kat="treningi", rodzaj="wykonany",
               tytul="✅ " + (a.get("nazwa") or a.get("typ") or "trening"), opis=" · ".join(v for v in (a.get("typ"), f"{a['czas_min']} min",
@@ -1801,7 +1809,8 @@ def kal_zdarzenia(od, do):
         for d in daty:
             dodaj(data=d.isoformat(), od=z["termin"][11:16], kat=kat, rodzaj="zadanie", id=z["id"], tytul=("📞 " if z.get("dzwon") else "") + z["tekst"],
                   opis={"dzien": "codziennie", "tydzien": "co tydzień", "miesiac": "co miesiąc"}.get(z.get("powtarzaj"), ""),
-                  link="/strony/todo/", zrobione=bool(z.get("zrobione")) and d == pierwszy)
+                  link=(kal_link_nauki(z["tekst"], spis) if kat == "nauka" else None) or "/strony/todo/",
+                  ucz=kat == "nauka", zrobione=bool(z.get("zrobione")) and d == pierwszy)
     d, kon = _d.fromisoformat(od), _d.fromisoformat(do)
     alarmy = [a for a in alarmy_lista() if a.get("aktywny", True)]
     while d <= kon:
@@ -1814,6 +1823,115 @@ def kal_zdarzenia(od, do):
     return wyn
 
 
+KAL_SILOWNIA_TYPY = ("WeightTraining",)          # treningi na siłowni (Fabryka Formy, Skórzewo)
+KAL_DOM_SILOWNIA = 20                            # min: dom -> siłownia (15–20)
+KAL_SILOWNIA_SZKOLA = 30                         # min: siłownia -> szkoła i szkoła -> siłownia (20–30)
+KAL_TRASY = {}                                   # (dzień, skąd, dokąd, godzina) -> (czas, wariant): plan ZTM, ważny 30 min
+
+
+def kal_trasa(data, skad, dokad, przyjazd=None, wyjazd=None):
+    """plan ZTM między zapisanymi miejscami (dom, szkoła, siłownia) na dany dzień: dowiezie na `przyjazd` (min od północy)
+    albo pierwsze połączenie po `wyjazd` -> wariant albo None (tylko dziś i jutro, bo opóźnienia/rozkład)"""
+    from datetime import datetime as _dt, timedelta as _td
+    m = miejsca()
+    if skad not in m or dokad not in m or ztm is None:
+        return None
+    dzien = _dt.strptime(data, "%Y-%m-%d")
+    if not (_dt.now().date() <= dzien.date() <= _dt.now().date() + _td(days=1)):
+        return None
+    klucz = (data, skad, dokad, przyjazd, wyjazd)
+    if klucz in KAL_TRASY and time.time() - KAL_TRASY[klucz][0] < 1800:
+        return KAL_TRASY[klucz][1]
+    try:
+        if przyjazd is not None:
+            w = ztm.trasa_na(m[skad], m[dokad], dzien + _td(minutes=przyjazd))
+        else:
+            ww = ztm.trasa(m[skad], m[dokad], od=dzien + _td(minutes=wyjazd), warianty=1)
+            w = ww[0] if ww else None
+    except Exception:
+        w = None
+    KAL_TRASY[klucz] = (time.time(), w)
+    return w
+
+
+def kal_opis_trasy(w):
+    if not w:
+        return ""
+    if w.get("pieszo_calosc"):
+        return f"pieszo {w['min']} min"
+    jazdy = [k for k in w["kroki"] if k["rodzaj"] == "jazda"]
+    return (f"🚌 Wyjdź {w['wyjdz']}: " + " → ".join(f"{k['linia']} {k['z']} {k['odjazd']}" for k in jazdy)
+            + f" · na miejscu {w['na_miejscu']}")
+
+
+def kal_dojazdy(dodaj, lekcje, treningi, od, do):
+    """dojazdy w kalendarzu: do szkoły i z powrotem (godzina), a gdy siłownia jest przed albo po szkole: dom -> siłownia
+    (20 min), siłownia -> szkoła (30 min) i odwrotnie. Dziś i jutro z planem autobusów ZTM (gdy są zapisane miejsca)."""
+    g = lambda x: f"{max(0, min(x, 1439)) // 60:02d}:{max(0, min(x, 1439)) % 60:02d}"
+    dni = set(lekcje) | {d for d, l in treningi.items() if any(t in KAL_SILOWNIA_TYPY for _, _, t in l)}
+    for data in sorted(dni):
+        if not od <= data <= do:
+            continue
+        sil = sorted((a, b) for a, b, t in treningi.get(data, []) if t in KAL_SILOWNIA_TYPY)
+        if data not in lekcje:                         # dzień bez szkoły: dom -> siłownia -> dom
+            for a, b in sil:
+                w = kal_trasa(data, "dom", "silownia", przyjazd=a)
+                dodaj(data=data, od=(w or {}).get("wyjdz") or g(a - KAL_DOM_SILOWNIA), do=g(a), kat="dojazd", rodzaj="dojazd",
+                      tytul="🚌 Dom → siłownia", opis=kal_opis_trasy(w))
+                dodaj(data=data, od=g(b), do=g(b + KAL_DOM_SILOWNIA), kat="dojazd", rodzaj="dojazd", tytul="🚌 Siłownia → dom",
+                      opis=kal_opis_trasy(kal_trasa(data, "silownia", "dom", wyjazd=b)))
+            continue
+        S, E = lekcje[data]
+        przed = next(((a, b) for a, b in sil if b <= S), None)
+        po = next(((a, b) for a, b in sil if a >= E), None)
+        if przed:
+            w = kal_trasa(data, "dom", "silownia", przyjazd=przed[0])
+            dodaj(data=data, od=(w or {}).get("wyjdz") or g(przed[0] - KAL_DOM_SILOWNIA), do=g(przed[0]), kat="dojazd", rodzaj="dojazd",
+                  tytul="🚌 Dom → siłownia", opis=kal_opis_trasy(w))
+            w = kal_trasa(data, "silownia", "szkola", przyjazd=S)
+            dodaj(data=data, od=(w or {}).get("wyjdz") or g(S - KAL_SILOWNIA_SZKOLA), do=g(S), kat="dojazd", rodzaj="dojazd",
+                  tytul="🚌 Siłownia → szkoła", opis=kal_opis_trasy(w))
+        else:
+            w = kal_trasa(data, "dom", "szkola", przyjazd=S)
+            dodaj(data=data, od=(w or {}).get("wyjdz") or g(S - KAL_DOJAZD), do=g(S), kat="dojazd", rodzaj="dojazd",
+                  tytul="🚌 Do szkoły", opis=kal_opis_trasy(w))
+        if po:
+            dodaj(data=data, od=g(E), do=g(E + KAL_SILOWNIA_SZKOLA), kat="dojazd", rodzaj="dojazd", tytul="🚌 Szkoła → siłownia",
+                  opis=kal_opis_trasy(kal_trasa(data, "szkola", "silownia", wyjazd=E + 5)))
+            dodaj(data=data, od=g(po[1]), do=g(po[1] + KAL_DOM_SILOWNIA), kat="dojazd", rodzaj="dojazd", tytul="🚌 Siłownia → dom",
+                  opis=kal_opis_trasy(kal_trasa(data, "silownia", "dom", wyjazd=po[1])))
+        else:
+            w = kal_trasa(data, "szkola", "dom", wyjazd=E + 5)
+            dodaj(data=data, od=g(E), do=(w or {}).get("na_miejscu") or g(E + KAL_DOJAZD), kat="dojazd", rodzaj="dojazd",
+                  tytul="🚌 Do domu", opis=kal_opis_trasy(w))
+
+
+KAL_ZAKLADKI = {}                                # folder strony nauki -> [(id, etykieta)] zakładek
+
+
+def kal_link_nauki(tekst, spis):
+    """sesja nauki („Matematyka: wielomiany – quiz i fiszki”) -> link do strony Nauki z właściwą zakładką (#fiszki, #quiz…)"""
+    from datetime import date as _d
+    przedm = tekst.split(":", 1)[0].strip().lower()[:5]
+    kand = [x for x in spis if (x.get("przedmiot") or "").lower()[:5] == przedm]
+    if not kand:
+        return None
+    dzis = _d.today().isoformat()
+    x = min(kand, key=lambda y: (y.get("data", "") < dzis, abs((_d.fromisoformat(y["data"]) - _d.today()).days) if y.get("data") else 999))
+    folder = x.get("folder") or x.get("id")
+    if folder not in KAL_ZAKLADKI:
+        try:
+            h = (NAUKA / folder / "index.html").read_text(encoding="utf-8")
+            KAL_ZAKLADKI[folder] = re.findall(r'data-tab="([\w-]+)"[^>]*>([^<]+)<', h)
+        except OSError:
+            KAL_ZAKLADKI[folder] = []
+    t = tekst.lower()
+    zakl = next((i for i, n in KAL_ZAKLADKI[folder] if n.lower() in t or i in t), None)
+    if not zakl and re.search(r"pytania otwarte|zadania", t):
+        zakl = next((i for i, _ in KAL_ZAKLADKI[folder] if i in ("otwarte", "zadania")), None)
+    return f"/strony/nauka/{folder}/" + (f"#{zakl}" if zakl else "")
+
+
 def kal_godzina_treningu(typ, akt):
     """zwykła godzina rozpoczęcia treningu danego typu (mediana z ostatnich aktywności), w minutach od północy"""
     g = sorted(int(a["start"][11:13]) * 60 + int(a["start"][14:16]) for a in akt if a.get("typ") == typ and len(a.get("start", "")) >= 16)
@@ -1823,7 +1941,7 @@ def kal_godzina_treningu(typ, akt):
 
 
 KAL_DZIEN = (8 * 60, 21 * 60 + 30)      # nauka tylko między 8:00 a 21:30
-KAL_DOJAZD = 40                         # min przed pierwszą i po ostatniej lekcji (droga do szkoły i ze szkoły)
+KAL_DOJAZD = 60                         # min: dom <-> szkoła (Dąbrowa -> Jawornicka), gdy nie ma planu ZTM
 KAL_PRZERWA = 10                        # min odstępu od innych rzeczy
 
 
@@ -1832,8 +1950,8 @@ def kal_zajete(data, bez_id=None):
     m = lambda t: int(t[:2]) * 60 + int(t[3:5])
     zaj = []
     lekcje = [z for z in kal_zdarzenia(data, data) if z["kat"] == "lekcje" and z.get("od") and z.get("do") and z.get("rodzaj") != "odwołana"]
-    if lekcje:
-        zaj.append((min(m(z["od"]) for z in lekcje) - KAL_DOJAZD, max(m(z["do"]) for z in lekcje) + KAL_DOJAZD, "szkoła (z dojazdem)"))
+    if lekcje:                              # dojazdy (do szkoły, z siłowni…) są osobnymi wpisami kalendarza
+        zaj.append((min(m(z["od"]) for z in lekcje), max(m(z["do"]) for z in lekcje), "szkoła"))
     for z in kal_zdarzenia(data, data):
         if z["kat"] == "lekcje" or not z.get("od") or (bez_id and z.get("id") == bez_id) or (z.get("zrobione") and z["kat"] != "treningi"):
             continue

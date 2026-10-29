@@ -217,6 +217,8 @@ Wszystko musi się zgadzać z notatką. Gotowe narzędzie: `narzedzia/dodaj_najw
    `<a href="../" style="display:inline-block;font-size:14px;opacity:.75;text-decoration:none;margin-bottom:8px">← Wszystkie notatki</a>`
 2. Klucz wyniku quizu: `"nauka:<id>:best_"+qFilter` (w `getItem` i `setItem`). Lista czyta `nauka:<id>:best_all`.
    Bez tego wyniki różnych sprawdzianów nadpisywałyby się nawzajem.
+3. Na końcu `<body>` skrypt otwierający zakładkę z adresu (`#fiszki`, `#quiz`… — linki „📚 Ucz się” z kalendarza):
+   `addEventListener("load",()=>{const h=decodeURIComponent(location.hash.slice(1));if(h&&typeof showTab==="function"&&document.getElementById(h))showTab(h)});`
 
 **Jakość treści:**
 - Opieraj się na materiałach użytkownika (zdjęcia zeszytu i podręcznika, zakres od nauczyciela). Niczego nie zmyślaj.
@@ -508,4 +510,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   rozumie przekręconą mowę, „mhm” tylko przed Claude.
 - **2026-10-29 (szybsza mowa)**: Rozpoznawanie przez stały serwer whisper z modelem q8_0 (~2x szybciej), synteza przez
   stały proces Piper (~1 s mniej na zdanie). Zmierzone na Pi.
+- **2026-10-29 (kalendarz: odhaczanie, nauka, dojazdy)**: W kalendarzu ✓ przy zadaniach, „📚 Ucz się →” prowadzi do zakładki
+  strony Nauki (strony nauki otwierają zakładkę z `#fiszki`, `#quiz`… — dodane do wszystkich 8 stron, kopie w `strona/`
+  równe Pi), dojazdy szkoła/siłownia z planem autobusów ZTM na dziś i jutro, link Kalendarz w pasku portalu.
 
