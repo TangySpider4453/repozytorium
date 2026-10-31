@@ -254,6 +254,45 @@ def stop():
         bt("disconnect", u["bt_mac"])
     if not (u["tryb"] == "usb" and ustaw_wyjscie("usb", usb=u.get("usb"))):
         ustaw_wyjscie("aux")
+    # świeży shairport-sync na następne granie: po zniknięciu wyjścia BT jego strumień potrafił zostać „martwy”
+    # (iPhone połączony, a dźwięk nie płynął). Restart za 3 s, gdy ten hook już się skończy.
+    sh("systemd-run", "--user", "--collect", "--on-active=3", "systemctl", "--user", "restart", USLUGA)
+
+
+def strumien_aktywny():
+    """czy strumień AirPlay w PipeWire faktycznie gra (połączenia „[active]”)"""
+    _, out = sh("wpctl", "status")
+    sek = out.split("Streams:", 1)[1] if "Streams:" in out else ""
+    blok = sek.split("AirPlay", 1)[1].split("\n\n", 1)[0] if "AirPlay" in sek else ""
+    return "[active]" in "\n".join(blok.splitlines()[:4])
+
+
+def pilnuj():
+    """strażnik (timer co 20 s): AirPlay gra (stan.json „gra”), ale do głośnika nic nie płynie przez 3 sprawdzenia
+    z rzędu (~1 min) -> restart shairport-sync i ponowne połączenie BT; usługa wyłączona, a powinna działać -> start"""
+    u = ustawienia()
+    licznik = KAT / "pilnuj.json"
+    n = czytaj(licznik, {"n": 0})["n"]
+    _, akt = usluga("is-active")
+    if u["wlaczony"] and akt.strip() != "active":
+        usluga("restart")
+        print("pilnuj: usługa nie działała, uruchamiam", flush=True)
+        return
+    s = czytaj(STAN, {"gra": False})
+    if not s.get("gra") or time.time() - s.get("t", 0) < 30 or strumien_aktywny():
+        if n:
+            zapisz(licznik, {"n": 0})
+        return
+    n += 1
+    zapisz(licznik, {"n": n})
+    if n < 3:
+        return
+    print("pilnuj: AirPlay gra, a dźwięk nie płynie: restart", flush=True)
+    zapisz(licznik, {"n": 0})
+    zapisz(STAN, {"gra": False, "t": time.time(), "uwaga": "AirPlay się zaciął i został zrestartowany: puść jeszcze raz."})
+    if u["tryb"] == "bt" and u["bt_mac"]:
+        bt("disconnect", u["bt_mac"])
+    usluga("restart")
 
 
 def stan():
@@ -282,6 +321,8 @@ if __name__ == "__main__":
         start()
     elif k == "stop":
         stop()
+    elif k == "pilnuj":
+        pilnuj()
     elif k == "konfiguracja":              # ExecStartPre usługi: świeża konfiguracja, po starcie nic jeszcze nie gra
         konfiguracja(ustawienia())
         zapisz(STAN, {"gra": False, "t": time.time()})

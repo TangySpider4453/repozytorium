@@ -470,6 +470,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Bluetooth włączony 2026-10-28** (za zgodą Antka): w `/boot/firmware/config.txt` zakomentowane `dtoverlay=disable-bt`
   (kopia `config.txt.bak_2026-10-28_bt`), UART na GPIO to teraz `ttyS0` (`serial0`). BT był też zablokowany przez rfkill
   (zapis w `/var/lib/systemd/rfkill/*bluetooth` = 0); `airplay.py` sam robi `bluetoothctl power on`, gdy radio jest wyłączone.
+- **Niezawodność** (2026-10-31): AirPlay przyjmował połączenie z iPhone'a, ale nie podawał dźwięku (strumień w PipeWire
+  „suspended”, BT działał). Teraz: `stop` po każdym graniu (po zwolnieniu BT) restartuje shairport-sync za 3 s
+  (`systemd-run --user --on-active=3`), a strażnik `airplay-pilnuj.timer` (co 20 s, `airplay.py pilnuj`) restartuje
+  usługę, gdy nie działa, a powinna, albo gdy „gra”, a strumień nie jest `[active]` przez ~1 min (rozłącza BT, uwaga na
+  stronie). Dziennik shairport-sync (`log_verbosity = 1`, statystyki): `journalctl --user -u airplay`.
 - **Karta dźwiękowa USB** (od 2026-10-28): tryb `usb` (strona: „🎛️ Karta USB”, aktywny, gdy karta wykryta): wyjście
   PipeWire z `usb` w nazwie (`karty_usb()`), zapamiętane w `ustawienia.json` (`usb`); odłączona = gra przez AUX z uwagą.
 - Opóźnienie: przesunięcie BT domyślnie 0 i ukryte za przełącznikiem na stronie. Bufor wyjścia 0,1 s

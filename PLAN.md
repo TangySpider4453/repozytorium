@@ -513,4 +513,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-10-29 (kalendarz: odhaczanie, nauka, dojazdy)**: W kalendarzu ✓ przy zadaniach, „📚 Ucz się →” prowadzi do zakładki
   strony Nauki (strony nauki otwierają zakładkę z `#fiszki`, `#quiz`… — dodane do wszystkich 8 stron, kopie w `strona/`
   równe Pi), dojazdy szkoła/siłownia z planem autobusów ZTM na dziś i jutro, link Kalendarz w pasku portalu.
+- **2026-10-31 (AirPlay bez dźwięku)**: shairport-sync zawiesił się z „martwym” wyjściem po zwolnieniu BT. Restart pomógł
+  (sesja z iPhone'a gra, dźwięk płynie do TP-Link). Zabezpieczenia: świeży restart po każdym graniu i strażnik co 20 s.
 
