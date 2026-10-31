@@ -128,6 +128,10 @@ general = {{
   volume_range_db = 60;
   audio_backend_latency_offset_in_seconds = {opozn:.2f};
 }};
+diagnostics = {{
+  log_verbosity = 1;          // błędy i najważniejsze zdarzenia do dziennika (journalctl --user -u airplay)
+  statistics = "yes";
+}};
 sessioncontrol = {{
   run_this_before_entering_active_state = "{py} start";
   run_this_after_exiting_active_state = "{py} stop";
