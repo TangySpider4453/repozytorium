@@ -216,9 +216,10 @@ class Analiza(threading.Thread):
 
     SERIA = 8
 
-    def __init__(self, katalog, glebia):
+    def __init__(self, katalog, glebia, wideo=None):
         super().__init__(daemon=True)
         self.katalog, self.glebia = katalog, glebia
+        self.wideo = wideo or os.path.join(katalog, "wideo.avi")  # także dowolny film (np. z telefonu)
         self.przerwij = False
         self.lock = threading.Lock()
         self.podglad = None  # (klatka, mapa głębi) ostatnio przetworzonej klatki
@@ -242,7 +243,7 @@ class Analiza(threading.Thread):
     def _analizuj(self):
         cv2.setNumThreads(2)
         self.glebia.zaladuj()
-        cap = cv2.VideoCapture(os.path.join(self.katalog, "wideo.avi"))
+        cap = cv2.VideoCapture(self.wideo)
         razem = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self._ustaw(etap="analiza", razem=razem)
         orb = cv2.ORB_create(2000)
@@ -268,6 +269,8 @@ class Analiza(threading.Thread):
                 ok, k = cap.read()
                 if not ok:
                     break
+                if k.shape[1] > 960:  # filmy z telefonu (1080p/4K): ruch i chmura nie potrzebują więcej
+                    k = cv2.resize(k, (960, int(k.shape[0] * 960 / k.shape[1])), interpolation=cv2.INTER_AREA)
                 seria.append(k)
             if not seria:
                 break
@@ -362,11 +365,12 @@ class Analiza(threading.Thread):
         werdykt = self._werdykt(gotowe, zgubione, droga, obrot)
         katalog = zapisz_skan(pkt[0], kol[0], dict(
             opis=werdykt, klatki=gotowe, klatki_kluczowe=kluczowe, obrot_stopnie=round(obrot),
-            droga_m=round(droga, 2), zgubione=zgubione, nagranie=os.path.basename(self.katalog)))
+            droga_m=round(droga, 2), zgubione=zgubione, nagranie=os.path.basename(self.wideo)))
         info_p = os.path.join(self.katalog, "info.json")
-        info = json.load(open(info_p, encoding="utf-8"))
-        info.update(skan=os.path.basename(katalog), werdykt=werdykt)
-        json.dump(info, open(info_p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        if self.wideo.endswith("wideo.avi") and os.path.exists(info_p):  # nagranie z aplikacji: zapamiętaj skan
+            info = json.load(open(info_p, encoding="utf-8"))
+            info.update(skan=os.path.basename(katalog), werdykt=werdykt)
+            json.dump(info, open(info_p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         self._ustaw(etap="gotowe", wynik=katalog, werdykt=werdykt, punkty=len(pkt[0]))
 
     @staticmethod

@@ -1,0 +1,14 @@
+[Unit]
+Description=Lazik: strona do przesylania filmow (port 8080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=rpi
+WorkingDirectory=/home/rpi/lazik/analiza
+ExecStart=/usr/bin/python3 /home/rpi/lazik/analiza/serwer_wideo.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
