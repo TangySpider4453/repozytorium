@@ -3,11 +3,16 @@
 set -e
 cd "$(dirname "$0")"
 sudo apt-get install -y hailo-all python3-opencv python3-pyqt5 qtwayland5
-chmod +x uruchom.sh wizja.py
+chmod +x uruchom.sh wizja.py skany.sh
+# model głębi dla trybu „Przestrzeń” (Hailo Model Zoo, wersja zgodna z HailoRT 4.23) i three.js do podglądu skanów
+mkdir -p modele skany zdjecia
+[ -f modele/scdepthv3.hef ] || curl -fsSL -o modele/scdepthv3.hef \
+  https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/ModelZoo/Compiled/v2.17.0/hailo8/scdepthv3.hef
+[ -f three.min.js ] || curl -fsSL -o three.min.js https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js
 mkdir -p ~/Desktop ~/.local/share/applications
-cp lazik-wizja.desktop ~/Desktop/
-cp lazik-wizja.desktop ~/.local/share/applications/
-chmod +x ~/Desktop/lazik-wizja.desktop
+for d in lazik-wizja.desktop lazik-skany.desktop; do
+  cp $d ~/Desktop/ && cp $d ~/.local/share/applications/ && chmod +x ~/Desktop/$d
+done
 # pulpit (pcmanfm) uruchamia ikonę od razu, bez pytania "wykonać?"
 mkdir -p ~/.config/libfm
 if [ -f ~/.config/libfm/libfm.conf ]; then

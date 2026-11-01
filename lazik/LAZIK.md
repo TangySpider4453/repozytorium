@@ -58,12 +58,28 @@ Kamera USB Logitech C170 = `/dev/video0` (1024×768, ~12 kl/s). Ekran testowy HD
 D-WAV, pulpit Wayland (labwc). Logowanie z chmury na razie hasłem (klucza nie dopisujemy bez zgody użytkownika).
 ⚠️ Zasilanie: `get_throttled=0x50000` (spadki napięcia od startu), EXT5V ≈ 4,86 V: potrzebny zasilacz 27 W 5 V/5 A.
 
-**Aplikacja „Łazik: wizja”** (`apki/wizja/`, na Pi `~/lazik/wizja/`, ikona na pulpicie): kamera USB na pełnym
-ekranie, rozpoznawanie YOLOv8s na Hailo włączane przełącznikiem (wyłączenie zwalnia chip), próg pewności, CPU / RAM /
-Hailo z temperaturami, zasilanie, lista obiektów po polsku. Krzyżyk lub Esc zamyka. Instalacja: `./instaluj.sh`
-(po pierwszej instalacji `hailo-all` potrzebny reboot). Test bez klikania: `./uruchom.sh --rozpoznawanie`.
-Uruchamianie z SSH na ekranie: `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 ./uruchom.sh &`,
-zrzut ekranu `grim /tmp/ekran.png`. Zamykanie z SSH: `pkill -f "^python3 wizja\.py"`.
+**Aplikacja „Łazik: wizja”** (`apki/wizja/`, na Pi `~/lazik/wizja/`, ikony na pulpicie „Łazik: wizja” i „Łazik: skany 3D”):
+- **Tryb Obiekty:** YOLOv8s na Hailo (~17 ms/klatkę), każdy obiekt ma numer (śledzenie po IoU), lista w panelu, opis
+  sceny słowami. Dotknięcie obiektu pokazuje tylko jego (lupa, położenie, czas śledzenia), „cała klasa” pokazuje
+  wszystkie tej klasy. „Zdjęcie” = stop-klatka z adnotacjami: przybliżanie (2 palce / kółko / + −), przesuwanie,
+  podpisy w stałym rozmiarze ustawiane tak, by nie zasłaniały obiektu. Zapis do `zdjecia/RRRR-MM-DD_GGMM_opis.jpg`
+  (+ `_ramki.png`, `.json`), „Galeria” przegląda zapisane. „Pauza” zamraża obraz.
+- **Tryb Przestrzeń:** głębia `scdepthv3` na Hailo (~9 ms, model z Hailo Model Zoo v2.17 w `modele/`), opis
+  (gdzie blisko/daleko, czy na wprost wolno). Skan 3D: stać w miejscu i obracać kamerę; obrót z ORB + homografii,
+  chmura punktów (woksel 4 cm) zapisywana do `skany/RRRR-MM-DD_GGMM_skan/` (`skan.html` z wbudowanymi danymi +
+  `three.min.js`, `chmura.ply`, `info.json`). Podgląd jak gra: WASD + mysz albo joystick dotykowy, widok z góry.
+  Folder skanu działa offline na każdym komputerze (otworzyć `skan.html`).
+- **Ograniczenia:** głębia z jednej kamery jest względna (skala i odległości orientacyjne, z bliska potrafi się mylić);
+  skan zakłada obrót w miejscu, chodzenie z kamerą psuje go. Docelowo OAK-D Lite + odometria, ten sam format i podgląd.
+- **Hailo:** modele wczytują się raz i zostają na chipie; przełącznik tylko przestaje wysyłać klatki. Zwalnianie
+  urządzenia w trakcie pracy (picamera2 `Hailo.close()` / `VDevice.release()`) kończy się crashem albo zakleszczeniem
+  w HailoRT 4.23, dlatego aplikacja kończy się przez `os._exit`. Temperatura: stały uchwyt `get_physical_devices()[0]`.
+  Sterownik na jądrze 6.18 sypie ostrzeżeniami `find_vma` w `dmesg` (nieszkodliwe). Przegrzanie > 85 °C wyłącza liczenie.
+- Instalacja: `./instaluj.sh` (pakiety, model głębi, three.js, ikony; po pierwszej instalacji `hailo-all` reboot).
+  Testy bez klikania: `./uruchom.sh --rozpoznawanie [--przestrzen]`. Z SSH na ekranie:
+  `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 ./uruchom.sh &`, zrzut `grim /tmp/ekran.png`, zamykanie
+  `pkill -f "^python3 wizja\.py"` (uwaga: wzorzec bez `^` zabija też własną powłokę SSH).
+- VNC włączony (wayvnc, port 5900, logowanie kontem `rpi`).
 
 Zero 2W: użytkownik `rpi`, Debian 13, Python 3.13. Klucz SSH z chmury na nich nie działa; do ustalenia: Tailscale SSH
 (`sudo tailscale set --ssh`) albo skok przez Pi 4B.
@@ -76,5 +92,6 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-01 | Wizja v2: śledzenie i wybór obiektów, zdjęcia z adnotacjami (zoom, galeria), opis sceny, tryb Przestrzeń (głębia Hailo, skan 3D, przeglądarka „gra”). VNC włączony. Zasilacz za słaby (spadki napięcia). |
 | 2026-11-01 | Pi 5 + AI HAT+ (Hailo-8) uruchomione; aplikacja „Łazik: wizja” na pulpicie Pi 5, sprawdzona na sprzęcie (YOLOv8s ~12 ms/klatkę, Hailo ~41 °C). |
 | 2026-10-26 | Mapa projektu zrobiona z trzech plików dokumentacji i historii czatu; zapisana w `strona/mapa.html`. Na Pi jeszcze jej nie ma (brak `TS_AUTHKEY` w środowisku chmury). |

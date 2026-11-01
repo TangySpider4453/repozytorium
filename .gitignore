@@ -1,2 +1,7 @@
 progres/mp/
 __pycache__/
+# Łazik: dane z Pi (zdjęcia, skany, modele) zostają na Pi
+lazik/apki/wizja/zdjecia/
+lazik/apki/wizja/skany/
+lazik/apki/wizja/modele/
+lazik/apki/wizja/three.min.js

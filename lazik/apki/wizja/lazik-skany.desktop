@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Łazik: skany 3D
+Comment=Przeglądanie skanów przestrzeni z aplikacji „Łazik: wizja” (chodzenie jak w grze)
+Exec=/home/rpi/lazik/wizja/skany.sh
+Icon=applications-games
+Terminal=false
+Categories=Utility;
