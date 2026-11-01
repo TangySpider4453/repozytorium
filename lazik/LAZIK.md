@@ -103,9 +103,10 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   (OpenCV, procesor) grupowane w obrębie filmu (próg cosinus 0,363, scalanie na końcu): „różne twarze (pewne)” =
   widziane ≥ 2 razy. Bez nazwisk i bez bazy osób. Przedmioty: maks. naraz, czas widoczności, pierwszy raz, miniatura;
   oś czasu; do 12 klatek kluczowych (zmiana sceny). Test: film z 2 osobami → 2 pewne twarze; ~14 kl/s, CPU ~80 %.
-- **Opis AI:** Ollama + `gemma3:4b` (lokalnie, procesor, ~1 min na klatkę kluczową) opisuje klatki i cały film po polsku.
-  **Ollama nie jest jeszcze zainstalowana** (instalator `curl … | sh` wymaga zgody użytkownika):
-  `curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma3:4b`. Bez niej raport pisze, że opis niedostępny.
+- **Opis AI:** Ollama 0.40 (usługa `ollama`, zainstalowana 2026-11-01) + `gemma3:4b` (3,4 GB) **na procesorze Pi 5,
+  nie na Hailo** (Hailo-8 nie uruchamia modeli językowych; potrafi to Hailo-10H w AI HAT+ 2). Zmierzone: ~2 min na
+  klatkę, opis po polsku sensowny, ale z drobnymi zmyśleniami. Do 8 klatek kluczowych + podsumowanie (~17 min na film).
+  Pod pełnym obciążeniem procesor doszedł do 86 °C i zwalniał (`throttled=0xe0006`): potrzebny Active Cooler.
 - **Skan 3D:** `przestrzen.Analiza(..., wideo=plik)`, filmy > 960 px zmniejszane; skan w `raporty/<film>/skan/`.
 - **Wynik:** `raporty/<film>/raport.html` (+ `miniatury/`, `dane.json`, `notatki.txt`), widoczny też na telefonie.
 - Hailo naraz obsługuje jeden proces: przy włączonej „Łazik: wizja” analiza pokaże „Hailo zajęte”.

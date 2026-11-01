@@ -264,7 +264,8 @@ class Okno(QWidget):
     def _stan_ai(self):
         dziala, ma_model, kom = A.ollama_gotowa()
         self.stan_ai.setText(f"Opis AI: {kom}." if not (dziala and ma_model) else
-                             f"Opis AI: {kom}. Liczy na procesorze, ok. 1 min na klatkę kluczową.")
+                             f"Opis AI: {kom}. Liczy na procesorze Pi 5 (nie na Hailo): ok. 2 min na klatkę, do 8 klatek, "
+                             "czyli kilkanaście minut na film.")
 
     def dodaj_z_pliku(self):
         pliki, _ = QFileDialog.getOpenFileNames(self, "Wybierz filmy", "/media",

@@ -34,6 +34,7 @@ MODEL_AI = "gemma3:4b"
 PODOBIENSTWO_TWARZY = 0.363   # próg cosinusowy SFace zalecany przez OpenCV
 ANALIZ_NA_SEKUNDE = 10        # tyle klatek na sekundę filmu przechodzi przez YOLO i twarze
 MAKS_KLUCZOWYCH = 12
+MAKS_KLATEK_AI = 8            # opis AI liczy na procesorze Pi 5 ~2 min na klatkę (zmierzone), więc najwyżej 8
 
 ROZSZERZENIA = (".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm", ".3gp")
 
@@ -358,6 +359,9 @@ class AnalizaWideo(threading.Thread):
             return [], f"Opis AI niedostępny: {kom}."
         opisy = []
         t0 = time.monotonic()
+        if len(kluczowe) > MAKS_KLATEK_AI:  # równo rozłożone po filmie
+            idx = sorted(set(np.linspace(0, len(kluczowe) - 1, MAKS_KLATEK_AI).round().astype(int)))
+            kluczowe[:] = [kluczowe[i] for i in idx]
         for i, (t, k, licz) in enumerate(kluczowe):
             if self.przerwij:
                 return opisy, ""
