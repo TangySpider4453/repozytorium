@@ -31,11 +31,10 @@ from PyQt5.QtWidgets import (QAbstractButton, QApplication, QButtonGroup, QHBoxL
 KATALOG = os.path.dirname(os.path.abspath(__file__))
 ZDJECIA = os.path.join(KATALOG, "zdjecia")
 
-MODELE = [  # pierwszy, który się wczyta na tym chipie (Hailo-8 albo Hailo-8L)
-    "/usr/share/hailo-models/yolov8s_h8.hef",
-    "/usr/share/hailo-models/yolov8s_h8l.hef",
-    "/usr/share/hailo-models/yolov6n_h8.hef",
-    "/usr/share/hailo-models/yolov6n_h8l.hef",
+MODELE = [  # (nazwa, pliki do wypróbowania po kolei); większe modele z Hailo Model Zoo pobiera instaluj.sh
+    ("YOLOv8s", ["/usr/share/hailo-models/yolov8s_h8.hef", "/usr/share/hailo-models/yolov8s_h8l.hef"]),
+    ("YOLOv8m", [os.path.join(KATALOG, "modele", "yolov8m.hef")]),
+    ("YOLOv8x", [os.path.join(KATALOG, "modele", "yolov8x.hef")]),
 ]
 HAILO_MAKS_TEMP = 85  # powyżej rozpoznawanie samo się wyłącza
 
@@ -89,6 +88,7 @@ class Kamera(threading.Thread):
         self.klatka, self.nr_klatki = None, 0
         self.stan, self.fps = "szukam kamery…", 0.0
         self.dziala = True
+        self.odbiorcy = []  # funkcje(klatka, czas) wołane dla każdej klatki (np. nagrywanie)
 
     def najnowsza(self):
         with self.lock:
@@ -103,9 +103,14 @@ class Kamera(threading.Thread):
                 time.sleep(2)
                 continue
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            # C170: 30 kl/s tylko do 640×480 (1024×768 daje ~12); modele i tak liczą na 640×640 / 320×256
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             cap.set(cv2.CAP_PROP_FPS, 30)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            # bez tego kamera w słabym świetle wydłuża ekspozycję i spada do ~12–20 kl/s (zmierzone: 20 → 25)
+            subprocess.run(["v4l2-ctl", "-d", f"/dev/video{dev}", "-c", "exposure_dynamic_framerate=0"],
+                           capture_output=True)
             w, h = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             self.stan = f"/dev/video{dev} · {w}×{h}"
             t0, n = time.monotonic(), 0
@@ -116,6 +121,8 @@ class Kamera(threading.Thread):
                     break
                 with self.lock:
                     self.klatka, self.nr_klatki = f, self.nr_klatki + 1
+                for odb in self.odbiorcy:
+                    odb(f, time.time())
                 n += 1
                 if time.monotonic() - t0 >= 1:
                     self.fps, t0, n = n / (time.monotonic() - t0), time.monotonic(), 0
@@ -186,19 +193,15 @@ class Detektor(threading.Thread):
         self.zaladowany = None         # tryb, który teraz liczy (None = bezczynnie)
         self._dev_temp = None          # stały uchwyt do chipu do odczytu temperatury
         self.glebia = P.Glebia()
-        self.skaner = P.Skaner()
-        self.skanuj = False
-        self.lock_skan = threading.Lock()
         self.glebia_wynik = None       # (klatka, mapa głębi)
+        self.wybor_modelu = 1 if os.path.exists(MODELE[1][1][0]) else 0
+        self._model_wczytany = None    # indeks modelu obiektów, który liczy
+        self._modele_hailo = {}        # ścieżka → wczytany model (zostaje na chipie)
 
     def _zaladuj(self):
-        if self.tryb == "obiekty" and self.hailo is not None:
-            self.zaladowany = "obiekty"
-            return
         if self.tryb == "przestrzen":
             self.glebia.zaladuj()
             self.model = self.glebia.nazwa
-            self.skaner.metryczna = self.glebia.metryczna
             self.zaladowany = "przestrzen"
             return
         try:
@@ -206,17 +209,21 @@ class Detektor(threading.Thread):
         except Exception as e:  # brak hailo-all / picamera2
             raise RuntimeError(f"brak biblioteki Hailo ({e.__class__.__name__})")
         bledy = []
-        for sciezka in MODELE:
+        wybor = self.wybor_modelu
+        nazwa_m, sciezki = MODELE[wybor]
+        for sciezka in sciezki:
             if not os.path.exists(sciezka):
                 continue
             try:
-                self.hailo = Hailo(sciezka)
-                self.model = os.path.basename(sciezka)
-                self.zaladowany = "obiekty"
+                if sciezka not in self._modele_hailo:
+                    self._modele_hailo[sciezka] = Hailo(sciezka)
+                self.hailo = self._modele_hailo[sciezka]
+                self.model = nazwa_m
+                self.zaladowany, self._model_wczytany = "obiekty", wybor
                 return
             except Exception as e:
                 bledy.append(f"{os.path.basename(sciezka)}: {e}")
-        raise RuntimeError("nie wczytano modelu; " + ("; ".join(bledy) or "brak plików w /usr/share/hailo-models"))
+        raise RuntimeError(f"nie wczytano {nazwa_m}; " + ("; ".join(bledy) or "brak pliku modelu (uruchom ./instaluj.sh)"))
 
     def _zwolnij(self):
         """Wstrzymuje liczenie (modele zostają wczytane, chip jest bezczynny)."""
@@ -247,12 +254,13 @@ class Detektor(threading.Thread):
     def run(self):
         ostatnia, okno_t0, zajety, n, temp_t = -1, time.monotonic(), 0.0, 0, 0.0
         while self.dziala:
-            if self.zaladowany is not None and (not self.wlaczony.is_set() or self.zaladowany != self.tryb):
+            if self.zaladowany is not None and (not self.wlaczony.is_set() or self.zaladowany != self.tryb or (
+                    self.tryb == "obiekty" and self._model_wczytany != self.wybor_modelu)):
                 self._zwolnij()
             if not self.wlaczony.is_set():
                 if not self.stan.startswith("błąd"):
                     self.stan = "wyłączone"
-                if self._dev_temp is not None and time.monotonic() - temp_t >= 2:
+                if (self._dev_temp is not None or self.hailo or self.glebia.hailo) and time.monotonic() - temp_t >= 2:
                     self._odczytaj_temp()
                     temp_t = time.monotonic()
                 time.sleep(0.1)
@@ -285,9 +293,6 @@ class Detektor(threading.Thread):
             dt = time.monotonic() - t0
             teraz = time.monotonic()
             if self.zaladowany == "przestrzen":
-                if self.skanuj:
-                    with self.lock_skan:
-                        self.skaner.krok(klatka, glebia)
                 with self.lock:
                     self.glebia_wynik = (klatka, glebia)
             else:
@@ -935,6 +940,231 @@ class Wiersz(QWidget):
             self.ustaw_kolor(ZIELONY if proc < 70 else ZOLTY if proc < 90 else CZERWONY)
 
 
+class AnalizaEkran(QWidget):
+    """Analiza nagrań na pełnym ekranie: wybór nagrania, postęp, obciążenie i temperatury podzespołów, werdykt."""
+
+    def __init__(self, okno):
+        super().__init__(okno)
+        self.okno = okno
+        self.analiza = None
+        self._przelacznik_przed = False
+        self._oddane = True  # czy po analizie przywrócono przełącznik rozpoznawania
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(f"background:{TLO};color:{TEKST}")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(20, 12, 14, 14)
+        lay.setSpacing(10)
+        gora = QHBoxLayout()
+        tytul = QLabel("Analiza nagrań → skan 3D")
+        tytul.setStyleSheet("font-size:22px;font-weight:700")
+        self.b_zamknij = przycisk("✕", 52, rozmiar=22)
+        self.b_zamknij.clicked.connect(self.hide)
+        gora.addWidget(tytul)
+        gora.addStretch()
+        gora.addWidget(self.b_zamknij)
+        lay.addLayout(gora)
+        self.strony = QStackedWidget()
+        lay.addWidget(self.strony, 1)
+
+        # strona 0: wybór nagrania
+        s0 = QWidget()
+        l0 = QVBoxLayout(s0)
+        l0.setContentsMargins(0, 0, 0, 0)
+        pomoc = QLabel("Wybierz nagranie. Analiza liczy głębię każdej klatki na Hailo, śledzi ruch kamery "
+                       "(obrót i przesunięcie) i składa chmurę punktów. Może trwać dłużej niż nagranie.")
+        pomoc.setWordWrap(True)
+        pomoc.setStyleSheet(f"color:{SZARY};font-size:14px")
+        l0.addWidget(pomoc)
+        self.lista = QListWidget()
+        self.lista.setStyleSheet(
+            "QListWidget{background:#161c21;border:none;border-radius:8px;font-size:16px}"
+            "QListWidget::item{padding:10px 12px;border-bottom:1px solid #232b31}"
+            "QListWidget::item:selected{background:#2e3a42}")
+        self.lista.setFocusPolicy(Qt.NoFocus)
+        QScroller.grabGesture(self.lista.viewport(), QScroller.LeftMouseButtonGesture)
+        self.lista.itemSelectionChanged.connect(self._zaznaczone)
+        l0.addWidget(self.lista, 1)
+        r0 = QHBoxLayout()
+        self.b_analizuj, self.b_3d_lista = przycisk("Analizuj wybrane"), przycisk("Otwórz skan 3D")
+        self.b_analizuj.clicked.connect(self.analizuj)
+        self.b_3d_lista.clicked.connect(self._otworz_z_listy)
+        r0.addWidget(self.b_analizuj)
+        r0.addWidget(self.b_3d_lista)
+        r0.addStretch()
+        l0.addLayout(r0)
+        self.strony.addWidget(s0)
+
+        # strona 1: postęp
+        s1 = QWidget()
+        l1 = QHBoxLayout(s1)
+        l1.setContentsMargins(0, 0, 0, 0)
+        l1.setSpacing(16)
+        lewa = QVBoxLayout()
+        self.podglad = QLabel()
+        self.podglad.setFixedSize(560, 210)
+        self.podglad.setAlignment(Qt.AlignCenter)
+        self.podglad.setStyleSheet("background:#000;border-radius:6px")
+        lewa.addWidget(self.podglad)
+        self.pasek = QProgressBar()
+        self.pasek.setRange(0, 1000)
+        self.pasek.setTextVisible(False)
+        self.pasek.setFixedHeight(18)
+        self.pasek.setStyleSheet(f"QProgressBar{{background:#2a333a;border:none;border-radius:9px}}"
+                                 f"QProgressBar::chunk{{background:{ZIELONY};border-radius:9px}}")
+        lewa.addWidget(self.pasek)
+        self.t_postep = QLabel()
+        self.t_postep.setStyleSheet("font-size:20px;font-weight:700")
+        lewa.addWidget(self.t_postep)
+        self.t_szczeg = QLabel()
+        self.t_szczeg.setWordWrap(True)
+        self.t_szczeg.setStyleSheet(f"color:{SZARY};font-size:14px")
+        lewa.addWidget(self.t_szczeg)
+        self.t_werdykt = QLabel()
+        self.t_werdykt.setWordWrap(True)
+        self.t_werdykt.setStyleSheet(f"font-size:15px;background:#1f272d;border-radius:8px;padding:8px")
+        self.t_werdykt.hide()
+        lewa.addWidget(self.t_werdykt)
+        lewa.addStretch()
+        l1.addLayout(lewa, 1)
+        prawa = QVBoxLayout()
+        prawa.setSpacing(10)
+        self.w_cpu, self.w_ram, self.w_hailo = Wiersz("Procesor"), Wiersz("RAM"), Wiersz("Hailo (analiza)")
+        self.w_zas = Wiersz("Zasilanie", pasek=False)
+        for w in (self.w_cpu, self.w_ram, self.w_hailo, self.w_zas):
+            prawa.addWidget(w)
+        prawa.addStretch()
+        self.b_przerwij, self.b_3d, self.b_lista = przycisk("Przerwij"), przycisk("Otwórz w 3D"), przycisk("Do listy")
+        self.b_przerwij.clicked.connect(self.przerwij)
+        self.b_3d.clicked.connect(lambda: self.okno.otworz_skany(self.analiza.odczyt()["wynik"]))
+        self.b_lista.clicked.connect(self.do_listy)
+        for b in (self.b_przerwij, self.b_3d, self.b_lista):
+            prawa.addWidget(b)
+        oprawa = QWidget()
+        oprawa.setFixedWidth(300)
+        oprawa.setLayout(prawa)
+        l1.addWidget(oprawa)
+        self.strony.addWidget(s1)
+
+        self.t = QTimer(self, timeout=self.odswiez)
+        self.hide()
+
+    def trwa(self):
+        return self.analiza is not None and self.analiza.is_alive()
+
+    def pokaz(self):
+        if self.okno.b_nagraj.isChecked():
+            self.okno.b_nagraj.setChecked(False)
+        self.setGeometry(self.okno.rect())
+        if not self.trwa():
+            self.do_listy()
+        self.show()
+        self.raise_()
+        self.t.start(300)
+
+    def do_listy(self):
+        self.lista.clear()
+        for n in P.lista_nagran():
+            stan = "  ✓ skan gotowy" if n.get("skan") else ""
+            it = QListWidgetItem(f"{n['nazwa']}{stan}\n{n.get('sekundy', 0)} s · {n.get('klatki', 0)} klatek · "
+                                 f"{n.get('kl_s', 0)} kl/s")
+            it.setData(Qt.UserRole, n)
+            self.lista.addItem(it)
+        if self.lista.count() == 0:
+            it = QListWidgetItem("Brak nagrań: w trybie Przestrzeń dotknij „● Nagrywaj”.")
+            it.setFlags(Qt.NoItemFlags)
+            self.lista.addItem(it)
+        else:
+            self.lista.setCurrentRow(0)
+        self._zaznaczone()
+        self.b_zamknij.setEnabled(True)
+        self.strony.setCurrentIndex(0)
+
+    def _zaznaczone(self):
+        it = self.lista.currentItem()
+        n = it.data(Qt.UserRole) if it else None
+        self.b_analizuj.setEnabled(bool(n))
+        self.b_3d_lista.setEnabled(bool(n and n.get("skan")))
+
+    def _otworz_z_listy(self):
+        n = self.lista.currentItem().data(Qt.UserRole)
+        self.okno.otworz_skany(os.path.join(P.SKANY, n["skan"]))
+
+    def analizuj(self):
+        it = self.lista.currentItem()
+        n = it.data(Qt.UserRole) if it else None
+        if not n:
+            return
+        # Hailo dostaje tylko analiza: podgląd na żywo przestaje wysyłać klatki
+        self._przelacznik_przed = self.okno.przelacznik.isChecked()
+        self.okno.przelacznik.setChecked(False)
+        self._oddane = False
+        self.analiza = P.Analiza(n["katalog"], self.okno.detektor.glebia)
+        self.t_werdykt.hide()
+        self.b_przerwij.setEnabled(True)
+        self.b_3d.setEnabled(False)
+        self.b_lista.setEnabled(False)
+        self.b_zamknij.setEnabled(False)
+        self.strony.setCurrentIndex(1)
+        QTimer.singleShot(400, self.analiza.start)  # chwila, aż detektor skończy bieżącą klatkę
+
+    def przerwij(self):
+        if self.trwa():
+            self.analiza.przerwij = True
+
+    def odswiez(self):
+        if not self.isVisible():
+            self.t.stop()
+            return
+        sy, d = self.okno.system, self.okno.detektor
+        t_cpu = f" · {sy.temp:.0f} °C" if sy.temp is not None else ""
+        self.w_cpu.ustaw(f"{sy.cpu:.0f}%{t_cpu}", sy.cpu, kolor=kolor_temp(sy.temp, 70, 80))
+        self.w_ram.ustaw(f"{sy.ram_uzyte:.1f} / {sy.ram_razem:.1f} GB", sy.ram_proc)
+        self.w_zas.ustaw(sy.zasilanie, kolor=ZIELONY if sy.zasilanie == "OK" else ZOLTY)
+        if self.analiza is None:
+            return
+        st = self.analiza.odczyt()
+        t_h = f" · {d.temp:.0f} °C" if d.temp is not None else ""
+        hp = st.get("hailo_proc", 0.0) if self.trwa() else 0.0
+        self.w_hailo.ustaw(f"{hp:.0f}%{t_h}", hp, kolor=kolor_temp(d.temp))
+        razem, gotowe = max(st["razem"], 1), st["gotowe"]
+        self.pasek.setValue(int(1000 * gotowe / razem))
+        zost = st["zostalo"]
+        zost_t = f" · zostało ~{int(zost) // 60} min {int(zost) % 60} s" if zost and self.trwa() else ""
+        self.t_postep.setText(f"{gotowe} / {st['razem']} klatek ({100 * gotowe / razem:.0f}%)")
+        dr = f"{st['droga']:.2f}".replace(".", ",")
+        self.t_szczeg.setText(
+            f"Tempo {st['kl_s']:.1f} kl/s{zost_t} · Hailo {st['hailo_ms']:.1f} ms/klatkę\n"
+            f"Punkty: {st['punkty']:,} · klatki kluczowe: {st['kluczowe']} · zgubione: {st['zgubione']}\n".replace(",", " ")
+            + f"Ruch kamery: droga ≈{dr} m, obrót {st['obrot']:.0f}°")
+        with self.analiza.lock:
+            pg = self.analiza.podglad
+        if pg is not None:
+            klatka, glebia = pg
+            obraz = bgr_na_qimage(cv2.hconcat([klatka, P.mapa_kolorow(glebia, klatka.shape)]))
+            self.podglad.setPixmap(QPixmap.fromImage(obraz).scaled(self.podglad.size(), Qt.KeepAspectRatio,
+                                                                   Qt.SmoothTransformation))
+        etap = st["etap"]
+        if etap == "zapis":
+            self.t_postep.setText("Zapisuję skan…")
+        if etap in ("gotowe", "błąd", "przerwano") and not self._oddane:
+            self._oddane = True
+            self.okno.przelacznik.setChecked(self._przelacznik_przed)
+            self.b_przerwij.setEnabled(False)
+            self.b_lista.setEnabled(True)
+            self.b_zamknij.setEnabled(True)
+            if etap == "gotowe":
+                self.t_postep.setText(f"Gotowe: {st['punkty']:,} punktów".replace(",", " "))
+                self.t_werdykt.setText(st["werdykt"])
+                self.b_3d.setEnabled(True)
+            elif etap == "błąd":
+                self.t_postep.setText("Błąd analizy")
+                self.t_werdykt.setText(st["blad"])
+            else:
+                self.t_postep.setText("Przerwano")
+                self.t_werdykt.setText("Analiza przerwana, skan nie został zapisany.")
+            self.t_werdykt.show()
+
+
 class Okno(QWidget):
     def __init__(self):
         super().__init__()
@@ -1029,6 +1259,10 @@ class Okno(QWidget):
         for b in (self.b_zdjecie, self.pauza, self.b_galeria):
             rb.addWidget(b)
         so.addLayout(rb)
+        self.b_model = przycisk("", wys=36, rozmiar=14)
+        self.b_model.clicked.connect(self.nastepny_model)
+        so.addWidget(self.b_model)
+        self._opis_modelu()
 
         # wybrany obiekt: lupa + opis + przyciski
         self.wybor = QWidget()
@@ -1085,28 +1319,22 @@ class Okno(QWidget):
         self.opis_pr.setWordWrap(True)
         self.opis_pr.setStyleSheet(f"color:{TEKST};font-size:14px;background:#1f272d;border-radius:8px;padding:8px")
         sp.addWidget(self.opis_pr)
-        rs = QHBoxLayout()
-        rs.setSpacing(6)
-        self.b_skan = przycisk("Start skanu")
-        self.b_skan.setCheckable(True)
-        self.b_skan.toggled.connect(self.przelacz_skan)
-        self.b_wyczysc = przycisk("Wyczyść")
-        self.b_wyczysc.clicked.connect(self.wyczysc_skan)
-        rs.addWidget(self.b_skan, 1)
-        rs.addWidget(self.b_wyczysc)
-        sp.addLayout(rs)
+        self.b_nagraj = przycisk("● Nagrywaj")
+        self.b_nagraj.setCheckable(True)
+        self.b_nagraj.toggled.connect(self.przelacz_nagrywanie)
+        sp.addWidget(self.b_nagraj)
         rs2 = QHBoxLayout()
         rs2.setSpacing(6)
-        self.b_zapisz_skan, self.b_skany = przycisk("Zapisz skan"), przycisk("Skany 3D")
-        self.b_zapisz_skan.clicked.connect(self.zapisz_skan)
+        self.b_analiza, self.b_skany = przycisk("Analiza"), przycisk("Skany 3D")
+        self.b_analiza.clicked.connect(lambda: self.analiza.pokaz())
         self.b_skany.clicked.connect(self.otworz_skany)
-        rs2.addWidget(self.b_zapisz_skan)
+        rs2.addWidget(self.b_analiza)
         rs2.addWidget(self.b_skany)
         sp.addLayout(rs2)
-        self.info_skan = QLabel()
-        self.info_skan.setWordWrap(True)
-        self.info_skan.setStyleSheet(f"color:{SZARY};font-size:13px")
-        sp.addWidget(self.info_skan)
+        self.info_nagr = QLabel()
+        self.info_nagr.setWordWrap(True)
+        self.info_nagr.setStyleSheet(f"color:{SZARY};font-size:13px")
+        sp.addWidget(self.info_nagr)
         sp.addStretch()
 
         self.strony.addWidget(str_ob)
@@ -1134,6 +1362,10 @@ class Okno(QWidget):
         self.zamknij.clicked.connect(self.close)
 
         self.przegladarka = Przegladarka(self)
+        self.nagrywanie = P.Nagrywanie()
+        self.kamera.odbiorcy.append(self.nagrywanie.dodaj)
+        self.ostatnie_nagranie = None
+        self.analiza = AnalizaEkran(self)
 
         self.kamera.start()
         self.detektor.start()
@@ -1155,9 +1387,10 @@ class Okno(QWidget):
     def resizeEvent(self, e):
         self.zamknij.move(self.width() - 64, 8)
         self.zamknij.raise_()
-        if self.przegladarka.isVisible():
-            self.przegladarka.setGeometry(self.rect())
-            self.przegladarka.raise_()
+        for nakladka in (self.przegladarka, self.analiza):
+            if nakladka.isVisible():
+                nakladka.setGeometry(self.rect())
+                nakladka.raise_()
         super().resizeEvent(e)
 
     def keyPressEvent(self, e):
@@ -1189,33 +1422,39 @@ class Okno(QWidget):
         self.wiersz_progu.setVisible(not przestrzen)  # próg dotyczy tylko rozpoznawania obiektów
         if self.pauza.isChecked():
             self.pauza.setChecked(False)
-        if not przestrzen and self.b_skan.isChecked():
-            self.b_skan.setChecked(False)
+        if not przestrzen and self.b_nagraj.isChecked():
+            self.b_nagraj.setChecked(False)
         self.wybierz(None, None)
 
-    def przelacz_skan(self, wl):
-        if wl and not self.przelacznik.isChecked():
-            self.przelacznik.setChecked(True)
-        self.detektor.skanuj = wl
-        self.b_skan.setText("Stop skanu" if wl else "Start skanu")
+    def przelacz_nagrywanie(self, wl):
+        if wl:
+            if not self.przelacznik.isChecked():
+                self.przelacznik.setChecked(True)  # żeby widzieć głębię obok obrazu
+            self.nagrywanie.zacznij()
+            self.b_nagraj.setText("■ Zatrzymaj nagrywanie")
+        else:
+            self.b_nagraj.setText("● Nagrywaj")
+            katalog = self.nagrywanie.zakoncz()
+            if katalog:
+                self.ostatnie_nagranie = katalog
+                self.komunikat(f"Zapisano nagranie ({self.nagrywanie.klatki} klatek). Dotknij „Analiza”.", 5)
 
-    def wyczysc_skan(self):
-        with self.detektor.lock_skan:
-            self.detektor.skaner.wyczysc()
+    def nastepny_model(self):
+        for krok in range(1, len(MODELE) + 1):
+            i = (self.detektor.wybor_modelu + krok) % len(MODELE)
+            if any(os.path.exists(x) for x in MODELE[i][1]):
+                self.detektor.wybor_modelu = i
+                break
+        self._opis_modelu()
 
-    def zapisz_skan(self):
-        self.b_skan.setChecked(False)
+    def _opis_modelu(self):
+        opisy = {"YOLOv8s": "szybki", "YOLOv8m": "średni", "YOLOv8x": "największy"}
+        n = MODELE[self.detektor.wybor_modelu][0]
+        self.b_model.setText(f"Model: {n} ({opisy.get(n, '')}) ▸")
+
+    def otworz_skany(self, katalog=None):
         try:
-            with self.detektor.lock_skan:
-                katalog = self.detektor.skaner.zapisz(opis=self.opis_pr.text())
-        except Exception as e:
-            self.komunikat(f"Nie zapisano: {e}")
-            return
-        self.komunikat(f"Zapisano skan: skany/{os.path.basename(katalog)}", 5)
-
-    def otworz_skany(self):
-        try:
-            subprocess.Popen([os.path.join(KATALOG, "skany.sh")], start_new_session=True,
+            subprocess.Popen([os.path.join(KATALOG, "skany.sh")] + ([katalog] if katalog else []), start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.komunikat("Otwieram przeglądarkę skanów…")
         except Exception as e:
@@ -1289,14 +1528,17 @@ class Okno(QWidget):
             if wynik is not None:
                 klatka, glebia = wynik
                 mapa = P.mapa_kolorow(glebia, klatka.shape)
-                self.obraz.img = bgr_na_qimage(cv2.addWeighted(klatka, 0.4, mapa, 0.6, 0))
+                self.obraz.img = bgr_na_qimage(cv2.hconcat([klatka, mapa]))  # obraz | głębia
             else:
                 klatka = self.kamera.najnowsza()[0]
                 self.obraz.img = bgr_na_qimage(klatka) if klatka is not None else None
                 self.obraz.komunikat = self.kamera.stan
-            sk = self.detektor.skaner
-            self.obraz.nakladka = (f"● SKAN · {len(sk.pkt):,} pkt · obrót {sk.obrot:.0f}°".replace(",", " ")
-                                   if self.detektor.skanuj else "")
+            n = self.nagrywanie
+            if n.aktywne:
+                sek = int(time.time() - n.start)
+                self.obraz.nakladka = f"● NAGRYWANIE {sek // 60:02d}:{sek % 60:02d} · {n.klatki} klatek"
+            else:
+                self.obraz.nakladka = ""
             self.obraz.obiekty = []
             self.obraz.update()
             if self.dymek.isVisible() and time.monotonic() > self._komunikat_do:
@@ -1320,11 +1562,14 @@ class Okno(QWidget):
                 self.opis_pr.setText(P.opisz_glebie(wynik[1], self.detektor.glebia.metryczna))
             elif not self.przelacznik.isChecked():
                 self.opis_pr.setText("Włącz rozpoznawanie, żeby liczyć głębię.")
-            sk = self.detektor.skaner
-            odch, poch = sk.katy()
-            self.info_skan.setText(
-                f"Punkty: {len(sk.pkt):,} · kierunek {odch:+.0f}° / {poch:+.0f}°\n".replace(",", " ") +
-                f"{sk.stan[0].upper() + sk.stan[1:]}")
+            n = self.nagrywanie
+            if n.aktywne:
+                gubi = f" · pominięte {n.pominiete}" if n.pominiete else ""
+                self.info_nagr.setText(f"Nagrywam {n.klatki} klatek{gubi}.\nObracaj się powoli; "
+                                       "możesz też iść, wolno i płynnie.")
+            else:
+                self.info_nagr.setText("Nagraj otoczenie, potem „Analiza” przerobi całe nagranie na skan 3D "
+                                       "na pełnych obrotach.")
             return
         klatka, obiekty = self.biezace()
         widoczne = self.widoczne(obiekty)
@@ -1396,6 +1641,10 @@ class Okno(QWidget):
             self.wybierz(None, None)
 
     def closeEvent(self, e):
+        if self.nagrywanie.aktywne:
+            self.nagrywanie.zakoncz()
+        if self.analiza.trwa():
+            self.analiza.analiza.przerwij = True
         self.detektor.wlaczony.clear()
         self.detektor.dziala = False
         self.kamera.dziala = False

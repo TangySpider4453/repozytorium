@@ -59,26 +59,32 @@ D-WAV, pulpit Wayland (labwc). Logowanie z chmury na razie hasłem (klucza nie d
 ⚠️ Zasilanie: `get_throttled=0x50000` (spadki napięcia od startu), EXT5V ≈ 4,86 V: potrzebny zasilacz 27 W 5 V/5 A.
 
 **Aplikacja „Łazik: wizja”** (`apki/wizja/`, na Pi `~/lazik/wizja/`, ikony na pulpicie „Łazik: wizja” i „Łazik: skany 3D”):
-- **Tryb Obiekty:** YOLOv8s na Hailo (~17 ms/klatkę), każdy obiekt ma numer (śledzenie po IoU), lista w panelu, opis
-  sceny słowami. Dotknięcie obiektu pokazuje tylko jego (lupa, położenie, czas śledzenia), „cała klasa” pokazuje
-  wszystkie tej klasy. „Zdjęcie” = stop-klatka z adnotacjami: przybliżanie (2 palce / kółko / + −), przesuwanie,
-  podpisy w stałym rozmiarze ustawiane tak, by nie zasłaniały obiektu. Zapis do `zdjecia/RRRR-MM-DD_GGMM_opis.jpg`
-  (+ `_ramki.png`, `.json`), „Galeria” przegląda zapisane. „Pauza” zamraża obraz.
-- **Tryb Przestrzeń:** głębia `scdepthv3` na Hailo (~9 ms, model z Hailo Model Zoo v2.17 w `modele/`), opis
-  (gdzie blisko/daleko, czy na wprost wolno). Skan 3D: stać w miejscu i obracać kamerę; obrót z ORB + homografii,
-  chmura punktów (woksel 4 cm) zapisywana do `skany/RRRR-MM-DD_GGMM_skan/` (`skan.html` z wbudowanymi danymi +
-  `three.min.js`, `chmura.ply`, `info.json`). Podgląd jak gra: WASD + mysz albo joystick dotykowy, widok z góry.
-  Folder skanu działa offline na każdym komputerze (otworzyć `skan.html`).
-- **Ograniczenia:** głębia z jednej kamery jest względna (skala i odległości orientacyjne, z bliska potrafi się mylić);
-  skan zakłada obrót w miejscu, chodzenie z kamerą psuje go. Docelowo OAK-D Lite + odometria, ten sam format i podgląd.
-- **Hailo:** modele wczytują się raz i zostają na chipie; przełącznik tylko przestaje wysyłać klatki. Zwalnianie
-  urządzenia w trakcie pracy (picamera2 `Hailo.close()` / `VDevice.release()`) kończy się crashem albo zakleszczeniem
-  w HailoRT 4.23, dlatego aplikacja kończy się przez `os._exit`. Temperatura: stały uchwyt `get_physical_devices()[0]`.
-  Sterownik na jądrze 6.18 sypie ostrzeżeniami `find_vma` w `dmesg` (nieszkodliwe). Przegrzanie > 85 °C wyłącza liczenie.
-- Instalacja: `./instaluj.sh` (pakiety, model głębi, three.js, ikony; po pierwszej instalacji `hailo-all` reboot).
-  Testy bez klikania: `./uruchom.sh --rozpoznawanie [--przestrzen]`. Z SSH na ekranie:
+- **Kamera:** Logitech C170 w 640×480 MJPG, `exposure_dynamic_framerate=0` (w słabym świetle 20 → 25 kl/s;
+  25 kl/s to praktyczny limit tej kamery, ręczna ekspozycja tylko pogarsza). Więcej klatek = lepsza kamera (np. CSI).
+- **Tryb Obiekty:** model do wyboru przyciskiem: YOLOv8s (100 kl/s na Hailo), **YOLOv8m** (domyślny, 32 kl/s, przy
+  kamerze 25 kl/s Hailo ~80%), YOLOv8x (14 kl/s, Hailo 100%); m i x z Hailo Model Zoo v2.17 w `modele/`. Każdy obiekt
+  ma numer (śledzenie po IoU), lista, opis sceny. Dotknięcie = tylko ten obiekt (lupa, położenie), „cała klasa”.
+  „Zdjęcie” = stop-klatka z adnotacjami (zoom 2 palcami / kółkiem / + −, podpisy w stałym rozmiarze poza obiektem),
+  zapis do `zdjecia/` (`.jpg`, `_ramki.png`, `.json`), „Galeria”, „Pauza”.
+- **Tryb Przestrzeń:** na żywo dwa widoki obok siebie (obraz | głębia scdepthv3 na Hailo) i opis (blisko/daleko).
+  „● Nagrywaj” zapisuje każdą klatkę do `nagrania/RRRR-MM-DD_GGMMSS_nagranie/` (`wideo.avi` MJPG, `czasy.txt`, `info.json`).
+  **„Analiza”** (ekran na całość): wybór nagrania, analiza na pełnych obrotach (Hailo seriami po 8 klatek, ORB na
+  3 wątkach, ruch kamery PnP z głębią + zapas z homografii), postęp, tempo, czas do końca, CPU/RAM/Hailo z temperaturami,
+  werdykt (obrót w miejscu czy chodzenie, % zgubionych klatek). Na czas analizy podgląd przestaje używać Hailo.
+  Wynik: `skany/RRRR-MM-DD_GGMM_skan/` (`skan.html` + `three.min.js`, `chmura.ply`, `info.json`), woksel 2 cm.
+  Zmierzone: analiza ~38 kl/s (≈1,5× szybciej niż nagranie), głębia 5 ms/klatkę.
+- **Ruch w nagraniu:** analiza liczy obrót i przesunięcie (PnP), więc można iść wolno i płynnie; obrót w miejscu jest
+  najpewniejszy. Test syntetyczny (pokój, 1 m drogi + 90° obrotu, idealna głębia): obrót 86°, mediana odchyłki punktów
+  od ścian 0,9 cm, droga zawyżona ~20%. Na prawdziwej kamerze głębia jest zgadywana, więc skala i kształt orientacyjne.
+- **Podgląd 3D:** przyciski przytrzymywane (▲▼◀▶ chodzenie, ↺↻ obrót, patrz ↑↓, w górę/w dół), przeciąganie po obrazie,
+  klawiatura WASD/QE. Joystick dotykowy usunięty (na ekranie D-WAV dotyk przychodzi jak mysz).
+  `./skany.sh <folder_skanu>` otwiera jeden skan od razu.
+- **Hailo:** modele wczytują się raz i zostają na chipie (zwalnianie w trakcie pracy = crash w HailoRT 4.23 + picamera2),
+  wyjście przez `os._exit`. Temperatura: stały uchwyt `get_physical_devices()[0]`. Przegrzanie > 85 °C wyłącza liczenie.
+- Instalacja: `./instaluj.sh` (pakiety + v4l-utils, modele głębi i YOLOv8m/x, three.js, ikony; po pierwszej instalacji
+  `hailo-all` reboot). Testy: `./uruchom.sh --rozpoznawanie [--przestrzen]`. Z SSH na ekranie:
   `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 ./uruchom.sh &`, zrzut `grim /tmp/ekran.png`, zamykanie
-  `pkill -f "^python3 wizja\.py"` (uwaga: wzorzec bez `^` zabija też własną powłokę SSH).
+  `pkill -f "^python3 wizja\.py"` (wzorzec bez `^` zabija też własną powłokę SSH).
 - VNC włączony (wayvnc, port 5900, logowanie kontem `rpi`).
 
 Zero 2W: użytkownik `rpi`, Debian 13, Python 3.13. Klucz SSH z chmury na nich nie działa; do ustalenia: Tailscale SSH
@@ -92,6 +98,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-01 | Wizja v3: 25 kl/s (ustawienie kamery), YOLOv8m/x do wyboru, nagrywanie z dwoma widokami, analiza nagrań na pełnych obrotach (PnP z głębią, ekran postępu z obciążeniem i temperaturami), strzałki w podglądzie 3D. Pi zrestartował się raz (zasilanie). |
 | 2026-11-01 | Wizja v2: śledzenie i wybór obiektów, zdjęcia z adnotacjami (zoom, galeria), opis sceny, tryb Przestrzeń (głębia Hailo, skan 3D, przeglądarka „gra”). VNC włączony. Zasilacz za słaby (spadki napięcia). |
 | 2026-11-01 | Pi 5 + AI HAT+ (Hailo-8) uruchomione; aplikacja „Łazik: wizja” na pulpicie Pi 5, sprawdzona na sprzęcie (YOLOv8s ~12 ms/klatkę, Hailo ~41 °C). |
 | 2026-10-26 | Mapa projektu zrobiona z trzech plików dokumentacji i historii czatu; zapisana w `strona/mapa.html`. Na Pi jeszcze jej nie ma (brak `TS_AUTHKEY` w środowisku chmury). |

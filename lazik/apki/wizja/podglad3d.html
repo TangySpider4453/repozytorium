@@ -13,17 +13,20 @@
   .hud { position:fixed; left:12px; top:12px; background:var(--panel); border-radius:10px; padding:10px 14px; max-width:min(420px, 70vw); }
   .hud b { font-size:17px; }
   .hud .maly { color:var(--szary); font-size:13px; }
-  .pomoc { position:fixed; left:12px; bottom:12px; background:var(--panel); border-radius:10px; padding:8px 12px;
-    font-size:13px; color:var(--szary); max-width:60vw; }
+  .pomoc { position:fixed; left:230px; right:230px; bottom:14px; text-align:center; background:var(--panel); border-radius:10px; padding:8px 12px;
+    font-size:13px; color:var(--szary); }
+  @media (max-width:700px) { .pomoc { display:none; } }
   .przyciski { position:fixed; right:12px; top:12px; display:flex; gap:8px; }
   button { background:#2a333a; color:var(--tekst); border:0; border-radius:10px; height:46px; min-width:46px; padding:0 12px;
     font:600 15px system-ui, sans-serif; cursor:pointer; }
   button:active, button.wl { background:var(--akcent); color:#111; }
-  .joy { position:fixed; left:30px; bottom:70px; width:130px; height:130px; border-radius:50%;
-    border:2px solid rgba(255,255,255,.25); display:none; }
-  .joy i { position:absolute; left:45px; top:45px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.35); }
-  @media (pointer:coarse) { .joy { display:block; } .pomoc .mysz { display:none; } }
-  @media (pointer:fine) { .pomoc .dotyk { display:none; } }
+  /* przyciski ruchu: działają przytrzymaniem, także gdy ekran dotykowy zgłasza się jako mysz */
+  .pad { position:fixed; bottom:14px; display:grid; grid-template-columns:repeat(3, 62px); grid-auto-rows:62px; gap:6px; }
+  .pad.lewy { left:14px; } .pad.prawy { right:14px; }
+  .pad button { width:62px; height:62px; padding:0; font-size:24px; background:rgba(42,51,58,.88); touch-action:none; }
+  .pad button.maly { font-size:13px; }
+  .pad button.trzymany { background:var(--akcent); color:#111; }
+  .pad .pusty { visibility:hidden; }
 </style>
 </head>
 <body>
@@ -35,11 +38,17 @@
   <button id="start" title="Wróć na miejsce skanu">Start</button>
   <button id="zamknij" title="Zamknij">✕</button>
 </div>
-<div class="pomoc">
-  <span class="mysz">Przeciągnij myszą: rozglądanie · W A S D / strzałki: chodzenie · Q / E: góra / dół · Shift: szybciej · kółko: do przodu</span>
-  <span class="dotyk">Lewy dolny krąg: chodzenie · przeciągnij palcem po prawej stronie: rozglądanie</span>
+<div class="pomoc" id="pomoc">Przytrzymaj strzałki, żeby chodzić i się obracać · przeciągnij po obrazie, żeby się rozglądać ·
+  klawiatura: W A S D, Q / E, Shift</div>
+<div class="pad lewy" aria-label="Chodzenie">
+  <span class="pusty"></span><button data-akcja="przod" title="Do przodu">▲</button><span class="pusty"></span>
+  <button data-akcja="lewo" title="Krok w lewo">◀</button><span class="pusty"></span><button data-akcja="prawo" title="Krok w prawo">▶</button>
+  <span class="pusty"></span><button data-akcja="tyl" title="Do tyłu">▼</button><span class="pusty"></span>
 </div>
-<div class="joy" id="joy"><i></i></div>
+<div class="pad prawy" aria-label="Obrót i wysokość">
+  <button data-akcja="obrotL" title="Obróć w lewo">↺</button><button data-akcja="patrzG" class="maly" title="Patrz w górę">patrz<br>↑</button><button data-akcja="obrotP" title="Obróć w prawo">↻</button>
+  <button data-akcja="wgore" class="maly" title="Wznieś się">w górę</button><button data-akcja="patrzD" class="maly" title="Patrz w dół">patrz<br>↓</button><button data-akcja="wdol" class="maly" title="Opuść się">w dół</button>
+</div>
 <script src="three.min.js"></script>
 <script>
 if (!window.THREE) document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
@@ -95,32 +104,28 @@ const DANE = /*__DANE__*/null;
   addEventListener('keydown', e => { klawisze[e.code] = true; if (e.code === 'Escape') zamknij(); });
   addEventListener('keyup', e => { klawisze[e.code] = false; });
 
-  // rozglądanie myszą lub palcem (prawa część ekranu), chodzenie joystickiem (lewy dolny krąg)
-  let patrz = null, joy = null, ruchJoy = { x: 0, y: 0 };
-  const joyEl = document.getElementById('joy'), galka = joyEl.querySelector('i');
-  const wJoy = (x, y) => { const r = joyEl.getBoundingClientRect(); return Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)) < r.width; };
-  render.domElement.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'touch' && getComputedStyle(joyEl).display !== 'none' && wJoy(e.clientX, e.clientY)) {
-      joy = { id: e.pointerId };
-    } else patrz = { id: e.pointerId, x: e.clientX, y: e.clientY };
-  });
+  // rozglądanie: przeciąganie po obrazie (mysz albo palec)
+  let patrz = null;
+  render.domElement.addEventListener('pointerdown', e => { patrz = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
   addEventListener('pointermove', e => {
     if (patrz && e.pointerId === patrz.id) {
       odchyl -= (e.clientX - patrz.x) * 0.004; pochyl -= (e.clientY - patrz.y) * 0.004;
       pochyl = Math.max(-1.5, Math.min(1.5, pochyl)); patrz.x = e.clientX; patrz.y = e.clientY;
     }
-    if (joy && e.pointerId === joy.id) {
-      const r = joyEl.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      let dx = e.clientX - cx, dy = e.clientY - cy; const d = Math.hypot(dx, dy), m = r.width / 2;
-      if (d > m) { dx *= m / d; dy *= m / d; }
-      ruchJoy = { x: dx / m, y: dy / m }; galka.style.transform = `translate(${dx}px,${dy}px)`;
-    }
   });
-  const pusc = e => {
-    if (patrz && e.pointerId === patrz.id) patrz = null;
-    if (joy && e.pointerId === joy.id) { joy = null; ruchJoy = { x: 0, y: 0 }; galka.style.transform = ''; }
-  };
+  const pusc = e => { if (patrz && e.pointerId === patrz.id) patrz = null; };
   addEventListener('pointerup', pusc); addEventListener('pointercancel', pusc);
+
+  // przyciski ruchu: aktywne, dopóki są przytrzymane
+  const trzymane = {};
+  document.querySelectorAll('.pad button').forEach(b => {
+    const a = b.dataset.akcja;
+    const wl = e => { e.preventDefault(); trzymane[a] = true; b.classList.add('trzymany'); try { b.setPointerCapture(e.pointerId); } catch (_) {} };
+    const wyl = () => { trzymane[a] = false; b.classList.remove('trzymany'); };
+    b.addEventListener('pointerdown', wl);
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => b.addEventListener(n, wyl));
+    b.addEventListener('contextmenu', e => e.preventDefault());
+  });
   render.domElement.addEventListener('wheel', e => { e.preventDefault(); idz(0, -Math.sign(e.deltaY) * 0.3, 0); }, { passive: false });
 
   function idz(bok, przod, gora) {
@@ -150,7 +155,17 @@ const DANE = /*__DANE__*/null;
     if (klawisze.KeyD || klawisze.ArrowRight) bok += v;
     if (klawisze.KeyE || klawisze.Space) gora += v;
     if (klawisze.KeyQ || klawisze.KeyC) gora -= v;
-    przod -= ruchJoy.y * 1.4 * dt; bok += ruchJoy.x * 1.4 * dt;
+    const vp = 1.4 * dt, vo = 1.6 * dt;
+    if (trzymane.przod) przod += vp;
+    if (trzymane.tyl) przod -= vp;
+    if (trzymane.lewo) bok -= vp;
+    if (trzymane.prawo) bok += vp;
+    if (trzymane.wgore) gora += vp;
+    if (trzymane.wdol) gora -= vp;
+    if (trzymane.obrotL) odchyl += vo;
+    if (trzymane.obrotP) odchyl -= vo;
+    if (trzymane.patrzG) pochyl = Math.min(1.5, pochyl + vo * 0.7);
+    if (trzymane.patrzD) pochyl = Math.max(-1.5, pochyl - vo * 0.7);
     idz(bok, przod, gora);
     if (zGory) {
       kamera.position.y = Math.max(kamera.position.y, 6);

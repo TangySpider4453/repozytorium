@@ -1,5 +1,6 @@
 #!/bin/bash
 # Lista skanów 3D (ikona „Łazik: skany 3D”): buduje skany/index.html i otwiera go w Chromium.
+# ./skany.sh <folder_skanu> otwiera od razu jeden skan.
 cd "$(dirname "$0")"
 mkdir -p skany
 python3 - <<'PY'
@@ -31,7 +32,10 @@ PY
 # pulpit Pi 5 to Wayland; bez tej flagi Chromium uruchomiony spoza sesji próbuje X11 i się nie otwiera
 FLAGI=()
 [ -n "$WAYLAND_DISPLAY" ] && FLAGI+=(--ozone-platform=wayland)
+# z argumentem (folder skanu) otwiera od razu ten skan, bez listy
+ADRES="file://$PWD/skany/index.html"
+[ -n "$1" ] && [ -f "$1/skan.html" ] && ADRES="file://$(cd "$1" && pwd)/skan.html"
 if command -v chromium >/dev/null; then
-  exec chromium "${FLAGI[@]}" --app="file://$PWD/skany/index.html" --start-maximized >skany.log 2>&1
+  exec chromium "${FLAGI[@]}" --app="$ADRES" --start-maximized >skany.log 2>&1
 fi
-exec firefox "file://$PWD/skany/index.html" >skany.log 2>&1
+exec firefox "$ADRES" >skany.log 2>&1
