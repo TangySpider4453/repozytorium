@@ -1,0 +1,53 @@
+#!/bin/bash
+# Kopia zapasowa całego systemu tego Pi na NAS przez most na Pi 4 (serwer domowy).
+# Wołane co godzinę przez lazik-kopia.timer: robi kopię, gdy od ostatniej udanej minęło 7 dni
+# (zaległa kopia rusza więc zaraz po włączeniu Pi i dostępie do sieci domowej). `lazik-kopia --teraz` = od razu.
+# Kopia: tar z uprawnieniami, ACL i atrybutami, kompresja zstd, suma SHA-256 sprawdzana na Pi 4.
+set -uo pipefail
+
+MOST=tonyg@172.23.0.20          # Pi 4 w sieci domowej (zwykłe SSH; Tailscale SSH wymaga ręcznego zatwierdzania)
+KLUCZ=/root/.ssh/lazik_kopia
+CO_ILE_DNI=7
+STAN=/var/lib/lazik-kopia
+mkdir -p "$STAN"
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" | tee -a "$STAN/kopia.log"; }
+
+ostatnia=$(cat "$STAN/ostatnia-udana" 2>/dev/null || echo 0)
+if [ "${1:-}" != "--teraz" ] && (( $(date +%s) - ostatnia < CO_ILE_DNI * 86400 )); then
+  exit 0   # jeszcze nie czas
+fi
+exec 9>"$STAN/blokada"; flock -n 9 || { log "kopia już trwa"; exit 0; }
+
+SSH=(ssh -i "$KLUCZ" -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=6
+     -o StrictHostKeyChecking=accept-new "$MOST")
+if ! odp=$("${SSH[@]}" stan 2>&1); then
+  log "zaległa: most/NAS niedostępny ($(echo "$odp" | tail -1)), spróbuję za godzinę"
+  exit 0
+fi
+log "START kopii ($(echo "$odp" | head -1))"
+start=$(date +%s)
+rm -f "$STAN/suma"
+# --one-file-system pomija /proc, /sys, /dev, /run, /tmp (osobne systemy plików); /boot/firmware dodane jawnie
+tar -cpf - --one-file-system --xattrs --acls --numeric-owner --warning=no-file-changed --warning=no-file-ignored \
+    --exclude='./mnt/*' --exclude='./media/*' --exclude='./var/swap' --exclude='./swapfile' --exclude='./var/tmp/*' \
+    --exclude='./var/cache/apt/archives/*.deb' --exclude='./home/*/.cache/*' --exclude='./root/.cache/*' \
+    --exclude='./usr/share/ollama/.ollama/models/*' --exclude='./home/*/lazik/*/modele/*' \
+    --exclude="./var/lib/lazik-kopia/*" \
+    -C / . ./boot/firmware 2>>"$STAN/tar-ostrzezenia.log" \
+  | zstd -q -T2 -6 \
+  | tee >(sha256sum | cut -d' ' -f1 > "$STAN/suma") \
+  | "${SSH[@]}" zapisz
+wynik=("${PIPESTATUS[@]}")
+for i in $(seq 1 60); do [ -s "$STAN/suma" ] && break; sleep 1; done
+# tar: 0 = ok, 1 = pliki zmieniły się w trakcie (normalne w działającym systemie)
+if [ "${wynik[0]}" -gt 1 ] || [ "${wynik[1]}" -ne 0 ] || [ "${wynik[3]}" -ne 0 ] || [ ! -s "$STAN/suma" ]; then
+  log "BLAD: przesyłanie nie powiodło się (tar=${wynik[0]} zstd=${wynik[1]} ssh=${wynik[3]}), ponowię za godzinę"
+  exit 1
+fi
+if odp=$("${SSH[@]}" "zatwierdz $(cat "$STAN/suma")" 2>&1); then
+  date +%s > "$STAN/ostatnia-udana"
+  log "OK $(echo "$odp" | tail -1) w $(( ($(date +%s) - start) / 60 )) min"
+else
+  log "BLAD: $odp"
+  exit 1
+fi

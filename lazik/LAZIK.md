@@ -94,10 +94,42 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 (części 1–3), dziennik kodu (tylko kod sprawdzony na sprzęcie, wpisy z datą i godziną `RRRR-MM-DD GG:MM`, zdjęcia
 `RRRR-MM-DD_GGMM_opis.jpg`) i kopia sprzed 2026-10-18. Mapa projektu jest ich streszczeniem.
 
+## Aplikacja „Łazik: analiza wideo” (`apki/analiza/`, na Pi 5 `~/lazik/analiza/`, ikona na pulpicie)
+- **Przesyłanie:** usługa `lazik-wideo.service` (Flask, port 8080, zawsze włączona). Dostęp tylko z kodem
+  (`kod_dostepu.txt`, w aplikacji jako QR i adresy LAN/Tailscale; przeglądarka zapamiętuje go w ciasteczku).
+  Plik idzie strumieniem PUT prosto do `filmy/` (bez `/tmp` w RAM-ie), strona pokazuje postęp i listę raportów.
+  Można też „Dodaj z pliku / pendrive’a” w aplikacji. Lista obejmuje też nagrania z „Łazik: wizja”.
+- **Notatki:** YOLOv8m na Hailo (seriami po 8 klatek), ~10 klatek filmu na sekundę analizy; twarze YuNet + SFace
+  (OpenCV, procesor) grupowane w obrębie filmu (próg cosinus 0,363, scalanie na końcu): „różne twarze (pewne)” =
+  widziane ≥ 2 razy. Bez nazwisk i bez bazy osób. Przedmioty: maks. naraz, czas widoczności, pierwszy raz, miniatura;
+  oś czasu; do 12 klatek kluczowych (zmiana sceny). Test: film z 2 osobami → 2 pewne twarze; ~14 kl/s, CPU ~80 %.
+- **Opis AI:** Ollama + `gemma3:4b` (lokalnie, procesor, ~1 min na klatkę kluczową) opisuje klatki i cały film po polsku.
+  **Ollama nie jest jeszcze zainstalowana** (instalator `curl … | sh` wymaga zgody użytkownika):
+  `curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma3:4b`. Bez niej raport pisze, że opis niedostępny.
+- **Skan 3D:** `przestrzen.Analiza(..., wideo=plik)`, filmy > 960 px zmniejszane; skan w `raporty/<film>/skan/`.
+- **Wynik:** `raporty/<film>/raport.html` (+ `miniatury/`, `dane.json`, `notatki.txt`), widoczny też na telefonie.
+- Hailo naraz obsługuje jeden proces: przy włączonej „Łazik: wizja” analiza pokaże „Hailo zajęte”.
+
+## Kopie zapasowe na NAS (`kopie/`)
+- **Most na Pi 4:** `/usr/local/sbin/lazik-kopia-odbierz` (jedyna zmiana na Pi 4 + folder
+  `/mnt/nas/Raspberry/Kopie-lazika/<pi>/` + linie w `~tonyg/.ssh/authorized_keys`). Każdy Pi ma własny klucz z
+  `command="… <pi>",restrict`: może tylko `stan`, `zapisz` (strumień), `zatwierdz <sha256>`, i tylko do swojego
+  folderu. Sprawdza znacznik `/mnt/nas/Raspberry/.nas`. Zostawia 3 najnowsze kopie. Log: `Raspberry/Logi/kopie-lazika.log`.
+- **Na każdym Pi łazika:** `/usr/local/sbin/lazik-kopia` + `lazik-kopia.timer` (co godzinę, `OnBootSec=5min`):
+  kopia, gdy od ostatniej udanej minęło 7 dni (zaległa rusza zaraz po włączeniu i dostępie do sieci domowej).
+  `tar` całego systemu (uprawnienia, ACL, xattr, `/boot/firmware`), `zstd`, SHA-256 sprawdzana na Pi 4. Pomija modele
+  do pobrania i cache. Łączy się po LAN z `tonyg@172.23.0.20` (Tailscale SSH na Pi 4 wymaga zatwierdzania).
+  Stan: `/var/lib/lazik-kopia/kopia.log`, wymuszenie: `sudo lazik-kopia --teraz`.
+- Instalacja: na Pi 4 `instaluj-most.sh`, na Pi łazika `instaluj-na-pi.sh` (wypisze klucz) i na Pi 4
+  `dodaj-klucz.sh <pi> "<klucz>"`. **Zero 2W a1/a2 czekają** (offline od połowy października).
+- Przywracanie: `zstd -dc PLIK.tar.zst | sudo tar -xpf - --xattrs --acls --numeric-owner -C /mnt/nowa-karta`
+  (na świeżo sformatowaną kartę z partycjami jak w Raspberry Pi OS; potem sprawdzić PARTUUID w `cmdline.txt` i `fstab`).
+
 ## Stan
 
 | Data | Co |
 |---|---|
+| 2026-11-01 | Analiza wideo (przesyłanie z telefonu, osoby i twarze, przedmioty, opis AI, skan 3D) i kopie zapasowe przez most na Pi 4 (Pi 5 skonfigurowany; Zero 2W czekają). |
 | 2026-11-01 | Wizja v3: 25 kl/s (ustawienie kamery), YOLOv8m/x do wyboru, nagrywanie z dwoma widokami, analiza nagrań na pełnych obrotach (PnP z głębią, ekran postępu z obciążeniem i temperaturami), strzałki w podglądzie 3D. Pi zrestartował się raz (zasilanie). |
 | 2026-11-01 | Wizja v2: śledzenie i wybór obiektów, zdjęcia z adnotacjami (zoom, galeria), opis sceny, tryb Przestrzeń (głębia Hailo, skan 3D, przeglądarka „gra”). VNC włączony. Zasilacz za słaby (spadki napięcia). |
 | 2026-11-01 | Pi 5 + AI HAT+ (Hailo-8) uruchomione; aplikacja „Łazik: wizja” na pulpicie Pi 5, sprawdzona na sprzęcie (YOLOv8s ~12 ms/klatkę, Hailo ~41 °C). |
