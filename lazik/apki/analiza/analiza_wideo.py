@@ -10,7 +10,9 @@ Wynik: raporty/<film>/raport.html (+ miniatury, dane.json, notatki.txt, skan/).
 
 import base64
 import html
+import http.client
 import json
+import socket
 import os
 import sys
 import threading
@@ -65,6 +67,73 @@ def lista_filmow():
     return sorted(wynik, key=lambda f: -f["czas"])
 
 
+PODGLADY = os.path.join(KATALOG, "podglady")
+MIESIACE = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"]
+
+
+def metadane(sciezka):
+    """Długość, rozdzielczość, data nagrania (z metadanych telefonu) i miniatura; wynik w podglady/ (pamięć podręczna)."""
+    import datetime
+    import subprocess
+    os.makedirs(PODGLADY, exist_ok=True)
+    st = os.stat(sciezka)
+    klucz = slug(os.path.relpath(sciezka, os.path.dirname(KATALOG)))[-90:] + f"_{int(st.st_mtime)}_{st.st_size}"
+    plik_json, plik_jpg = os.path.join(PODGLADY, klucz + ".json"), os.path.join(PODGLADY, klucz + ".jpg")
+    if os.path.exists(plik_json):
+        return json.load(open(plik_json, encoding="utf-8"))
+    m = dict(sekundy=None, szer=None, wys=None, nagrany=None, miniatura=None)
+    try:
+        out = subprocess.run(["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", sciezka],
+                             capture_output=True, text=True, timeout=30).stdout
+        d = json.loads(out or "{}")
+        fmt = d.get("format", {})
+        m["sekundy"] = float(fmt.get("duration", 0)) or None
+        wid = next((x for x in d.get("streams", []) if x.get("codec_type") == "video"), {})
+        w, h = wid.get("width"), wid.get("height")
+        obrot = abs(int(float(next((sd.get("rotation", 0) for sd in wid.get("side_data_list", []) if "rotation" in sd), 0))))
+        if obrot in (90, 270) and w and h:
+            w, h = h, w
+        m["szer"], m["wys"] = w, h
+        tagi = {**fmt.get("tags", {}), **wid.get("tags", {})}
+        data = tagi.get("com.apple.quicktime.creationdate") or tagi.get("creation_time")
+        if data:
+            t = datetime.datetime.fromisoformat(data.replace("Z", "+00:00"))
+            m["nagrany"] = t.astimezone().strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        pass
+    try:
+        cap = cv2.VideoCapture(sciezka)
+        n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if n > 0:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(n * 0.3))
+        ok, k = cap.read()
+        if not ok:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ok, k = cap.read()
+        cap.release()
+        if ok:
+            s = 240 / max(k.shape[:2])
+            cv2.imwrite(plik_jpg, cv2.resize(k, (int(k.shape[1] * s), int(k.shape[0] * s)), interpolation=cv2.INTER_AREA),
+                        [cv2.IMWRITE_JPEG_QUALITY, 85])
+            m["miniatura"] = plik_jpg
+            if not m["szer"]:
+                m["szer"], m["wys"] = k.shape[1], k.shape[0]
+    except Exception:
+        pass
+    json.dump(m, open(plik_json, "w", encoding="utf-8"), ensure_ascii=False)
+    return m
+
+
+def ladna_data(tekst):
+    """'2026-11-01 21:20' → '1 lis 2026, 21:20'"""
+    try:
+        d, g = tekst.split(" ")
+        r, mies, dz = d.split("-")
+        return f"{int(dz)} {MIESIACE[int(mies) - 1]} {r}, {g}"
+    except Exception:
+        return tekst
+
+
 def katalog_raportu(sciezka):
     baza = os.path.basename(os.path.dirname(sciezka)) if os.path.basename(sciezka) == "wideo.avi" else \
         os.path.splitext(os.path.basename(sciezka))[0]
@@ -83,8 +152,10 @@ def ollama_gotowa():
     return True, True, f"gotowa ({MODEL_AI})"
 
 
-def zapytaj_ai(prompt, obraz_bgr=None, maks_tokenow=220):
-    dane = dict(model=MODEL_AI, prompt=prompt, stream=False,
+def zapytaj_ai(prompt, obraz_bgr=None, maks_tokenow=220, uchwyt=None):
+    """Pyta model wizyjny w Ollamie. Odpowiedź przychodzi kawałkami; `uchwyt` (dict) dostaje połączenie,
+    a przerwij_ai(uchwyt) je zamyka: Ollama przestaje wtedy liczyć od razu, nawet w połowie klatki."""
+    dane = dict(model=MODEL_AI, prompt=prompt, stream=True,
                 options=dict(temperature=0.2, num_predict=maks_tokenow, num_ctx=4096))
     if obraz_bgr is not None:
         h, w = obraz_bgr.shape[:2]
@@ -93,10 +164,34 @@ def zapytaj_ai(prompt, obraz_bgr=None, maks_tokenow=220):
             obraz_bgr = cv2.resize(obraz_bgr, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
         ok, jpg = cv2.imencode(".jpg", obraz_bgr, [cv2.IMWRITE_JPEG_QUALITY, 88])
         dane["images"] = [base64.b64encode(jpg.tobytes()).decode()]
-    zad = urllib.request.Request(OLLAMA + "/api/generate", data=json.dumps(dane).encode(),
-                                 headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(zad, timeout=1800) as r:
-        return json.load(r).get("response", "").strip()
+    pol = http.client.HTTPConnection("127.0.0.1", 11434, timeout=1800)
+    if uchwyt is not None:
+        uchwyt["pol"] = pol
+    try:
+        pol.request("POST", "/api/generate", body=json.dumps(dane), headers={"Content-Type": "application/json"})
+        odp = pol.getresponse()
+        tekst = []
+        for linia in odp:
+            if uchwyt is not None and uchwyt.get("stop"):
+                break
+            if linia.strip():
+                kawalek = json.loads(linia)
+                tekst.append(kawalek.get("response", ""))
+                if kawalek.get("done"):
+                    break
+        return "".join(tekst).strip()
+    finally:
+        pol.close()
+
+
+def przerwij_ai(uchwyt):
+    uchwyt["stop"] = True
+    pol = uchwyt.get("pol")
+    if pol is not None and pol.sock is not None:
+        try:
+            pol.sock.shutdown(socket.SHUT_RDWR)  # przerywa czekanie na odpowiedź; Ollama kończy liczenie
+        except OSError:
+            pass
 
 
 class Twarze:
@@ -179,6 +274,7 @@ class AnalizaWideo(threading.Thread):
         super().__init__(daemon=True)
         self.sciezka, self.opcje = sciezka, dict(notatki=notatki, opis_ai=opis_ai, skan3d=skan3d)
         self.przerwij = False
+        self._ai = {}             # połączenie z Ollamą (do natychmiastowego przerwania)
         self.lock = threading.Lock()
         self.podglad = None
         self._dev_temp = None
@@ -193,6 +289,11 @@ class AnalizaWideo(threading.Thread):
         with self.lock:
             return dict(self.stan)
 
+    def zatrzymaj(self):
+        """Przerywa analizę: kolejne etapy kończą się na najbliższej serii klatek, opis AI natychmiast."""
+        self.przerwij = True
+        przerwij_ai(self._ai)
+
     def _temp_hailo(self, hailo):
         try:
             if self._dev_temp is None:
@@ -206,6 +307,8 @@ class AnalizaWideo(threading.Thread):
         try:
             self._analizuj()
         except Exception as e:
+            if self.przerwij:
+                return self._ustaw(etap="przerwano")
             import traceback
             traceback.print_exc()
             msg = str(e)
@@ -374,7 +477,9 @@ class AnalizaWideo(threading.Thread):
             wykryte = ", ".join(f"{nazwa(kl)} ×{n}" for kl, n in licz) or "nic"
             opisy.append(zapytaj_ai(
                 "Opisz po polsku w 2–3 zdaniach, co widać na tej klatce filmu: miejsce, osoby (bez zgadywania, "
-                f"kim są), co robią, ważne przedmioty. Detektor obiektów wskazał: {wykryte}.", k))
+                f"kim są), co robią, ważne przedmioty. Detektor obiektów wskazał: {wykryte}.", k, uchwyt=self._ai))
+            if self.przerwij:
+                return opisy, ""
         self._ustaw(krok="Opis AI: podsumowanie całego filmu", gotowe=len(kluczowe))
         linie = "\n".join(f"[{czas_mmss(t)}] {o}" for (t, _, _), o in zip(kluczowe, opisy))
         przedm = ", ".join(f"{nazwa(kl)} (maks. {v['naraz']} naraz)" for kl, v in
@@ -384,7 +489,7 @@ class AnalizaWideo(threading.Thread):
             f"Oto opisy kolejnych klatek filmu ({czas_mmss(self.info['sekundy'])}):\n{linie}\n"
             f"Wykryte przedmioty: {przedm}. Różnych twarzy: {osoby}.\n"
             "Napisz po polsku zwięzły opis całego filmu (5–8 zdań): gdzie się dzieje, kto i co robi, jak zmienia się "
-            "scena, co jest w otoczeniu. Nie zgaduj tożsamości osób.", None, maks_tokenow=420)
+            "scena, co jest w otoczeniu. Nie zgaduj tożsamości osób.", None, maks_tokenow=420, uchwyt=self._ai)
         return opisy, podsumowanie
 
     # ---------- skan 3D ----------

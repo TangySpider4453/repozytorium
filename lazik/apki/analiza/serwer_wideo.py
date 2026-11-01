@@ -176,7 +176,7 @@ async function odswiez() {
     }
   } catch (_) { l.innerHTML = '<li class="blad">Nie udało się pobrać listy.</li>'; }
 }
-odswiez(); setInterval(odswiez, 15000);
+odswiez(); setInterval(odswiez, 5000);
 </script></body></html>"""
 
 

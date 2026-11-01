@@ -8,6 +8,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 
 KATALOG = os.path.dirname(os.path.abspath(__file__))
@@ -15,10 +16,10 @@ sys.path.insert(0, KATALOG)
 import analiza_wideo as A  # noqa: E402  (dodaje też ścieżkę do aplikacji „wizja”)
 import cv2  # noqa: E402
 import qrcode  # noqa: E402
-from PyQt5.QtCore import Qt, QTimer  # noqa: E402
-from PyQt5.QtGui import QImage, QPixmap  # noqa: E402
+from PyQt5.QtCore import QFileSystemWatcher, QPointF, QRectF, QSize, Qt, QTimer  # noqa: E402
+from PyQt5.QtGui import QColor, QImage, QPainter, QPixmap, QPolygonF  # noqa: E402
 from PyQt5.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,  # noqa: E402
-                             QProgressBar, QScroller, QStackedWidget, QVBoxLayout, QWidget)
+                             QProgressBar, QScroller, QSlider, QStackedWidget, QVBoxLayout, QWidget)
 from wizja import (CZERWONY, PANEL, SZARY, TEKST, TLO, ZIELONY, ZOLTY, System, Wiersz, bgr_na_qimage,  # noqa: E402
                    kolor_temp, przycisk)
 import serwer_wideo  # noqa: E402
@@ -59,6 +60,176 @@ def otworz_w_przegladarce(sciezka):
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+AKCENT = "#e0a640"
+
+
+def ikona_dom(r=26):
+    """Domek: kod QR dla domowego WiFi."""
+    px = QPixmap(r, r)
+    px.fill(Qt.transparent)
+    p = QPainter(px)
+    p.setRenderHint(QPainter.Antialiasing)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor(AKCENT))
+    p.drawPolygon(QPolygonF([QPointF(r / 2, 2), QPointF(r - 2, r * 0.48), QPointF(2, r * 0.48)]))
+    p.drawRect(QRectF(r * 0.2, r * 0.46, r * 0.6, r * 0.48))
+    p.setBrush(QColor(PANEL))
+    p.drawRect(QRectF(r * 0.42, r * 0.64, r * 0.16, r * 0.3))
+    p.end()
+    return px
+
+
+def ikona_tailscale(r=26):
+    """Kropki 3×3 jak w logo Tailscale: kod QR dla adresu Tailscale."""
+    px = QPixmap(r, r)
+    px.fill(Qt.transparent)
+    p = QPainter(px)
+    p.setRenderHint(QPainter.Antialiasing)
+    p.setPen(Qt.NoPen)
+    jasne = {(0, 1), (1, 1), (2, 1), (1, 2)}
+    for x in range(3):
+        for y in range(3):
+            p.setBrush(QColor("#ffffff" if (x, y) in jasne else "#5b6670"))
+            p.drawEllipse(QPointF(r * (0.2 + 0.3 * x), r * (0.2 + 0.3 * y)), r * 0.11, r * 0.11)
+    p.end()
+    return px
+
+
+class Klikalny(QLabel):
+    def __init__(self, akcja):
+        super().__init__()
+        self.akcja = akcja
+        self.setCursor(Qt.PointingHandCursor)
+
+    def mouseReleaseEvent(self, e):
+        self.akcja()
+
+
+class WierszFilmu(QWidget):
+    """Wiersz listy: miniatura, data nagrania i długość, nazwa pliku, stan raportu."""
+
+    def __init__(self, f, m):
+        super().__init__()
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(8, 6, 8, 6)
+        lay.setSpacing(12)
+        mini = QLabel()
+        mini.setFixedSize(128, 72)
+        mini.setAlignment(Qt.AlignCenter)
+        mini.setStyleSheet("background:#000;border-radius:6px;color:#5b6670;font-size:12px")
+        if m and m.get("miniatura") and os.path.exists(m["miniatura"]):
+            mini.setPixmap(QPixmap(m["miniatura"]).scaled(128, 72, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            mini.setText("…")
+        lay.addWidget(mini)
+        tekst = QVBoxLayout()
+        tekst.setSpacing(2)
+        kiedy = A.ladna_data(m["nagrany"]) if m and m.get("nagrany") else \
+            A.ladna_data(time.strftime("%Y-%m-%d %H:%M", time.localtime(f["czas"])))
+        dl = f" · {A.czas_mmss(m['sekundy'])}" if m and m.get("sekundy") else ""
+        t1 = QLabel(f"{kiedy}{dl}")
+        t1.setStyleSheet(f"font-size:17px;font-weight:700;color:{TEKST};background:transparent")
+        roz = f" · {m['szer']}×{m['wys']}" if m and m.get("szer") else ""
+        zrodlo = "z telefonu / pliku" if f["zrodlo"] == "przesłany" else "z kamery łazika"
+        nazwa = f["nazwa"].split("_", 2)[-1] if f["zrodlo"] == "przesłany" else f["nazwa"]
+        t2 = QLabel(f"{nazwa} · {zrodlo}{roz} · {f['rozmiar_mb']:.0f} MB")
+        t2.setStyleSheet("font-size:13px;color:#b5c0c7;background:transparent")
+        t3 = QLabel("✓ raport gotowy" if f["ma_raport"] else "jeszcze nie analizowany")
+        t3.setStyleSheet(f"font-size:13px;font-weight:600;color:{ZIELONY if f['ma_raport'] else SZARY};background:transparent")
+        for t in (t1, t2, t3):
+            tekst.addWidget(t)
+        lay.addLayout(tekst, 1)
+
+
+class Odtwarzacz(QWidget):
+    """Podgląd filmu w aplikacji (bez dźwięku): pauza, suwak, krzyżyk."""
+
+    def __init__(self, okno):
+        super().__init__(okno)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet("background:#000;color:#e6ebee")
+        self.cap, self.fps, self.n = None, 30.0, 0
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(10, 10, 10, 10)
+        gora = QHBoxLayout()
+        self.tytul = QLabel()
+        self.tytul.setStyleSheet("font-size:17px;font-weight:700")
+        b_x = przycisk("✕", 52, rozmiar=22)
+        b_x.clicked.connect(self.zamknij)
+        gora.addWidget(self.tytul, 1)
+        gora.addWidget(b_x)
+        lay.addLayout(gora)
+        self.obraz = QLabel()
+        self.obraz.setAlignment(Qt.AlignCenter)
+        lay.addWidget(self.obraz, 1)
+        dol = QHBoxLayout()
+        self.b_graj = przycisk("❚❚", 64, rozmiar=20)
+        self.b_graj.clicked.connect(self.przelacz)
+        self.suwak = QSlider(Qt.Horizontal)
+        self.suwak.setStyleSheet(
+            "QSlider::groove:horizontal{height:10px;background:#2a333a;border-radius:5px}"
+            f"QSlider::sub-page:horizontal{{background:{AKCENT};border-radius:5px}}"
+            "QSlider::handle:horizontal{width:30px;margin:-11px 0;background:#ffffff;border-radius:15px}")
+        self.suwak.sliderMoved.connect(self.skocz)
+        self.czas = QLabel()
+        self.czas.setStyleSheet("font-size:15px;font-family:monospace")
+        dol.addWidget(self.b_graj)
+        dol.addWidget(self.suwak, 1)
+        dol.addWidget(self.czas)
+        lay.addLayout(dol)
+        self.t = QTimer(self, timeout=self.klatka)
+        self.hide()
+
+    def otworz(self, f):
+        self.cap = cv2.VideoCapture(f["sciezka"])
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS) or 30.0
+        self.n = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.suwak.setRange(0, max(self.n - 1, 1))
+        self.tytul.setText(f["nazwa"])
+        self.setGeometry(self.parent().rect())
+        self.show()
+        self.raise_()
+        self.graj(True)
+
+    def graj(self, wl):
+        self.b_graj.setText("❚❚" if wl else "▶")
+        if wl:
+            self.t.start(int(1000 / min(self.fps, 30)))
+        else:
+            self.t.stop()
+
+    def przelacz(self):
+        self.graj(not self.t.isActive())
+
+    def skocz(self, nr):
+        if self.cap is not None:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, nr)
+            if not self.t.isActive():
+                self.klatka()
+
+    def klatka(self):
+        if self.cap is None:
+            return
+        ok, k = self.cap.read()
+        if not ok:
+            self.graj(False)
+            return
+        nr = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
+        if not self.suwak.isSliderDown():
+            self.suwak.setValue(nr)
+        self.czas.setText(f"{A.czas_mmss(nr / self.fps)} / {A.czas_mmss(self.n / self.fps)}")
+        self.obraz.setPixmap(QPixmap.fromImage(bgr_na_qimage(k)).scaled(
+            self.obraz.size(), Qt.KeepAspectRatio, Qt.FastTransformation))
+
+    def zamknij(self):
+        self.graj(False)
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+        self.hide()
+
+
 class Okno(QWidget):
     def __init__(self):
         super().__init__()
@@ -91,20 +262,25 @@ class Okno(QWidget):
         lewa = QVBoxLayout()
         self.lista = QListWidget()
         self.lista.setStyleSheet(
-            "QListWidget{background:#161c21;border:none;border-radius:10px;font-size:15px}"
-            "QListWidget::item{padding:9px 12px;border-bottom:1px solid #232b31}"
-            "QListWidget::item:selected{background:#2e3a42}")
+            "QListWidget{background:#161c21;border:none;border-radius:10px;font-size:15px;outline:0}"
+            "QListWidget::item{border-bottom:1px solid #2a333a;border-left:6px solid transparent}"
+            f"QListWidget::item:selected{{background:#3a4a56;border-left:6px solid {AKCENT}}}")
         self.lista.setFocusPolicy(Qt.NoFocus)
+        self.lista.setVerticalScrollMode(QListWidget.ScrollPerPixel)
         QScroller.grabGesture(self.lista.viewport(), QScroller.LeftMouseButtonGesture)
         self.lista.itemSelectionChanged.connect(self._zaznaczone)
+        self.lista.itemDoubleClicked.connect(lambda _: self.podglad_filmu())
         lewa.addWidget(self.lista, 1)
         rd = QHBoxLayout()
         self.b_dodaj = przycisk("Dodaj z pliku / pendrive’a", wys=40, rozmiar=14)
         self.b_dodaj.clicked.connect(self.dodaj_z_pliku)
         self.b_raport = przycisk("Otwórz raport", wys=40, rozmiar=14)
         self.b_raport.clicked.connect(self.otworz_raport)
-        rd.addWidget(self.b_dodaj)
+        self.b_podglad = przycisk("▶ Podgląd", wys=40, rozmiar=14)
+        self.b_podglad.clicked.connect(self.podglad_filmu)
+        rd.addWidget(self.b_podglad)
         rd.addWidget(self.b_raport)
+        rd.addWidget(self.b_dodaj)
         lewa.addLayout(rd)
         l0.addLayout(lewa, 1)
 
@@ -115,14 +291,32 @@ class Okno(QWidget):
         pr.setContentsMargins(14, 12, 14, 12)
         pr.setSpacing(8)
         rq = QHBoxLayout()
-        self.qr = QLabel()
+        self.qr = Klikalny(self.przelacz_qr)
         self.qr.setFixedSize(120, 120)
-        opis_qr = QLabel("<b>Wyślij film z telefonu</b><br>Zeskanuj kod aparatem telefonu (ta sama sieć WiFi "
-                         "albo Tailscale) i wybierz film.")
+        prawa_qr = QVBoxLayout()
+        prawa_qr.setSpacing(4)
+        opis_qr = QLabel("<b>Wyślij film z telefonu</b><br>Zeskanuj kod aparatem telefonu.")
         opis_qr.setWordWrap(True)
         opis_qr.setStyleSheet("font-size:13px;background:transparent")
+        rodzaj = QHBoxLayout()
+        rodzaj.setSpacing(6)
+        self.qr_ikona = QLabel()
+        self.qr_ikona.setFixedSize(26, 26)
+        self.qr_ikona.setStyleSheet("background:transparent")
+        self.qr_nazwa = QLabel()
+        self.qr_nazwa.setWordWrap(True)
+        self.qr_nazwa.setStyleSheet(f"font-size:13px;font-weight:700;color:{AKCENT};background:transparent")
+        rodzaj.addWidget(self.qr_ikona)
+        rodzaj.addWidget(self.qr_nazwa, 1)
+        przel = QLabel("Dotknij kodu, żeby przełączyć.")
+        przel.setWordWrap(True)
+        przel.setStyleSheet(f"font-size:12px;color:{SZARY};background:transparent")
+        prawa_qr.addWidget(opis_qr)
+        prawa_qr.addLayout(rodzaj)
+        prawa_qr.addWidget(przel)
+        prawa_qr.addStretch()
         rq.addWidget(self.qr)
-        rq.addWidget(opis_qr, 1)
+        rq.addLayout(prawa_qr, 1)
         pr.addLayout(rq)
         self.adresy = QLabel()
         self.adresy.setWordWrap(True)
@@ -210,12 +404,30 @@ class Okno(QWidget):
 
         kod = serwer_wideo.kod_dostepu()
         lan, ts = adres_lan(), adres_tailscale()
-        glowny = f"http://{lan or ts or 'rpi-5-1'}:{PORT}/?t={kod}"
-        self.qr.setPixmap(obraz_qr(glowny, 120))
-        self.adresy.setText(f"W domu: {glowny}" + (f"<br>Tailscale: http://{ts}:{PORT}/?t={kod}" if ts else ""))
+        self.kody_qr = []  # (ikona, nazwa, adres)
+        if lan:
+            self.kody_qr.append((ikona_dom(), "Sieć domowa (WiFi)", f"http://{lan}:{PORT}/?t={kod}"))
+        if ts:
+            self.kody_qr.append((ikona_tailscale(), "Tailscale (z każdego miejsca)", f"http://{ts}:{PORT}/?t={kod}"))
+        if not self.kody_qr:
+            self.kody_qr.append((ikona_dom(), "Adres lokalny", f"http://rpi-5-1:{PORT}/?t={kod}"))
+        self._qr_nr = -1
+        self.przelacz_qr()
+
+        self.odtwarzacz = Odtwarzacz(self)
+        self._meta = {}               # ścieżka → metadane (miniatura, data, długość)
+        self._meta_kolejka = []
+        self._meta_nowe = False
+        threading.Thread(target=self._licz_metadane, daemon=True).start()
+        # lista odświeża się sama: od razu, gdy w folderach coś się zmieni, i dodatkowo co 2 s
+        self.watcher = QFileSystemWatcher(self)
+        for k in (A.FILMY, A.RAPORTY, A.P.NAGRANIA):
+            os.makedirs(k, exist_ok=True)
+            self.watcher.addPath(k)
+        self.watcher.directoryChanged.connect(lambda _: QTimer.singleShot(300, self.odswiez_liste))
 
         self.t_lista = QTimer(self, timeout=self.odswiez_liste)
-        self.t_lista.start(3000)
+        self.t_lista.start(2000)
         self.t_post = QTimer(self, timeout=self.odswiez_postep)
         self.t_post.start(300)
         self.t_stat = QTimer(self, timeout=self.system.odswiez)
@@ -224,33 +436,63 @@ class Okno(QWidget):
         self._stan_ai()
 
     # --- lista filmów ---
+    def przelacz_qr(self):
+        self._qr_nr = (self._qr_nr + 1) % len(self.kody_qr)
+        ikona, nazwa, adres = self.kody_qr[self._qr_nr]
+        self.qr.setPixmap(obraz_qr(adres, 120))
+        self.qr_ikona.setPixmap(ikona)
+        self.qr_nazwa.setText(nazwa)
+        self.adresy.setText(adres)
+
+    def _licz_metadane(self):
+        """Wątek w tle: miniatury i dane filmów (ffprobe + jedna klatka), żeby lista się nie zacinała."""
+        while True:
+            if self._meta_kolejka:
+                sciezka = self._meta_kolejka.pop(0)
+                try:
+                    self._meta[sciezka] = A.metadane(sciezka)
+                except Exception:
+                    self._meta[sciezka] = {}
+                self._meta_nowe = True
+            else:
+                time.sleep(0.3)
+
     def odswiez_liste(self):
-        if self.strony.currentIndex() != 0:
-            return
         filmy = A.lista_filmow()
+        for f in filmy:
+            if f["sciezka"] not in self._meta and f["sciezka"] not in self._meta_kolejka:
+                self._meta_kolejka.append(f["sciezka"])
         klucz = tuple((f["sciezka"], f["ma_raport"], round(f["rozmiar_mb"])) for f in filmy)
-        if klucz == self._lista_klucz:
+        if klucz == self._lista_klucz and not self._meta_nowe:
             return
-        wybrany = self.lista.currentItem().data(Qt.UserRole)["sciezka"] if self.lista.currentItem() and \
-            self.lista.currentItem().data(Qt.UserRole) else None
+        self._meta_nowe = False
+        wybrany = self._wybrany()["sciezka"] if self._wybrany() else None
+        nowe = self._lista_klucz is not None and len(klucz) > len(self._lista_klucz)
         self._lista_klucz = klucz
         self.lista.clear()
         for f in filmy:
-            raport = "   ✓ raport" if f["ma_raport"] else ""
-            it = QListWidgetItem(f"{f['nazwa']}{raport}\n{f['zrodlo']} · {f['rozmiar_mb']:.0f} MB · "
-                                 f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(f['czas']))}")
+            it = QListWidgetItem()
             it.setData(Qt.UserRole, f)
+            it.setSizeHint(QSize(100, 88))
             self.lista.addItem(it)
-            if f["sciezka"] == wybrany:
+            self.lista.setItemWidget(it, WierszFilmu(f, self._meta.get(f["sciezka"])))
+            if f["sciezka"] == wybrany and not nowe:
                 self.lista.setCurrentItem(it)
         if not filmy:
             it = QListWidgetItem("Brak filmów. Wyślij film z telefonu (kod QR obok), dodaj z pliku "
                                  "albo nagraj w „Łazik: wizja” (tryb Przestrzeń).")
             it.setFlags(Qt.NoItemFlags)
             self.lista.addItem(it)
-        elif self.lista.currentItem() is None:
-            self.lista.setCurrentRow(0)
+        elif nowe or self.lista.currentItem() is None:
+            self.lista.setCurrentRow(0)  # nowy film (najnowszy jest na górze) od razu zaznaczony
+            if nowe:
+                self.komunikat("Nowy film na liście.")
         self._zaznaczone()
+
+    def podglad_filmu(self):
+        f = self._wybrany()
+        if f:
+            self.odtwarzacz.otworz(f)
 
     def _wybrany(self):
         it = self.lista.currentItem()
@@ -259,6 +501,7 @@ class Okno(QWidget):
     def _zaznaczone(self):
         f = self._wybrany()
         self.b_analizuj.setEnabled(bool(f))
+        self.b_podglad.setEnabled(bool(f))
         self.b_raport.setEnabled(bool(f and f["ma_raport"]))
 
     def _stan_ai(self):
@@ -305,7 +548,7 @@ class Okno(QWidget):
 
     def przerwij(self):
         if self.analiza and self.analiza.is_alive():
-            self.analiza.przerwij = True
+            self.analiza.zatrzymaj()
             self.t_krok.setText("Przerywam…")
 
     def do_listy(self):
@@ -381,12 +624,19 @@ class Okno(QWidget):
         self._dymek_do = time.monotonic() + sekundy
 
     def keyPressEvent(self, e):
-        if e.key() == Qt.Key_Escape and self.b_zamknij.isEnabled():
+        if e.key() == Qt.Key_Escape and self.odtwarzacz.isVisible():
+            self.odtwarzacz.zamknij()
+        elif e.key() == Qt.Key_Escape and self.b_zamknij.isEnabled():
             self.close()
+
+    def resizeEvent(self, e):
+        if self.odtwarzacz.isVisible():
+            self.odtwarzacz.setGeometry(self.rect())
+        super().resizeEvent(e)
 
     def closeEvent(self, e):
         if self.analiza and self.analiza.is_alive():
-            self.analiza.przerwij = True
+            self.analiza.zatrzymaj()
             self.analiza.join(timeout=5)
         super().closeEvent(e)
 
