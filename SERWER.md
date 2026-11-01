@@ -29,3 +29,11 @@ do kopii zapasowych (szczegóły: do ustalenia z użytkownikiem).
 ## Dziennik
 - **2026-10-22**: Monitor zdrowia, dioda na wszystkich stronach, strona „Zdrowie serwera”, link w menu portalu.
   Backup `app.py.bak_2026-10-22_zdrowie`. Pierwszy pomiar: wszystko OK (46,7 °C, throttled 0x0, 10 usług aktywnych).
+
+## Most kopii zapasowych łazika (od 2026-11-01)
+- Pi 5 i Zero 2W łazika co 7 dni (zaległe od razu) wysyłają kopię systemu przez SSH w sieci domowej
+  (`tonyg@172.23.0.20`) na NAS: `/mnt/nas/Raspberry/Kopie-lazika/<pi>/` (3 ostatnie, `.tar.zst` + `.sha256`).
+- Jedyne zmiany na tym Pi: `/usr/local/sbin/lazik-kopia-odbierz`, folder na NAS i linie z
+  `command="/usr/local/sbin/lazik-kopia-odbierz <pi>",restrict` w `~/.ssh/authorized_keys` (klucz każdego Pi może tylko
+  zapisać kopię do swojego folderu). Żadna usługa ani timer nie doszły. Log: `/mnt/nas/Raspberry/Logi/kopie-lazika.log`.
+- Szczegóły i przywracanie: `lazik/LAZIK.md`, sekcja „Kopie zapasowe na NAS”; skrypty w `lazik/kopie/`.
