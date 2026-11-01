@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Łazik: wizja
+Comment=Kamera USB i rozpoznawanie obiektów na Hailo, CPU, RAM, temperatury
+Exec=/home/rpi/lazik/wizja/uruchom.sh
+Icon=camera-web
+Terminal=false
+Categories=Utility;

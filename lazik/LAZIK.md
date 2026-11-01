@@ -50,7 +50,22 @@ udział Samba `\\100.108.241.58\tonyg` do `portal\sites\lazik\`.
 | a1 `rpi-zero2w-a1` | stacja domowa | 100.124.7.125 | 172.23.0.27 | `/home/rpi/Documents/lora_field/` |
 | a2 `rpi-zero2w-a2` | satelita | 100.89.71.96 | 172.23.0.21 | jw., usługa `lora_field.service` |
 
-Użytkownik `rpi`, Debian 13, Python 3.13. Klucz SSH z chmury na nich nie działa; do ustalenia: Tailscale SSH
+| **Pi 5 (łazik)** `rpi-5-1` | komputer łazika | 100.64.96.61 | 172.23.0.15 | `/home/rpi/lazik/` |
+
+Pi 5: 8 GB, Debian 13 (trixie), jądro 6.18, użytkownik `rpi` (sudo bez hasła), Tailscale zainstalowany przez użytkownika.
+**AI HAT+ Hailo-8 (26 TOPS)** działa: `hailo-all` 5.1.1, HailoRT i firmware 4.23.0, modele w `/usr/share/hailo-models/`.
+Kamera USB Logitech C170 = `/dev/video0` (1024×768, ~12 kl/s). Ekran testowy HDMI 1024×600 (Lenovo L1950wD) z dotykiem
+D-WAV, pulpit Wayland (labwc). Logowanie z chmury na razie hasłem (klucza nie dopisujemy bez zgody użytkownika).
+⚠️ Zasilanie: `get_throttled=0x50000` (spadki napięcia od startu), EXT5V ≈ 4,86 V: potrzebny zasilacz 27 W 5 V/5 A.
+
+**Aplikacja „Łazik: wizja”** (`apki/wizja/`, na Pi `~/lazik/wizja/`, ikona na pulpicie): kamera USB na pełnym
+ekranie, rozpoznawanie YOLOv8s na Hailo włączane przełącznikiem (wyłączenie zwalnia chip), próg pewności, CPU / RAM /
+Hailo z temperaturami, zasilanie, lista obiektów po polsku. Krzyżyk lub Esc zamyka. Instalacja: `./instaluj.sh`
+(po pierwszej instalacji `hailo-all` potrzebny reboot). Test bez klikania: `./uruchom.sh --rozpoznawanie`.
+Uruchamianie z SSH na ekranie: `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 ./uruchom.sh &`,
+zrzut ekranu `grim /tmp/ekran.png`. Zamykanie z SSH: `pkill -f "^python3 wizja\.py"`.
+
+Zero 2W: użytkownik `rpi`, Debian 13, Python 3.13. Klucz SSH z chmury na nich nie działa; do ustalenia: Tailscale SSH
 (`sudo tailscale set --ssh`) albo skok przez Pi 4B.
 
 Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\claude kopia\`): plik główny projektu
@@ -61,4 +76,5 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-01 | Pi 5 + AI HAT+ (Hailo-8) uruchomione; aplikacja „Łazik: wizja” na pulpicie Pi 5, sprawdzona na sprzęcie (YOLOv8s ~12 ms/klatkę, Hailo ~41 °C). |
 | 2026-10-26 | Mapa projektu zrobiona z trzech plików dokumentacji i historii czatu; zapisana w `strona/mapa.html`. Na Pi jeszcze jej nie ma (brak `TS_AUTHKEY` w środowisku chmury). |
