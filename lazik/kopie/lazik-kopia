@@ -46,7 +46,7 @@ if [ "${wynik[0]}" -gt 1 ] || [ "${wynik[1]}" -ne 0 ] || [ "${wynik[3]}" -ne 0 ]
 fi
 if odp=$("${SSH[@]}" "zatwierdz $(cat "$STAN/suma")" 2>&1); then
   date +%s > "$STAN/ostatnia-udana"
-  log "OK $(echo "$odp" | tail -1) w $(( ($(date +%s) - start) / 60 )) min"
+  log "OK $(echo "$odp" | tail -1 | sed "s/^OK //") w $(( ($(date +%s) - start) / 60 )) min"
 else
   log "BLAD: $odp"
   exit 1
