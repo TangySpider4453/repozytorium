@@ -4,8 +4,8 @@ kamery, wyborem trybu jazdy i zaznaczaniem obiektu do śledzenia (dotknięcie na
 
 Bezpieczeństwo: po starcie łazik stoi; tryb inny niż „stop” wymaga otwartej strony (puls co 1 s); brak pulsu przez
 `stop_bez_strony_s` = STOP. Strona tylko z kodem dostępu (QR/link), bo steruje silnikami.
-Hailo: po `zwolnij_hailo_po_s` bez strony i w trybie stop proces uruchamia się od nowa, żeby zwolnić Hailo i kamerę
-dla aplikacji „Łazik: wizja” / „analiza wideo” (zwalnianie Hailo w trakcie pracy jest w HailoRT 4.23 zawodne).
+Hailo: po `zwolnij_hailo_po_s` bez strony i w trybie stop proces się kończy (systemd uruchamia go od nowa), żeby zwolnić
+Hailo i kamerę dla „Łazik: wizja” / „analiza wideo” (zwalnianie Hailo w trakcie pracy jest w HailoRT 4.23 zawodne).
 """
 
 import json
@@ -42,7 +42,7 @@ naped = Naped(KONF)
 percepcja = Percepcja()
 sterownik = Sterownik(naped, percepcja, KONF)
 system = System()
-puls = {"czas": 0.0}
+puls = {"czas": time.monotonic()}  # ostatni puls ze strony (start usługi liczy się jak puls)
 analiza = {"watek": None}
 app = Flask(__name__)
 app.json.sort_keys = False  # kolejność trybów i klas jak w kodzie
@@ -199,14 +199,16 @@ def straznik():
             system.odswiez()
             t_stat = time.monotonic()
         cisza = time.monotonic() - puls["czas"]
+        bezczynnosc = time.monotonic() - max(puls["czas"], percepcja._uzycie)  # także podgląd i odczyty stanu
         if sterownik.tryb != "stop" and cisza > KONF["stop_bez_strony_s"]:
             sterownik.ustaw_tryb("stop")
             sterownik.opis = "Strona przestała odpowiadać: STOP dla bezpieczeństwa."
         trwa_analiza = analiza["watek"] is not None and analiza["watek"].is_alive()
         if (sterownik.tryb == "stop" and percepcja.hailo_wczytane() and not trwa_analiza
-                and cisza > KONF["zwolnij_hailo_po_s"]):
+                and bezczynnosc > KONF["zwolnij_hailo_po_s"]):
             naped.stop()
-            os.execv(sys.executable, [sys.executable] + sys.argv)
+            print("Bezczynność: kończę proces, żeby zwolnić Hailo i kamerę (systemd uruchomi usługę od nowa).", flush=True)
+            os._exit(0)
 
 
 if __name__ == "__main__":

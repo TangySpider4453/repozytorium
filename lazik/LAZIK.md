@@ -126,6 +126,24 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 - Przywracanie: `zstd -dc PLIK.tar.zst | sudo tar -xpf - --xattrs --acls --numeric-owner -C /mnt/nowa-karta`
   (na świeżo sformatowaną kartę z partycjami jak w Raspberry Pi OS; potem sprawdzić PARTUUID w `cmdline.txt` i `fstab`).
 
+## Aplikacja „Łazik: sterowanie” (`apki/sterowanie/`, na Pi 5 `~/lazik/sterowanie/`)
+- Usługa `lazik-sterowanie.service` (startuje z Pi, port 8000, kod dostępu w `kod_dostepu.txt`, ciasteczko).
+  Ikona „Łazik: sterowanie” otwiera stronę w Chromium. Strona: podgląd MJPEG + ramki (płótno), dotknięcie obiektu =
+  zaznaczenie („▶ Jedź za zaznaczonym”), tryby, pad do jazdy ręcznej (przytrzymanie, klawisze WASD/strzałki, spacja = STOP),
+  paski wolnego miejsca z głębi, ustawienia napędu (maks./min. moc, odwracanie silników, zamiana stron).
+- Tryby (`tryby.py`, 10 Hz, opis decyzji słowami): Ręczny; Przetrwaj (zagrożenie = osoba/zwierzę/pojazd, który rośnie
+  w kadrze lub jest blisko → ucieczka w przeciwną stronę, co 8 s rozglądanie); Zwiedzaj i skanuj (jazda z omijaniem
+  przeszkód + nagrywanie, po STOP „Zrób skan 3D z ostatniej wyprawy”); Fotograf (różne klasy, max raz na 3 min, podjazd
+  i zdjęcie do `wizja/zdjecia/` w formacie galerii); Śledź (konkretny obiekt albo klasa; odległość = wysokość ramki).
+- Bezpieczeństwo: po starcie STOP; polecenie silnika ważne 0,6 s (strażnik w `naped.py`); brak pulsu strony 3 s = STOP.
+  Kamera i Hailo tylko gdy ktoś ogląda/tryb działa; po 120 s bezczynności proces się kończy i systemd go wznawia
+  (zwalnia Hailo dla „wizji”/„analizy”). Przetestowane w symulacji (gpiozero mock) i na Pi: 25 kl/s, Hailo ~43 °C.
+- Napęd: HW-094 przez gpiozero `Motor` (piny w `konfiguracja.json`: 17/27 + PWM 12 lewy, 22/23 + PWM 13 prawy), bez enkoderów.
+  **2026-11-02: silniki nie ruszyły w teście** (impulsy 0,4–0,8 s, 50–70%, kamera bez zmiany). Do sprawdzenia: zasilanie
+  silników, połączenia, typ płytki. Piny kierunku jako wejścia czytały stan wysoki: płytka podciąga wejścia (do jakiego
+  napięcia? jeśli 5 V, to ryzyko dla GPIO 3,3 V).
+- BME280 na I2C 0x76 działa (`bme280.py`, I2C włączone 2026-11-02): 22,2 °C, 1020,9 hPa, 97,8 % (wilgotność do sprawdzenia).
+
 ## Stan
 
 | Data | Co |
