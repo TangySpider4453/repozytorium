@@ -155,7 +155,8 @@ def api_reczny():
     d = request.get_json(force=True)
     puls["czas"] = time.monotonic()
     if sterownik.tryb == "reczny":
-        sterownik.reczny(max(-1, min(1, d.get("v", 0))), max(-1, min(1, d.get("s", 0))))
+        maks = 1.0 if d.get("pelna") else None  # pad: tryb „pełna moc” i spusty pomijają ustawienie maks. mocy
+        sterownik.reczny(max(-1, min(1, d.get("v", 0))), max(-1, min(1, d.get("s", 0))), maks)
     return jsonify(ok=True)
 
 

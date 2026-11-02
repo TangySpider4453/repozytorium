@@ -47,7 +47,7 @@ class Sterownik(threading.Thread):
         self.naped, self.per, self.konf = naped, percepcja, konf
         self.tryb, self.opis = "stop", "Stoję. Wybierz tryb."
         self.lock = threading.Lock()
-        self._reczny = (0.0, 0.0, 0.0)          # (prędkość, skręt, ważne do)
+        self._reczny = (0.0, 0.0, 0.0, None)    # (prędkość, skręt, ważne do, maks. moc albo None = z ustawień)
         self.cel_id, self.cel_klasa = None, 0     # śledzenie: konkretny obiekt albo klasa
         self._cel_ostatnio = None                 # (czas, cx, klasa) do odnalezienia zgubionego celu
         self._akcja = None                        # (nazwa, do kiedy, prędkość, skręt): krótki manewr
@@ -85,8 +85,8 @@ class Sterownik(threading.Thread):
         if kat and self.nagrywanie.klatki > 30:
             self.ostatnia_wyprawa = kat
 
-    def reczny(self, v, s):
-        self._reczny = (float(v), float(s), time.monotonic() + 0.5)
+    def reczny(self, v, s, maks=None):
+        self._reczny = (float(v), float(s), time.monotonic() + 0.5, maks)
 
     def wybierz_cel(self, id_=None, klasa=None):
         self.cel_id = id_
@@ -114,9 +114,9 @@ class Sterownik(threading.Thread):
         if self.nagrywanie.aktywne and self.per.kamera is not None and self.nagrywanie.dodaj not in self.per.kamera.odbiorcy:
             self.per.kamera.odbiorcy.append(self.nagrywanie.dodaj)  # kamera mogła ruszyć dopiero teraz
         if t == "reczny":
-            v, s, do = self._reczny
+            v, s, do, maks = self._reczny
             if time.monotonic() < do:
-                self.naped.jedz(v, s)
+                self.naped.jedz(v, s, maks)
                 self.opis = "Jadę ręcznie." if (v or s) else "Czekam na polecenia."
             return
         klatka, nr, obiekty, sektory = self.per.najnowsze()

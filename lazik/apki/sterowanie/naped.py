@@ -27,27 +27,28 @@ class Naped:
             self.blad = f"silniki niedostępne: {e}"
         threading.Thread(target=self._straznik, daemon=True).start()
 
-    def _moc(self, x):
-        """Strefa martwa L298N: poniżej ~30–40% PWM silnik tylko buczy, więc małe wartości przesuwamy w górę."""
+    def _moc(self, x, maks=None):
+        """Strefa martwa L298N: poniżej ~30–40% PWM silnik tylko buczy, więc małe wartości przesuwamy w górę.
+        `maks` zastępuje ustawienie „maks. moc” (pad: tryb pełnej mocy i spusty)."""
         if abs(x) < 0.03:
             return 0.0
-        mn, mx = self.konf["min_moc"], self.konf["maks_moc"]
+        mn, mx = self.konf["min_moc"], self.konf["maks_moc"] if maks is None else maks
         return (1 if x > 0 else -1) * (mn + (mx - mn) * min(1.0, abs(x)))
 
-    def jedz(self, predkosc, skret=0.0):
+    def jedz(self, predkosc, skret=0.0, maks=None):
         """predkosc i skret w zakresie -1..1 (skret > 0 = w prawo). Ważne przez WAZNOSC s."""
         l = max(-1.0, min(1.0, predkosc + skret))
         r = max(-1.0, min(1.0, predkosc - skret))
-        self.ustaw(l, r)
+        self.ustaw(l, r, maks)
 
-    def ustaw(self, lewy, prawy):
+    def ustaw(self, lewy, prawy, maks=None):
         k = self.konf
         if k.get("zamien_strony"):
             lewy, prawy = prawy, lewy
         lewy = -lewy if k.get("odwroc_lewy") else lewy
         prawy = -prawy if k.get("odwroc_prawy") else prawy
         with self.lock:
-            self.lewy, self.prawy = self._moc(lewy), self._moc(prawy)
+            self.lewy, self.prawy = self._moc(lewy, maks), self._moc(prawy, maks)
             self._do = time.monotonic() + WAZNOSC
             self._zastosuj()
 

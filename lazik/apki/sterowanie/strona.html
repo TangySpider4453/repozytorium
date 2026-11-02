@@ -87,12 +87,15 @@
   body.pelny header, body.pelny .uklad > aside, body.pelny .sektory, body.pelny .kokpit-gora,
   body.pelny .kokpit-l, body.pelny .kokpit-p { display:none !important; }
   body.pelny .uklad { display:block; }
-  body.pelny .wideo { position:fixed; inset:0; border-radius:0; aspect-ratio:auto; z-index:1; }
-  body.pelny .opis { position:fixed; left:12px; bottom:12px; right:200px; z-index:3; background:rgba(13,17,20,.72); margin:0; }
+  body.pelny .wideo { position:fixed; inset:0; border-radius:0; aspect-ratio:auto; z-index:1; width:auto !important; margin:0; }
+  body.pelny .opis { position:fixed; left:12px; bottom:12px; right:200px; z-index:3; background:rgba(13,17,20,.72); margin:0; width:auto !important; }
   body.pelny .pelny-hud { display:flex; position:fixed; top:calc(36px + env(safe-area-inset-top, 0px)); left:12px; right:12px; z-index:3; gap:8px;
     align-items:center; flex-wrap:wrap; }
   .pelny-hud .etyk { background:rgba(13,17,20,.72); border-radius:8px; padding:6px 10px; font-size:14px; }
   .pelny-hud .stop { margin-left:auto; }
+  .spusty { display:inline-flex; align-items:center; gap:6px; }
+  .sp { display:inline-block; width:70px; height:10px; background:var(--linia); border-radius:5px; overflow:hidden; }
+  .sp i { display:block; height:100%; width:0; background:var(--akcent); }
 
   /* ---- wysuwany panel stanu (zawsze, w każdym trybie i widoku) ---- */
   .szuflada { position:fixed; top:0; left:50%; z-index:5; display:flex; flex-direction:column; align-items:center;
@@ -157,6 +160,8 @@
   <button id="nakokpit">Przyciski</button>
   <span class="etyk" id="hud_tryb"></span>
   <span class="etyk" id="hud_pad"></span>
+  <span class="etyk" id="hud_moc" title="X na padzie przełącza tryb mocy"></span>
+  <span class="etyk spusty" id="hud_spusty"><span>LT</span><span class="sp"><i id="sp_lt"></i></span><span>RT</span><span class="sp"><i id="sp_rt"></i></span></span>
   <button class="stop" id="stop3">STOP</button>
 </div>
 <div class="uklad">
@@ -204,6 +209,7 @@
     <div class="wiersz"><div class="g"><span>Zasilanie</span><span id="s_zas">—</span></div></div>
     <div class="wiersz"><div class="g"><span>Kamera / wizja</span><span id="s_kl">—</span></div></div>
     <div class="wiersz"><div class="g"><span>Silniki L / P</span><span id="s_nap">—</span></div></div>
+    <div class="wiersz"><div class="g"><span>Pad (X = tryb mocy)</span><span id="s_pad">—</span></div></div>
     <div class="maly">Czujnik BME280</div>
     <div class="czujnik" id="czujnik">
       <div><b id="c_t">—</b><small>°C</small></div><div><b id="c_h">—</b><small>% wilg.</small></div><div><b id="c_p">—</b><small>hPa</small></div>
@@ -356,10 +362,10 @@ const wcisniete = new Set();
 const pad = { v: 0, s: 0, czas: 0, nazwa: '' };
 let wysylanie = null, ostatniRuch = '0,0';
 function ruch() {
-  if (performance.now() - pad.czas < 300) return { v: pad.v, s: pad.s };
+  if (performance.now() - pad.czas < 300) return { v: pad.v, s: pad.s, pelna: !!pad.pelna };
   let v = dotyk.gaz, s = dotyk.skret;
   for (const k of wcisniete) { v += klawisze[k][0]; s += klawisze[k][1]; }
-  return { v: Math.max(-1, Math.min(1, v)), s: Math.max(-1, Math.min(1, s)) };
+  return { v: Math.max(-1, Math.min(1, v)), s: Math.max(-1, Math.min(1, s)), pelna: false };
 }
 function wyslij() {
   const r = ruch(), k = r.v.toFixed(2) + ',' + r.s.toFixed(2);
@@ -393,28 +399,59 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { if (wcisniete.delete(e.code)) zmiana(); });
 
-// Pad Xbox (Gamepad API): lewa gałka / spusty = gaz, gałka X = skręt, B = STOP, Start = tryb ręczny.
-// Działa na stronie otwartej na Pi (localhost) albo przez HTTPS; przez zwykłe http z innego urządzenia przeglądarka go blokuje.
-let poprzB = false, poprzStart = false;
+// Pad Xbox (Gamepad API). X przełącza tryb mocy:
+//   ustawienia: lewa gałka = jazda, moc do „maks. moc” z ustawień
+//   spusty:     RT = płynny gaz do przodu, LT = do tyłu (0–100% mocy), gałka = skręt
+//   pełna moc:  lewa gałka = jazda do 100% mocy
+// B = STOP, Start = tryb ręczny. Działa na stronie z HTTPS albo otwartej na samym Pi (localhost).
+const TRYBY_MOCY = { ustawienia: 'Moc: z ustawień', spusty: 'Moc: spusty RT/LT', pelna: 'Moc: PEŁNA' };
+let trybMocy = pamiec.get('lazik_moc') || 'ustawienia';
+if (!TRYBY_MOCY[trybMocy]) trybMocy = 'ustawienia';
+let poprzB = false, poprzStart = false, poprzX = false;
+const spust = { lt: 0, rt: 0, plynne: false };
+function odczytSpustow(gp) {
+  // standardowe mapowanie: przyciski 6/7 z wartością 0..1; inne przeglądarki: osie 2/5 w zakresie -1..1
+  let lt = gp.buttons[6] ? gp.buttons[6].value : 0, rt = gp.buttons[7] ? gp.buttons[7].value : 0;
+  if (gp.mapping !== 'standard' && gp.axes.length >= 6) {
+    lt = Math.max(lt, (gp.axes[2] + 1) / 2); rt = Math.max(rt, (gp.axes[5] + 1) / 2);
+  }
+  if ((lt > 0.02 && lt < 0.98) || (rt > 0.02 && rt < 0.98)) spust.plynne = true;  // widać wartości pośrednie = spusty płynne
+  spust.lt = lt; spust.rt = rt;
+}
 function petlaPada() {
   const gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected);
   if (gp) {
     pad.nazwa = gp.id.split('(')[0].trim().slice(0, 32);
+    odczytSpustow(gp);
     const mz = x => Math.abs(x) < 0.15 ? 0 : x;
-    const spust = (gp.buttons[7] ? gp.buttons[7].value : 0) - (gp.buttons[6] ? gp.buttons[6].value : 0);
-    const v = Math.max(-1, Math.min(1, mz(-(gp.axes[1] || 0)) + mz(spust)));
-    const sx = [gp.axes[0] || 0, gp.axes[2] || 0].reduce((a, b) => Math.abs(b) > Math.abs(a) ? b : a, 0);
-    const s = mz(sx);
+    const gy = mz(-(gp.axes[1] || 0));
+    const sx = mz([gp.axes[0] || 0, gp.axes[2] && gp.mapping === 'standard' ? gp.axes[2] : 0]
+      .reduce((a, b) => Math.abs(b) > Math.abs(a) ? b : a, 0));
     const b = gp.buttons[1] && gp.buttons[1].pressed, st = gp.buttons[9] && gp.buttons[9].pressed;
+    const x = gp.buttons[2] && gp.buttons[2].pressed;
     if (b && !poprzB) $('#stop').click();
     if (st && !poprzStart) api('api/tryb', { tryb: 'reczny' }).then(odswiez);
-    poprzB = b; poprzStart = st;
-    if (v || s) {
+    if (x && !poprzX) {
+      const kol = Object.keys(TRYBY_MOCY); trybMocy = kol[(kol.indexOf(trybMocy) + 1) % kol.length];
+      pamiec.set('lazik_moc', trybMocy); pokazTrybMocy();
+    }
+    poprzB = b; poprzStart = st; poprzX = x;
+    let v = gy;
+    if (trybMocy === 'spusty') v = Math.max(-1, Math.min(1, (spust.rt < 0.03 ? 0 : spust.rt) - (spust.lt < 0.03 ? 0 : spust.lt)));
+    pad.pelna = trybMocy !== 'ustawienia';
+    if (v || sx) {
       if (S && S.tryb === 'reczny' && widok !== 'pelny') wejdzPelny();
-      pad.v = v; pad.s = s; pad.czas = performance.now(); zmiana();
+      pad.v = v; pad.s = sx; pad.czas = performance.now(); zmiana();
     } else if (performance.now() - pad.czas < 300) { pad.v = pad.s = 0; pad.czas = performance.now(); zmiana(); }
+    $('#sp_lt').style.width = Math.round(spust.lt * 100) + '%'; $('#sp_rt').style.width = Math.round(spust.rt * 100) + '%';
   } else pad.nazwa = '';
   requestAnimationFrame(petlaPada);
+}
+function pokazTrybMocy() {
+  const t = TRYBY_MOCY[trybMocy] + (trybMocy === 'ustawienia' && S ? ` (${Math.round(S.maks_moc * 100)}%)` : '');
+  $('#hud_moc').textContent = t;
+  $('#hud_moc').style.background = trybMocy === 'pelna' ? 'rgba(229,83,75,.85)' : '';
+  $('#hud_spusty').style.display = trybMocy === 'spusty' ? '' : 'none';
 }
 requestAnimationFrame(petlaPada);
 addEventListener('gamepadconnected', e => { pad.nazwa = e.gamepad.id; });
@@ -532,6 +569,9 @@ function panelStanu() {
   $('#s_zas').textContent = S.zasilanie; $('#s_zas').style.color = S.zasilanie === 'OK' ? 'var(--ok)' : 'var(--akcent)';
   $('#s_kl').textContent = `${S.fps} kl/s · ${S.ms} ms`;
   $('#s_nap').textContent = `${Math.round(S.naped[0] * 100)}% / ${Math.round(S.naped[1] * 100)}%`;
+  $('#s_pad').textContent = pad.nazwa ? `${TRYBY_MOCY[trybMocy].replace('Moc: ', '')} · RT ${Math.round(spust.rt * 100)}% LT ${Math.round(spust.lt * 100)}%` +
+    (spust.plynne ? ' · płynne' : '') : 'brak pada';
+  pokazTrybMocy();
   const c = S.czujnik;
   $('#c_t').textContent = c ? c.temperatura.toFixed(1).replace('.', ',') : '—';
   $('#c_h').textContent = c && c.wilgotnosc != null ? Math.round(c.wilgotnosc) : '—';

@@ -144,6 +144,10 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   **2026-11-02: silniki nie ruszyły w teście** (impulsy 0,4–0,8 s, 50–70%, kamera bez zmiany). Do sprawdzenia: zasilanie
   silników, połączenia, typ płytki. Piny kierunku jako wejścia czytały stan wysoki: płytka podciąga wejścia (do jakiego
   napięcia? jeśli 5 V, to ryzyko dla GPIO 3,3 V).
+- **Pad Xbox:** Start = tryb ręczny, B = STOP, X = tryb mocy w kółko: „z ustawień” (gałka, do maks. mocy), „spusty”
+  (RT płynnie do przodu, LT do tyłu, 0–100%, gałka = skręt), „PEŁNA” (gałka do 100%; `pelna` w /api/reczny pomija maks. moc).
+  Spusty: standardowe mapowanie (przyciski 6/7, wartość 0..1) albo osie 2/5; HUD pokazuje paski RT/LT i czy są płynne.
+  Tryb mocy pamiętany w przeglądarce. Sprawdzone symulowanym padem w Chromium (wartości na silnikach jak wyżej).
 - **Ustawienia (⚙, `ustawienia.py`)**: zakładki Kamera (rozdzielczość, kl/s, stała liczba klatek, obrót 180°, lustro + wszystkie
   regulacje kamery z `v4l2-ctl`, zapamiętywane w `kamera_v4l2` i nakładane przy otwarciu), Wizja i Hailo (model YOLOv8s/m/x,
   próg, głębia zawsze, podgląd obraz+głębia, limit kl/s, jakość i szerokość podglądu, zwalnianie Hailo), Napęd, Tryby,
