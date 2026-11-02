@@ -127,6 +127,8 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   (na świeżo sformatowaną kartę z partycjami jak w Raspberry Pi OS; potem sprawdzić PARTUUID w `cmdline.txt` i `fstab`).
 
 ## Aplikacja „Łazik: sterowanie” (`apki/sterowanie/`, na Pi 5 `~/lazik/sterowanie/`)
+- **Adres HTTPS (pad Xbox działa zdalnie):** https://rpi-5-1.tail52831c.ts.net/ (`tailscale serve --bg 8000`, tylko w tailnecie,
+  włączone 2026-11-02). Gamepad API wymaga HTTPS albo localhost; zwykłe http://IP:8000 działa bez pada.
 - Usługa `lazik-sterowanie.service` (startuje z Pi, port 8000, kod dostępu w `kod_dostepu.txt`, ciasteczko).
   Ikona „Łazik: sterowanie” otwiera stronę w Chromium. Strona: podgląd MJPEG + ramki (płótno), dotknięcie obiektu =
   zaznaczenie („▶ Jedź za zaznaczonym”), tryby, pad do jazdy ręcznej (przytrzymanie, klawisze WASD/strzałki, spacja = STOP),
