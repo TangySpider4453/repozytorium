@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Łazik: sterowanie
+Comment=Podgląd z kamery i tryby jazdy (strona z usługi lazik-sterowanie)
+Exec=/home/rpi/lazik/sterowanie/otworz.sh
+Icon=applications-science
+Terminal=false
+Categories=Utility;

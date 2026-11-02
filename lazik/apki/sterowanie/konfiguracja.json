@@ -1,0 +1,13 @@
+{
+  "port": 8000,
+  "piny": {"lewy_przod": 17, "lewy_tyl": 27, "lewy_pwm": 12, "prawy_przod": 22, "prawy_tyl": 23, "prawy_pwm": 13},
+  "odwroc_lewy": false,
+  "odwroc_prawy": false,
+  "zamien_strony": false,
+  "min_moc": 0.35,
+  "maks_moc": 0.7,
+  "prog_przeszkody": 0.45,
+  "sledzenie_wysokosc": 0.5,
+  "stop_bez_strony_s": 3,
+  "zwolnij_hailo_po_s": 120
+}

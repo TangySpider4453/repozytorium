@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="pl" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Łazik: sterowanie</title>
+<style>
+  :root { --tlo:#0d1114; --panel:#161c21; --panel2:#1f272d; --tekst:#e6ebee; --szary:#8b979f; --linia:#2a333a;
+          --akcent:#e0a640; --ok:#3fbf6a; --zle:#e5534b; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--tlo); color:var(--tekst); font:15px/1.4 system-ui, "Segoe UI", sans-serif; }
+  body { padding:max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left)); }
+  header { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  header h1 { font-size:20px; margin:0; flex:1; white-space:nowrap; }
+  .lacze { font-size:13px; color:var(--szary); display:flex; align-items:center; gap:6px; }
+  .lacze i { width:9px; height:9px; border-radius:50%; background:var(--zle); }
+  .lacze.ok i { background:var(--ok); }
+  button { font:600 15px system-ui, sans-serif; color:var(--tekst); background:var(--panel2); border:0; border-radius:10px;
+           min-height:44px; padding:0 12px; cursor:pointer; touch-action:manipulation; }
+  button:active { filter:brightness(1.3); }
+  #stop { background:var(--zle); color:#fff; font-size:18px; padding:0 22px; min-height:48px; }
+  .uklad { display:grid; grid-template-columns:minmax(0, 1fr) 360px; gap:10px; align-items:start; }
+  @media (max-width:820px) { .uklad { grid-template-columns:1fr; } }
+  .wideo { position:relative; background:#000; border-radius:10px; overflow:hidden; aspect-ratio:4/3; }
+  .wideo img, .wideo canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  .wideo canvas { touch-action:none; cursor:crosshair; }
+  .brak { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--szary); text-align:center; padding:20px; }
+  .sektory { display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; margin-top:6px; }
+  .sektory div { height:10px; border-radius:3px; background:var(--linia); }
+  .opis { background:var(--panel2); border-radius:10px; padding:10px 12px; margin-top:8px; font-size:16px; min-height:44px; }
+  .panel { background:var(--panel); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .tryby { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+  .tryby button.wl { background:var(--akcent); color:#111; }
+  .opcje { display:flex; flex-direction:column; gap:8px; }
+  .chipy { display:flex; flex-wrap:wrap; gap:6px; }
+  .chipy button { min-height:36px; font-size:14px; border-radius:18px; }
+  .chipy button.wl { background:var(--ok); color:#0b0b0b; }
+  .pad { display:grid; grid-template-columns:repeat(3, 72px); grid-auto-rows:64px; gap:6px; justify-content:center; }
+  .pad button { font-size:26px; user-select:none; -webkit-user-select:none; }
+  .pad button.trzym { background:var(--akcent); color:#111; }
+  .pad .p { visibility:hidden; }
+  label.suwak { display:flex; flex-direction:column; gap:2px; font-size:13px; color:var(--szary); }
+  input[type=range] { width:100%; accent-color:var(--akcent); }
+  .stat { display:grid; grid-template-columns:max-content 1fr; gap:2px 10px; font-size:13px; }
+  .stat dt { color:var(--szary); } .stat dd { margin:0; font-variant-numeric:tabular-nums; }
+  .zdj { display:flex; gap:6px; overflow-x:auto; }
+  .zdj img { height:60px; border-radius:6px; }
+  details summary { cursor:pointer; color:var(--szary); font-size:14px; }
+  .maly { font-size:13px; color:var(--szary); }
+  .blad { color:var(--zle); font-size:13px; }
+  a { color:var(--akcent); }
+  .jedz-za { background:var(--ok); color:#0b0b0b; }
+  .pasek { height:8px; background:var(--linia); border-radius:4px; overflow:hidden; }
+  .pasek i { display:block; height:100%; background:var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Łazik · sterowanie</h1>
+  <span class="lacze" id="lacze"><i></i><span>łączę…</span></span>
+  <button id="stop" title="Zatrzymaj (spacja)">STOP</button>
+</header>
+<div class="uklad">
+  <section>
+    <div class="wideo">
+      <img id="obraz" alt="Podgląd z kamery łazika">
+      <canvas id="nakladka"></canvas>
+      <div class="brak" id="brak">Łączę z kamerą…</div>
+    </div>
+    <div class="sektory" id="sektory" title="Wolne miejsce przed łazikiem (z głębi): zielone = wolno, czerwone = blisko">
+      <div></div><div></div><div></div><div></div><div></div>
+    </div>
+    <div class="opis" id="opis">…</div>
+  </section>
+  <aside class="panel">
+    <div class="tryby" id="tryby"></div>
+    <div class="opcje" id="opcje"></div>
+    <dl class="stat" id="stat"></dl>
+    <div id="bledy"></div>
+    <details>
+      <summary>Ustawienia napędu</summary>
+      <div class="opcje" style="margin-top:8px">
+        <label class="suwak">Maks. moc silników <span id="w_maks"></span><input type="range" id="maks" min="0.3" max="1" step="0.05"></label>
+        <label class="suwak">Min. moc (próg ruszania) <span id="w_min"></span><input type="range" id="min" min="0" max="0.6" step="0.05"></label>
+        <label class="suwak">Odległość przy śledzeniu (wysokość celu w kadrze) <span id="w_dyst"></span><input type="range" id="dyst" min="0.2" max="0.8" step="0.05"></label>
+        <div class="chipy">
+          <button id="odwl">odwróć lewy</button><button id="odwp">odwróć prawy</button><button id="zamien">zamień strony</button>
+        </div>
+        <p class="maly">Jeśli „▲” kręci kołem do tyłu, odwróć ten silnik. Jeśli „◀” skręca w prawo, zamień strony.</p>
+      </div>
+    </details>
+  </aside>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const api = (u, d) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d || {}) });
+let S = null, zaznaczony = null, polaczono = false;
+
+// --- podgląd ---
+const obraz = $('#obraz'), plotno = $('#nakladka');
+obraz.onload = () => { $('#brak').style.display = 'none'; };
+obraz.onerror = () => { $('#brak').style.display = 'flex'; $('#brak').textContent = 'Brak obrazu z kamery. Ponawiam…';
+  setTimeout(() => obraz.src = 'strumien.mjpg?' + Date.now(), 2000); };
+obraz.src = 'strumien.mjpg';
+
+function prostokat() {  // gdzie na płótnie leży obraz 4:3 (object-fit: contain)
+  const W = plotno.clientWidth, H = plotno.clientHeight, s = Math.min(W / 640, H / 480);
+  return { x: (W - 640 * s) / 2, y: (H - 480 * s) / 2, w: 640 * s, h: 480 * s };
+}
+function rysuj() {
+  const dpr = devicePixelRatio || 1;
+  plotno.width = plotno.clientWidth * dpr; plotno.height = plotno.clientHeight * dpr;
+  const c = plotno.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!S) return;
+  const r = prostokat();
+  c.font = '600 14px system-ui'; c.lineWidth = 2;
+  for (const o of S.obiekty) {
+    const [x0, y0, x1, y1] = o.ramka, x = r.x + x0 * r.w, y = r.y + y0 * r.h, w = (x1 - x0) * r.w, h = (y1 - y0) * r.h;
+    const cel = o.id === S.cel_id, zazn = o.id === zaznaczony;
+    const kol = cel ? '#3fbf6a' : zazn ? '#e0a640' : `hsl(${(o.klasa * 47) % 360} 80% 65%)`;
+    c.strokeStyle = kol; c.lineWidth = cel || zazn ? 4 : 2; c.strokeRect(x, y, w, h);
+    const t = `${cel ? '● ' : ''}#${o.id} ${o.nazwa} ${Math.round(o.pew * 100)}%`, tw = c.measureText(t).width + 10;
+    const ty = y > 22 ? y - 22 : y + h;
+    c.fillStyle = kol; c.fillRect(x, ty, tw, 22); c.fillStyle = '#0b0b0b'; c.fillText(t, x + 5, ty + 16);
+  }
+}
+plotno.addEventListener('click', e => {
+  if (!S) return;
+  const b = plotno.getBoundingClientRect(), r = prostokat();
+  const nx = (e.clientX - b.left - r.x) / r.w, ny = (e.clientY - b.top - r.y) / r.h;
+  const traf = S.obiekty.filter(o => o.ramka[0] <= nx && nx <= o.ramka[2] && o.ramka[1] <= ny && ny <= o.ramka[3])
+    .sort((a, b) => (a.ramka[2] - a.ramka[0]) * (a.ramka[3] - a.ramka[1]) - (b.ramka[2] - b.ramka[0]) * (b.ramka[3] - b.ramka[1]));
+  zaznaczony = traf.length ? traf[0].id : null;
+  if (zaznaczony !== null && S.tryb === 'sledz') api('api/cel', { id: zaznaczony });
+  opcje(true); rysuj();
+});
+
+// --- tryby i opcje ---
+$('#stop').onclick = () => api('api/tryb', { tryb: 'stop' }).then(odswiez);
+addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); $('#stop').click(); } });
+function przyciskiTrybow() {
+  const t = $('#tryby'); t.innerHTML = '';
+  for (const [k, n] of Object.entries(S.tryby)) {
+    if (k === 'stop') continue;
+    const b = document.createElement('button'); b.textContent = n; b.classList.toggle('wl', S.tryb === k);
+    b.onclick = () => api('api/tryb', { tryb: k }).then(odswiez); t.append(b);
+  }
+}
+let ostatnieOpcje = '';
+function opcje(wymus) {
+  const klucz = [S.tryb, S.cel_id, S.cel_klasa, zaznaczony, S.wyprawa, S.analiza && S.analiza.etap, S.zdjecia.join()].join('|');
+  if (!wymus && klucz === ostatnieOpcje) { aktualizujDynamiczne(); return; }
+  ostatnieOpcje = klucz;
+  const o = $('#opcje'); o.innerHTML = '';
+  if (zaznaczony !== null && S.tryb !== 'sledz') {
+    const b = document.createElement('button'); b.className = 'jedz-za'; b.textContent = `▶ Jedź za zaznaczonym #${zaznaczony}`;
+    b.onclick = () => api('api/cel', { id: zaznaczony }).then(() => api('api/tryb', { tryb: 'sledz' })).then(odswiez);
+    o.append(b);
+  }
+  if (S.tryb === 'reczny') {
+    o.insertAdjacentHTML('beforeend', `<div class="pad">
+      <span class="p"></span><button data-v="1" data-s="0">▲</button><span class="p"></span>
+      <button data-v="0" data-s="-1">◀</button><button data-v="0" data-s="0" style="font-size:15px">stój</button><button data-v="0" data-s="1">▶</button>
+      <span class="p"></span><button data-v="-1" data-s="0">▼</button><span class="p"></span></div>
+      <p class="maly">Przytrzymaj strzałkę. Klawiatura: strzałki albo W A S D.</p>`);
+    o.querySelectorAll('.pad button').forEach(padPrzycisk);
+  } else if (S.tryb === 'sledz') {
+    o.insertAdjacentHTML('beforeend', `<p class="maly">Dotknij obiektu na podglądzie (np. siebie), żeby jechać właśnie za nim, albo wybierz rodzaj:</p>`);
+    const ch = document.createElement('div'); ch.className = 'chipy';
+    for (const [k, n] of Object.entries(S.do_sledzenia)) {
+      const b = document.createElement('button'); b.textContent = n;
+      b.classList.toggle('wl', S.cel_id === null && +k === S.cel_klasa);
+      b.onclick = () => { zaznaczony = null; api('api/cel', { id: null, klasa: +k }).then(odswiez); };
+      ch.append(b);
+    }
+    o.append(ch);
+    if (S.cel_id !== null) o.insertAdjacentHTML('beforeend', `<p>Cel: <b>#${S.cel_id}</b> (zielona ramka) <button id="anulujcel">jedź za rodzajem</button></p>`);
+    const an = $('#anulujcel'); if (an) an.onclick = () => api('api/cel', { id: null, klasa: S.cel_klasa }).then(odswiez);
+  } else if (S.tryb === 'zwiedzaj') {
+    o.insertAdjacentHTML('beforeend', `<p class="maly">Jeżdżę, omijam przeszkody i nagrywam. Po STOP zrobisz z tego skan 3D.</p><p id="nagr"></p>`);
+  } else if (S.tryb === 'fotograf') {
+    o.insertAdjacentHTML('beforeend', `<p class="maly">Szukam różnych rzeczy (każdy rodzaj raz na 3 min), podjeżdżam i robię zdjęcie.
+      Zdjęcia trafiają też do galerii w „Łazik: wizja”.</p>`);
+  } else if (S.tryb === 'przetrwaj') {
+    o.insertAdjacentHTML('beforeend', `<p class="maly">Obserwuję otoczenie. Gdy coś (osoba, zwierzę, pojazd) szybko się zbliża
+      albo jest bardzo blisko, uciekam w przeciwną stronę, omijając przeszkody.</p>`);
+  }
+  if (S.tryb === 'stop' && S.wyprawa) {
+    const a = S.analiza;
+    if (!a || a.etap === 'błąd' || a.etap === 'przerwano') {
+      o.insertAdjacentHTML('beforeend', `<button id="skan">Zrób skan 3D z ostatniej wyprawy</button>${a && a.blad ? `<p class="blad">${a.blad}</p>` : ''}`);
+      $('#skan').onclick = () => api('api/skan').then(odswiez);
+    }
+  }
+  if (S.analiza) o.insertAdjacentHTML('beforeend', `<div id="an"></div>`);
+  if (S.zdjecia.length) {
+    o.insertAdjacentHTML('beforeend', `<div class="maly">Ostatnie zdjęcia:</div><div class="zdj">${S.zdjecia.map(z =>
+      `<a href="zdjecia/${z}" target="_blank"><img src="zdjecia/${z}" alt=""></a>`).join('')}</div>`);
+  }
+  aktualizujDynamiczne();
+}
+function aktualizujDynamiczne() {
+  const n = $('#nagr'); if (n) n.textContent = S.nagrywanie !== null ? `● Nagrywam: ${S.nagrywanie} klatek` : '';
+  const a = $('#an'), s = S.analiza;
+  if (a && s) {
+    if (s.etap === 'gotowe') a.innerHTML = `<p>✓ Skan gotowy (${s.punkty.toLocaleString('pl-PL')} punktów). ${s.werdykt || ''}</p>
+      <a href="skany/${s.skan}/skan.html" target="_blank">Otwórz skan 3D →</a>`;
+    else if (s.etap === 'analiza' || s.etap === 'zapis' || s.etap === 'start')
+      a.innerHTML = `<p class="maly">Skan 3D: ${s.gotowe} / ${s.razem} klatek</p><div class="pasek"><i style="width:${100 * s.gotowe / Math.max(1, s.razem)}%"></i></div>`;
+  }
+}
+
+// --- jazda ręczna: przytrzymanie przycisku albo klawisza ---
+let ruch = { v: 0, s: 0 }, wysylanie = null;
+function wyslijRuch() { api('api/reczny', ruch); }
+function zacznij(v, s) { ruch = { v, s }; wyslijRuch(); clearInterval(wysylanie); wysylanie = setInterval(wyslijRuch, 150); }
+function skoncz() { ruch = { v: 0, s: 0 }; clearInterval(wysylanie); wysylanie = null; wyslijRuch(); }
+function padPrzycisk(b) {
+  const v = +b.dataset.v, s = +b.dataset.s;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('trzym'); try { b.setPointerCapture(e.pointerId); } catch (_) {} zacznij(v, s); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => b.addEventListener(n, () => { b.classList.remove('trzym'); skoncz(); }));
+  b.addEventListener('contextmenu', e => e.preventDefault());
+}
+const klawisze = { ArrowUp: [1, 0], KeyW: [1, 0], ArrowDown: [-1, 0], KeyS: [-1, 0], ArrowLeft: [0, -1], KeyA: [0, -1], ArrowRight: [0, 1], KeyD: [0, 1] };
+const wcisniete = new Set();
+function zKlawiszy() {
+  let v = 0, s = 0; for (const k of wcisniete) { v += klawisze[k][0]; s += klawisze[k][1]; }
+  v = Math.max(-1, Math.min(1, v)); s = Math.max(-1, Math.min(1, s));
+  if (v || s) zacznij(v, s); else skoncz();
+}
+addEventListener('keydown', e => { if (klawisze[e.code] && S && S.tryb === 'reczny' && !wcisniete.has(e.code)) { e.preventDefault(); wcisniete.add(e.code); zKlawiszy(); } });
+addEventListener('keyup', e => { if (wcisniete.delete(e.code)) zKlawiszy(); });
+
+// --- ustawienia ---
+function suwak(id, klucz, etykieta) {
+  const el = $('#' + id), w = $('#w_' + etykieta);
+  el.oninput = () => { w.textContent = Math.round(el.value * 100) + '%'; };
+  el.onchange = () => api('api/ustawienia', { [klucz]: +el.value });
+}
+fetch('api/konf').then(r => r.json()).then(k => {
+  $('#maks').value = k.maks_moc; $('#min').value = k.min_moc; $('#dyst').value = k.sledzenie_wysokosc;
+  ['maks', 'min', 'dyst'].forEach(i => $('#' + i).oninput && $('#' + i).oninput());
+  for (const [id, kl] of [['odwl', 'odwroc_lewy'], ['odwp', 'odwroc_prawy'], ['zamien', 'zamien_strony']]) {
+    const b = $('#' + id); b.classList.toggle('wl', !!k[kl]); b.style.background = k[kl] ? 'var(--akcent)' : '';
+    b.onclick = () => { k[kl] = !k[kl]; b.style.background = k[kl] ? 'var(--akcent)' : ''; api('api/ustawienia', { [kl]: k[kl] }); };
+  }
+});
+suwak('maks', 'maks_moc', 'maks'); suwak('min', 'min_moc', 'min'); suwak('dyst', 'sledzenie_wysokosc', 'dyst');
+
+// --- odświeżanie i puls (bez pulsu łazik sam staje) ---
+async function odswiez() {
+  try {
+    S = await (await fetch('api/stan', { cache: 'no-store' })).json();
+    polaczono = true;
+    $('#lacze').className = 'lacze ok'; $('#lacze span').textContent = `${S.fps} kl/s`;
+    $('#opis').textContent = S.opis;
+    przyciskiTrybow(); opcje(false); rysuj();
+    const sek = $('#sektory').children;
+    for (let i = 0; i < 5; i++) {
+      const v = S.sektory ? S.sektory[i] : null;
+      sek[i].style.background = v === null ? 'var(--linia)' : v < 0.45 ? 'var(--zle)' : v < 0.8 ? 'var(--akcent)' : 'var(--ok)';
+    }
+    const t = x => x == null ? '—' : Math.round(x) + ' °C';
+    $('#stat').innerHTML = `<dt>Tryb</dt><dd>${S.tryby[S.tryb]}</dd>
+      <dt>Silniki L / P</dt><dd>${Math.round(S.naped[0] * 100)}% / ${Math.round(S.naped[1] * 100)}%</dd>
+      <dt>Procesor</dt><dd>${S.cpu}% · ${t(S.temp_cpu)}</dd><dt>Hailo</dt><dd>${t(S.temp_hailo)} · ${S.ms} ms/klatkę</dd>
+      <dt>RAM</dt><dd>${S.ram}%</dd><dt>Zasilanie</dt><dd>${S.zasilanie}</dd><dt>Kamera</dt><dd>${S.kamera}</dd>`;
+    $('#bledy').innerHTML = [S.blad_napedu, S.blad_wizji].filter(Boolean).map(b => `<p class="blad">${b}</p>`).join('');
+  } catch (_) {
+    polaczono = false; $('#lacze').className = 'lacze'; $('#lacze span').textContent = 'brak połączenia';
+  }
+}
+setInterval(odswiez, 250);
+setInterval(() => api('api/puls').catch(() => {}), 1000);
+api('api/puls'); odswiez();
+</script>
+</body>
+</html>
