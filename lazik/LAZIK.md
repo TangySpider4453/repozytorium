@@ -144,10 +144,13 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   **2026-11-02: silniki nie ruszyły w teście** (impulsy 0,4–0,8 s, 50–70%, kamera bez zmiany). Do sprawdzenia: zasilanie
   silników, połączenia, typ płytki. Piny kierunku jako wejścia czytały stan wysoki: płytka podciąga wejścia (do jakiego
   napięcia? jeśli 5 V, to ryzyko dla GPIO 3,3 V).
-- **Pad Xbox:** Start = tryb ręczny, B = STOP, X = tryb mocy w kółko: „z ustawień” (gałka, do maks. mocy), „spusty”
-  (RT płynnie do przodu, LT do tyłu, 0–100%, gałka = skręt), „PEŁNA” (gałka do 100%; `pelna` w /api/reczny pomija maks. moc).
-  Spusty: standardowe mapowanie (przyciski 6/7, wartość 0..1) albo osie 2/5; HUD pokazuje paski RT/LT i czy są płynne.
-  Tryb mocy pamiętany w przeglądarce. Sprawdzone symulowanym padem w Chromium (wartości na silnikach jak wyżej).
+- **Pad Xbox:** Start = tryb ręczny, B = STOP, X = tryb mocy w kółko:
+  „z ustawień” (gałka, do maks. mocy, małe wychylenie podbite do progu ruszania), „spusty” (RT przód / LT tył, moc
+  **liniowo od zera** 0–100%, gałka = skręt), „wychylenie gałki” (gałka, moc liniowo od zera 0–100%), „PEŁNA” (gałka do 100%,
+  z podbiciem). `/api/reczny` przyjmuje `pelna` (pomija maks. moc) i `liniowo` (bez progu ruszania). Martwa strefa gałki 12%,
+  potem płynnie od zera. Zmierzone symulowanym padem (wychylenie → moc): spusty 20→20%, 40→40%, 70→70%, 100→100%;
+  gałka liniowo 20→9%, 40→32%, 70→66%, 100→100%; z ustawień 20→38% … 100→70%; pełna 20→41% … 100→100%.
+  Spusty: standardowe mapowanie (przyciski 6/7) albo osie 2/5; HUD pokazuje paski RT/LT i czy są płynne.
 - **Ustawienia (⚙, `ustawienia.py`)**: zakładki Kamera (rozdzielczość, kl/s, stała liczba klatek, obrót 180°, lustro + wszystkie
   regulacje kamery z `v4l2-ctl`, zapamiętywane w `kamera_v4l2` i nakładane przy otwarciu), Wizja i Hailo (model YOLOv8s/m/x,
   próg, głębia zawsze, podgląd obraz+głębia, limit kl/s, jakość i szerokość podglądu, zwalnianie Hailo), Napęd, Tryby,

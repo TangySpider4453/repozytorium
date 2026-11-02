@@ -362,7 +362,7 @@ const wcisniete = new Set();
 const pad = { v: 0, s: 0, czas: 0, nazwa: '' };
 let wysylanie = null, ostatniRuch = '0,0';
 function ruch() {
-  if (performance.now() - pad.czas < 300) return { v: pad.v, s: pad.s, pelna: !!pad.pelna };
+  if (performance.now() - pad.czas < 300) return { v: pad.v, s: pad.s, pelna: !!pad.pelna, liniowo: !!pad.liniowo };
   let v = dotyk.gaz, s = dotyk.skret;
   for (const k of wcisniete) { v += klawisze[k][0]; s += klawisze[k][1]; }
   return { v: Math.max(-1, Math.min(1, v)), s: Math.max(-1, Math.min(1, s)), pelna: false };
@@ -400,11 +400,12 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { if (wcisniete.delete(e.code)) zmiana(); });
 
 // Pad Xbox (Gamepad API). X przełącza tryb mocy:
-//   ustawienia: lewa gałka = jazda, moc do „maks. moc” z ustawień
-//   spusty:     RT = płynny gaz do przodu, LT = do tyłu (0–100% mocy), gałka = skręt
-//   pełna moc:  lewa gałka = jazda do 100% mocy
+//   ustawienia:      lewa gałka = jazda, moc do „maks. moc” z ustawień (małe wychylenie od razu podbite do progu ruszania)
+//   spusty:          RT = gaz do przodu, LT = do tyłu, moc liniowo 0–100% (delikatnie = bardzo mało mocy), gałka = skręt
+//   gałka = moc:     wychylenie lewej gałki = moc liniowo 0–100% (jak spusty, tylko gałką)
+//   pełna moc:       lewa gałka = jazda do 100% mocy (z podbiciem do progu ruszania)
 // B = STOP, Start = tryb ręczny. Działa na stronie z HTTPS albo otwartej na samym Pi (localhost).
-const TRYBY_MOCY = { ustawienia: 'Moc: z ustawień', spusty: 'Moc: spusty RT/LT', pelna: 'Moc: PEŁNA' };
+const TRYBY_MOCY = { ustawienia: 'Moc: z ustawień', spusty: 'Moc: spusty RT/LT', gałka: 'Moc: wychylenie gałki', pelna: 'Moc: PEŁNA' };
 let trybMocy = pamiec.get('lazik_moc') || 'ustawienia';
 if (!TRYBY_MOCY[trybMocy]) trybMocy = 'ustawienia';
 let poprzB = false, poprzStart = false, poprzX = false;
@@ -423,7 +424,8 @@ function petlaPada() {
   if (gp) {
     pad.nazwa = gp.id.split('(')[0].trim().slice(0, 32);
     odczytSpustow(gp);
-    const mz = x => Math.abs(x) < 0.15 ? 0 : x;
+    // martwa strefa gałki (luz w spoczynku), potem płynnie od 0: przy liniowej mocy wychylenie tuż za strefą = prawie zero
+    const mz = x => Math.abs(x) < 0.12 ? 0 : Math.sign(x) * (Math.abs(x) - 0.12) / 0.88;
     const gy = mz(-(gp.axes[1] || 0));
     const sx = mz([gp.axes[0] || 0, gp.axes[2] && gp.mapping === 'standard' ? gp.axes[2] : 0]
       .reduce((a, b) => Math.abs(b) > Math.abs(a) ? b : a, 0));
@@ -439,6 +441,7 @@ function petlaPada() {
     let v = gy;
     if (trybMocy === 'spusty') v = Math.max(-1, Math.min(1, (spust.rt < 0.03 ? 0 : spust.rt) - (spust.lt < 0.03 ? 0 : spust.lt)));
     pad.pelna = trybMocy !== 'ustawienia';
+    pad.liniowo = trybMocy === 'spusty' || trybMocy === 'gałka';  // moc dokładnie proporcjonalna od zera
     if (v || sx) {
       if (S && S.tryb === 'reczny' && widok !== 'pelny') wejdzPelny();
       pad.v = v; pad.s = sx; pad.czas = performance.now(); zmiana();

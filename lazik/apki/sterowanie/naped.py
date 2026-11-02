@@ -27,28 +27,29 @@ class Naped:
             self.blad = f"silniki niedostępne: {e}"
         threading.Thread(target=self._straznik, daemon=True).start()
 
-    def _moc(self, x, maks=None):
+    def _moc(self, x, maks=None, liniowo=False):
         """Strefa martwa L298N: poniżej ~30–40% PWM silnik tylko buczy, więc małe wartości przesuwamy w górę.
-        `maks` zastępuje ustawienie „maks. moc” (pad: tryb pełnej mocy i spusty)."""
+        `maks` zastępuje ustawienie „maks. moc”; `liniowo` = moc dokładnie proporcjonalna od zera (bez podbijania:
+        delikatne wychylenie daje naprawdę mało mocy, nawet jeśli koła jeszcze nie ruszą)."""
         if abs(x) < 0.03:
             return 0.0
-        mn, mx = self.konf["min_moc"], self.konf["maks_moc"] if maks is None else maks
+        mn, mx = (0.0 if liniowo else self.konf["min_moc"]), (self.konf["maks_moc"] if maks is None else maks)
         return (1 if x > 0 else -1) * (mn + (mx - mn) * min(1.0, abs(x)))
 
-    def jedz(self, predkosc, skret=0.0, maks=None):
+    def jedz(self, predkosc, skret=0.0, maks=None, liniowo=False):
         """predkosc i skret w zakresie -1..1 (skret > 0 = w prawo). Ważne przez WAZNOSC s."""
         l = max(-1.0, min(1.0, predkosc + skret))
         r = max(-1.0, min(1.0, predkosc - skret))
-        self.ustaw(l, r, maks)
+        self.ustaw(l, r, maks, liniowo)
 
-    def ustaw(self, lewy, prawy, maks=None):
+    def ustaw(self, lewy, prawy, maks=None, liniowo=False):
         k = self.konf
         if k.get("zamien_strony"):
             lewy, prawy = prawy, lewy
         lewy = -lewy if k.get("odwroc_lewy") else lewy
         prawy = -prawy if k.get("odwroc_prawy") else prawy
         with self.lock:
-            self.lewy, self.prawy = self._moc(lewy, maks), self._moc(prawy, maks)
+            self.lewy, self.prawy = self._moc(lewy, maks, liniowo), self._moc(prawy, maks, liniowo)
             self._do = time.monotonic() + WAZNOSC
             self._zastosuj()
 
