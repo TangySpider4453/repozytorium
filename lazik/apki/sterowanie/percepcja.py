@@ -44,6 +44,7 @@ class Percepcja(threading.Thread):
         self.klatka, self.nr = None, 0
         self.obiekty, self.sektory = [], None
         self.fps = self.ms = 0.0
+        self.hailo_proc = 0.0           # część każdej sekundy, którą Hailo spędza na naszych sieciach
         self.temp_hailo = None
         self.blad = None
         self.stan_kamery = "wyłączona"
@@ -71,10 +72,11 @@ class Percepcja(threading.Thread):
             self.stan_kamery = "wyłączona"
 
     def run(self):
-        ostatni, okno, n, t_temp = -1, time.monotonic(), 0, 0.0
+        ostatni, okno, n, t_temp, zajety = -1, time.monotonic(), 0, 0.0, 0.0
         while True:
             if time.monotonic() - self._uzycie > 10:
                 self._kamera(False)
+                self.fps = self.hailo_proc = 0.0
                 time.sleep(0.2)
                 continue
             self._kamera(True)
@@ -113,8 +115,10 @@ class Percepcja(threading.Thread):
             n += 1
             teraz = time.monotonic()
             self.ms = 1000 * (teraz - t0)
+            zajety += teraz - t0
             if teraz - okno >= 1:
-                self.fps, okno, n = n / (teraz - okno), teraz, 0
+                self.hailo_proc = min(100.0, 100 * zajety / (teraz - okno))
+                self.fps, okno, n, zajety = n / (teraz - okno), teraz, 0, 0.0
             if teraz - t_temp > 2 and self.hailo_wczytane():
                 t_temp = teraz
                 try:

@@ -42,6 +42,23 @@ naped = Naped(KONF)
 percepcja = Percepcja()
 sterownik = Sterownik(naped, percepcja, KONF)
 system = System()
+czujnik = {"dane": None, "blad": None}
+
+
+def czytaj_czujnik():
+    """BME280 co 2 s (temperatura, wilgotność, ciśnienie) do stałego panelu na stronie."""
+    try:
+        from bme280 import BME280
+        c = BME280()
+    except Exception as e:
+        czujnik["blad"] = f"czujnik BME280 niedostępny: {e}"
+        return
+    while True:
+        try:
+            czujnik["dane"], czujnik["blad"] = c.odczyt(), None
+        except Exception as e:
+            czujnik["blad"] = f"błąd odczytu BME280: {e}"
+        time.sleep(2)
 puls = {"czas": time.monotonic()}  # ostatni puls ze strony (start usługi liczy się jak puls)
 analiza = {"watek": None}
 app = Flask(__name__)
@@ -108,7 +125,8 @@ def stan():
         do_sledzenia=DO_SLEDZENIA, naped=[round(naped.lewy, 2), round(naped.prawy, 2)], blad_napedu=naped.blad,
         blad_wizji=percepcja.blad, kamera=percepcja.stan_kamery, fps=round(percepcja.fps, 1), ms=round(percepcja.ms),
         cpu=round(system.cpu), temp_cpu=system.temp, temp_hailo=percepcja.temp_hailo, ram=round(system.ram_proc),
-        zasilanie=system.zasilanie, maks_moc=KONF["maks_moc"], nagrywanie=sterownik.nagrywanie.klatki if
+        zasilanie=system.zasilanie, hailo_proc=round(percepcja.hailo_proc), czujnik=czujnik["dane"],
+        blad_czujnika=czujnik["blad"], ram_gb=[round(system.ram_uzyte, 1), round(system.ram_razem, 1)], maks_moc=KONF["maks_moc"], nagrywanie=sterownik.nagrywanie.klatki if
         sterownik.nagrywanie.aktywne else None, wyprawa=os.path.basename(sterownik.ostatnia_wyprawa or "") or None,
         analiza=st_an, zdjecia=zdjecia, liczba_zdjec=sterownik.liczba_zdjec)
 
@@ -214,6 +232,7 @@ def straznik():
 if __name__ == "__main__":
     kod_dostepu()
     percepcja.start()
+    threading.Thread(target=czytaj_czujnik, daemon=True).start()
     sterownik.start()
     threading.Thread(target=straznik, daemon=True).start()
     app.run(host="0.0.0.0", port=KONF["port"], threaded=True)
