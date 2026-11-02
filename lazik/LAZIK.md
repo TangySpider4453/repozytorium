@@ -144,6 +144,13 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   **2026-11-02: silniki nie ruszyły w teście** (impulsy 0,4–0,8 s, 50–70%, kamera bez zmiany). Do sprawdzenia: zasilanie
   silników, połączenia, typ płytki. Piny kierunku jako wejścia czytały stan wysoki: płytka podciąga wejścia (do jakiego
   napięcia? jeśli 5 V, to ryzyko dla GPIO 3,3 V).
+- **Ustawienia (⚙, `ustawienia.py`)**: zakładki Kamera (rozdzielczość, kl/s, stała liczba klatek, obrót 180°, lustro + wszystkie
+  regulacje kamery z `v4l2-ctl`, zapamiętywane w `kamera_v4l2` i nakładane przy otwarciu), Wizja i Hailo (model YOLOv8s/m/x,
+  próg, głębia zawsze, podgląd obraz+głębia, limit kl/s, jakość i szerokość podglądu, zwalnianie Hailo), Napęd, Tryby,
+  Bezpieczeństwo (STOP bez strony, STOP trybów powyżej temperatury), System (restart usługi). Pola opisane w `POLA`
+  (zakres, podpis, podpowiedź); strona buduje z nich formularze, serwer sprawdza wartości. „Przywróć domyślne” na zakładkę.
+- Strona skaluje się: czcionka `clamp`, obraz dopasowany do wysokości ekranu, telefon w poziomie (panel obok obrazu),
+  kokpit z przyciskami rosnącymi z ekranem. Sprawdzone zrzutami 360×740, 740×360, 1024×600, 1920×1080 (bez przewijania w bok).
 - BME280 na I2C 0x76 działa (`bme280.py`, I2C włączone 2026-11-02): 22,2 °C, 1020,9 hPa, 97,8 % (wilgotność do sprawdzenia).
 
 ## Stan

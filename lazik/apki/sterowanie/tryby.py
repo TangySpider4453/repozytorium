@@ -192,7 +192,7 @@ class Sterownik(threading.Thread):
             blisko, _ = self._przeszkoda(obiekty, sektory)
             self._manewr("ucieczka", 1.0, 0.0 if blisko else 0.4, 0.9 * kier)
             return
-        if teraz - self._t_rozgladania > 8:  # co jakiś czas rozejrzyj się, bo kamera widzi tylko przed siebie
+        if teraz - self._t_rozgladania > self.konf.get("rozgladanie_co_s", 8):  # co jakiś czas rozejrzyj się, bo kamera widzi tylko przed siebie
             self._t_rozgladania = teraz
             self.opis = "Czuwam: obracam się, żeby rozejrzeć się dookoła."
             self._manewr("rozgladanie", 0.7, 0.0, random.choice((-0.7, 0.7)))
@@ -203,7 +203,7 @@ class Sterownik(threading.Thread):
 
     # --- zwiedzaj ---
     def _zwiedzaj(self, klatka, obiekty, sektory):
-        self._wedruj(obiekty, sektory)
+        self._wedruj(obiekty, sektory, self.konf.get("predkosc_zwiedzania", 0.55))
         if self._akcja is None:
             self.opis = f"Zwiedzam i nagrywam do skanu 3D ({self.nagrywanie.klatki} klatek)."
 
@@ -211,7 +211,7 @@ class Sterownik(threading.Thread):
     def _fotograf(self, klatka, obiekty, sektory):
         teraz = time.monotonic()
         kandydaci = [o for o in obiekty if o["pew"] > 0.55 and o["klasa"] not in NUDNE
-                     and teraz - self.zdjecia_klas.get(o["klasa"], -1e9) > 180]
+                     and teraz - self.zdjecia_klas.get(o["klasa"], -1e9) > self.konf.get("fotograf_co_ile_s", 180)]
         if not kandydaci:
             self._wedruj(obiekty, sektory, 0.45)
             if self._akcja is None:

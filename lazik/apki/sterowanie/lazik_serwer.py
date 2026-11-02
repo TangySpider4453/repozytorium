@@ -23,11 +23,12 @@ sys.path.insert(0, KATALOG)
 from naped import Naped  # noqa: E402
 from percepcja import Percepcja, P  # noqa: E402
 from tryby import DO_SLEDZENIA, TRYBY, Sterownik  # noqa: E402
-from wizja import KLASY, ZDJECIA, System  # noqa: E402
+import ustawienia as U  # noqa: E402
+from wizja import ZDJECIA, System  # noqa: E402
 
 PLIK_KONF = os.path.join(KATALOG, "konfiguracja.json")
 PLIK_KODU = os.path.join(KATALOG, "kod_dostepu.txt")
-KONF = json.load(open(PLIK_KONF, encoding="utf-8"))
+KONF = U.wczytaj(PLIK_KONF)
 
 
 def kod_dostepu():
@@ -39,7 +40,7 @@ def kod_dostepu():
 
 
 naped = Naped(KONF)
-percepcja = Percepcja()
+percepcja = Percepcja(KONF)
 sterownik = Sterownik(naped, percepcja, KONF)
 system = System()
 czujnik = {"dane": None, "blad": None}
@@ -94,12 +95,15 @@ def strumien():
         ostatni = -1
         while True:
             percepcja.potrzebna()
-            klatka, nr, _, _ = percepcja.najnowsze()
+            klatka, nr = percepcja.do_podgladu()
             if klatka is None or nr == ostatni:
                 time.sleep(0.03)
                 continue
             ostatni = nr
-            ok, jpg = cv2.imencode(".jpg", klatka, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            szer = int(KONF["szer_strumienia"]) * (2 if KONF["strumien_glebia"] else 1)
+            if klatka.shape[1] > szer:
+                klatka = cv2.resize(klatka, (szer, int(klatka.shape[0] * szer / klatka.shape[1])), interpolation=cv2.INTER_AREA)
+            ok, jpg = cv2.imencode(".jpg", klatka, [cv2.IMWRITE_JPEG_QUALITY, int(KONF["jakosc_strumienia"])])
             if ok:
                 yield b"--klatka\r\nContent-Type: image/jpeg\r\n\r\n" + jpg.tobytes() + b"\r\n"
     return Response(generuj(), mimetype="multipart/x-mixed-replace; boundary=klatka")
@@ -128,7 +132,8 @@ def stan():
         zasilanie=system.zasilanie, hailo_proc=round(percepcja.hailo_proc), czujnik=czujnik["dane"],
         blad_czujnika=czujnik["blad"], ram_gb=[round(system.ram_uzyte, 1), round(system.ram_razem, 1)], maks_moc=KONF["maks_moc"], nagrywanie=sterownik.nagrywanie.klatki if
         sterownik.nagrywanie.aktywne else None, wyprawa=os.path.basename(sterownik.ostatnia_wyprawa or "") or None,
-        analiza=st_an, zdjecia=zdjecia, liczba_zdjec=sterownik.liczba_zdjec)
+        analiza=st_an, zdjecia=zdjecia, liczba_zdjec=sterownik.liczba_zdjec, model=percepcja.nazwa_modelu,
+        proporcje=2 * 4 / 3 if KONF["strumien_glebia"] else 4 / 3)
 
 
 @app.post("/api/puls")
@@ -161,22 +166,82 @@ def api_cel():
     return jsonify(ok=True)
 
 
+@app.get("/api/schemat")
+def api_schemat():
+    return jsonify(pola=U.schemat(), wartosci={k: KONF.get(k) for k in U.DOMYSLNE if k not in ("piny", "kamera_v4l2")})
+
+
 @app.post("/api/ustawienia")
 def api_ustawienia():
+    """Zapis dowolnych pól z opisu ustawień (sprawdzone zakresy). Zmiany kamery otwierają ją ponownie."""
     d = request.get_json(force=True)
-    for k in ("maks_moc", "min_moc", "prog_przeszkody", "sledzenie_wysokosc"):
-        if k in d:
-            KONF[k] = max(0.0, min(1.0, float(d[k])))
-    for k in ("odwroc_lewy", "odwroc_prawy", "zamien_strony"):
-        if k in d:
-            KONF[k] = bool(d[k])
-    json.dump(KONF, open(PLIK_KONF, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    return jsonify(ok=True, konf=KONF)
+    bledy = {}
+    for k, v in d.items():
+        try:
+            KONF[k] = U.sprawdz(k, v)
+        except ValueError as e:
+            bledy[k] = str(e)
+    if {"kamera_rozdzielczosc", "kamera_fps", "kamera_stale_kl_s"} & set(d):
+        percepcja.ponownie_kamera()
+    U.zapisz(PLIK_KONF, KONF)
+    return jsonify(ok=not bledy, bledy=bledy, konf=KONF)
+
+
+@app.post("/api/ustawienia/domyslne")
+def api_domyslne():
+    zakladka = request.get_json(force=True).get("zakladka")
+    for p in U.schemat():
+        if p["zakladka"] == zakladka:
+            KONF[p["klucz"]] = p["domyslnie"]
+    if zakladka == "Kamera":
+        KONF["kamera_v4l2"] = {}
+        urz = percepcja.kamera.urzadzenie if percepcja.kamera else None
+        for c in (U.kontrolki_kamery(urz) if urz else []):
+            try:
+                U.ustaw_kontrolke(urz, c["nazwa"], c["domyslnie"])
+            except ValueError:
+                pass
+        percepcja.ponownie_kamera()
+    U.zapisz(PLIK_KONF, KONF)
+    return jsonify(ok=True)
 
 
 @app.get("/api/konf")
 def api_konf():
     return jsonify(KONF)
+
+
+@app.get("/api/kamera/kontrolki")
+def api_kontrolki():
+    percepcja.potrzebna()
+    urz = percepcja.kamera.urzadzenie if percepcja.kamera else None
+    lista = U.kontrolki_kamery(urz) if urz else []
+    for c in lista:
+        c["podpis"] = U.PODPISY_KAMERY.get(c["nazwa"], c["nazwa"].replace("_", " "))
+    return jsonify(urzadzenie=urz, kontrolki=lista)
+
+
+@app.post("/api/kamera/kontrolki")
+def api_kontrolka():
+    d = request.get_json(force=True)
+    urz = percepcja.kamera.urzadzenie if percepcja.kamera else None
+    if not urz:
+        return jsonify(ok=False, blad="kamera wyłączona"), 400
+    try:
+        U.ustaw_kontrolke(urz, d["nazwa"], d["wartosc"])
+    except (ValueError, KeyError) as e:
+        return jsonify(ok=False, blad=str(e)), 400
+    KONF.setdefault("kamera_v4l2", {})[d["nazwa"]] = int(d["wartosc"])  # zapamiętane i nakładane przy otwarciu kamery
+    U.zapisz(PLIK_KONF, KONF)
+    return jsonify(ok=True)
+
+
+@app.post("/api/restart")
+def api_restart():
+    """Restart usługi (systemd uruchamia ją od nowa); łazik staje."""
+    naped.stop()
+    threading.Timer(0.5, lambda: os._exit(0)).start()
+    return jsonify(ok=True)
 
 
 @app.post("/api/skan")
@@ -216,6 +281,10 @@ def straznik():
         if time.monotonic() - t_stat >= 1:
             system.odswiez()
             t_stat = time.monotonic()
+        temp = max(system.temp or 0, percepcja.temp_hailo or 0)
+        if sterownik.tryb not in ("stop", "reczny") and temp > KONF["maks_temp"]:
+            sterownik.ustaw_tryb("stop")
+            sterownik.opis = f"Za gorąco ({temp:.0f} °C > {KONF['maks_temp']} °C): STOP trybu, żeby układy ostygły."
         cisza = time.monotonic() - puls["czas"]
         bezczynnosc = time.monotonic() - max(puls["czas"], percepcja._uzycie)  # także podgląd i odczyty stanu
         if sterownik.tryb != "stop" and cisza > KONF["stop_bez_strony_s"]:
