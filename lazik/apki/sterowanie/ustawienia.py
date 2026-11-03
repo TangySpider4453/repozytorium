@@ -93,6 +93,13 @@ POLA = [
     ("fotograf_co_ile_s", "Tryby", "suwak", 180, (30, 900, 30), "Fotograf: ten sam rodzaj co [s]", ""),
     ("rozgladanie_co_s", "Tryby", "suwak", 8, (3, 60, 1), "Przetrwaj: rozglądanie co [s]", ""),
 
+    ("wyswietlacz", "Wyświetlacz", "tak_nie", True, None, "Wyświetlacz stanu na I2C",
+     "OLED 128×64 (SSD1306/SH1106, 0x3C) albo LCD 16×2/20×4 z modułem I2C (0x27/0x3F). Wykrywany sam co 5 s."),
+    ("wyswietlacz_typ", "Wyświetlacz", "wybor", "ssd1306", [("ssd1306", "OLED SSD1306 (0,96\")"), ("sh1106", "OLED SH1106 (1,3\")")],
+     "Układ OLED", "Gdy obraz jest przesunięty albo na brzegu są śmieci, wybierz drugi."),
+    ("wyswietlacz_obrot", "Wyświetlacz", "wybor", 0, [(0, "normalnie"), (180, "obrócony o 180°")], "Obrót", ""),
+    ("wyswietlacz_jasnosc", "Wyświetlacz", "suwak", 128, (1, 255, 1), "Jasność OLED", "Niższa = mniej się wypala i mniej prądu."),
+    ("wyswietlacz_lcd_kolumny", "Wyświetlacz", "wybor", 16, [(16, "16×2"), (20, "20×4")], "Rozmiar LCD", ""),
     ("stop_bez_strony_s", "Bezpieczeństwo", "suwak", 3, (1, 15, 1), "STOP bez strony po [s]",
      "Gdy strona przestanie się odzywać (zamknięta, utracone WiFi), łazik staje."),
     ("maks_temp", "Bezpieczeństwo", "suwak", 82, (60, 90, 1), "STOP trybów przy temperaturze [°C]",

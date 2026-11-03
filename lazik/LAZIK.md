@@ -189,6 +189,14 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   *Na obrazie*: Ramki, Podpisy (wyłączone = same ramki), Przeszkody (kreski z cm), Horyzont (domyślnie wyłączony),
   Napisy (telemetria: tylko pełny ekran / każdy widok / wyłączone; zakładka ⚙ Nakładki). Zaznaczony obiekt i cel
   śledzenia są widoczne zawsze. Napisy mają temperatury w kolorach (CPU, Hailo, otoczenie z BME280) i obciążenie.
+- **Wyświetlacz stanu na I2C** (`wyswietlacz.py`, od 2026-11-03): wykrywany sam co 5 s. OLED 128×64 SSD1306/SH1106
+  (0x3C/0x3D, Pillow) albo LCD 16×2/20×4 z PCF8574 (0x27/0x3F). Tytuł „✓ WSZYSTKO OK” z Wi-Fi (sygnał, sieć), Tailscale,
+  temperaturami, trybem i kursem albo „⚠ PROBLEMY: n” z listą (Wi-Fi, Tailscale, kamera, Hailo/wizja, silniki, BME280,
+  żyroskop, zasilanie, temperatury ≥ 80 °C, mało miejsca); mrugający punkt = program działa. Ta sama lista jest w panelu
+  stanu na stronie (`/api/stan.problemy`). Zakładka ⚙ Wyświetlacz (typ OLED, obrót, jasność, rozmiar LCD).
+  **2026-11-03: wyświetlacz nie odpowiada na I2C**, a od jego podłączenia magistrala gubi transmisje (0x68 odpowiadał
+  raz 50/50, raz 1/30; zapisy do MPU6050 odrzucane). Typowa przyczyna: wyświetlacz bez zasilania albo z zamienionym
+  VCC/GND, podpięty do SDA/SCL, obciąża linie. Żyroskop jest wykrywany ponownie co 10 s, a zapisy są ponawiane.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -203,6 +211,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Wyświetlacz stanu I2C (OLED/LCD, wykrywany sam), lista problemów na stronie; żyroskop ponawia wykrywanie. Magistrala I2C niestabilna od podłączenia wyświetlacza. |
 | 2026-11-03 | Przeszkody od nowa (koniec podłogi z głębi w cm, obiekty, czas do zderzenia, uderzenie, utknięcie; omijanie z obrotem o kąt żyroskopem). Pełny ekran z przezroczystym panelem z boku. |
 | 2026-11-03 | Podgląd bez MJPEG (Safari/iPad gubił obraz), sam wraca po zerwaniu; etykiety bez nakładania. |
 | 2026-11-03 | Żyroskop MPU6050 w sterowaniu: kurs, trzymanie toru (PID), STOP przy przewróceniu, Y na padzie = zeruj. |

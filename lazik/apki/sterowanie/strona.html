@@ -154,6 +154,9 @@
   .czujnik b { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
   .czujnik small { color:var(--szary); font-size:11px; }
   .przypnij { min-height:30px; font-size:12px; }
+  .zdrowie { grid-column:1 / -1; font-size:13px; border-radius:8px; padding:6px 8px; background:var(--panel2); }
+  .zdrowie b.ok { color:var(--ok); } .zdrowie b.zle { color:var(--zle); }
+  .zdrowie ul { margin:4px 0 0; padding-left:18px; } .zdrowie small { color:var(--szary); }
   .zyro { grid-column:1 / -1; display:flex; align-items:center; gap:12px; font-size:13px; }
   .tarcza { width:54px; height:54px; flex:none; }
   .tarcza circle { fill:var(--panel2); stroke:var(--linia); stroke-width:2; }
@@ -261,6 +264,7 @@
     <div class="wiersz"><div class="g"><span>Kamera / wizja</span><span id="s_kl">—</span></div></div>
     <div class="wiersz"><div class="g"><span>Silniki L / P</span><span id="s_nap">—</span></div></div>
     <div class="wiersz"><div class="g"><span>Pad (X = tryb mocy)</span><span id="s_pad">—</span></div></div>
+    <div class="zdrowie" id="zdrowie"></div>
     <div class="maly">Żyroskop (kurs względny: 0° = kierunek przy starcie albo po „Zeruj”)</div>
     <div class="zyro">
       <svg class="tarcza" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="27" r="25"/><text x="27" y="10">0</text>
@@ -771,6 +775,9 @@ function panelStanu() {
   $('#c_h').textContent = c && c.wilgotnosc != null ? Math.round(c.wilgotnosc) : '—';
   $('#c_p').textContent = c && c.cisnienie ? Math.round(c.cisnienie) : '—';
   $('#c_blad').textContent = S.blad_czujnika || '';
+  const pr = S.problemy, esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  $('#zdrowie').innerHTML = (pr == null ? '' : pr.length ? `<b class="zle">⚠ Problemy: ${pr.length}</b><ul>${pr.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`
+    : '<b class="ok">✓ Wszystko działa</b>') + ` <small>· wyświetlacz I2C: ${S.wyswietlacz ? esc(S.wyswietlacz) : 'nie wykryto'}</small>`;
   const z = S.zyroskop;
   $('#z_kurs').textContent = z ? `${Math.round(z.kurs)}°` : '—';
   $('#z_obr').textContent = z ? `${Math.round(z.obrot)} °/s` : '—';
@@ -781,7 +788,7 @@ function panelStanu() {
   $('#z_blad').textContent = S.blad_zyroskopu || (z && z.stan !== 'gotowy' ? z.stan : '');
   if (z) $('#z_igla').style.transform = `rotate(${z.kurs}deg)`;
   const najg = Math.max(S.temp_cpu || 0, S.temp_hailo || 0);
-  $('#uchwyt_t').textContent = najg ? Math.round(najg) + '°' : '';
+  $('#uchwyt_t').textContent = (S.problemy && S.problemy.length ? '⚠ ' : '') + (najg ? Math.round(najg) + '°' : '');
   $('#uchwyt_t').style.color = kolTemp(najg, 70, 80) || 'var(--akcent)';
 }
 

@@ -47,16 +47,44 @@ czujnik = {"dane": None, "blad": None}
 zyro = {"imu": None, "blad": None}
 
 
-def wlacz_zyroskop():
-    """MPU6050 na I2C: kurs względny, trzymanie toru w napędzie i STOP przy przewróceniu."""
+def stan_dla_wyswietlacza():
+    imu, c = zyro["imu"], czujnik["dane"]
+    return dict(kamera=percepcja.stan_kamery, blad_wizji=percepcja.blad, blad_napedu=naped.blad,
+                blad_czujnika=czujnik["blad"], blad_zyroskopu=zyro["blad"] or (imu.blad if imu else None),
+                zasilanie=system.zasilanie, temp_cpu=system.temp, temp_hailo=percepcja.temp_hailo,
+                otoczenie=c["temperatura"] if c else None, tryb=TRYBY[sterownik.tryb], fps=percepcja.fps,
+                kurs=imu.kurs if imu and imu.ok else None)
+
+
+wyswietlacz = None
+
+
+def wlacz_wyswietlacz():
+    global wyswietlacz
     try:
-        from zyroskop import Zyroskop
-        imu = Zyroskop(KONF, spoczynek=naped.spoczynek)
+        from wyswietlacz import Wyswietlacz
+        wyswietlacz = Wyswietlacz(KONF, stan_dla_wyswietlacza)
+        wyswietlacz.start()
     except Exception as e:
-        zyro["blad"] = f"żyroskop niedostępny: {e}"
-        return
-    imu.start()
-    zyro["imu"] = naped.imu = imu
+        print(f"Wyświetlacz niedostępny: {e}", flush=True)
+
+
+def wlacz_zyroskop():
+    """MPU6050 na I2C: kurs względny, trzymanie toru w napędzie i STOP przy przewróceniu.
+    Gdy nie odpowiada (np. tuż po starcie albo luźny przewód), próbujemy ponownie co 10 s."""
+    def proby():
+        from zyroskop import Zyroskop
+        while zyro["imu"] is None:
+            try:
+                imu = Zyroskop(KONF, spoczynek=naped.spoczynek)
+            except Exception as e:
+                zyro["blad"] = f"żyroskop niedostępny: {e}"
+                time.sleep(10)
+                continue
+            imu.start()
+            zyro["imu"], zyro["blad"] = imu, None
+            naped.imu = imu
+    threading.Thread(target=proby, daemon=True).start()
 
 
 def czytaj_czujnik():
@@ -173,6 +201,7 @@ def stan():
         trzymaj_tor=bool(KONF.get("trzymaj_tor")), trzyma_tor=naped.trzyma_tor, korekta=round(naped.korekta, 2),
         maks_przechyl=KONF["maks_przechyl"], podstawy=percepcja.podstawy, horyzont=KONF["horyzont"],
         ocena=sterownik.ocena if sterownik.tryb not in ("stop", "reczny") else None,
+        wyswietlacz=wyswietlacz.nazwa if wyswietlacz else None, problemy=wyswietlacz.problemy if wyswietlacz else None,
         wizja=dict(percepcja.analiza, wymuszona=percepcja.potrzebna_glebia),
         wl={k: KONF[k] for k in ("analiza_obiekty", "glebia_zawsze", "nakladka_ramki", "nakladka_podpisy", "pokaz_przeszkody",
                                  "nakladka_horyzont", "nakladka_telemetria")},
@@ -371,6 +400,7 @@ if __name__ == "__main__":
     percepcja.start()
     threading.Thread(target=czytaj_czujnik, daemon=True).start()
     wlacz_zyroskop()
+    wlacz_wyswietlacz()
     sterownik.start()
     threading.Thread(target=straznik, daemon=True).start()
     app.run(host="0.0.0.0", port=KONF["port"], threaded=True)

@@ -45,24 +45,42 @@ class Zyroskop(threading.Thread):
         self._kalibruj = True
         self.bus = SMBus(magistrala)
         self.adres = None
-        for a in (0x68, 0x69):
-            try:
-                if self.bus.read_byte_data(a, 0x75) in (0x68, 0x70, 0x71, 0x73, 0x98):
-                    self.adres = a
-                    break
-            except OSError:
-                pass
+        for _ in range(5):
+            for a in (0x68, 0x69):
+                try:
+                    if self.bus.read_byte_data(a, 0x75) in (0x68, 0x70, 0x71, 0x73, 0x98):
+                        self.adres = a
+                        break
+                except OSError:
+                    pass
+            if self.adres is not None:
+                break
+            time.sleep(0.1)
         if self.adres is None:
             raise RuntimeError("brak MPU6050 na I2C (0x68/0x69)")
-        b, a = self.bus, self.adres
-        b.write_byte_data(a, 0x6B, 0x80)   # reset
+        self._zapisz(0x6B, 0x80)   # reset
+        time.sleep(0.15)
+        for rej, wart in ((0x6B, 0x01),   # wybudzenie, zegar z żyroskopu X (stabilniejszy)
+                          (0x1A, 0x03),   # filtr dolnoprzepustowy ~44 Hz (drgania silników)
+                          (0x19, 0x09),   # próbkowanie 100 Hz
+                          (0x1B, 0x00),   # żyroskop ±250 °/s
+                          (0x1C, 0x00)):  # akcelerometr ±2 g
+            self._zapisz(rej, wart)
         time.sleep(0.1)
-        b.write_byte_data(a, 0x6B, 0x01)   # wybudzenie, zegar z żyroskopu X (stabilniejszy)
-        b.write_byte_data(a, 0x1A, 0x03)   # filtr dolnoprzepustowy ~44 Hz (drgania silników)
-        b.write_byte_data(a, 0x19, 0x09)   # próbkowanie 100 Hz
-        b.write_byte_data(a, 0x1B, 0x00)   # żyroskop ±250 °/s
-        b.write_byte_data(a, 0x1C, 0x00)   # akcelerometr ±2 g
-        time.sleep(0.1)
+
+    def _zapisz(self, rej, wart, proby=10):
+        """Zapis z ponawianiem: przy słabszych połączeniach I2C pojedyncze zapisy bywają odrzucane (Errno 121)."""
+        for i in range(proby):
+            try:
+                self.bus.write_byte_data(self.adres, rej, wart)
+                if rej == 0x6B and wart & 0x80:
+                    return  # po resecie układ chwilę nie odpowiada, odczytu nie sprawdzamy
+                if self.bus.read_byte_data(self.adres, rej) == wart:
+                    return
+            except OSError:
+                pass
+            time.sleep(0.03 * (i + 1))
+        raise OSError(f"MPU6050 nie przyjmuje zapisu rejestru 0x{rej:02X} (sprawdź przewody SDA/SCL i zasilanie)")
 
     @property
     def kurs(self):
