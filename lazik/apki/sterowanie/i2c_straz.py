@@ -45,12 +45,12 @@ class StrazI2C(threading.Thread):
     def run(self):
         nisko = 0
         while True:
-            time.sleep(0.5)
+            time.sleep(0.2)
             try:
                 nisko = nisko + 1 if sda_nisko() else 0
             except Exception:
                 continue
-            if nisko >= 3:    # 1,5 s bez przerwy: to nie zwykła transmisja, tylko zawieszona magistrala
+            if nisko >= 3:    # 0,6 s bez przerwy: to nie zwykła transmisja, tylko zawieszona magistrala
                 ok = odblokuj()
                 self.odblokowania += 1
                 self.ostatnie = time.strftime("%H:%M:%S")

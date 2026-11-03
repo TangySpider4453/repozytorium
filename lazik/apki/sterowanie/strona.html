@@ -546,7 +546,8 @@ let poprzB = false, poprzStart = false, poprzX = false, poprzY = false;
 const spust = { lt: 0, rt: 0, plynne: false };
 function odczytSpustow(gp) {
   // standardowe mapowanie: przyciski 6/7 z wartością 0..1; inne przeglądarki: osie 2/5 w zakresie -1..1
-  let lt = gp.buttons[6] ? gp.buttons[6].value : 0, rt = gp.buttons[7] ? gp.buttons[7].value : 0;
+  const wart = b => !b ? 0 : (b.value > 0 ? b.value : b.pressed ? 1 : 0);   // część przeglądarek daje tylko „pressed”
+  let lt = wart(gp.buttons[6]), rt = wart(gp.buttons[7]);
   if (gp.mapping !== 'standard' && gp.axes.length >= 6) {
     lt = Math.max(lt, (gp.axes[2] + 1) / 2); rt = Math.max(rt, (gp.axes[5] + 1) / 2);
   }
@@ -580,7 +581,7 @@ function petlaPada() {
     // zapas na krzywy palec: gałka do ~10° od pionu (przód albo tył) = jazda prosto, tor trzyma żyroskop
     const katZapasu = Math.tan(((S && S.galka_kat != null) ? S.galka_kat : 10) * Math.PI / 180);
     if (gy && sx && Math.abs(sx) <= Math.abs(gy) * katZapasu) sx = 0;
-    if (spustyWcisniete && Math.abs(sx) < 0.15) sx = 0;   // jazda spustami: drobne drgnięcie gałki to nie skręt
+    if (spustyWcisniete && Math.abs(sx) < 0.25) sx = 0;   // jazda spustami: drobne drgnięcie gałki to nie skręt
     pad.pelna = trybMocy !== 'ustawienia' || spustyWcisniete;
     pad.liniowo = spustyWcisniete || trybMocy === 'spusty' || trybMocy === 'gałka';  // moc dokładnie proporcjonalna od zera
     if (v || sx) {
@@ -849,7 +850,21 @@ async function odswiez() {
   }
 }
 setInterval(odswiez, 250);
-setInterval(() => api('api/puls').catch(() => {}), 1000);
+// puls co 1 s; przy podłączonym padzie dołączamy, co przeglądarka z niego widzi (zdalna diagnoza spustów)
+setInterval(() => {
+  const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(g => g && g.connected);
+  const p = gp ? { id: gp.id, mapping: gp.mapping, osie: gp.axes.map(a => +a.toFixed(2)),
+    przyciski: gp.buttons.map(b => +(b.value || (b.pressed ? 1 : 0)).toFixed(2)), tryb_mocy: trybMocy, spust } : null;
+  api('api/puls', p ? { pad: p } : {}).catch(() => {});
+}, 1000);
+// nowa wersja strony na łaziku: przeładuj sama, gdy nikt akurat nie jedzie (Safari potrafi trzymać starą wersję godzinami)
+let mojaWersja = null;
+setInterval(() => {
+  if (!S || S.wersja == null) return;
+  if (mojaWersja === null) { mojaWersja = S.wersja; return; }
+  const ktosJedzie = pad.aktywny || wcisniete.size || dotyk.gaz || dotyk.skret || performance.now() - pad.czas < 1500;
+  if (S.wersja !== mojaWersja && !ktosJedzie) location.reload();
+}, 1000);
 api('api/puls'); odswiez();
 </script>
 </body>

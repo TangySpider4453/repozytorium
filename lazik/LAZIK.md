@@ -228,6 +228,13 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   (`tor_powrot_st_na_m` = 80°/m, najwyżej 25°, do tyłu skręt odwrotny). Kierunek jest przywracany przy obrocie do 150°
   (było 60°). Symulacja: wybój spycha koło przez 1,2 s; do przodu bez powrotu łazik kończy 11 cm obok linii, z powrotem
   −1 cm. Szacunek jest zgrubny: przesunięcia w bok bez obrotu (poślizg całego łazika) nie widać bez enkoderów.
+- **2026-11-03, po jeździe: iPad miał starą stronę.** Przez 30 min ani jednego wejścia na `/`, ~70 poleceń/s, czyli
+  Safari trzymało wersję sprzed poprawek (bez zapasu gałki, spusty tylko w trybie „spusty”). Teraz `/api/stan.wersja`
+  (czas zmiany `strona.html`) i strona przeładowuje się sama, gdy wersja się zmieni, a nikt nie jedzie (sprawdzone).
+  Puls wysyła, co przeglądarka widzi z pada (`GET /api/pad`: id, mapowanie, osie, przyciski) do zdalnej diagnozy;
+  spust z samym `pressed` bez wartości liczy się jako 100%. Podczas jazdy I2C zawisło 3× w minutę (zakłócenia od silników):
+  strażnik reaguje po 0,6 s (było 1,5 s). Zapas gałki 20° (było 10°), korekta toru mocniejsza (P 0,05, D 0,006,
+  maks. 0,5); symulacja: szturchnięcie o 20° → z powrotem w 0,3 s, przestrzał 2,8°.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -242,6 +249,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Strona sama się przeładowuje po aktualizacji (iPad miał starą wersję), diagnoza pada zdalnie, zapas gałki 20°, mocniejsza korekta, szybszy strażnik I2C. |
 | 2026-11-03 | Powrót na linię toru po wyboju (szacunek zejścia w bok z żyroskopu i mocy). |
 | 2026-11-03 | Gałka: 10° zapasu do jazdy prosto; skręt ze stałą prędkością obrotu (regulator na żyroskopie); bezpiecznik odwróconego żyroskopu. |
 | 2026-11-03 | Strażnik I2C (samo odblokowanie zawieszonej magistrali), pad bez zalewania poleceniami (~10/s zamiast ~70/s), spusty w każdym trybie mocy. |
