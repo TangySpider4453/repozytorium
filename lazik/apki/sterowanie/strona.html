@@ -484,21 +484,30 @@ function aktualizujDynamiczne() {
 // ---------- jazda ręczna: przyciski (wielodotyk), klawiatura, pad ----------
 const dotyk = { gaz: 0, skret: 0 };
 const wcisniete = new Set();
-const pad = { v: 0, s: 0, czas: 0, nazwa: '' };
-let wysylanie = null, ostatniRuch = '0,0';
+const pad = { v: 0, s: 0, czas: 0, nazwa: '', aktywny: false };
+let wysylanie = null, ostatniRuch = '0,0', wToku = false, czekajace = false, tOstatni = 0;
 function ruch() {
   if (performance.now() - pad.czas < 300) return { v: pad.v, s: pad.s, pelna: !!pad.pelna, liniowo: !!pad.liniowo };
   let v = dotyk.gaz, s = dotyk.skret;
   for (const k of wcisniete) { v += klawisze[k][0]; s += klawisze[k][1]; }
   return { v: Math.max(-1, Math.min(1, v)), s: Math.max(-1, Math.min(1, s)), pelna: false };
 }
-function wyslij() {
+// Najwyżej jedno polecenie w drodze naraz i nie częściej niż co 50 ms (wcześniej pad wysyłał ~70/s i polecenia
+// stały w kolejce przez Wi-Fi/Tailscale = zacinanie). Co 120 ms odświeżenie, bo łazik bez polecenia staje po 0,6 s.
+function wyslij(odswiez) {
   const r = ruch(), k = r.v.toFixed(2) + ',' + r.s.toFixed(2);
-  if (S && S.tryb === 'reczny') api('api/reczny', r);
-  if (k === '0.00,0.00' && ostatniRuch === k) { clearInterval(wysylanie); wysylanie = null; }
+  const stop = k === '0.00,0.00';
+  if (!odswiez && k === ostatniRuch && performance.now() - tOstatni < 120) return;
+  if (wToku && !stop) { czekajace = true; return; }
+  if (!stop && performance.now() - tOstatni < 50) { czekajace = true; return; }
+  if (S && S.tryb === 'reczny') {
+    wToku = true; tOstatni = performance.now();
+    api('api/reczny', r).catch(() => {}).finally(() => { wToku = false; if (czekajace) { czekajace = false; wyslij(true); } });
+  }
+  if (stop && ostatniRuch === k) { clearInterval(wysylanie); wysylanie = null; }
   ostatniRuch = k;
 }
-function zmiana() { wyslij(); if (!wysylanie) wysylanie = setInterval(wyslij, 120); }
+function zmiana() { wyslij(); if (!wysylanie) wysylanie = setInterval(() => wyslij(true), 120); }
 function skoncz() { dotyk.gaz = dotyk.skret = 0; wcisniete.clear(); pad.czas = 0; zmiana(); }
 document.querySelectorAll('.kokpit-l button, .kokpit-p button').forEach(b => {
   const gaz = b.dataset.gaz !== undefined ? +b.dataset.gaz : null, skret = b.dataset.skret !== undefined ? +b.dataset.skret : null;
@@ -564,14 +573,18 @@ function petlaPada() {
       pamiec.set('lazik_moc', trybMocy); pokazTrybMocy();
     }
     poprzB = b; poprzStart = st; poprzX = x; poprzY = y;
-    let v = gy;
-    if (trybMocy === 'spusty') v = Math.max(-1, Math.min(1, (spust.rt < 0.03 ? 0 : spust.rt) - (spust.lt < 0.03 ? 0 : spust.lt)));
-    pad.pelna = trybMocy !== 'ustawienia';
-    pad.liniowo = trybMocy === 'spusty' || trybMocy === 'gałka';  // moc dokładnie proporcjonalna od zera
+    // spusty działają w każdym trybie mocy (RT przód, LT tył, liniowo od zera); gałka Y tylko, gdy spusty puszczone
+    const spV = Math.max(-1, Math.min(1, (spust.rt < 0.03 ? 0 : spust.rt) - (spust.lt < 0.03 ? 0 : spust.lt)));
+    const spustyWcisniete = spust.rt >= 0.03 || spust.lt >= 0.03;
+    let v = spustyWcisniete ? spV : trybMocy === 'spusty' ? 0 : gy;
+    pad.pelna = trybMocy !== 'ustawienia' || spustyWcisniete;
+    pad.liniowo = spustyWcisniete || trybMocy === 'spusty' || trybMocy === 'gałka';  // moc dokładnie proporcjonalna od zera
     if (v || sx) {
       if (S && S.tryb === 'reczny' && widok !== 'pelny') wejdzPelny();
-      pad.v = v; pad.s = sx; pad.czas = performance.now(); zmiana();
-    } else if (performance.now() - pad.czas < 300) { pad.v = pad.s = 0; pad.czas = performance.now(); zmiana(); }
+      pad.v = v; pad.s = sx; pad.czas = performance.now(); pad.aktywny = true; zmiana();
+    } else if (pad.aktywny) {   // puszczone: jeden STOP (i odświeżanie aż do potwierdzenia), bez zalewania poleceniami
+      pad.v = pad.s = 0; pad.czas = performance.now(); pad.aktywny = false; zmiana();
+    }
     $('#sp_lt').style.width = Math.round(spust.lt * 100) + '%'; $('#sp_rt').style.width = Math.round(spust.rt * 100) + '%';
   } else pad.nazwa = '';
   requestAnimationFrame(petlaPada);
@@ -782,7 +795,8 @@ function panelStanu() {
   $('#c_blad').textContent = S.blad_czujnika || '';
   const pr = S.problemy, esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   $('#zdrowie').innerHTML = (pr == null ? '' : pr.length ? `<b class="zle">⚠ Problemy: ${pr.length}</b><ul>${pr.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`
-    : '<b class="ok">✓ Wszystko działa</b>') + ` <small>· wyświetlacz I2C: ${S.wyswietlacz ? esc(S.wyswietlacz) : 'nie wykryto'}</small>`;
+    : '<b class="ok">✓ Wszystko działa</b>') + ` <small>· wyświetlacz I2C: ${S.wyswietlacz ? esc(S.wyswietlacz) : 'nie wykryto'}` +
+    (S.i2c_odblokowania ? ` · magistrala I2C odblokowana ${S.i2c_odblokowania}× (ostatnio ${S.i2c_ostatnie})` : '') + '</small>';
   const z = S.zyroskop;
   $('#z_kurs').textContent = z ? `${Math.round(z.kurs)}°` : '—';
   $('#z_obr').textContent = z ? `${Math.round(z.obrot)} °/s` : '—';

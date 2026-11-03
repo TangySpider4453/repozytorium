@@ -57,6 +57,8 @@ def stan_dla_wyswietlacza():
 
 
 wyswietlacz = None
+from i2c_straz import StrazI2C  # noqa: E402
+straz_i2c = StrazI2C()
 
 
 def wlacz_wyswietlacz():
@@ -203,6 +205,7 @@ def stan():
         trzymaj_tor=bool(KONF.get("trzymaj_tor")), trzyma_tor=naped.trzyma_tor, korekta=round(naped.korekta, 2),
         maks_przechyl=KONF["maks_przechyl"], podstawy=percepcja.podstawy, horyzont=KONF["horyzont"],
         ocena=sterownik.ocena if sterownik.tryb not in ("stop", "reczny") else None,
+        i2c_odblokowania=straz_i2c.odblokowania, i2c_ostatnie=straz_i2c.ostatnie,
         wyswietlacz=wyswietlacz.nazwa if wyswietlacz else None, problemy=wyswietlacz.problemy if wyswietlacz else None,
         wizja=dict(percepcja.analiza, wymuszona=percepcja.potrzebna_glebia),
         wl={k: KONF[k] for k in ("analiza_obiekty", "glebia_zawsze", "nakladka_ramki", "nakladka_podpisy", "pokaz_przeszkody",
@@ -403,6 +406,7 @@ if __name__ == "__main__":
     threading.Thread(target=czytaj_czujnik, daemon=True).start()
     wlacz_zyroskop()
     wlacz_wyswietlacz()
+    straz_i2c.start()
     sterownik.start()
     threading.Thread(target=straznik, daemon=True).start()
     app.run(host="0.0.0.0", port=KONF["port"], threaded=True)

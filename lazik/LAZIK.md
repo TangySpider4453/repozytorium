@@ -206,6 +206,14 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   = 60 (wcześniej wysokość ramki 0,5 = kilka metrów przy kamerze na 10 cm). Skręt z martwą strefą 7%, przy celu mocno
   z boku najpierw obrót. Przerywana zielona ramka = cel prowadzi tracker.
 - **Wolniejsze obroty** we wszystkich trybach: `predkosc_obrotu` = 0,5 (było 0,6–0,9), przy końcu obrotu 75%.
+- **2026-11-03, naprawy po jeździe w terenie.** (1) Magistrala I2C zawisła (SDA na stałe nisko, Errno 5: żyroskop
+  i BME280 naraz), prawdopodobnie przy odłączaniu wyświetlacza albo przez luźny przewód. Nowy `i2c_straz.py`: gdy SDA jest
+  nisko przez 1,5 s, robi 9 impulsów SCL + STOP przez `pinctrl` i oddaje piny do I2C (a3). Sprawdzone: wymuszone SDA nisko
+  → po ~1,5 s odblokowane, żyroskop i BME280 działają dalej. Licznik odblokowań w panelu stanu. (2) **Zacinanie
+  sterowania**: strona wysyłała ~70 poleceń/s z pada (wysyłka w każdej klatce animacji) i po puszczeniu gałki STOP 60/s
+  bez końca. Teraz najwyżej jedno polecenie w drodze, nie częściej niż co 50 ms, odświeżanie co 120 ms: ~10/s, po
+  puszczeniu jeden STOP. (3) **Spusty działają w każdym trybie mocy** (RT przód, LT tył, liniowo); gałka Y tylko przy
+  puszczonych spustach. Sprawdzone symulowanym padem z przechwyceniem poleceń (bez ruszania silnikami).
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -220,6 +228,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Strażnik I2C (samo odblokowanie zawieszonej magistrali), pad bez zalewania poleceniami (~10/s zamiast ~70/s), spusty w każdym trybie mocy. |
 | 2026-11-03 | Śledź: zablokowany cel (wygląd + KCF), YOLOv8s, odległość w cm (60 cm); wolniejsze obroty. Wyświetlacz odłączony (nowy w drodze). |
 | 2026-11-03 | Wyświetlacz stanu I2C (OLED/LCD, wykrywany sam), lista problemów na stronie; żyroskop ponawia wykrywanie. Magistrala I2C niestabilna od podłączenia wyświetlacza. |
 | 2026-11-03 | Przeszkody od nowa (koniec podłogi z głębi w cm, obiekty, czas do zderzenia, uderzenie, utknięcie; omijanie z obrotem o kąt żyroskopem). Pełny ekran z przezroczystym panelem z boku. |
