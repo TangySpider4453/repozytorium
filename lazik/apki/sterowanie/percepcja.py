@@ -105,6 +105,7 @@ class Percepcja(threading.Thread):
         self.podstawy = None                     # wiersz (0..1), gdzie w danym pasie kończy się podłoga
         self.przeplyw = Z.Przeplyw()
         self.ttc, self.ruch_obrazu = [None] * Z.SEKTORY, 0.0
+        self.analiza = dict(obiekty=False, glebia=False, przeplyw=False)   # co faktycznie jest liczone
         self.fps = self.ms = 0.0
         self.hailo_proc = 0.0           # część każdej sekundy, którą Hailo spędza na naszych sieciach
         self.temp_hailo = None
@@ -179,17 +180,22 @@ class Percepcja(threading.Thread):
             ostatni = nr
             t0 = time.monotonic()
             obiekty, sektory, mapa = [], None, None
+            # tryby jazdy wymuszają analizę; w Stop i Ręcznym liczy się tylko to, co włączone (Hailo odpoczywa i chłodnieje)
+            chce_obiekty = self.potrzebna_glebia or self.konf["analiza_obiekty"]
+            chce_glebie = self.potrzebna_glebia or self.konf["glebia_zawsze"] or self.konf["strumien_glebia"]
+            self.analiza = dict(obiekty=chce_obiekty, glebia=chce_glebie and not self.glebia_wstrzymana,
+                                przeplyw=self.potrzebna_glebia)
             try:
-                self._model()
-                mh, mw, _ = self.hailo.get_input_shape()
-                out = self.hailo.run(cv2.resize(cv2.cvtColor(klatka, cv2.COLOR_BGR2RGB), (mw, mh)))
-                prog = self.konf["prog_pewnosci"]
-                wyk = [(k, float(d[1]), float(d[0]), float(d[3]), float(d[2]), float(d[4]))
-                       for k, ds in enumerate(out) for d in ds if d[4] >= prog]
-                obiekty = self.sled.aktualizuj(wyk, time.monotonic())
-                for o in obiekty:
-                    o["nazwa"] = nazwa(o["klasa"])
-                chce_glebie = self.potrzebna_glebia or self.konf["glebia_zawsze"] or self.konf["strumien_glebia"]
+                if chce_obiekty:
+                    self._model()
+                    mh, mw, _ = self.hailo.get_input_shape()
+                    out = self.hailo.run(cv2.resize(cv2.cvtColor(klatka, cv2.COLOR_BGR2RGB), (mw, mh)))
+                    prog = self.konf["prog_pewnosci"]
+                    wyk = [(k, float(d[1]), float(d[0]), float(d[3]), float(d[2]), float(d[4]))
+                           for k, ds in enumerate(out) for d in ds if d[4] >= prog]
+                    obiekty = self.sled.aktualizuj(wyk, time.monotonic())
+                    for o in obiekty:
+                        o["nazwa"] = nazwa(o["klasa"])
                 if not chce_glebie or self.glebia_wstrzymana:
                     self.podstawy = None
                 if chce_glebie and not self.glebia_wstrzymana:

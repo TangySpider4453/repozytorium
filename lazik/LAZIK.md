@@ -183,6 +183,12 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   ■ stoi, kolor zielony/pomarańczowy), kierunek jazdy (prosto, skręt, obrót w miejscu), korekta toru, kurs i obrót,
   odległość z przodu, CPU i Hailo (obciążenie i temperatura), BME280, kl/s, zasilanie gdy nie OK. `/api/stan.naped`
   podaje teraz moc stron łazika (`Naped.logiczne`: przed odwróceniami i zamianą stron), a nie stan pinów.
+- **Szybkie przełączniki** (panel z prawej i panel pełnego ekranu, zapis w `konfiguracja.json`): *Analiza na Hailo*:
+  Obiekty (`analiza_obiekty`), Głębia (`glebia_zawsze`). W Stop i Ręcznym liczy się tylko to, co włączone: po wyłączeniu
+  obiektów Hailo spada z ~26% do 0% (sprawdzone). Tryby jazdy włączają obie analizy same (przycisk z dopiskiem „(tryb)”).
+  *Na obrazie*: Ramki, Podpisy (wyłączone = same ramki), Przeszkody (kreski z cm), Horyzont (domyślnie wyłączony),
+  Napisy (telemetria: tylko pełny ekran / każdy widok / wyłączone; zakładka ⚙ Nakładki). Zaznaczony obiekt i cel
+  śledzenia są widoczne zawsze. Napisy mają temperatury w kolorach (CPU, Hailo, otoczenie z BME280) i obciążenie.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki

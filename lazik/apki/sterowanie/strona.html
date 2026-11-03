@@ -111,16 +111,24 @@
   body.pelny.zwiniety .mini-stop { display:block; }
   @media (prefers-reduced-motion:reduce) { .pelny-hud, body.pelny .wideo, .zwin-hud, .telemetria { transition:none; } }
   /* telemetria jak napisy na dole podglądu: sam tekst z cieniem, bez pudełek zasłaniających obraz */
-  .telemetria { display:none; position:fixed; z-index:2; left:0; right:var(--bok); bottom:0; pointer-events:none;
+  .telemetria { display:none; position:absolute; z-index:2; left:0; right:0; bottom:0; pointer-events:none;
     padding:22px 14px calc(8px + env(safe-area-inset-bottom, 0px)); text-align:center; transition:right .2s ease;
     background:linear-gradient(transparent, rgba(0,0,0,.35)); color:#f2f5f7; font-variant-numeric:tabular-nums;
     text-shadow:0 1px 3px #000, 0 0 6px rgba(0,0,0,.8); font-size:clamp(12px, 1.5vw, 16px); line-height:1.45; }
-  body.pelny .telemetria { display:block; }
+  body.napisy .telemetria { display:block; }
+  .telemetria .tmp { font-weight:600; }
   .telemetria .t1 { font-size:1.2em; font-weight:700; }
   .telemetria .t1 b { display:inline-block; min-width:5.2em; }
   .telemetria .przod { color:#7ee2a0; } .telemetria .tyl { color:#ffb36b; }
   .telemetria .sep { opacity:.5; margin:0 .4em; }
   .spusty { display:inline-flex; align-items:center; gap:6px; }
+  .szybkie { display:flex; flex-direction:column; gap:4px; }
+  .szybkie .gr { display:flex; flex-wrap:wrap; gap:4px; }
+  .szybkie .gr > span { width:100%; color:var(--szary); font-size:11px; margin-top:2px; }
+  .szybkie button { min-height:30px; padding:0 9px; font-size:12px; border-radius:15px; width:auto !important; flex:none;
+                    background:rgba(255,255,255,.06); color:var(--szary); border:1px solid var(--linia); }
+  .szybkie button.wl { background:rgba(63,191,106,.22); color:#e6ebee; border-color:var(--ok); }
+  .szybkie button.wym { border-style:dashed; }
   .sp { display:inline-block; width:70px; height:10px; background:var(--linia); border-radius:5px; overflow:hidden; }
   .sp i { display:block; height:100%; width:0; background:var(--akcent); }
 
@@ -199,9 +207,10 @@
   <span class="etyk spusty" id="hud_spusty"><span>LT</span><span class="sp"><i id="sp_lt"></i></span><span>RT</span><span class="sp"><i id="sp_rt"></i></span></span>
   <span class="etyk" id="hud_pad"></span>
   <span class="etyk hud-opis" id="hud_opis"></span>
+  <div class="szybkie" id="szybkie_hud"></div>
   <button id="nakokpit">Przyciski</button>
 </div>
-<div class="telemetria" id="telemetria" aria-live="off"><div class="t1" id="tel1"></div><div id="tel2"></div></div>
+
 <button class="zwin-hud" id="zwin_hud" aria-label="Zwiń albo rozwiń panel">›</button>
 <button class="stop mini-stop" id="stop4">STOP</button>
 <div class="uklad">
@@ -215,6 +224,7 @@
         <img id="obraz" alt="Podgląd z kamery łazika">
         <canvas id="nakladka"></canvas>
         <div class="brak" id="brak">Łączę z kamerą…</div>
+        <div class="telemetria" id="telemetria" aria-live="off"><div class="t1" id="tel1"></div><div id="tel2"></div></div>
       </div>
       <div class="kokpit-p" aria-label="Skręt">
         <div class="rzad"><button data-skret="-1" aria-label="W lewo">◀</button><button data-skret="1" aria-label="W prawo">▶</button></div>
@@ -228,6 +238,7 @@
   </section>
   <aside class="panel">
     <div class="tryby" id="tryby"></div>
+    <div class="szybkie" id="szybkie"></div>
     <div class="opcje" id="opcje"></div>
     <div id="bledy"></div>
     <button id="otworz_ustaw">⚙ Ustawienia (kamera, Hailo, napęd, tryby…)</button>
@@ -350,9 +361,11 @@ function rysuj() {
   const c = plotno.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (!S) return;
   const r = prostokat();
-  if (S.pokaz_przeszkody && S.podstawy) {  // gdzie kończy się wolna podłoga + horyzont
+  if (S.wl.nakladka_horyzont) {
     c.setLineDash([6, 6]); c.strokeStyle = 'rgba(224,166,64,.7)'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(r.x, r.y + S.horyzont * r.h); c.lineTo(r.x + r.w, r.y + S.horyzont * r.h); c.stroke(); c.setLineDash([]);
+  }
+  if (S.wl.pokaz_przeszkody && S.podstawy) {  // gdzie kończy się wolna podłoga
     c.font = '600 12px system-ui';
     S.podstawy.forEach((y, i) => {
       if (y == null) return;
@@ -368,8 +381,10 @@ function rysuj() {
   for (const o of [...S.obiekty].sort((a, b) => b.pew - a.pew)) {
     const [x0, y0, x1, y1] = o.ramka, x = r.x + x0 * r.w, y = r.y + y0 * r.h, w = (x1 - x0) * r.w, h = (y1 - y0) * r.h;
     const cel = o.id === S.cel_id, zazn = o.id === zaznaczony;
+    if (!S.wl.nakladka_ramki && !cel && !zazn) continue;   // ramki wyłączone: zostaje tylko zaznaczony i cel
     const kol = cel ? '#3fbf6a' : zazn ? '#e0a640' : `hsl(${(o.klasa * 47) % 360} 80% 65%)`;
     c.strokeStyle = kol; c.lineWidth = cel || zazn ? 4 : 2; c.strokeRect(x, y, w, h);
+    if (!S.wl.nakladka_podpisy && !cel && !zazn) continue;  // same ramki, bez podpisów
     const t = `${cel ? '● ' : ''}#${o.id} ${o.nazwa} ${Math.round(o.pew * 100)}%`, tw = c.measureText(t).width + 10;
     let ty = y > 22 ? y - 22 : y + h;
     for (let i = 0; i < 8 && zajete.some(z => koliduje(z, { x, y: ty, w: tw, h: 22 })); i++) ty += 23;
@@ -665,7 +680,41 @@ function rysujSystem(t) {
   t.insertAdjacentHTML('beforeend', '<p class="maly">Restart zatrzymuje łazik, zwalnia kamerę i Hailo, a po kilku sekundach strona wraca sama.</p>');
 }
 
-// ---------- telemetria (napisy na dole pełnego ekranu) ----------
+// ---------- szybkie przełączniki: co liczy Hailo i co widać na obrazie ----------
+const SZYBKIE = [
+  ['Analiza na Hailo (w trybach jazdy włączona zawsze)', [['analiza_obiekty', 'Obiekty', 'obiekty'], ['glebia_zawsze', 'Głębia', 'glebia']]],
+  ['Na obrazie', [['nakladka_ramki', 'Ramki'], ['nakladka_podpisy', 'Podpisy'], ['pokaz_przeszkody', 'Przeszkody'],
+                  ['nakladka_horyzont', 'Horyzont'], ['nakladka_telemetria', 'Napisy']]],
+];
+let ostatnieSzybkie = '';
+const napisyWl = () => S && (S.wl.nakladka_telemetria === 'zawsze' || (S.wl.nakladka_telemetria === 'pelny' && widok === 'pelny'));
+function szybkie() {
+  const klucz = JSON.stringify([S.wl, S.wizja, widok]);
+  document.body.classList.toggle('napisy', !!napisyWl());
+  if (klucz === ostatnieSzybkie) return;
+  ostatnieSzybkie = klucz;
+  for (const id of ['#szybkie', '#szybkie_hud']) {
+    const box = $(id); box.innerHTML = '';
+    for (const [tytul, pola] of SZYBKIE) {
+      const gr = document.createElement('div'); gr.className = 'gr'; gr.innerHTML = `<span>${tytul}</span>`;
+      for (const [k, nazwa, liczone] of pola) {
+        const v = S.wl[k], wl = k === 'nakladka_telemetria' ? napisyWl() : !!v;
+        const wym = !!(liczone && S.wizja.wymuszona);
+        const b = document.createElement('button'); b.textContent = nazwa + (wym && !v ? ' (tryb)' : '');
+        b.classList.toggle('wl', !!(wl || (liczone && S.wizja[liczone]))); b.classList.toggle('wym', wym && !v);
+        b.title = liczone ? (S.wizja[liczone] ? 'Liczone teraz na Hailo' : 'Wyłączone: Hailo tego nie liczy') : '';
+        b.onclick = () => {
+          const nowa = k === 'nakladka_telemetria' ? (wl ? 'nie' : widok === 'pelny' ? 'pelny' : 'zawsze') : !v;
+          S.wl[k] = nowa; szybkie(); rysuj(); api('api/ustawienia', { [k]: nowa });
+        };
+        gr.append(b);
+      }
+      box.append(gr);
+    }
+  }
+}
+
+// ---------- telemetria (napisy na dole obrazu) ----------
 const silnik = v => v > 0 ? `▲ ${Math.round(v * 100)}%` : v < 0 ? `▼ ${Math.round(-v * 100)}%` : '■ 0%';
 function kierunekJazdy([l, p]) {
   if (!l && !p) return 'stoi';
@@ -680,16 +729,17 @@ function telemetria() {
   $('#tel1').innerHTML = `<span class="${kl(l)}">L <b>${silnik(l)}</b></span><span class="sep">|</span>` +
     `<span class="${kl(p)}">P <b>${silnik(p)}</b></span><span class="sep">·</span>${kierunekJazdy(S.naped)}` +
     (S.trzyma_tor ? `<span class="sep">·</span>trzymam tor (${S.korekta > 0 ? '+' : ''}${Math.round(S.korekta * 100)}%)` : '');
-  const t = x => x == null ? '—' : Math.round(x) + '°';
   const z = S.zyroskop, c = S.czujnik, oc = S.ocena;
+  const temp = (n, x, a, b) => x == null ? null : `<span class="tmp" style="color:${kolTemp(x, a, b) === 'var(--ok)' ? '#7ee2a0' : kolTemp(x, a, b) === 'var(--akcent)' ? '#ffd27a' : '#ff8a80'}">${n} ${Math.round(x)} °C</span>`;
   const czesci = [
+    ['🌡', temp('CPU', S.temp_cpu, 70, 80), temp('Hailo', S.temp_hailo, 65, 80),
+     c ? `otoczenie ${c.temperatura.toFixed(1).replace('.', ',')} °C` : null].filter(Boolean).join(' '),
+    `obciążenie CPU ${S.cpu}% · Hailo ${S.hailo_proc}%`,
     z ? `🧭 ${Math.round(z.kurs)}°${Math.abs(z.obrot) > 2 ? ` (${Math.round(z.obrot)}°/s)` : ''}${z.przechyl > 8 ? ` · przechył ${Math.round(z.przechyl)}°` : ''}` : null,
     oc ? `przód ${oc.przod > 5 ? 'wolny' : (S.podstawy && S.podstawy[2] >= 0.97 ? '≤ ' : '') + Math.round(oc.przod * 100) + ' cm'}` : null,
-    `CPU ${S.cpu}% ${t(S.temp_cpu)}`, `Hailo ${S.hailo_proc}% ${t(S.temp_hailo)}`,
-    c ? `${c.temperatura.toFixed(1).replace('.', ',')} °C${c.cisnienie ? ' ' + Math.round(c.cisnienie) + ' hPa' : ''}` : null,
     `${S.fps} kl/s`, S.zasilanie !== 'OK' ? `zasilanie: ${S.zasilanie}` : null,
   ].filter(Boolean);
-  $('#tel2').innerHTML = czesci.map(x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;')).join('<span class="sep">·</span>');
+  $('#tel2').innerHTML = czesci.join('<span class="sep">·</span>');
 }
 
 // ---------- panel stanu ----------
@@ -751,7 +801,8 @@ async function odswiez() {
     $('#hud_tryb').textContent = S.tryby[S.tryb] + ' · ' + S.fps + ' kl/s';
     $('#hud_pad').textContent = pad.nazwa ? 'Pad: ' + pad.nazwa.replace(/\(.*\)/, '').trim() : 'Klawiatura: strzałki / WASD · Esc = przyciski';
     $('#hud_opis').textContent = S.opis;
-    if (widok === 'pelny') telemetria();
+    szybkie();
+    if (napisyWl()) telemetria();
     przyciskiTrybow(); opcje(false); rysuj(); panelStanu();
     const sek = $('#sektory').children;
     for (let i = 0; i < 5; i++) {
