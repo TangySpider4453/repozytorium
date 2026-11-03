@@ -197,6 +197,15 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   **2026-11-03: wyświetlacz nie odpowiada na I2C**, a od jego podłączenia magistrala gubi transmisje (0x68 odpowiadał
   raz 50/50, raz 1/30; zapisy do MPU6050 odrzucane). Typowa przyczyna: wyświetlacz bez zasilania albo z zamienionym
   VCC/GND, podpięty do SDA/SCL, obciąża linie. Żyroskop jest wykrywany ponownie co 10 s, a zapisy są ponawiane.
+- **Śledź od 2026-11-03** (`cel.py`): cel jest *zablokowany*: wygląd (histogram barwy i nasycenia, wolno douczany),
+  przewidywany ruch i tracker KCF z OpenCV (prowadzi cel do 2,5 s, gdy YOLO go nie widzi; poprawiany ramką z YOLO).
+  Inna ramka tej samej klasy przechodzi tylko, gdy pasuje miejscem i wyglądem; po dłuższej utracie (do 10 s) tylko
+  wyglądem. Test na łaziku: dwie osoby mijają się, YOLO zamienia im numery, cel znika na 6 klatek → śledzenie zostaje
+  na właściwej osobie (54/60 klatek, KCF 4 klatki, 7 ms/klatkę). W Śledź zawsze YOLOv8s (`model_wymuszony`, mniej
+  obciążony Hailo). Odległość do celu w cm z dolnej krawędzi ramki (styk z podłogą), cel: `sledzenie_odleglosc_cm`
+  = 60 (wcześniej wysokość ramki 0,5 = kilka metrów przy kamerze na 10 cm). Skręt z martwą strefą 7%, przy celu mocno
+  z boku najpierw obrót. Przerywana zielona ramka = cel prowadzi tracker.
+- **Wolniejsze obroty** we wszystkich trybach: `predkosc_obrotu` = 0,5 (było 0,6–0,9), przy końcu obrotu 75%.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -211,6 +220,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Śledź: zablokowany cel (wygląd + KCF), YOLOv8s, odległość w cm (60 cm); wolniejsze obroty. Wyświetlacz odłączony (nowy w drodze). |
 | 2026-11-03 | Wyświetlacz stanu I2C (OLED/LCD, wykrywany sam), lista problemów na stronie; żyroskop ponawia wykrywanie. Magistrala I2C niestabilna od podłączenia wyświetlacza. |
 | 2026-11-03 | Przeszkody od nowa (koniec podłogi z głębi w cm, obiekty, czas do zderzenia, uderzenie, utknięcie; omijanie z obrotem o kąt żyroskopem). Pełny ekran z przezroczystym panelem z boku. |
 | 2026-11-03 | Podgląd bez MJPEG (Safari/iPad gubił obraz), sam wraca po zerwaniu; etykiety bez nakładania. |

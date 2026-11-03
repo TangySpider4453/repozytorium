@@ -21,6 +21,7 @@ import time
 import cv2
 
 import przeszkody as Z
+from cel import Cel
 
 KATALOG = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(KATALOG), "wizja"))
@@ -55,6 +56,8 @@ class Sterownik(threading.Thread):
         self._reczny = (0.0, 0.0, 0.0, None, False)  # (prędkość, skręt, ważne do, maks. moc / None, liniowo)
         self.cel_id, self.cel_klasa = None, 0     # śledzenie: konkretny obiekt albo klasa
         self._cel_ostatnio = None                 # (czas, cx, klasa) do odnalezienia zgubionego celu
+        self.cel = Cel()                          # zablokowany cel (wygląd + tracker KCF), patrz cel.py
+        self._zadanie_celu = None                 # numer obiektu dotkniętego na stronie, do zablokowania w trybie
         self._plan = []                           # kroki manewru: {nazwa, typ: czas|obrot, …}
         self._jade_od = None                      # od kiedy tryb każe jechać do przodu (dla „utknąłem” i czasu do zderzenia)
         self._blokady = []                        # czasy ostatnich omijań (kilka naraz = kąt, zawracamy)
@@ -83,6 +86,12 @@ class Sterownik(threading.Thread):
             self._t_losowego = self._t_rozgladania = time.monotonic()
             self.naped.stop()
             self.per.potrzebna_glebia = tryb in ("przetrwaj", "zwiedzaj", "fotograf", "sledz")
+            # w Śledź szybki model: więcej klatek na sekundę = cel ginie rzadziej (Hailo nie dobija do 100%)
+            self.per.model_wymuszony = 0 if tryb == "sledz" and self.konf.get("sledz_szybki_model", True) else None
+            if tryb == "sledz" and self.cel_id is not None:
+                self._zadanie_celu = self.cel_id
+            if tryb != "sledz":
+                self.cel.porzuc()
             if tryb == "zwiedzaj":
                 if self.per.kamera is not None:
                     self.per.kamera.odbiorcy.append(self.nagrywanie.dodaj)
@@ -100,10 +109,14 @@ class Sterownik(threading.Thread):
         self._reczny = (float(v), float(s), time.monotonic() + 0.5, maks, bool(liniowo))
 
     def wybierz_cel(self, id_=None, klasa=None):
-        self.cel_id = id_
-        if klasa is not None:
-            self.cel_klasa = int(klasa)
-        self._cel_ostatnio = None
+        """id_ = konkretny obiekt (dotknięty na podglądzie), inaczej rodzaj `klasa` (blokujemy najbliższy tego rodzaju)."""
+        with self.lock:
+            self.cel_id = id_
+            if klasa is not None:
+                self.cel_klasa = int(klasa)
+            self._cel_ostatnio = None
+            self.cel.porzuc()
+            self._zadanie_celu = id_
 
     # --- pętla ---
     def run(self):
@@ -150,6 +163,10 @@ class Sterownik(threading.Thread):
             self._jade_od = None
         self.naped.jedz(v, s)
 
+    def _obr(self):
+        """Moc obrotu w miejscu z ustawień (wolniej = łagodniej, kamera mniej rozmazuje obraz)."""
+        return self.konf.get("predkosc_obrotu", 0.5)
+
     def _stoj(self):
         self._jade_od = None
         self.naped.stop()
@@ -169,19 +186,20 @@ class Sterownik(threading.Thread):
             k["start"] = teraz
             if k["typ"] == "obrot":
                 if imu is not None and imu.ok:
-                    k["cel"], k["do"] = imu.kurs_ciagly + k["kat"], teraz + 1.5 + abs(k["kat"]) / 45
-                else:  # bez żyroskopu: na czas (~90°/s przy mocy 0,8; zależy od podłoża)
-                    k["do"] = teraz + abs(k["kat"]) / 90
+                    k["cel"], k["do"] = imu.kurs_ciagly + k["kat"], teraz + 2.0 + abs(k["kat"]) / (40 * self._obr())
+                else:  # bez żyroskopu: na czas (~110°/s przy pełnej mocy obrotu; zależy od podłoża)
+                    k["do"] = teraz + abs(k["kat"]) / (110 * self._obr())
             else:
                 k["do"] = teraz + k["sek"]
         if k["typ"] == "obrot" and "cel" in k and imu is not None and imu.ok:
             zostalo = k["cel"] - imu.kurs_ciagly
             if abs(zostalo) > 6 and teraz < k["do"]:
-                self.naped.jedz(0.0, math.copysign(max(0.6, min(0.9, abs(zostalo) / 50)), zostalo))
+                moc = self._obr() * (0.75 if abs(zostalo) < 25 else 1.0)   # przy końcu obrotu jeszcze wolniej
+                self.naped.jedz(0.0, math.copysign(moc, zostalo))
                 return True
         elif teraz < k["do"]:
             if k["typ"] == "obrot":
-                self.naped.jedz(0.0, math.copysign(0.8, k["kat"]))
+                self.naped.jedz(0.0, math.copysign(self._obr(), k["kat"]))
             else:
                 self.naped.jedz(k["v"], k["s"])
             return True
@@ -328,7 +346,8 @@ class Sterownik(threading.Thread):
         blisko, _ = self._przeszkoda([x for x in obiekty if x is not o], sektory)
         if wys < 0.45 and not blisko:
             self.opis = f"Podjeżdżam do: {o['nazwa']} ({gdzie(cx)})."
-            self._jedz(0.45, max(-0.6, min(0.6, (cx - 0.5) * 1.6)))
+            m = 0.8 * self._obr()
+            self._jedz(0.45, max(-m, min(m, (cx - 0.5) * 1.2)))
             return
         self._stoj()
         self._zdjecie(klatka, obiekty, o)
@@ -352,44 +371,63 @@ class Sterownik(threading.Thread):
 
     # --- śledź ---
     def _sledz(self, klatka, obiekty, sektory):
-        teraz = time.monotonic()
-        cel = None
-        if self.cel_id is not None:
-            cel = next((o for o in obiekty if o["id"] == self.cel_id), None)
-            if cel is None and self._cel_ostatnio and teraz - self._cel_ostatnio[0] < 2.0:
-                # zgubiony numer (np. chwilowo zasłonięty): ta sama klasa najbliżej ostatniego miejsca
-                _, cx_o, kl = self._cel_ostatnio
-                pas = [o for o in obiekty if o["klasa"] == kl]
-                if pas:
-                    cel = min(pas, key=lambda o: abs((o["ramka"][0] + o["ramka"][2]) / 2 - cx_o))
-                    self.cel_id = cel["id"]
-        else:
-            pas = [o for o in obiekty if o["klasa"] == self.cel_klasa]
+        teraz, k = time.monotonic(), self.konf
+        # 1. blokada celu: dotknięty obiekt albo najbliższy (najniżej stojący) obiekt wybranego rodzaju
+        if self._zadanie_celu is not None:
+            o = next((o for o in obiekty if o["id"] == self._zadanie_celu), None)
+            if o is not None:
+                self.cel.zacznij(klatka, o, teraz)
+                self._zadanie_celu = None
+        if not self.cel.aktywny and self.cel_id is None and self._zadanie_celu is None:
+            pas = [o for o in obiekty if o["klasa"] == self.cel_klasa and o["pew"] > 0.4]
             if pas:
-                cel = max(pas, key=lambda o: (o["ramka"][3] - o["ramka"][1]))
-        if cel is None:
+                self.cel.zacznij(klatka, max(pas, key=lambda o: o["ramka"][3]), teraz)
+        ramka = self.cel.aktualizuj(klatka, obiekty, teraz) if self.cel.aktywny else None
+        if self.cel.aktywny and self.cel_id is not None:
+            self.cel_id = self.cel.id   # numer ramki YOLO mógł się zmienić, a to wciąż ten sam cel
+        kogo = DO_SLEDZENIA.get(self.cel.klasa if self.cel.klasa is not None else self.cel_klasa, nazwa(self.cel_klasa))
+        m_obr = self._obr()
+        if ramka is None:
             if self._cel_ostatnio and teraz - self._cel_ostatnio[0] < 4:
                 strona = 1 if self._cel_ostatnio[1] > 0.5 else -1
-                self.opis = f"Zgubiłem cel: szukam {'w prawo' if strona > 0 else 'w lewo'}."
-                self._jedz(0.0, 0.55 * strona)
+                self.opis = f"Zgubiłem cel ({kogo}): powoli szukam {'w prawo' if strona > 0 else 'w lewo'}."
+                self._jedz(0.0, 0.8 * m_obr * strona)
             else:
                 self._stoj()
-                kogo = f"#{self.cel_id}" if self.cel_id is not None else DO_SLEDZENIA.get(self.cel_klasa, nazwa(self.cel_klasa))
-                self.opis = f"Nie widzę celu ({kogo}). Dotknij obiektu na podglądzie albo wybierz klasę."
+                if self.cel.aktywny:
+                    self.opis = f"Nie widzę celu ({kogo}): czekam, aż wróci (rozpoznam go po wyglądzie)."
+                elif self._zadanie_celu is not None or self.cel_id is not None:
+                    self.opis = "Wybrany obiekt zniknął. Dotknij go jeszcze raz na podglądzie albo wybierz rodzaj."
+                else:
+                    self.opis = f"Nie widzę: {kogo}. Dotknij obiektu na podglądzie albo wybierz rodzaj."
             return
-        x0, y0, x1, y1 = cel["ramka"]
-        cx, wys = (x0 + x1) / 2, y1 - y0
-        self._cel_ostatnio = (teraz, cx, cel["klasa"])
-        dystans = self.konf["sledzenie_wysokosc"]  # docelowa wysokość ramki (ułamek kadru) = odległość
-        skret = max(-0.7, min(0.7, (cx - 0.5) * 1.8))
-        v = max(-0.35, min(0.75, (dystans - wys) * 2.5))
-        blisko, _ = self._przeszkoda([o for o in obiekty if o is not cel], sektory)
-        if v > 0 and blisko:
+        x0, y0, x1, y1 = ramka
+        cx = (x0 + x1) / 2
+        self._cel_ostatnio = (teraz, cx, self.cel.klasa)
+        # 2. odległość do celu w metrach z miejsca, gdzie dotyka podłogi (dolna krawędź ramki)
+        if y1 >= 0.97:
+            odl = Z.odleglosc_z_wiersza(1.0, k)          # stopy poza kadrem: bliżej niż dół kadru
+        elif y1 > k.get("horyzont", 0.5) + 0.03:
+            odl = Z.odleglosc_z_wiersza(y1, k)
+        else:                                            # wisi w powietrzu: zgrubnie z wysokości ramki
+            odl = 0.5 / max(0.05, y1 - y0)
+        cel_odl = k.get("sledzenie_odleglosc_cm", 60) / 100
+        # 3. skręt łagodny, z martwą strefą (nie kręci się przy każdym drgnięciu celu)
+        blad = cx - 0.5
+        skret = 0.0 if abs(blad) < 0.07 else max(-0.8 * m_obr, min(0.8 * m_obr, blad * 1.4))
+        # 4. prędkość: proporcjonalnie do tego, ile brakuje do zadanej odległości
+        roznica = odl - cel_odl
+        v = 0.0 if abs(roznica) < 0.12 else max(-0.35, min(k.get("predkosc_sledzenia", 0.6), roznica * 0.9))
+        if v > 0 and abs(blad) > 0.3:
+            v *= 0.5                                     # cel mocno z boku: najpierw się obróć
+        oc = self._ocen([o for o in obiekty if o["id"] != self.cel.id], sektory)
+        przeszkoda = oc["przod"] < min(k["odleglosc_stop_cm"] / 100, odl - 0.2) or (oc["powod"] and oc["mocno"])
+        zr = " (prowadzi tracker)" if self.cel.zrodlo == "tracker" else ""
+        if v > 0 and przeszkoda:
             v = 0.0
-            self.opis = f"Śledzę #{cel['id']} {cel['nazwa']}, ale przede mną przeszkoda: tylko się obracam."
-        elif abs(v) < 0.08:
-            v = 0.0
-            self.opis = f"Śledzę #{cel['id']} {cel['nazwa']}: jestem w dobrej odległości."
+            self.opis = f"Śledzę {kogo}{zr}, ale między nami jest przeszkoda: tylko się obracam."
+        elif v == 0:
+            self.opis = f"Śledzę {kogo}{zr}: jestem w dobrej odległości (~{odl * 100:.0f} cm)."
         else:
-            self.opis = f"Śledzę #{cel['id']} {cel['nazwa']} ({gdzie(cx)}): {'jadę za nim' if v > 0 else 'cofam się, za blisko'}."
+            self.opis = f"Śledzę {kogo}{zr} (~{odl * 100:.0f} cm, {gdzie(cx)}): {'jadę za nim' if v > 0 else 'cofam się, za blisko'}."
         self._jedz(v, skret)

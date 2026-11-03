@@ -379,12 +379,17 @@ function rysuj() {
       c.fillStyle = kol; c.fillText((y >= 0.97 ? '≤ ' : '') + Math.round(d * 100) + ' cm', x0 + 2, yy - 5);
     });
   }
+  if (S.cel_ramka && S.cel_zrodlo === 'tracker') {  // YOLO chwilowo nie widzi celu: ramka z trackera (przerywana)
+    const [x0, y0, x1, y1] = S.cel_ramka;
+    c.setLineDash([8, 6]); c.strokeStyle = '#3fbf6a'; c.lineWidth = 3;
+    c.strokeRect(r.x + x0 * r.w, r.y + y0 * r.h, (x1 - x0) * r.w, (y1 - y0) * r.h); c.setLineDash([]);
+  }
   c.font = '600 14px system-ui';
   const zajete = [];  // etykiety już narysowane: kolejna, która by na nie weszła, przesuwa się niżej
   const koliduje = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   for (const o of [...S.obiekty].sort((a, b) => b.pew - a.pew)) {
     const [x0, y0, x1, y1] = o.ramka, x = r.x + x0 * r.w, y = r.y + y0 * r.h, w = (x1 - x0) * r.w, h = (y1 - y0) * r.h;
-    const cel = o.id === S.cel_id, zazn = o.id === zaznaczony;
+    const cel = S.cel_zrodlo === 'yolo' ? o.id === S.cel_nr : (S.tryb !== 'sledz' && o.id === S.cel_id), zazn = o.id === zaznaczony;
     if (!S.wl.nakladka_ramki && !cel && !zazn) continue;   // ramki wyłączone: zostaje tylko zaznaczony i cel
     const kol = cel ? '#3fbf6a' : zazn ? '#e0a640' : `hsl(${(o.klasa * 47) % 360} 80% 65%)`;
     c.strokeStyle = kol; c.lineWidth = cel || zazn ? 4 : 2; c.strokeRect(x, y, w, h);

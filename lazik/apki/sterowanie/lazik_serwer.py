@@ -192,6 +192,8 @@ def stan():
         obiekty=[dict(id=o["id"], klasa=o["klasa"], nazwa=o["nazwa"], pew=round(o["pew"], 2),
                       ramka=[round(v, 4) for v in o["ramka"]]) for o in obiekty],
         sektory=sektory, cel_id=sterownik.cel_id, cel_klasa=sterownik.cel_klasa,
+        cel_ramka=[round(v, 4) for v in sterownik.cel.ramka] if sterownik.tryb == "sledz" and sterownik.cel.zrodlo else None,
+        cel_zrodlo=sterownik.cel.zrodlo if sterownik.tryb == "sledz" else None, cel_nr=sterownik.cel.id if sterownik.cel.aktywny else None,
         do_sledzenia=DO_SLEDZENIA, naped=[round(x, 2) for x in naped.logiczne], blad_napedu=naped.blad,
         blad_wizji=percepcja.blad, kamera=percepcja.stan_kamery, fps=round(percepcja.fps, 1), ms=round(percepcja.ms),
         cpu=round(system.cpu), temp_cpu=system.temp, temp_hailo=percepcja.temp_hailo, ram=round(system.ram_proc),

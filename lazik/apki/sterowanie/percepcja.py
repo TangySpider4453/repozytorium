@@ -112,6 +112,7 @@ class Percepcja(threading.Thread):
         self.blad = None
         self.stan_kamery = "wyłączona"
         self.nazwa_modelu = None
+        self.model_wymuszony = None   # numer modelu narzucony przez tryb (Śledź: szybki YOLOv8s), None = z ustawień
 
     def potrzebna(self):
         """Wołane przez stronę (podgląd) i tryby jazdy; podtrzymuje kamerę i Hailo."""
@@ -149,7 +150,7 @@ class Percepcja(threading.Thread):
 
     def _model(self):
         """Wczytuje wybrany model (raz; zostaje na chipie, bo zwalnianie Hailo w trakcie pracy jest zawodne)."""
-        nr = int(self.konf["model_obiektow"])
+        nr = int(self.konf["model_obiektow"]) if self.model_wymuszony is None else self.model_wymuszony
         if self._model_nr == nr and self.hailo is not None:
             return
         sciezka = next((p for p in MODELE[nr][1] if os.path.exists(p)), None)
