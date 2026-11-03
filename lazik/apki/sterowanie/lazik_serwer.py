@@ -203,7 +203,7 @@ def stan():
         blad_czujnika=czujnik["blad"],
         zyroskop=zyro["imu"].odczyt() if zyro["imu"] else None, blad_zyroskopu=zyro["blad"] or naped.blad_zyro or (zyro["imu"].blad if zyro["imu"] else None),
         trzymaj_tor=bool(KONF.get("trzymaj_tor")), trzyma_tor=naped.trzyma_tor, korekta=round(naped.korekta, 2),
-        obrot_zadany=naped.obrot_zadany, galka_kat=KONF["galka_kat_martwy"],
+        obrot_zadany=naped.obrot_zadany, boczne=round(naped.boczne, 3) if naped.trzyma_tor else None, galka_kat=KONF["galka_kat_martwy"],
         maks_przechyl=KONF["maks_przechyl"], podstawy=percepcja.podstawy, horyzont=KONF["horyzont"],
         ocena=sterownik.ocena if sterownik.tryb not in ("stop", "reczny") else None,
         i2c_odblokowania=straz_i2c.odblokowania, i2c_ostatnie=straz_i2c.ostatnie,

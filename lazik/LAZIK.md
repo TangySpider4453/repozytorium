@@ -223,6 +223,11 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   wahanie ≤ 4 °/s (bez regulatora 230–410 °/s zależnie od podłoża). Bezpiecznik: gdy żyroskop pokazuje obrót w przeciwną
   stronę niż silniki przez 0,6 s, korekty się wyłączają i pojawia się problem „Odwróć kierunek obrotu” (resetowany zmianą
   kierunków w ustawieniach).
+- **Powrót na linię toru po wyboju** (`wracaj_na_tor`, 2026-11-03): poza prostowaniem kursu łazik szacuje zejście w bok
+  (całka sin(odchylenia) × prędkość z mocy, `predkosc_pelna_ms` = 0,5 m/s do zmierzenia) i jedzie skosem do linii
+  (`tor_powrot_st_na_m` = 80°/m, najwyżej 25°, do tyłu skręt odwrotny). Kierunek jest przywracany przy obrocie do 150°
+  (było 60°). Symulacja: wybój spycha koło przez 1,2 s; do przodu bez powrotu łazik kończy 11 cm obok linii, z powrotem
+  −1 cm. Szacunek jest zgrubny: przesunięcia w bok bez obrotu (poślizg całego łazika) nie widać bez enkoderów.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -237,6 +242,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Powrót na linię toru po wyboju (szacunek zejścia w bok z żyroskopu i mocy). |
 | 2026-11-03 | Gałka: 10° zapasu do jazdy prosto; skręt ze stałą prędkością obrotu (regulator na żyroskopie); bezpiecznik odwróconego żyroskopu. |
 | 2026-11-03 | Strażnik I2C (samo odblokowanie zawieszonej magistrali), pad bez zalewania poleceniami (~10/s zamiast ~70/s), spusty w każdym trybie mocy. |
 | 2026-11-03 | Śledź: zablokowany cel (wygląd + KCF), YOLOv8s, odległość w cm (60 cm); wolniejsze obroty. Wyświetlacz odłączony (nowy w drodze). |

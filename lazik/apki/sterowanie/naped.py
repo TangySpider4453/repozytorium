@@ -34,6 +34,7 @@ class Naped:
         self._zly_znak = 0.0                # ile sekund żyroskop pokazuje obrót w przeciwną stronę niż polecenie
         self.blad_zyro = None               # podejrzenie odwróconego żyroskopu (wtedy korekty wyłączone)
         self._byl_skret = False
+        self.boczne = 0.0                   # szacowane zejście z linii toru [m], > 0 = w prawo
         try:
             from gpiozero import Motor
             p = konf["piny"]
@@ -105,9 +106,21 @@ class Naped:
             # po skręcie łazik jeszcze chwilę się obraca: cel z małym wyprzedzeniem, żeby nie cofał się do starego kursu
             wyprzedzenie = imu.obrot * 0.15 if self._byl_skret else 0.0
             self._kurs_cel, self._calka, self._byl_skret = imu.kurs_ciagly + wyprzedzenie, 0.0, False
-        blad = imu.kurs_ciagly - self._kurs_cel        # > 0 = zboczył w prawo
-        if abs(blad) > 60:                             # ktoś go obrócił albo w coś uderzył: nowy kierunek
-            self._kurs_cel, blad, self._calka = imu.kurs_ciagly, 0.0, 0.0
+            self.boczne = 0.0
+        odch = imu.kurs_ciagly - self._kurs_cel        # > 0 = obrócony w prawo od toru
+        if abs(odch) > 150:                            # ktoś go zawrócił (nie wybój): przyjmujemy nowy kierunek
+            self._kurs_cel, odch, self._calka, self.boczne = imu.kurs_ciagly, 0.0, 0.0, 0.0
+        # powrót NA LINIĘ toru, nie tylko na kierunek: wybój obraca łazik, ten jedzie chwilę skosem i ląduje obok
+        # dawnej linii. Bez enkoderów zejście w bok szacujemy z kąta i mocy (prędkość przy pełnej mocy z ustawień).
+        if k.get("wracaj_na_tor", True):
+            predkosc = v * k.get("predkosc_pelna_ms", 0.5)                      # m/s, < 0 = do tyłu
+            self.boczne += math.sin(math.radians(odch)) * predkosc * dt
+            self.boczne = max(-1.0, min(1.0, self.boczne))
+            # kąt dojazdu do linii: im dalej od niej, tym ostrzej (do 25°); jadąc do tyłu skręt odwrotny
+            dojazd = max(-25.0, min(25.0, -self.boczne * k.get("tor_powrot_st_na_m", 80))) * (1 if v > 0 else -1)
+        else:
+            self.boczne, dojazd = 0.0, 0.0
+        blad = odch - dojazd
         self._calka = max(-30.0, min(30.0, self._calka + blad * dt))
         kor = -(k.get("tor_kp", 0.03) * blad + k.get("tor_ki", 0.02) * self._calka + k.get("tor_kd", 0.004) * imu.obrot)
         m = k.get("tor_maks_korekta", 0.35)

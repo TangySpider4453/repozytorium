@@ -754,7 +754,8 @@ function telemetria() {
   const [l, p] = S.naped;
   $('#tel1').innerHTML = `<span class="${kl(l)}">L <b>${silnik(l)}</b></span><span class="sep">|</span>` +
     `<span class="${kl(p)}">P <b>${silnik(p)}</b></span><span class="sep">·</span>${kierunekJazdy(S.naped)}` +
-    (S.trzyma_tor ? `<span class="sep">·</span>trzymam tor (${S.korekta > 0 ? '+' : ''}${Math.round(S.korekta * 100)}%)` : '') +
+    (S.trzyma_tor ? `<span class="sep">·</span>trzymam tor (${S.korekta > 0 ? '+' : ''}${Math.round(S.korekta * 100)}%)` +
+      (S.boczne != null && Math.abs(S.boczne) > 0.03 ? `, wracam na linię (${Math.round(Math.abs(S.boczne) * 100)} cm ${S.boczne > 0 ? 'w prawo' : 'w lewo'})` : '') : '') +
     (S.obrot_zadany != null && S.zyroskop ? `<span class="sep">·</span>obrót ${Math.round(S.zyroskop.obrot)} / ${S.obrot_zadany} °/s` : '');
   const z = S.zyroskop, c = S.czujnik, oc = S.ocena;
   const temp = (n, x, a, b) => x == null ? null : `<span class="tmp" style="color:${kolTemp(x, a, b) === 'var(--ok)' ? '#7ee2a0' : kolTemp(x, a, b) === 'var(--akcent)' ? '#ffd27a' : '#ff8a80'}">${n} ${Math.round(x)} °C</span>`;
