@@ -8,6 +8,7 @@ Bezpieczeństwo: każde polecenie ważne jest tylko `WAZNOSC` sekund; strażnik 
 nie odświeża polecenia (zawieszony tryb, utracone połączenie). Piny i odwrócenia w konfiguracja.json.
 """
 
+import math
 import threading
 import time
 
@@ -28,6 +29,11 @@ class Naped:
         self._calka = 0.0
         self.korekta = 0.0
         self.trzyma_tor = False
+        self._calka_obr = 0.0               # regulator prędkości obrotu (skręt ze stałą liczbą °/s)
+        self.obrot_zadany = None            # °/s, gdy działa regulator obrotu (do telemetrii)
+        self._zly_znak = 0.0                # ile sekund żyroskop pokazuje obrót w przeciwną stronę niż polecenie
+        self.blad_zyro = None               # podejrzenie odwróconego żyroskopu (wtedy korekty wyłączone)
+        self._byl_skret = False
         try:
             from gpiozero import Motor
             p = konf["piny"]
@@ -53,18 +59,52 @@ class Naped:
         self._jedz(predkosc, skret, maks, liniowo, 0.0)
 
     def _jedz(self, predkosc, skret, maks, liniowo, dt, przedluz=True):
+        skret = self._obrot_staly(skret, dt)
         skret = self._trzymaj_tor(predkosc, skret, dt)
         l = max(-1.0, min(1.0, predkosc + skret))
         r = max(-1.0, min(1.0, predkosc - skret))
         self.ustaw(l, r, maks, liniowo, przedluz)
 
+    def _imu_ok(self):
+        return self.imu is not None and self.imu.ok and self.blad_zyro is None
+
+    def _obrot_staly(self, s, dt):
+        """Skręt jako zadana prędkość obrotu: gałka w bok = tyle °/s (pełne wychylenie = `obrot_maks_dps`), a żyroskop
+        dokłada albo ujmuje mocy, żeby łazik kręcił się równo (na trawie, na płytkach, przy słabszej baterii)."""
+        k, imu = self.konf, self.imu
+        if not (k.get("obrot_staly", True) and self._imu_ok()) or abs(s) < 0.04:
+            self._calka_obr, self.obrot_zadany = 0.0, None
+            self._zly_znak = 0.0
+            return s
+        zadany = s * k.get("obrot_maks_dps", 90)
+        blad = zadany - imu.obrot
+        self._calka_obr = max(-1.2, min(1.2, self._calka_obr + k.get("obrot_ki", 0.008) * blad * dt))
+        wynik = max(-1.0, min(1.0, s + k.get("obrot_kp", 0.004) * blad + self._calka_obr))
+        if wynik * s <= 0 or abs(wynik) < 0.05:
+            # nie schodzimy do zera ani na drugą stronę: silnik poniżej progu ruszania staje i obrót by szarpał;
+            # wolniej niż przy progu ruszania łazik po prostu nie umie, wtedy kręci się równo najwolniej, jak może
+            wynik = math.copysign(0.05, s)
+        self.obrot_zadany = round(zadany)
+        # bezpiecznik: wyraźnie kręcimy w jedną stronę, a żyroskop pokazuje drugą = zły znak, wyłączamy korekty
+        if abs(s) > 0.3 and imu.obrot * s < 0 and abs(imu.obrot) > 20:
+            self._zly_znak += dt
+            if self._zly_znak > 0.6:
+                self.blad_zyro = ("żyroskop pokazuje obrót w przeciwną stronę niż silniki: korekty wyłączone. "
+                                  "Włącz „Odwróć kierunek obrotu” (⚙ → Żyroskop) albo sprawdź „Zamień strony”.")
+        else:
+            self._zly_znak = max(0.0, self._zly_znak - dt)
+        return wynik
+
     def _trzymaj_tor(self, v, s, dt):
         k, imu = self.konf, self.imu
-        if not (k.get("trzymaj_tor") and imu is not None and imu.ok and abs(v) > 0.05 and abs(s) < 0.04):
+        if not (k.get("trzymaj_tor") and self._imu_ok() and abs(v) > 0.05 and abs(s) < 0.04):
             self._kurs_cel, self._calka, self.korekta, self.trzyma_tor = None, 0.0, 0.0, False
+            self._byl_skret = abs(s) >= 0.04
             return s
         if self._kurs_cel is None:
-            self._kurs_cel, self._calka = imu.kurs_ciagly, 0.0
+            # po skręcie łazik jeszcze chwilę się obraca: cel z małym wyprzedzeniem, żeby nie cofał się do starego kursu
+            wyprzedzenie = imu.obrot * 0.15 if self._byl_skret else 0.0
+            self._kurs_cel, self._calka, self._byl_skret = imu.kurs_ciagly + wyprzedzenie, 0.0, False
         blad = imu.kurs_ciagly - self._kurs_cel        # > 0 = zboczył w prawo
         if abs(blad) > 60:                             # ktoś go obrócił albo w coś uderzył: nowy kierunek
             self._kurs_cel, blad, self._calka = imu.kurs_ciagly, 0.0, 0.0
@@ -125,5 +165,5 @@ class Naped:
                     self._zastosuj()
                     continue
                 pol = self._polecenie if teraz <= self._do else None
-            if pol is not None and self.konf.get("trzymaj_tor") and self.imu is not None:
+            if pol is not None and (self.konf.get("trzymaj_tor") or self.konf.get("obrot_staly", True)) and self.imu is not None:
                 self._jedz(*pol, dt, przedluz=False)

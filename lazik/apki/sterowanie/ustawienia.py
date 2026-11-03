@@ -78,6 +78,11 @@ POLA = [
 
     ("trzymaj_tor", "Żyroskop", "tak_nie", True, None, "Trzymaj tor przy jeździe prosto",
      "Żyroskop pilnuje kierunku i sam wyrównuje moc stron, żeby łazik nie zbaczał (ręcznie i w trybach)."),
+    ("obrot_staly", "Żyroskop", "tak_nie", True, None, "Skręt ze stałą prędkością obrotu",
+     "Gałka w bok (i obroty w trybach) = zadana liczba °/s; żyroskop pilnuje, żeby łazik kręcił się równo."),
+    ("obrot_maks_dps", "Żyroskop", "suwak", 90, (20, 240, 10), "Prędkość obrotu przy pełnym wychyleniu [°/s]", ""),
+    ("galka_kat_martwy", "Żyroskop", "suwak", 10, (0, 25, 1), "Zapas gałki do jazdy prosto [°]",
+     "Wychylenie gałki do tylu stopni od pionu (przód albo tył) liczy się jako jazda prosto, a tor trzyma żyroskop."),
     ("tor_kp", "Żyroskop", "suwak", 0.03, (0.005, 0.1, 0.005), "Siła korekty (P)",
      "Ile skrętu na 1° odchyłki. Za dużo = łazik się wężykuje, za mało = powoli wraca na kurs."),
     ("tor_ki", "Żyroskop", "suwak", 0.02, (0.0, 0.1, 0.005), "Wyrównywanie stałego znoszenia (I)",

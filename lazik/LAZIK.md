@@ -214,6 +214,15 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   bez końca. Teraz najwyżej jedno polecenie w drodze, nie częściej niż co 50 ms, odświeżanie co 120 ms: ~10/s, po
   puszczeniu jeden STOP. (3) **Spusty działają w każdym trybie mocy** (RT przód, LT tył, liniowo); gałka Y tylko przy
   puszczonych spustach. Sprawdzone symulowanym padem z przechwyceniem poleceń (bez ruszania silnikami).
+- **Gałka i obroty z żyroskopem (2026-11-03).** Zapas kąta gałki `galka_kat_martwy` = 10°: wychylenie do 10° od pionu
+  (przód albo tył) = jazda prosto, a tor trzyma żyroskop; przy jeździe spustami skręt poniżej 15% pomijany.
+  Trzymanie toru działa też do tyłu (symulacja ze słabszym prawym silnikiem: 3 s przód 0,9°, tył 1,7°).
+  **Skręt ze stałą prędkością obrotu** (`naped._obrot_staly`, `obrot_staly`, `obrot_maks_dps` = 90): wychylenie w bok
+  = zadane °/s, regulator PI na odczycie żyroskopu, także obroty w trybach. Nie schodzi poniżej progu ruszania (bez szarpania).
+  Symulacja z silnikami stojącymi poniżej 30% mocy i bezwładnością: zadane 68/90 °/s → płytki 69/92, trawa 65/92,
+  wahanie ≤ 4 °/s (bez regulatora 230–410 °/s zależnie od podłoża). Bezpiecznik: gdy żyroskop pokazuje obrót w przeciwną
+  stronę niż silniki przez 0,6 s, korekty się wyłączają i pojawia się problem „Odwróć kierunek obrotu” (resetowany zmianą
+  kierunków w ustawieniach).
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -228,6 +237,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Gałka: 10° zapasu do jazdy prosto; skręt ze stałą prędkością obrotu (regulator na żyroskopie); bezpiecznik odwróconego żyroskopu. |
 | 2026-11-03 | Strażnik I2C (samo odblokowanie zawieszonej magistrali), pad bez zalewania poleceniami (~10/s zamiast ~70/s), spusty w każdym trybie mocy. |
 | 2026-11-03 | Śledź: zablokowany cel (wygląd + KCF), YOLOv8s, odległość w cm (60 cm); wolniejsze obroty. Wyświetlacz odłączony (nowy w drodze). |
 | 2026-11-03 | Wyświetlacz stanu I2C (OLED/LCD, wykrywany sam), lista problemów na stronie; żyroskop ponawia wykrywanie. Magistrala I2C niestabilna od podłączenia wyświetlacza. |

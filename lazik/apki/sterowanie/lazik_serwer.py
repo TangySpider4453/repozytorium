@@ -50,7 +50,7 @@ zyro = {"imu": None, "blad": None}
 def stan_dla_wyswietlacza():
     imu, c = zyro["imu"], czujnik["dane"]
     return dict(kamera=percepcja.stan_kamery, blad_wizji=percepcja.blad, blad_napedu=naped.blad,
-                blad_czujnika=czujnik["blad"], blad_zyroskopu=zyro["blad"] or (imu.blad if imu else None),
+                blad_czujnika=czujnik["blad"], blad_zyroskopu=zyro["blad"] or naped.blad_zyro or (imu.blad if imu else None),
                 zasilanie=system.zasilanie, temp_cpu=system.temp, temp_hailo=percepcja.temp_hailo,
                 otoczenie=c["temperatura"] if c else None, tryb=TRYBY[sterownik.tryb], fps=percepcja.fps,
                 kurs=imu.kurs if imu and imu.ok else None)
@@ -201,8 +201,9 @@ def stan():
         cpu=round(system.cpu), temp_cpu=system.temp, temp_hailo=percepcja.temp_hailo, ram=round(system.ram_proc),
         zasilanie=system.zasilanie, hailo_proc=round(percepcja.hailo_proc), czujnik=czujnik["dane"],
         blad_czujnika=czujnik["blad"],
-        zyroskop=zyro["imu"].odczyt() if zyro["imu"] else None, blad_zyroskopu=zyro["blad"] or (zyro["imu"].blad if zyro["imu"] else None),
+        zyroskop=zyro["imu"].odczyt() if zyro["imu"] else None, blad_zyroskopu=zyro["blad"] or naped.blad_zyro or (zyro["imu"].blad if zyro["imu"] else None),
         trzymaj_tor=bool(KONF.get("trzymaj_tor")), trzyma_tor=naped.trzyma_tor, korekta=round(naped.korekta, 2),
+        obrot_zadany=naped.obrot_zadany, galka_kat=KONF["galka_kat_martwy"],
         maks_przechyl=KONF["maks_przechyl"], podstawy=percepcja.podstawy, horyzont=KONF["horyzont"],
         ocena=sterownik.ocena if sterownik.tryb not in ("stop", "reczny") else None,
         i2c_odblokowania=straz_i2c.odblokowania, i2c_ostatnie=straz_i2c.ostatnie,
@@ -278,6 +279,8 @@ def api_ustawienia():
             KONF[k] = U.sprawdz(k, v)
         except ValueError as e:
             bledy[k] = str(e)
+    if {"zyro_odwroc", "zamien_strony", "odwroc_lewy", "odwroc_prawy", "obrot_staly"} & set(d):
+        naped.blad_zyro = None   # po zmianie kierunków bezpiecznik znaku żyroskopu sprawdza od nowa
     if {"kamera_rozdzielczosc", "kamera_fps", "kamera_stale_kl_s"} & set(d):
         percepcja.ponownie_kamera()
     U.zapisz(PLIK_KONF, KONF)
