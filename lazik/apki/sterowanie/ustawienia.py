@@ -43,6 +43,17 @@ POLA = [
     ("odwroc_prawy", "Napęd", "tak_nie", False, None, "Odwróć prawy silnik", ""),
     ("zamien_strony", "Napęd", "tak_nie", False, None, "Zamień strony", "Gdy „◀” skręca w prawo."),
 
+    ("trzymaj_tor", "Żyroskop", "tak_nie", True, None, "Trzymaj tor przy jeździe prosto",
+     "Żyroskop pilnuje kierunku i sam wyrównuje moc stron, żeby łazik nie zbaczał (ręcznie i w trybach)."),
+    ("tor_kp", "Żyroskop", "suwak", 0.03, (0.005, 0.1, 0.005), "Siła korekty (P)",
+     "Ile skrętu na 1° odchyłki. Za dużo = łazik się wężykuje, za mało = powoli wraca na kurs."),
+    ("tor_ki", "Żyroskop", "suwak", 0.02, (0.0, 0.1, 0.005), "Wyrównywanie stałego znoszenia (I)",
+     "Uczy się, że jeden silnik jest słabszy, i stale to wyrównuje."),
+    ("tor_kd", "Żyroskop", "suwak", 0.004, (0.0, 0.02, 0.001), "Tłumienie (D)", "Uspokaja wężykowanie."),
+    ("tor_maks_korekta", "Żyroskop", "suwak", 0.35, (0.1, 0.6, 0.05), "Maks. korekta", "Największa różnica mocy dodawana przez korektę."),
+    ("zyro_odwroc", "Żyroskop", "tak_nie", False, None, "Odwróć kierunek obrotu",
+     "Tylko gdy kurs rośnie przy skręcie w LEWO (zwykle wykrywa się samo z grawitacji)."),
+
     ("prog_przeszkody", "Tryby", "suwak", 0.45, (0.2, 0.8, 0.05), "Czułość na przeszkody",
      "Wyżej = wcześniej uznaje coś za przeszkodę (ostrożniej)."),
     ("sledzenie_wysokosc", "Tryby", "suwak", 0.5, (0.2, 0.8, 0.05), "Odległość przy śledzeniu",
@@ -55,6 +66,8 @@ POLA = [
      "Gdy strona przestanie się odzywać (zamknięta, utracone WiFi), łazik staje."),
     ("maks_temp", "Bezpieczeństwo", "suwak", 82, (60, 90, 1), "STOP trybów przy temperaturze [°C]",
      "Gdy procesor albo Hailo przekroczy tę temperaturę, tryby automatyczne się zatrzymują."),
+    ("maks_przechyl", "Bezpieczeństwo", "suwak", 40, (15, 80, 5), "STOP przy przechyle [°]",
+     "Żyroskop: gdy łazik przechyli się albo przewróci bardziej niż tyle, silniki stają (także w jeździe ręcznej)."),
 ]
 DOMYSLNE = {p[0]: p[3] for p in POLA}
 DOMYSLNE.update(port=8000, kamera_v4l2={},

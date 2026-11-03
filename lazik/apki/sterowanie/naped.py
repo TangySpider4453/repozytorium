@@ -1,5 +1,9 @@
 """Napęd łazika: dwa silniki przez sterownik HW-094 (L298N), bez enkoderów (sterowanie bez sprzężenia zwrotnego).
 
+Trzymanie toru (gdy podłączony żyroskop i włączone w ustawieniach): przy jeździe bez skrętu napęd zapamiętuje kurs
+i 50 razy na sekundę dodaje różnicę mocy między stronami (regulator PID), żeby łazik nie zbaczał, mimo że silniki
+mają różną siłę. Każdy świadomy skręt przestawia zapamiętany kurs na nowy.
+
 Bezpieczeństwo: każde polecenie ważne jest tylko `WAZNOSC` sekund; strażnik zatrzymuje silniki, gdy nikt
 nie odświeża polecenia (zawieszony tryb, utracone połączenie). Piny i odwrócenia w konfiguracja.json.
 """
@@ -17,6 +21,12 @@ class Naped:
         self.lewy = self.prawy = 0.0
         self._do = 0.0
         self.blad = None
+        self.imu = None                 # Zyroskop (ustawiany przez serwer, gdy czujnik jest)
+        self._polecenie = None          # (predkosc, skret, maks, liniowo) ostatniego jedz()
+        self._kurs_cel = None
+        self._calka = 0.0
+        self.korekta = 0.0
+        self.trzyma_tor = False
         try:
             from gpiozero import Motor
             p = konf["piny"]
@@ -38,11 +48,33 @@ class Naped:
 
     def jedz(self, predkosc, skret=0.0, maks=None, liniowo=False):
         """predkosc i skret w zakresie -1..1 (skret > 0 = w prawo). Ważne przez WAZNOSC s."""
+        self._polecenie = (predkosc, skret, maks, liniowo)
+        self._jedz(predkosc, skret, maks, liniowo, 0.0)
+
+    def _jedz(self, predkosc, skret, maks, liniowo, dt, przedluz=True):
+        skret = self._trzymaj_tor(predkosc, skret, dt)
         l = max(-1.0, min(1.0, predkosc + skret))
         r = max(-1.0, min(1.0, predkosc - skret))
-        self.ustaw(l, r, maks, liniowo)
+        self.ustaw(l, r, maks, liniowo, przedluz)
 
-    def ustaw(self, lewy, prawy, maks=None, liniowo=False):
+    def _trzymaj_tor(self, v, s, dt):
+        k, imu = self.konf, self.imu
+        if not (k.get("trzymaj_tor") and imu is not None and imu.ok and abs(v) > 0.05 and abs(s) < 0.04):
+            self._kurs_cel, self._calka, self.korekta, self.trzyma_tor = None, 0.0, 0.0, False
+            return s
+        if self._kurs_cel is None:
+            self._kurs_cel, self._calka = imu.kurs_ciagly, 0.0
+        blad = imu.kurs_ciagly - self._kurs_cel        # > 0 = zboczył w prawo
+        if abs(blad) > 60:                             # ktoś go obrócił albo w coś uderzył: nowy kierunek
+            self._kurs_cel, blad, self._calka = imu.kurs_ciagly, 0.0, 0.0
+        self._calka = max(-30.0, min(30.0, self._calka + blad * dt))
+        kor = -(k.get("tor_kp", 0.03) * blad + k.get("tor_ki", 0.02) * self._calka + k.get("tor_kd", 0.004) * imu.obrot)
+        m = k.get("tor_maks_korekta", 0.35)
+        self.korekta = max(-m, min(m, kor))
+        self.trzyma_tor = True
+        return s + self.korekta
+
+    def ustaw(self, lewy, prawy, maks=None, liniowo=False, przedluz=True):
         k = self.konf
         if k.get("zamien_strony"):
             lewy, prawy = prawy, lewy
@@ -50,13 +82,15 @@ class Naped:
         prawy = -prawy if k.get("odwroc_prawy") else prawy
         with self.lock:
             self.lewy, self.prawy = self._moc(lewy, maks, liniowo), self._moc(prawy, maks, liniowo)
-            self._do = time.monotonic() + WAZNOSC
+            if przedluz:
+                self._do = time.monotonic() + WAZNOSC
             self._zastosuj()
 
     def stop(self):
         with self.lock:
             self.lewy = self.prawy = 0.0
             self._do = 0.0
+            self._polecenie = None
             self._zastosuj()
 
     def _zastosuj(self):
@@ -70,10 +104,22 @@ class Naped:
             else:
                 m.stop()
 
+    def spoczynek(self):
+        return not (self.lewy or self.prawy)
+
     def _straznik(self):
+        """Co 20 ms: STOP przeterminowanych poleceń, a w trakcie jazdy prosto ponowne liczenie korekty toru."""
+        t_pop = time.monotonic()
         while True:
-            time.sleep(0.1)
+            time.sleep(0.02)
+            teraz = time.monotonic()
+            dt, t_pop = teraz - t_pop, teraz
             with self.lock:
-                if (self.lewy or self.prawy) and time.monotonic() > self._do:
+                if (self.lewy or self.prawy) and teraz > self._do:
                     self.lewy = self.prawy = 0.0
+                    self._polecenie = None
                     self._zastosuj()
+                    continue
+                pol = self._polecenie if teraz <= self._do else None
+            if pol is not None and self.konf.get("trzymaj_tor") and self.imu is not None:
+                self._jedz(*pol, dt, przedluz=False)

@@ -44,6 +44,19 @@ percepcja = Percepcja(KONF)
 sterownik = Sterownik(naped, percepcja, KONF)
 system = System()
 czujnik = {"dane": None, "blad": None}
+zyro = {"imu": None, "blad": None}
+
+
+def wlacz_zyroskop():
+    """MPU6050 na I2C: kurs względny, trzymanie toru w napędzie i STOP przy przewróceniu."""
+    try:
+        from zyroskop import Zyroskop
+        imu = Zyroskop(KONF, spoczynek=naped.spoczynek)
+    except Exception as e:
+        zyro["blad"] = f"żyroskop niedostępny: {e}"
+        return
+    imu.start()
+    zyro["imu"] = naped.imu = imu
 
 
 def czytaj_czujnik():
@@ -130,10 +143,28 @@ def stan():
         blad_wizji=percepcja.blad, kamera=percepcja.stan_kamery, fps=round(percepcja.fps, 1), ms=round(percepcja.ms),
         cpu=round(system.cpu), temp_cpu=system.temp, temp_hailo=percepcja.temp_hailo, ram=round(system.ram_proc),
         zasilanie=system.zasilanie, hailo_proc=round(percepcja.hailo_proc), czujnik=czujnik["dane"],
-        blad_czujnika=czujnik["blad"], ram_gb=[round(system.ram_uzyte, 1), round(system.ram_razem, 1)], maks_moc=KONF["maks_moc"], nagrywanie=sterownik.nagrywanie.klatki if
+        blad_czujnika=czujnik["blad"],
+        zyroskop=zyro["imu"].odczyt() if zyro["imu"] else None, blad_zyroskopu=zyro["blad"] or (zyro["imu"].blad if zyro["imu"] else None),
+        trzymaj_tor=bool(KONF.get("trzymaj_tor")), trzyma_tor=naped.trzyma_tor, korekta=round(naped.korekta, 2),
+        maks_przechyl=KONF["maks_przechyl"], ram_gb=[round(system.ram_uzyte, 1), round(system.ram_razem, 1)], maks_moc=KONF["maks_moc"], nagrywanie=sterownik.nagrywanie.klatki if
         sterownik.nagrywanie.aktywne else None, wyprawa=os.path.basename(sterownik.ostatnia_wyprawa or "") or None,
         analiza=st_an, zdjecia=zdjecia, liczba_zdjec=sterownik.liczba_zdjec, model=percepcja.nazwa_modelu,
         proporcje=2 * 4 / 3 if KONF["strumien_glebia"] else 4 / 3)
+
+
+@app.post("/api/zyroskop/<akcja>")
+def api_zyroskop(akcja):
+    imu = zyro["imu"]
+    if imu is None:
+        return jsonify(blad=zyro["blad"] or "brak żyroskopu"), 404
+    if akcja == "zeruj":
+        imu.zeruj()
+    elif akcja == "kalibruj":
+        naped.stop()
+        imu.kalibruj()
+    else:
+        return jsonify(blad="nieznana akcja"), 400
+    return jsonify(ok=True)
 
 
 @app.post("/api/puls")
@@ -286,6 +317,11 @@ def straznik():
         if sterownik.tryb not in ("stop", "reczny") and temp > KONF["maks_temp"]:
             sterownik.ustaw_tryb("stop")
             sterownik.opis = f"Za gorąco ({temp:.0f} °C > {KONF['maks_temp']} °C): STOP trybu, żeby układy ostygły."
+        imu = zyro["imu"]
+        if imu is not None and imu.ok and imu.przechyl > KONF["maks_przechyl"] and (naped.lewy or naped.prawy or sterownik.tryb != "stop"):
+            sterownik.ustaw_tryb("stop")
+            naped.stop()
+            sterownik.opis = f"Przechył {imu.przechyl:.0f}° (> {KONF['maks_przechyl']}°): STOP, łazik mógł się przewrócić."
         cisza = time.monotonic() - puls["czas"]
         bezczynnosc = time.monotonic() - max(puls["czas"], percepcja._uzycie)  # także podgląd i odczyty stanu
         if sterownik.tryb != "stop" and cisza > KONF["stop_bez_strony_s"]:
@@ -303,6 +339,7 @@ if __name__ == "__main__":
     kod_dostepu()
     percepcja.start()
     threading.Thread(target=czytaj_czujnik, daemon=True).start()
+    wlacz_zyroskop()
     sterownik.start()
     threading.Thread(target=straznik, daemon=True).start()
     app.run(host="0.0.0.0", port=KONF["port"], threaded=True)

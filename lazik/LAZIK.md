@@ -144,7 +144,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   **2026-11-02: silniki nie ruszyły w teście** (impulsy 0,4–0,8 s, 50–70%, kamera bez zmiany). Do sprawdzenia: zasilanie
   silników, połączenia, typ płytki. Piny kierunku jako wejścia czytały stan wysoki: płytka podciąga wejścia (do jakiego
   napięcia? jeśli 5 V, to ryzyko dla GPIO 3,3 V).
-- **Pad Xbox:** Start = tryb ręczny, B = STOP, X = tryb mocy w kółko:
+- **Pad Xbox:** Start = tryb ręczny, B = STOP, Y = zeruj kurs żyroskopu, X = tryb mocy w kółko:
   „z ustawień” (gałka, do maks. mocy, małe wychylenie podbite do progu ruszania), „spusty” (RT przód / LT tył, moc
   **liniowo od zera** 0–100%, gałka = skręt), „wychylenie gałki” (gałka, moc liniowo od zera 0–100%), „PEŁNA” (gałka do 100%,
   z podbiciem). `/api/reczny` przyjmuje `pelna` (pomija maks. moc) i `liniowo` (bez progu ruszania). Martwa strefa gałki 12%,
@@ -158,12 +158,21 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   (zakres, podpis, podpowiedź); strona buduje z nich formularze, serwer sprawdza wartości. „Przywróć domyślne” na zakładkę.
 - Strona skaluje się: czcionka `clamp`, obraz dopasowany do wysokości ekranu, telefon w poziomie (panel obok obrazu),
   kokpit z przyciskami rosnącymi z ekranem. Sprawdzone zrzutami 360×740, 740×360, 1024×600, 1920×1080 (bez przewijania w bok).
+- **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
+  bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
+  (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
+  stoją; na postoju dryf ~0° przez minutę. **Trzymanie toru** (`naped.py`, regulator PID 50 Hz): przy jeździe bez skrętu
+  zapamiętuje kurs i dodaje różnicę mocy stron, a świadomy skręt ustawia nowy kurs. Działa w trybie ręcznym i w trybach
+  automatycznych. Zakładka ⚙ Żyroskop (P/I/D, maks. korekta, odwrócenie, zeruj, kalibruj). STOP przy przechyle > 40°
+  (Bezpieczeństwo). Symulacja z prawym silnikiem słabszym o 20%: bez korekty 66° zboczenia w 3 s, z korektą ~1°.
+  Na sprzęcie do sprawdzenia: kierunek (obrót w prawo ręką ma zwiększać kurs) i strojenie P/I/D w jeździe.
 - BME280 na I2C 0x76 działa (`bme280.py`, I2C włączone 2026-11-02): 22,2 °C, 1020,9 hPa, 97,8 % (wilgotność do sprawdzenia).
 
 ## Stan
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Żyroskop MPU6050 w sterowaniu: kurs, trzymanie toru (PID), STOP przy przewróceniu, Y na padzie = zeruj. |
 | 2026-11-01 | Analiza wideo (przesyłanie z telefonu, osoby i twarze, przedmioty, opis AI, skan 3D) i kopie zapasowe przez most na Pi 4 (Pi 5 skonfigurowany; Zero 2W czekają). |
 | 2026-11-01 | Wizja v3: 25 kl/s (ustawienie kamery), YOLOv8m/x do wyboru, nagrywanie z dwoma widokami, analiza nagrań na pełnych obrotach (PnP z głębią, ekran postępu z obciążeniem i temperaturami), strzałki w podglądzie 3D. Pi zrestartował się raz (zasilanie). |
 | 2026-11-01 | Wizja v2: śledzenie i wybór obiektów, zdjęcia z adnotacjami (zoom, galeria), opis sceny, tryb Przestrzeń (głębia Hailo, skan 3D, przeglądarka „gra”). VNC włączony. Zasilacz za słaby (spadki napięcia). |

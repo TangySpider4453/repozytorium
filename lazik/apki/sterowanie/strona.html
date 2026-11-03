@@ -119,6 +119,15 @@
   .czujnik b { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
   .czujnik small { color:var(--szary); font-size:11px; }
   .przypnij { min-height:30px; font-size:12px; }
+  .zyro { grid-column:1 / -1; display:flex; align-items:center; gap:12px; font-size:13px; }
+  .tarcza { width:54px; height:54px; flex:none; }
+  .tarcza circle { fill:var(--panel2); stroke:var(--linia); stroke-width:2; }
+  .tarcza path { fill:var(--akcent); transition:transform .2s linear; transform-origin:27px 27px; }
+  .tarcza text { fill:var(--szary); font-size:9px; text-anchor:middle; }
+  .zyro .dane { display:grid; grid-template-columns:auto auto; gap:2px 10px; flex:1; }
+  .zyro .dane span:nth-child(odd) { color:var(--szary); }
+  .zyro .dane span:nth-child(even) { font-weight:600; font-variant-numeric:tabular-nums; }
+  .zyro button { min-height:30px; font-size:12px; padding:0 10px; }
 
   /* ---- ekran ustawień ---- */
   .ustaw { position:fixed; inset:0; z-index:10; background:var(--tlo); display:none; flex-direction:column;
@@ -161,6 +170,7 @@
   <span class="etyk" id="hud_tryb"></span>
   <span class="etyk" id="hud_pad"></span>
   <span class="etyk" id="hud_moc" title="X na padzie przełącza tryb mocy"></span>
+  <span class="etyk" id="hud_kurs" title="Kurs z żyroskopu (Y na padzie = zeruj)"></span>
   <span class="etyk spusty" id="hud_spusty"><span>LT</span><span class="sp"><i id="sp_lt"></i></span><span>RT</span><span class="sp"><i id="sp_rt"></i></span></span>
   <button class="stop" id="stop3">STOP</button>
 </div>
@@ -210,6 +220,15 @@
     <div class="wiersz"><div class="g"><span>Kamera / wizja</span><span id="s_kl">—</span></div></div>
     <div class="wiersz"><div class="g"><span>Silniki L / P</span><span id="s_nap">—</span></div></div>
     <div class="wiersz"><div class="g"><span>Pad (X = tryb mocy)</span><span id="s_pad">—</span></div></div>
+    <div class="maly">Żyroskop (kurs względny: 0° = kierunek przy starcie albo po „Zeruj”)</div>
+    <div class="zyro">
+      <svg class="tarcza" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="27" r="25"/><text x="27" y="10">0</text>
+        <path id="z_igla" d="M27 6 L32 30 L27 26 L22 30 Z"/></svg>
+      <div class="dane"><span>Kurs</span><span id="z_kurs">—</span><span>Obrót</span><span id="z_obr">—</span>
+        <span>Przechył</span><span id="z_prz">—</span><span>Trzymanie toru</span><span id="z_tor">—</span></div>
+      <button id="z_zeruj">Zeruj</button>
+    </div>
+    <p class="blad" id="z_blad"></p>
     <div class="maly">Czujnik BME280</div>
     <div class="czujnik" id="czujnik">
       <div><b id="c_t">—</b><small>°C</small></div><div><b id="c_h">—</b><small>% wilg.</small></div><div><b id="c_p">—</b><small>hPa</small></div>
@@ -404,11 +423,11 @@ addEventListener('keyup', e => { if (wcisniete.delete(e.code)) zmiana(); });
 //   spusty:          RT = gaz do przodu, LT = do tyłu, moc liniowo 0–100% (delikatnie = bardzo mało mocy), gałka = skręt
 //   gałka = moc:     wychylenie lewej gałki = moc liniowo 0–100% (jak spusty, tylko gałką)
 //   pełna moc:       lewa gałka = jazda do 100% mocy (z podbiciem do progu ruszania)
-// B = STOP, Start = tryb ręczny. Działa na stronie z HTTPS albo otwartej na samym Pi (localhost).
+// B = STOP, Start = tryb ręczny, Y = zeruj kurs żyroskopu. Działa na stronie z HTTPS albo otwartej na samym Pi (localhost).
 const TRYBY_MOCY = { ustawienia: 'Moc: z ustawień', spusty: 'Moc: spusty RT/LT', gałka: 'Moc: wychylenie gałki', pelna: 'Moc: PEŁNA' };
 let trybMocy = pamiec.get('lazik_moc') || 'ustawienia';
 if (!TRYBY_MOCY[trybMocy]) trybMocy = 'ustawienia';
-let poprzB = false, poprzStart = false, poprzX = false;
+let poprzB = false, poprzStart = false, poprzX = false, poprzY = false;
 const spust = { lt: 0, rt: 0, plynne: false };
 function odczytSpustow(gp) {
   // standardowe mapowanie: przyciski 6/7 z wartością 0..1; inne przeglądarki: osie 2/5 w zakresie -1..1
@@ -430,14 +449,15 @@ function petlaPada() {
     const sx = mz([gp.axes[0] || 0, gp.axes[2] && gp.mapping === 'standard' ? gp.axes[2] : 0]
       .reduce((a, b) => Math.abs(b) > Math.abs(a) ? b : a, 0));
     const b = gp.buttons[1] && gp.buttons[1].pressed, st = gp.buttons[9] && gp.buttons[9].pressed;
-    const x = gp.buttons[2] && gp.buttons[2].pressed;
+    const x = gp.buttons[2] && gp.buttons[2].pressed, y = gp.buttons[3] && gp.buttons[3].pressed;
+    if (y && !poprzY) api('api/zyroskop/zeruj');
     if (b && !poprzB) $('#stop').click();
     if (st && !poprzStart) api('api/tryb', { tryb: 'reczny' }).then(odswiez);
     if (x && !poprzX) {
       const kol = Object.keys(TRYBY_MOCY); trybMocy = kol[(kol.indexOf(trybMocy) + 1) % kol.length];
       pamiec.set('lazik_moc', trybMocy); pokazTrybMocy();
     }
-    poprzB = b; poprzStart = st; poprzX = x;
+    poprzB = b; poprzStart = st; poprzX = x; poprzY = y;
     let v = gy;
     if (trybMocy === 'spusty') v = Math.max(-1, Math.min(1, (spust.rt < 0.03 ? 0 : spust.rt) - (spust.lt < 0.03 ? 0 : spust.lt)));
     pad.pelna = trybMocy !== 'ustawienia';
@@ -522,6 +542,7 @@ async function rysujUstawienia() {
     else t.append(poleWybor(p.podpis, p.opcje, v, x => zapisz(p.klucz, x), p.podpowiedz));
   }
   if (zakladka === 'Kamera') await rysujKontrolkiKamery(t);
+  if (zakladka === 'Żyroskop') rysujZyroskop(t);
   const b = document.createElement('button'); b.textContent = `Przywróć domyślne: ${zakladka}`;
   b.onclick = async () => { await api('api/ustawienia/domyslne', { zakladka }); schemat = await (await fetch('api/schemat')).json(); rysujUstawienia(); };
   t.append(b);
@@ -538,6 +559,16 @@ async function rysujKontrolkiKamery(t) {
     if (c.typ === 'bool') box.append(polePrzelacznik(c.podpis, !!c.wartosc, x => ustaw(c.nazwa, x ? 1 : 0), pod, c.nieaktywna));
     else if (c.typ === 'menu') box.append(poleWybor(c.podpis, c.menu, c.wartosc, x => ustaw(c.nazwa, +x), pod, c.nieaktywna));
     else if (c.typ === 'int') box.append(poleSuwak(c.podpis, c.min, c.max, c.krok, c.wartosc, v => `${v} (dom. ${c.domyslnie})`, x => ustaw(c.nazwa, x), pod, c.nieaktywna));
+  }
+}
+function rysujZyroskop(t) {
+  t.insertAdjacentHTML('beforeend', '<p class="sekcja">Czujnik: MPU6050 (żyroskop + akcelerometr, bez magnetometru, więc kurs jest względny, nie od północy). ' +
+    'Jak sprawdzić: włącz tryb Ręczny i jedź prosto; w panelu stanu „Trzymanie toru” pokazuje, ile korekty dodaje.</p>');
+  for (const [nap, adr, opis] of [['Zeruj kurs', 'api/zyroskop/zeruj', 'Obecny kierunek staje się 0°.'],
+                                  ['Kalibruj żyroskop', 'api/zyroskop/kalibruj', 'Postaw łazik nieruchomo na płaskim na 2 s: ustawia zero żyroskopu i pion.']]) {
+    const b = document.createElement('button'); b.textContent = nap;
+    b.onclick = async () => { b.disabled = true; await api(adr); setTimeout(() => b.disabled = false, 2500); };
+    t.append(b); t.insertAdjacentHTML('beforeend', `<p class="maly">${opis}</p>`);
   }
 }
 function rysujSystem(t) {
@@ -557,6 +588,7 @@ const szuflada = $('#szuflada');
 let przypiety = pamiec.get('lazik_panel') === '1';
 szuflada.classList.toggle('otwarta', przypiety);
 $('#przypnij').textContent = przypiety ? 'Odepnij panel' : 'Przypnij panel';
+$('#z_zeruj').onclick = () => api('api/zyroskop/zeruj');
 $('#uchwyt').onclick = () => szuflada.classList.toggle('otwarta');
 $('#przypnij').onclick = () => {
   przypiety = !przypiety; pamiec.set('lazik_panel', przypiety ? '1' : '0');
@@ -580,6 +612,17 @@ function panelStanu() {
   $('#c_h').textContent = c && c.wilgotnosc != null ? Math.round(c.wilgotnosc) : '—';
   $('#c_p').textContent = c && c.cisnienie ? Math.round(c.cisnienie) : '—';
   $('#c_blad').textContent = S.blad_czujnika || '';
+  const z = S.zyroskop;
+  $('#z_kurs').textContent = z ? `${Math.round(z.kurs)}°` : '—';
+  $('#z_obr').textContent = z ? `${Math.round(z.obrot)} °/s` : '—';
+  $('#z_prz').textContent = z ? `${Math.round(z.przechyl)}°` : '—';
+  $('#z_prz').style.color = z && z.przechyl > S.maks_przechyl * 0.7 ? 'var(--zle)' : '';
+  $('#z_tor').textContent = !z ? '—' : !S.trzymaj_tor ? 'wyłączone' : S.trzyma_tor ? `pilnuje (korekta ${Math.round(S.korekta * 100)}%)` : 'gotowe';
+  $('#z_tor').style.color = S.trzyma_tor ? 'var(--ok)' : '';
+  $('#z_blad').textContent = S.blad_zyroskopu || (z && z.stan !== 'gotowy' ? z.stan : '');
+  if (z) $('#z_igla').style.transform = `rotate(${z.kurs}deg)`;
+  $('#hud_kurs').style.display = z ? '' : 'none';
+  if (z) $('#hud_kurs').textContent = `🧭 ${Math.round(z.kurs)}°` + (S.trzyma_tor ? ' · trzymam tor' : '');
   const najg = Math.max(S.temp_cpu || 0, S.temp_hailo || 0);
   $('#uchwyt_t').textContent = najg ? Math.round(najg) + '°' : '';
   $('#uchwyt_t').style.color = kolTemp(najg, 70, 80) || 'var(--akcent)';
