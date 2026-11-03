@@ -35,6 +35,7 @@ class Naped:
         self.blad_zyro = None               # podejrzenie odwróconego żyroskopu (wtedy korekty wyłączone)
         self._byl_skret = False
         self.boczne = 0.0                   # szacowane zejście z linii toru [m], > 0 = w prawo
+        self._zwolnienie = 1.0              # przy dużym odchyleniu od kursu jazda do przodu zwalnia, żeby szybciej wrócić
         try:
             from gpiozero import Motor
             p = konf["piny"]
@@ -62,6 +63,7 @@ class Naped:
     def _jedz(self, predkosc, skret, maks, liniowo, dt, przedluz=True):
         skret = self._obrot_staly(skret, dt)
         skret = self._trzymaj_tor(predkosc, skret, dt)
+        predkosc *= self._zwolnienie
         l = max(-1.0, min(1.0, predkosc + skret))
         r = max(-1.0, min(1.0, predkosc - skret))
         self.ustaw(l, r, maks, liniowo, przedluz)
@@ -101,6 +103,7 @@ class Naped:
         if not (k.get("trzymaj_tor") and self._imu_ok() and abs(v) > 0.05 and abs(s) < 0.04):
             self._kurs_cel, self._calka, self.korekta, self.trzyma_tor = None, 0.0, 0.0, False
             self._byl_skret = abs(s) >= 0.04
+            self._zwolnienie = 1.0
             return s
         if self._kurs_cel is None:
             # po skręcie łazik jeszcze chwilę się obraca: cel z małym wyprzedzeniem, żeby nie cofał się do starego kursu
@@ -123,8 +126,10 @@ class Naped:
         blad = odch - dojazd
         self._calka = max(-30.0, min(30.0, self._calka + blad * dt))
         kor = -(k.get("tor_kp", 0.03) * blad + k.get("tor_ki", 0.02) * self._calka + k.get("tor_kd", 0.004) * imu.obrot)
-        m = k.get("tor_maks_korekta", 0.35)
+        m = k.get("tor_maks_korekta", 0.9)
         self.korekta = max(-m, min(m, kor))
+        # szturchnięty: najpierw z powrotem na kurs, potem dalej (5° = pełna prędkość, od 15° tylko 30%)
+        self._zwolnienie = 1.0 - 0.7 * max(0.0, min(1.0, (abs(odch) - 5) / 10)) if k.get("tor_zwalniaj", True) else 1.0
         self.trzyma_tor = True
         return s + self.korekta
 

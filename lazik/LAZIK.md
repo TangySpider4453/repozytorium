@@ -235,6 +235,11 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   spust z samym `pressed` bez wartości liczy się jako 100%. Podczas jazdy I2C zawisło 3× w minutę (zakłócenia od silników):
   strażnik reaguje po 0,6 s (było 1,5 s). Zapas gałki 20° (było 10°), korekta toru mocniejsza (P 0,05, D 0,006,
   maks. 0,5); symulacja: szturchnięcie o 20° → z powrotem w 0,3 s, przestrzał 2,8°.
+- **Natychmiastowy powrót do kąta** (2026-11-03, na prośbę: „asap do kąta pierwotnego”): powrót na linię domyślnie
+  wyłączony (jechał skosem zamiast od razu wrócić do kąta). Korekta P 0,09, D 0,008, maks. 0,9 (jedno koło może kręcić
+  do tyłu). `tor_zwalniaj`: przy odchyleniu ponad 5° jazda do przodu zwalnia (od 15° do 30%), żeby moc szła w powrót.
+  Symulacja (stare → nowe): szturchnięcie 45° z powrotem po 0,42 → 0,34 s, kiwanie 8,3° → 1,5°; wybój pchający koło
+  1,2 s obracał łazik o 75° → teraz najwyżej 6°.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -249,6 +254,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Natychmiastowy powrót do pierwotnego kąta (mocniejsza korekta, zwalnianie przy odchyleniu, powrót na linię wyłączony). |
 | 2026-11-03 | Strona sama się przeładowuje po aktualizacji (iPad miał starą wersję), diagnoza pada zdalnie, zapas gałki 20°, mocniejsza korekta, szybszy strażnik I2C. |
 | 2026-11-03 | Powrót na linię toru po wyboju (szacunek zejścia w bok z żyroskopu i mocy). |
 | 2026-11-03 | Gałka: 10° zapasu do jazdy prosto; skręt ze stałą prędkością obrotu (regulator na żyroskopie); bezpiecznik odwróconego żyroskopu. |
