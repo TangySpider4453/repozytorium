@@ -38,7 +38,7 @@ class Oled:
         self.bus, self.adres, self.konf = bus, adres, konf
         self.f = ImageFont.truetype(CZCIONKA, 11)
         self.fb = ImageFont.truetype(CZCIONKA_B, 11)
-        for c in (0xAE, 0xD5, 0x80, 0xA8, 0x3F, 0xD3, 0x00, 0x40, 0x8D, 0x14, 0x20, 0x02, 0xDA, 0x12,
+        for c in (0xD5, 0x80, 0xA8, 0x3F, 0xD3, 0x00, 0x40, 0x8D, 0x14, 0x20, 0x02, 0xDA, 0x12,
                   0xD9, 0xF1, 0xDB, 0x40, 0xA4, 0xA6, 0xAF):
             self._kom(c)
         self._obrot = None
@@ -272,7 +272,12 @@ class Wyswietlacz(threading.Thread):
                 else:
                     try:
                         self.urz.pokaz(widok)
-                    except OSError:  # odłączony albo zakłócenia: spróbujemy wykryć od nowa
-                        self.urz, self.nazwa = None, None
+                        self._bledy = 0
+                    except OSError:
+                        # pojedynczy błąd I2C (zakłócenia): następna klatka za sekundę, bez ponownej inicjalizacji,
+                        # bo ta zaczyna się od wyłączenia ekranu (wyglądało to jak mruganie i gaśnięcie)
+                        self._bledy = getattr(self, "_bledy", 0) + 1
+                        if self._bledy >= 5:   # naprawdę odłączony: wykryjemy od nowa
+                            self.urz, self.nazwa, self._bledy = None, None, 0
             time.sleep(1)
 
