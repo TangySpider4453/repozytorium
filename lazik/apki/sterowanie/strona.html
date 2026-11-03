@@ -350,7 +350,7 @@ function rysuj() {
       const d = S.sektory[i], kol = d < S.odl_stop ? '#e5534b' : d < S.odl_zwolnij ? '#e0a640' : '#3fbf6a';
       const x0 = r.x + i * r.w / 5 + 3, x1 = r.x + (i + 1) * r.w / 5 - 3, yy = r.y + y * r.h;
       c.strokeStyle = kol; c.lineWidth = 3; c.beginPath(); c.moveTo(x0, yy); c.lineTo(x1, yy); c.stroke();
-      c.fillStyle = kol; c.fillText(Math.round(d * 100) + ' cm', x0 + 2, yy - 5);
+      c.fillStyle = kol; c.fillText((y >= 0.97 ? '≤ ' : '') + Math.round(d * 100) + ' cm', x0 + 2, yy - 5);
     });
   }
   c.font = '600 14px system-ui';
@@ -724,7 +724,8 @@ async function odswiez() {
     for (let i = 0; i < 5; i++) {
       const odl = S.ocena ? S.ocena.odl : S.sektory, v = odl ? odl[i] : null;
       sek[i].style.background = v === null ? 'var(--linia)' : v < S.odl_stop ? 'var(--zle)' : v < S.odl_zwolnij ? 'var(--akcent)' : 'var(--ok)';
-      sek[i].textContent = v === null || v > 5 ? '' : Math.round(v * 100) + ' cm';
+      const naDole = S.podstawy && S.podstawy[i] != null && S.podstawy[i] >= 0.97;  // przeszkoda od samego dołu kadru: bliżej się nie da zmierzyć
+      sek[i].textContent = v === null || v > 5 ? '' : (naDole ? '≤ ' : '') + Math.round(v * 100) + ' cm';
     }
     $('#bledy').innerHTML = [S.blad_napedu, S.blad_wizji].filter(Boolean).map(b => `<p class="blad">${b}</p>`).join('');
   } catch (_) {

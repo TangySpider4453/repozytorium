@@ -202,7 +202,9 @@ class Sterownik(threading.Thread):
         jade = self._jade_od is not None and teraz - self._jade_od > 0.5
         powod, mocno = None, False
         if przod < stop:
-            powod = f"przeszkoda ~{przod * 100:.0f} cm przed sobą"
+            pod = self.per.podstawy or []
+            na_dole = any(y is not None and y >= 0.97 for y in pod[1:4])
+            powod = f"przeszkoda {'tuż' if na_dole else '~' + format(przod * 100, '.0f') + ' cm'} przed sobą"
         ttc = [t for t in (self.per.ttc or [None] * 5)[1:4] if t]
         if not powod and jade and k["czas_do_zderzenia_s"] > 0 and ttc and min(ttc) < k["czas_do_zderzenia_s"]:
             powod = f"coś szybko rośnie w kadrze (zderzenie za ~{min(ttc):.1f} s)"
