@@ -37,6 +37,7 @@ class Zyroskop(threading.Thread):
         self.przechyl = 0.0         # ° od pozycji przy starcie (pochylenie albo przechył w bok)
         self.temp = None
         self.przyspieszenie = 0.0   # g ponad grawitację (uderzenie, podskok)
+        self._szczyt = 0.0          # największe przyspieszenie od ostatniego odczytu szczytu (wykrywanie uderzeń)
         self.stan = "uruchamiam…"
         self._zero = [0.0, 0.0, 0.0]
         self._gora = [0.0, 0.0, 1.0]
@@ -151,8 +152,15 @@ class Zyroskop(threading.Thread):
                 self.obrot = obrot
                 self.przechyl = math.degrees(math.acos(cos_p))
                 self.przyspieszenie = abs(dl - 1.0)
+                self._szczyt = max(self._szczyt, self.przyspieszenie)
                 self.temp = round(temp, 1)
             time.sleep(max(0.0, 1 / CZESTOTLIWOSC - (time.monotonic() - teraz)))
+
+    def szczyt(self):
+        """Największe przyspieszenie [g] od poprzedniego wywołania (uderzenie w przeszkodę daje skok)."""
+        with self.lock:
+            w, self._szczyt = self._szczyt, 0.0
+        return w
 
     def odczyt(self):
         with self.lock:

@@ -41,7 +41,8 @@
   .wideo canvas { touch-action:none; cursor:crosshair; }
   .brak { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--szary); text-align:center; padding:20px; }
   .sektory { display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; margin-top:6px; }
-  .sektory div { height:10px; border-radius:3px; background:var(--linia); }
+  .sektory div { min-height:16px; border-radius:3px; background:var(--linia); color:#0b0b0b; font-size:11px; font-weight:600;
+                 text-align:center; line-height:16px; }
   .opis { background:var(--panel2); border-radius:10px; padding:10px 12px; margin-top:8px; font-size:16px; min-height:44px; }
   .panel { background:var(--panel); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; }
   .tryby { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:6px; }
@@ -82,17 +83,33 @@
     body.kokpit .kokpit-l { flex-direction:row; } body.kokpit .kokpit-l button { flex:1; }
     .kokpit-l button, .kokpit-p button { min-height:96px; font-size:32px; } }
 
-  /* ---- pełny ekran: pad Xbox albo klawiatura ---- */
-  body.pelny { padding:0; overflow:hidden; }
-  body.pelny header, body.pelny .uklad > aside, body.pelny .sektory, body.pelny .kokpit-gora,
-  body.pelny .kokpit-l, body.pelny .kokpit-p { display:none !important; }
+  /* ---- pełny ekran: pad Xbox albo klawiatura. Nic nie leży na obrazie: przezroczysty panel z boku, zwijany ---- */
+  body.pelny { padding:0; overflow:hidden; --bok:clamp(150px, 19vw, 230px); }
+  body.pelny.zwiniety { --bok:0px; }
+  body.pelny header, body.pelny .uklad > aside, body.pelny .sektory, body.pelny .kokpit-gora, body.pelny .opis,
+  body.pelny .kokpit-l, body.pelny .kokpit-p, body.pelny .szuflada { display:none !important; }
   body.pelny .uklad { display:block; }
-  body.pelny .wideo { position:fixed; inset:0; border-radius:0; aspect-ratio:auto; z-index:1; width:auto !important; margin:0; }
-  body.pelny .opis { position:fixed; left:12px; bottom:12px; right:200px; z-index:3; background:rgba(13,17,20,.72); margin:0; width:auto !important; }
-  body.pelny .pelny-hud { display:flex; position:fixed; top:calc(36px + env(safe-area-inset-top, 0px)); left:12px; right:12px; z-index:3; gap:8px;
-    align-items:center; flex-wrap:wrap; }
-  .pelny-hud .etyk { background:rgba(13,17,20,.72); border-radius:8px; padding:6px 10px; font-size:14px; }
-  .pelny-hud .stop { margin-left:auto; }
+  body.pelny .wideo { position:fixed; top:0; bottom:0; left:0; right:var(--bok); border-radius:0; aspect-ratio:auto; z-index:1;
+                      width:auto !important; height:auto !important; margin:0; transition:right .2s ease; }
+  body.pelny .pelny-hud { display:flex; }
+  .pelny-hud { position:fixed; top:0; right:0; bottom:0; width:var(--bok); z-index:3; flex-direction:column; gap:7px;
+    padding:calc(8px + env(safe-area-inset-top, 0px)) calc(8px + env(safe-area-inset-right, 0px)) 8px 8px; overflow-y:auto;
+    background:rgba(13,17,20,.42); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border-left:1px solid rgba(255,255,255,.08);
+    transition:transform .2s ease; font-size:13px; }
+  body.pelny.zwiniety .pelny-hud { transform:translateX(100%); }
+  .pelny-hud .etyk { background:rgba(255,255,255,.07); border-radius:8px; padding:5px 8px; line-height:1.3; }
+  .pelny-hud .etyk:empty { display:none; }
+  .pelny-hud .stop { min-height:56px; font-size:20px; }
+  .pelny-hud button { width:100%; background:rgba(255,255,255,.1); }
+  .pelny-hud .hud-opis { color:var(--szary); font-size:12px; }
+  .zwin-hud { position:fixed; z-index:4; top:50%; right:var(--bok); transform:translateY(-50%); width:26px; min-height:64px; padding:0;
+              border-radius:10px 0 0 10px; background:rgba(13,17,20,.45); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+              display:none; font-size:18px; transition:right .2s ease; }
+  body.pelny .zwin-hud { display:block; }
+  .mini-stop { position:fixed; z-index:4; right:calc(8px + env(safe-area-inset-right, 0px)); top:calc(8px + env(safe-area-inset-top, 0px));
+               display:none; min-height:40px; padding:0 12px; opacity:.8; }
+  body.pelny.zwiniety .mini-stop { display:block; }
+  @media (prefers-reduced-motion:reduce) { .pelny-hud, body.pelny .wideo, .zwin-hud { transition:none; } }
   .spusty { display:inline-flex; align-items:center; gap:6px; }
   .sp { display:inline-block; width:70px; height:10px; background:var(--linia); border-radius:5px; overflow:hidden; }
   .sp i { display:block; height:100%; width:0; background:var(--akcent); }
@@ -165,15 +182,19 @@
   <span class="lacze" id="lacze2" style="margin-left:auto"><i></i><span></span></span>
   <button class="stop" id="stop2">STOP</button>
 </div>
-<div class="pelny-hud">
-  <button id="nakokpit">Przyciski</button>
-  <span class="etyk" id="hud_tryb"></span>
-  <span class="etyk" id="hud_pad"></span>
-  <span class="etyk" id="hud_moc" title="X na padzie przełącza tryb mocy"></span>
-  <span class="etyk" id="hud_kurs" title="Kurs z żyroskopu (Y na padzie = zeruj)"></span>
-  <span class="etyk spusty" id="hud_spusty"><span>LT</span><span class="sp"><i id="sp_lt"></i></span><span>RT</span><span class="sp"><i id="sp_rt"></i></span></span>
+<div class="pelny-hud" aria-label="Panel pełnego ekranu">
   <button class="stop" id="stop3">STOP</button>
+  <span class="etyk" id="hud_tryb"></span>
+  <span class="etyk" id="hud_moc" title="X na padzie przełącza tryb mocy"></span>
+  <span class="etyk spusty" id="hud_spusty"><span>LT</span><span class="sp"><i id="sp_lt"></i></span><span>RT</span><span class="sp"><i id="sp_rt"></i></span></span>
+  <span class="etyk" id="hud_kurs" title="Kurs z żyroskopu (Y na padzie = zeruj)"></span>
+  <span class="etyk" id="hud_temp"></span>
+  <span class="etyk" id="hud_pad"></span>
+  <span class="etyk hud-opis" id="hud_opis"></span>
+  <button id="nakokpit">Przyciski</button>
 </div>
+<button class="zwin-hud" id="zwin_hud" aria-label="Zwiń albo rozwiń panel">›</button>
+<button class="stop mini-stop" id="stop4">STOP</button>
 <div class="uklad">
   <section>
     <div class="scena">
@@ -191,7 +212,7 @@
         <p class="maly" style="text-align:center">gaz z lewej, skręt z prawej: można trzymać oba naraz</p>
       </div>
     </div>
-    <div class="sektory" id="sektory" title="Wolne miejsce przed łazikiem (z głębi): zielone = wolno, czerwone = blisko">
+    <div class="sektory" id="sektory" title="Odległość do przeszkody w 5 pasach (głębia + rozpoznane obiekty): zielone = wolno, żółte = zwalniam, czerwone = omijam">
       <div></div><div></div><div></div><div></div><div></div>
     </div>
     <div class="opis" id="opis">…</div>
@@ -261,9 +282,15 @@ function wyjdzPelny() {
   ustawWidok(S && S.tryb === 'reczny' ? 'kokpit' : 'zwykly');
 }
 $('#napelny').onclick = wejdzPelny;
+function zwinHud(z) {
+  document.body.classList.toggle('zwiniety', z); pamiec.set('lazik_hud_zwiniety', z ? '1' : '0');
+  $('#zwin_hud').textContent = z ? '‹' : '›'; setTimeout(rysuj, 250);
+}
+zwinHud(pamiec.get('lazik_hud_zwiniety') === '1');
+$('#zwin_hud').onclick = () => zwinHud(!document.body.classList.contains('zwiniety'));
 $('#nakokpit').onclick = wyjdzPelny;
 $('#wyjdz').onclick = () => api('api/tryb', { tryb: 'stop' }).then(odswiez);
-for (const id of ['#stop', '#stop2', '#stop3']) $(id).onclick = () => { skoncz(); api('api/tryb', { tryb: 'stop' }).then(odswiez); };
+for (const id of ['#stop', '#stop2', '#stop3', '#stop4']) $(id).onclick = () => { skoncz(); api('api/tryb', { tryb: 'stop' }).then(odswiez); };
 
 // ---------- podgląd i zaznaczanie ----------
 const obraz = $('#obraz'), plotno = $('#nakladka');
@@ -314,6 +341,18 @@ function rysuj() {
   const c = plotno.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (!S) return;
   const r = prostokat();
+  if (S.pokaz_przeszkody && S.podstawy) {  // gdzie kończy się wolna podłoga + horyzont
+    c.setLineDash([6, 6]); c.strokeStyle = 'rgba(224,166,64,.7)'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(r.x, r.y + S.horyzont * r.h); c.lineTo(r.x + r.w, r.y + S.horyzont * r.h); c.stroke(); c.setLineDash([]);
+    c.font = '600 12px system-ui';
+    S.podstawy.forEach((y, i) => {
+      if (y == null) return;
+      const d = S.sektory[i], kol = d < S.odl_stop ? '#e5534b' : d < S.odl_zwolnij ? '#e0a640' : '#3fbf6a';
+      const x0 = r.x + i * r.w / 5 + 3, x1 = r.x + (i + 1) * r.w / 5 - 3, yy = r.y + y * r.h;
+      c.strokeStyle = kol; c.lineWidth = 3; c.beginPath(); c.moveTo(x0, yy); c.lineTo(x1, yy); c.stroke();
+      c.fillStyle = kol; c.fillText(Math.round(d * 100) + ' cm', x0 + 2, yy - 5);
+    });
+  }
   c.font = '600 14px system-ui';
   const zajete = [];  // etykiety już narysowane: kolejna, która by na nie weszła, przesuwa się niżej
   const koliduje = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -676,12 +715,16 @@ async function odswiez() {
       poprzTryb = S.tryb;
     }
     $('#hud_tryb').textContent = S.tryby[S.tryb] + ' · ' + S.fps + ' kl/s';
-    $('#hud_pad').textContent = pad.nazwa ? 'Pad: ' + pad.nazwa : 'klawiatura: strzałki / WASD · Esc = przyciski';
+    $('#hud_pad').textContent = pad.nazwa ? 'Pad: ' + pad.nazwa.replace(/\(.*\)/, '').trim() : 'Klawiatura: strzałki / WASD · Esc = przyciski';
+    $('#hud_opis').textContent = S.opis;
+    const tt = x => x == null ? '—' : Math.round(x) + '°';
+    $('#hud_temp').textContent = `CPU ${S.cpu}% ${tt(S.temp_cpu)} · Hailo ${tt(S.temp_hailo)}` + (S.czujnik ? ` · ${S.czujnik.temperatura.toFixed(0)} °C` : '');
     przyciskiTrybow(); opcje(false); rysuj(); panelStanu();
     const sek = $('#sektory').children;
     for (let i = 0; i < 5; i++) {
-      const v = S.sektory ? S.sektory[i] : null;
-      sek[i].style.background = v === null ? 'var(--linia)' : v < 0.45 ? 'var(--zle)' : v < 0.8 ? 'var(--akcent)' : 'var(--ok)';
+      const odl = S.ocena ? S.ocena.odl : S.sektory, v = odl ? odl[i] : null;
+      sek[i].style.background = v === null ? 'var(--linia)' : v < S.odl_stop ? 'var(--zle)' : v < S.odl_zwolnij ? 'var(--akcent)' : 'var(--ok)';
+      sek[i].textContent = v === null || v > 5 ? '' : Math.round(v * 100) + ' cm';
     }
     $('#bledy').innerHTML = [S.blad_napedu, S.blad_wizji].filter(Boolean).map(b => `<p class="blad">${b}</p>`).join('');
   } catch (_) {

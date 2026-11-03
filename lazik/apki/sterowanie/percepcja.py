@@ -13,26 +13,13 @@ import threading
 import time
 
 import cv2
-import numpy as np
 
 KATALOG = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(KATALOG), "wizja"))
 import przestrzen as P  # noqa: E402
+import przeszkody as Z  # noqa: E402
 import ustawienia as U  # noqa: E402
 from wizja import MODELE, Sledzenie, nazwa, znajdz_kamere_usb  # noqa: E402
-
-SEKTORY = 5
-
-
-def sektory_glebi(glebia):
-    """Względna odległość w 5 pionowych pasach (środkowa część kadru, bez podłogi tuż przed kołami).
-    1.0 = typowa odległość w kadrze, < 0.45 = coś blisko. Głębia z jednej kamery jest względna."""
-    h, w = glebia.shape
-    pas = glebia[int(h * 0.35):int(h * 0.80)]
-    odn = max(float(np.percentile(glebia, 60)), 1e-6)
-    return [float(np.percentile(pas[:, int(i * w / SEKTORY):int((i + 1) * w / SEKTORY)], 20)) / odn
-            for i in range(SEKTORY)]
-
 
 class Kamera(threading.Thread):
     """Kamera USB według ustawień; `odbiorcy` dostają każdą klatkę (np. nagrywanie w trybie Zwiedzaj)."""
@@ -114,7 +101,10 @@ class Percepcja(threading.Thread):
         self._uzycie = 0.0
         self._dev_temp = None
         self.klatka, self.nr, self.mapa = None, 0, None
-        self.obiekty, self.sektory = [], None
+        self.obiekty, self.sektory = [], None   # sektory: odległość [m] do przeszkody w 5 pasach (9.99 = wolne)
+        self.podstawy = None                     # wiersz (0..1), gdzie w danym pasie kończy się podłoga
+        self.przeplyw = Z.Przeplyw()
+        self.ttc, self.ruch_obrazu = [None] * Z.SEKTORY, 0.0
         self.fps = self.ms = 0.0
         self.hailo_proc = 0.0           # część każdej sekundy, którą Hailo spędza na naszych sieciach
         self.temp_hailo = None
@@ -200,10 +190,16 @@ class Percepcja(threading.Thread):
                 for o in obiekty:
                     o["nazwa"] = nazwa(o["klasa"])
                 chce_glebie = self.potrzebna_glebia or self.konf["glebia_zawsze"] or self.konf["strumien_glebia"]
+                if not chce_glebie or self.glebia_wstrzymana:
+                    self.podstawy = None
                 if chce_glebie and not self.glebia_wstrzymana:
                     self.glebia.zaladuj()
                     mapa = self.glebia.licz(klatka)
-                    sektory = sektory_glebi(mapa)
+                    prof = Z.profil_sektorow(mapa, self.konf)
+                    sektory, self.podstawy = [d for d, _ in prof], [y for _, y in prof]
+                if self.potrzebna_glebia:   # tryby jazdy: czas do zderzenia i ruch obrazu
+                    self.przeplyw.aktualizuj(klatka, time.monotonic(), self.konf.get("horyzont", 0.5))
+                    self.ttc, self.ruch_obrazu = list(self.przeplyw.ttc), self.przeplyw.ruch
                 if self.blad and not self.blad.startswith("brak pliku"):
                     self.blad = None
             except Exception as e:

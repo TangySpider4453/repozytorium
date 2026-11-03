@@ -164,6 +164,21 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   w trakcie oglądania, obraz wrócił po kilku sekundach). `/strumien.mjpg` zostaje dla innych programów. Etykiety ramek
   nie nachodzą już na siebie (kolejna przesuwa się niżej). Adres przez IP Tailscale `http://100.64.96.61:8000/` też działa,
   ale pad wymaga HTTPS, czyli linku `https://rpi-5-1.tail52831c.ts.net/`.
+- **Przeszkody (`przeszkody.py`, od 2026-11-03).** Stara metoda (głębia vs „typowa” w kadrze) mówiła „wolne”, gdy przeszkoda
+  zasłaniała cały kadr: na prawdziwej klatce koszulka z ~20 cm miała głębię ~24, a ściana w tle ~20–36. Teraz łączymy:
+  (1) **koniec podłogi z głębi**: w każdym z 5 pasów od dołu kadru sprawdzamy, czy głębia rośnie tak, jak na płaskiej
+  podłodze (porównujemy tylko stosunki, więc skala modelu nie ma znaczenia). Wiersz, gdzie przestaje, daje odległość
+  w metrach z wysokości kamery (10 cm), horyzontu (0,5) i pola widzenia (C170 ~48°). Koszulka z bliska: 30–40 cm;
+  syntetyczna ściana w 0,6 m: 0,51 m; pusta podłoga: wolne; na stole w klasie krawędź blatu z rzeczami: 65 cm.
+  (2) **obiekty YOLO**: dolna krawędź ramki = styk z podłogą = odległość. (3) **czas do zderzenia** z przepływu optycznego
+  (Farneback 160×120, 3 ms): puchnięcie obrazu przy jeździe; sam obrót nie daje alarmu. (4) **uderzenie** (skok
+  przyspieszenia z MPU6050). (5) **utknięcie**: silniki ponad 2 s, a obraz stoi. Reakcja (`tryby._omin`): cofnięcie
+  0,2–0,7 s i obrót o 45–70° mierzony żyroskopem w stronę, gdzie więcej miejsca. Strona trzymana kilka sekund, a 4 omijania
+  w ciągu 12 s = kąt, więc zawraca o 160°. Prędkość maleje od 90 cm do 35 cm (do 45%), łazik lekko odbija od rzeczy z boku.
+  Zakładka ⚙ Przeszkody; kreski z odległościami na podglądzie i w paskach pod obrazem. **Nie wykrywa krawędzi stołu
+  (spadku)**, więc autonomii nie testować na stole.
+- **Pełny ekran**: nic nie leży na obrazie. Z prawej przezroczysty panel (STOP, tryb, moc, kurs, temperatury, opis),
+  zwijany przyciskiem ›/‹ (po zwinięciu tylko mały STOP w rogu); obraz zajmuje resztę ekranu.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -178,6 +193,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Przeszkody od nowa (koniec podłogi z głębi w cm, obiekty, czas do zderzenia, uderzenie, utknięcie; omijanie z obrotem o kąt żyroskopem). Pełny ekran z przezroczystym panelem z boku. |
 | 2026-11-03 | Podgląd bez MJPEG (Safari/iPad gubił obraz), sam wraca po zerwaniu; etykiety bez nakładania. |
 | 2026-11-03 | Żyroskop MPU6050 w sterowaniu: kurs, trzymanie toru (PID), STOP przy przewróceniu, Y na padzie = zeruj. |
 | 2026-11-01 | Analiza wideo (przesyłanie z telefonu, osoby i twarze, przedmioty, opis AI, skan 3D) i kopie zapasowe przez most na Pi 4 (Pi 5 skonfigurowany; Zero 2W czekają). |
