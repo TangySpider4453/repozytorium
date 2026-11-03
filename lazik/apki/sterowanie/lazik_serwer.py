@@ -102,6 +102,14 @@ def strona():
     return send_from_directory(KATALOG, "strona.html")
 
 
+def jpeg_podgladu(klatka):
+    szer = int(KONF["szer_strumienia"]) * (2 if KONF["strumien_glebia"] else 1)
+    if klatka.shape[1] > szer:
+        klatka = cv2.resize(klatka, (szer, int(klatka.shape[0] * szer / klatka.shape[1])), interpolation=cv2.INTER_AREA)
+    ok, jpg = cv2.imencode(".jpg", klatka, [cv2.IMWRITE_JPEG_QUALITY, int(KONF["jakosc_strumienia"])])
+    return jpg.tobytes() if ok else None
+
+
 @app.get("/strumien.mjpg")
 def strumien():
     def generuj():
@@ -113,13 +121,30 @@ def strumien():
                 time.sleep(0.03)
                 continue
             ostatni = nr
-            szer = int(KONF["szer_strumienia"]) * (2 if KONF["strumien_glebia"] else 1)
-            if klatka.shape[1] > szer:
-                klatka = cv2.resize(klatka, (szer, int(klatka.shape[0] * szer / klatka.shape[1])), interpolation=cv2.INTER_AREA)
-            ok, jpg = cv2.imencode(".jpg", klatka, [cv2.IMWRITE_JPEG_QUALITY, int(KONF["jakosc_strumienia"])])
-            if ok:
-                yield b"--klatka\r\nContent-Type: image/jpeg\r\n\r\n" + jpg.tobytes() + b"\r\n"
+            jpg = jpeg_podgladu(klatka)
+            if jpg:
+                yield b"--klatka\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
     return Response(generuj(), mimetype="multipart/x-mixed-replace; boundary=klatka")
+
+
+@app.get("/klatka.jpg")
+def klatka_jpg():
+    """Jedna klatka podglądu, nowsza niż `po` (czeka na nią do 2 s, inaczej 204). Strona pobiera tak klatkę po klatce:
+    działa w każdej przeglądarce (Safari gubi strumienie MJPEG bez zgłaszania błędu) i sama wraca po zerwaniu łącza."""
+    po = request.args.get("po", -1, type=int)
+    koniec = time.monotonic() + 2
+    while True:
+        percepcja.potrzebna()
+        klatka, nr = percepcja.do_podgladu()
+        if klatka is not None and nr != po:
+            break
+        if time.monotonic() > koniec:
+            return Response(status=204)
+        time.sleep(0.01)
+    jpg = jpeg_podgladu(klatka)
+    if not jpg:
+        return Response(status=204)
+    return Response(jpg, mimetype="image/jpeg", headers={"X-Nr": str(nr)})
 
 
 @app.get("/api/stan")

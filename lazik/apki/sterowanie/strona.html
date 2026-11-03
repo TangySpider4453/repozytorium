@@ -267,10 +267,40 @@ for (const id of ['#stop', '#stop2', '#stop3']) $(id).onclick = () => { skoncz()
 
 // ---------- podgląd i zaznaczanie ----------
 const obraz = $('#obraz'), plotno = $('#nakladka');
-obraz.onload = () => { $('#brak').style.display = 'none'; };
-obraz.onerror = () => { $('#brak').style.display = 'flex'; $('#brak').textContent = 'Brak obrazu z kamery. Ponawiam…';
-  setTimeout(() => obraz.src = 'strumien.mjpg?' + Date.now(), 2000); };
-obraz.src = 'strumien.mjpg';
+// Podgląd klatka po klatce (nie MJPEG): Safari na iPadzie/iPhonie gubi strumień MJPEG bez błędu i zostaje „?”.
+// Każde zerwanie (restart usługi, utrata WiFi, uśpiona karta) kończy się samym ponowieniem, bez przeładowania strony.
+const czekaj = ms => new Promise(r => setTimeout(r, ms));
+let nrKlatki = -1, urlKlatki = null, bledyObrazu = 0;
+function brakObrazu(t) { $('#brak').style.display = 'flex'; $('#brak').textContent = t; }
+// Dwa pobierania na zmianę: przy wolnym łączu (Tailscale spoza domu) klatek jest dwa razy więcej niż przy jednym.
+async function petlaObrazu(opoznienie) {
+  await czekaj(opoznienie);
+  while (true) {
+    if (document.hidden) { await czekaj(300); continue; }
+    const ctrl = new AbortController(), limit = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const r = await fetch(`klatka.jpg?po=${nrKlatki}&n=${Date.now()}${opoznienie}`, { cache: 'no-store', signal: ctrl.signal });
+      if (r.status === 204) { brakObrazu('Czekam na obraz z kamery…'); continue; }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const nr = +(r.headers.get('X-Nr') || -1), blob = await r.blob();
+      if (nr <= nrKlatki && nr > nrKlatki - 100) continue;   // starsza od pokazanej (druga pętla była szybsza)
+      const url = URL.createObjectURL(blob);
+      const wst = new Image(); wst.src = url;   // dekodowanie poza stroną: nie zależy od zdarzeń <img>, które potrafią nie przyjść
+      try { await Promise.race([wst.decode(), czekaj(3000).then(() => { throw new Error('dekodowanie trwa za długo'); })]); }
+      catch (e) { URL.revokeObjectURL(url); throw e; }
+      if (nr <= nrKlatki && nr > nrKlatki - 100) { URL.revokeObjectURL(url); continue; }
+      nrKlatki = nr; obraz.src = url;
+      if (urlKlatki) { const stary = urlKlatki; setTimeout(() => URL.revokeObjectURL(stary), 1000); }
+      urlKlatki = url; bledyObrazu = 0;
+      $('#brak').style.display = 'none';
+    } catch (_) {
+      bledyObrazu++;
+      brakObrazu('Brak obrazu z kamery. Ponawiam…');
+      await czekaj(Math.min(3000, 150 * bledyObrazu));
+    } finally { clearTimeout(limit); }
+  }
+}
+petlaObrazu(0); petlaObrazu(60);
 addEventListener('resize', () => rysuj());
 
 function prostokat() {  // gdzie na płótnie leży sam obraz z kamery (object-fit: contain; przy podglądzie z głębią: lewa połowa)
@@ -285,13 +315,17 @@ function rysuj() {
   if (!S) return;
   const r = prostokat();
   c.font = '600 14px system-ui';
-  for (const o of S.obiekty) {
+  const zajete = [];  // etykiety już narysowane: kolejna, która by na nie weszła, przesuwa się niżej
+  const koliduje = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  for (const o of [...S.obiekty].sort((a, b) => b.pew - a.pew)) {
     const [x0, y0, x1, y1] = o.ramka, x = r.x + x0 * r.w, y = r.y + y0 * r.h, w = (x1 - x0) * r.w, h = (y1 - y0) * r.h;
     const cel = o.id === S.cel_id, zazn = o.id === zaznaczony;
     const kol = cel ? '#3fbf6a' : zazn ? '#e0a640' : `hsl(${(o.klasa * 47) % 360} 80% 65%)`;
     c.strokeStyle = kol; c.lineWidth = cel || zazn ? 4 : 2; c.strokeRect(x, y, w, h);
     const t = `${cel ? '● ' : ''}#${o.id} ${o.nazwa} ${Math.round(o.pew * 100)}%`, tw = c.measureText(t).width + 10;
-    const ty = y > 22 ? y - 22 : y + h;
+    let ty = y > 22 ? y - 22 : y + h;
+    for (let i = 0; i < 8 && zajete.some(z => koliduje(z, { x, y: ty, w: tw, h: 22 })); i++) ty += 23;
+    zajete.push({ x, y: ty, w: tw, h: 22 });
     c.fillStyle = kol; c.fillRect(x, ty, tw, 22); c.fillStyle = '#0b0b0b'; c.fillText(t, x + 5, ty + 16);
   }
 }

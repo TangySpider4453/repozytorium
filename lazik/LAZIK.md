@@ -158,6 +158,12 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   (zakres, podpis, podpowiedź); strona buduje z nich formularze, serwer sprawdza wartości. „Przywróć domyślne” na zakładkę.
 - Strona skaluje się: czcionka `clamp`, obraz dopasowany do wysokości ekranu, telefon w poziomie (panel obok obrazu),
   kokpit z przyciskami rosnącymi z ekranem. Sprawdzone zrzutami 360×740, 740×360, 1024×600, 1920×1080 (bez przewijania w bok).
+- **Podgląd klatka po klatce** (`/klatka.jpg?po=<nr>`, od 2026-11-03): strona pobiera pojedyncze JPEG-i (dwa pobierania na
+  zmianę, dekodowanie przez `Image.decode()` z limitem 3 s) zamiast MJPEG, bo Safari na iPadzie gubił strumień MJPEG bez
+  błędu (ikona „?”, trzeba było przeładować). Po restarcie usługi albo zerwaniu WiFi obraz wraca sam (sprawdzone: restart
+  w trakcie oglądania, obraz wrócił po kilku sekundach). `/strumien.mjpg` zostaje dla innych programów. Etykiety ramek
+  nie nachodzą już na siebie (kolejna przesuwa się niżej). Adres przez IP Tailscale `http://100.64.96.61:8000/` też działa,
+  ale pad wymaga HTTPS, czyli linku `https://rpi-5-1.tail52831c.ts.net/`.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki
@@ -172,6 +178,7 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
 
 | Data | Co |
 |---|---|
+| 2026-11-03 | Podgląd bez MJPEG (Safari/iPad gubił obraz), sam wraca po zerwaniu; etykiety bez nakładania. |
 | 2026-11-03 | Żyroskop MPU6050 w sterowaniu: kurs, trzymanie toru (PID), STOP przy przewróceniu, Y na padzie = zeruj. |
 | 2026-11-01 | Analiza wideo (przesyłanie z telefonu, osoby i twarze, przedmioty, opis AI, skan 3D) i kopie zapasowe przez most na Pi 4 (Pi 5 skonfigurowany; Zero 2W czekają). |
 | 2026-11-01 | Wizja v3: 25 kl/s (ustawienie kamery), YOLOv8m/x do wyboru, nagrywanie z dwoma widokami, analiza nagrań na pełnych obrotach (PnP z głębią, ekran postępu z obciążeniem i temperaturami), strzałki w podglądzie 3D. Pi zrestartował się raz (zasilanie). |
