@@ -109,7 +109,17 @@
   .mini-stop { position:fixed; z-index:4; right:calc(8px + env(safe-area-inset-right, 0px)); top:calc(8px + env(safe-area-inset-top, 0px));
                display:none; min-height:40px; padding:0 12px; opacity:.8; }
   body.pelny.zwiniety .mini-stop { display:block; }
-  @media (prefers-reduced-motion:reduce) { .pelny-hud, body.pelny .wideo, .zwin-hud { transition:none; } }
+  @media (prefers-reduced-motion:reduce) { .pelny-hud, body.pelny .wideo, .zwin-hud, .telemetria { transition:none; } }
+  /* telemetria jak napisy na dole podglądu: sam tekst z cieniem, bez pudełek zasłaniających obraz */
+  .telemetria { display:none; position:fixed; z-index:2; left:0; right:var(--bok); bottom:0; pointer-events:none;
+    padding:22px 14px calc(8px + env(safe-area-inset-bottom, 0px)); text-align:center; transition:right .2s ease;
+    background:linear-gradient(transparent, rgba(0,0,0,.35)); color:#f2f5f7; font-variant-numeric:tabular-nums;
+    text-shadow:0 1px 3px #000, 0 0 6px rgba(0,0,0,.8); font-size:clamp(12px, 1.5vw, 16px); line-height:1.45; }
+  body.pelny .telemetria { display:block; }
+  .telemetria .t1 { font-size:1.2em; font-weight:700; }
+  .telemetria .t1 b { display:inline-block; min-width:5.2em; }
+  .telemetria .przod { color:#7ee2a0; } .telemetria .tyl { color:#ffb36b; }
+  .telemetria .sep { opacity:.5; margin:0 .4em; }
   .spusty { display:inline-flex; align-items:center; gap:6px; }
   .sp { display:inline-block; width:70px; height:10px; background:var(--linia); border-radius:5px; overflow:hidden; }
   .sp i { display:block; height:100%; width:0; background:var(--akcent); }
@@ -187,12 +197,11 @@
   <span class="etyk" id="hud_tryb"></span>
   <span class="etyk" id="hud_moc" title="X na padzie przełącza tryb mocy"></span>
   <span class="etyk spusty" id="hud_spusty"><span>LT</span><span class="sp"><i id="sp_lt"></i></span><span>RT</span><span class="sp"><i id="sp_rt"></i></span></span>
-  <span class="etyk" id="hud_kurs" title="Kurs z żyroskopu (Y na padzie = zeruj)"></span>
-  <span class="etyk" id="hud_temp"></span>
   <span class="etyk" id="hud_pad"></span>
   <span class="etyk hud-opis" id="hud_opis"></span>
   <button id="nakokpit">Przyciski</button>
 </div>
+<div class="telemetria" id="telemetria" aria-live="off"><div class="t1" id="tel1"></div><div id="tel2"></div></div>
 <button class="zwin-hud" id="zwin_hud" aria-label="Zwiń albo rozwiń panel">›</button>
 <button class="stop mini-stop" id="stop4">STOP</button>
 <div class="uklad">
@@ -656,6 +665,33 @@ function rysujSystem(t) {
   t.insertAdjacentHTML('beforeend', '<p class="maly">Restart zatrzymuje łazik, zwalnia kamerę i Hailo, a po kilku sekundach strona wraca sama.</p>');
 }
 
+// ---------- telemetria (napisy na dole pełnego ekranu) ----------
+const silnik = v => v > 0 ? `▲ ${Math.round(v * 100)}%` : v < 0 ? `▼ ${Math.round(-v * 100)}%` : '■ 0%';
+function kierunekJazdy([l, p]) {
+  if (!l && !p) return 'stoi';
+  if (l * p < 0) return l > 0 ? 'obrót w miejscu w prawo ↻' : 'obrót w miejscu w lewo ↺';
+  const przod = l + p > 0, roznica = przod ? l - p : p - l;   // jadąc do tyłu, szybsza prawa strona = tył idzie w lewo
+  const skret = Math.abs(l - p) < 0.05 ? '' : roznica > 0 ? ' · skręt w prawo' : ' · skręt w lewo';
+  return (przod ? 'do przodu ↑' : 'do tyłu ↓') + skret;
+}
+function telemetria() {
+  const kl = v => v > 0 ? 'przod' : v < 0 ? 'tyl' : '';
+  const [l, p] = S.naped;
+  $('#tel1').innerHTML = `<span class="${kl(l)}">L <b>${silnik(l)}</b></span><span class="sep">|</span>` +
+    `<span class="${kl(p)}">P <b>${silnik(p)}</b></span><span class="sep">·</span>${kierunekJazdy(S.naped)}` +
+    (S.trzyma_tor ? `<span class="sep">·</span>trzymam tor (${S.korekta > 0 ? '+' : ''}${Math.round(S.korekta * 100)}%)` : '');
+  const t = x => x == null ? '—' : Math.round(x) + '°';
+  const z = S.zyroskop, c = S.czujnik, oc = S.ocena;
+  const czesci = [
+    z ? `🧭 ${Math.round(z.kurs)}°${Math.abs(z.obrot) > 2 ? ` (${Math.round(z.obrot)}°/s)` : ''}${z.przechyl > 8 ? ` · przechył ${Math.round(z.przechyl)}°` : ''}` : null,
+    oc ? `przód ${oc.przod > 5 ? 'wolny' : (S.podstawy && S.podstawy[2] >= 0.97 ? '≤ ' : '') + Math.round(oc.przod * 100) + ' cm'}` : null,
+    `CPU ${S.cpu}% ${t(S.temp_cpu)}`, `Hailo ${S.hailo_proc}% ${t(S.temp_hailo)}`,
+    c ? `${c.temperatura.toFixed(1).replace('.', ',')} °C${c.cisnienie ? ' ' + Math.round(c.cisnienie) + ' hPa' : ''}` : null,
+    `${S.fps} kl/s`, S.zasilanie !== 'OK' ? `zasilanie: ${S.zasilanie}` : null,
+  ].filter(Boolean);
+  $('#tel2').innerHTML = czesci.map(x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;')).join('<span class="sep">·</span>');
+}
+
 // ---------- panel stanu ----------
 const szuflada = $('#szuflada');
 let przypiety = pamiec.get('lazik_panel') === '1';
@@ -676,7 +712,7 @@ function panelStanu() {
   $('#s_ram').textContent = `${S.ram_gb[0]} / ${S.ram_gb[1]} GB`; pasek('p_ram', S.ram);
   $('#s_zas').textContent = S.zasilanie; $('#s_zas').style.color = S.zasilanie === 'OK' ? 'var(--ok)' : 'var(--akcent)';
   $('#s_kl').textContent = `${S.fps} kl/s · ${S.ms} ms`;
-  $('#s_nap').textContent = `${Math.round(S.naped[0] * 100)}% / ${Math.round(S.naped[1] * 100)}%`;
+  $('#s_nap').textContent = `${silnik(S.naped[0])} / ${silnik(S.naped[1])} · ${kierunekJazdy(S.naped)}`;
   $('#s_pad').textContent = pad.nazwa ? `${TRYBY_MOCY[trybMocy].replace('Moc: ', '')} · RT ${Math.round(spust.rt * 100)}% LT ${Math.round(spust.lt * 100)}%` +
     (spust.plynne ? ' · płynne' : '') : 'brak pada';
   pokazTrybMocy();
@@ -694,8 +730,6 @@ function panelStanu() {
   $('#z_tor').style.color = S.trzyma_tor ? 'var(--ok)' : '';
   $('#z_blad').textContent = S.blad_zyroskopu || (z && z.stan !== 'gotowy' ? z.stan : '');
   if (z) $('#z_igla').style.transform = `rotate(${z.kurs}deg)`;
-  $('#hud_kurs').style.display = z ? '' : 'none';
-  if (z) $('#hud_kurs').textContent = `🧭 ${Math.round(z.kurs)}°` + (S.trzyma_tor ? ' · trzymam tor' : '');
   const najg = Math.max(S.temp_cpu || 0, S.temp_hailo || 0);
   $('#uchwyt_t').textContent = najg ? Math.round(najg) + '°' : '';
   $('#uchwyt_t').style.color = kolTemp(najg, 70, 80) || 'var(--akcent)';
@@ -717,8 +751,7 @@ async function odswiez() {
     $('#hud_tryb').textContent = S.tryby[S.tryb] + ' · ' + S.fps + ' kl/s';
     $('#hud_pad').textContent = pad.nazwa ? 'Pad: ' + pad.nazwa.replace(/\(.*\)/, '').trim() : 'Klawiatura: strzałki / WASD · Esc = przyciski';
     $('#hud_opis').textContent = S.opis;
-    const tt = x => x == null ? '—' : Math.round(x) + '°';
-    $('#hud_temp').textContent = `CPU ${S.cpu}% ${tt(S.temp_cpu)} · Hailo ${tt(S.temp_hailo)}` + (S.czujnik ? ` · ${S.czujnik.temperatura.toFixed(0)} °C` : '');
+    if (widok === 'pelny') telemetria();
     przyciskiTrybow(); opcje(false); rysuj(); panelStanu();
     const sek = $('#sektory').children;
     for (let i = 0; i < 5; i++) {

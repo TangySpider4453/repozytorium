@@ -179,6 +179,10 @@ Dokumentacja źródłowa jest u użytkownika na PC (`C:\Users\tonyg\Documents\cl
   (spadku)**, więc autonomii nie testować na stole.
 - **Pełny ekran**: nic nie leży na obrazie. Z prawej przezroczysty panel (STOP, tryb, moc, kurs, temperatury, opis),
   zwijany przyciskiem ›/‹ (po zwinięciu tylko mały STOP w rogu); obraz zajmuje resztę ekranu.
+  **Telemetria jako napisy na dole podglądu** (sam tekst z cieniem): silniki L/P z kierunkiem i mocą (▲ przód / ▼ tył /
+  ■ stoi, kolor zielony/pomarańczowy), kierunek jazdy (prosto, skręt, obrót w miejscu), korekta toru, kurs i obrót,
+  odległość z przodu, CPU i Hailo (obciążenie i temperatura), BME280, kl/s, zasilanie gdy nie OK. `/api/stan.naped`
+  podaje teraz moc stron łazika (`Naped.logiczne`: przed odwróceniami i zamianą stron), a nie stan pinów.
 - **Żyroskop MPU6050 (GY-521) na I2C 0x68** (`zyroskop.py`, 100 Hz, od 2026-11-03): kurs względny (0° = start albo „Zeruj”,
   bez magnetometru, więc to nie jest północ), prędkość obrotu i przechył. Oś pionu bierze z grawitacji przy kalibracji
   (czujnik może być przykręcony w dowolnej pozycji; ten stoi pionowo, oś X w górę). Zero żyroskopu douczane, gdy silniki

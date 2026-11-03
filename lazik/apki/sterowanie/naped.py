@@ -18,7 +18,8 @@ class Naped:
     def __init__(self, konf):
         self.konf = konf
         self.lock = threading.Lock()
-        self.lewy = self.prawy = 0.0
+        self.lewy = self.prawy = 0.0          # na piny (po odwróceniach i zamianie stron)
+        self.logiczne = (0.0, 0.0)            # lewa / prawa strona łazika, + = do przodu (do telemetrii)
         self._do = 0.0
         self.blad = None
         self.imu = None                 # Zyroskop (ustawiany przez serwer, gdy czujnik jest)
@@ -76,6 +77,7 @@ class Naped:
 
     def ustaw(self, lewy, prawy, maks=None, liniowo=False, przedluz=True):
         k = self.konf
+        self.logiczne = (self._moc(lewy, maks, liniowo), self._moc(prawy, maks, liniowo))
         if k.get("zamien_strony"):
             lewy, prawy = prawy, lewy
         lewy = -lewy if k.get("odwroc_lewy") else lewy
@@ -89,6 +91,7 @@ class Naped:
     def stop(self):
         with self.lock:
             self.lewy = self.prawy = 0.0
+            self.logiczne = (0.0, 0.0)
             self._do = 0.0
             self._polecenie = None
             self._zastosuj()
@@ -117,6 +120,7 @@ class Naped:
             with self.lock:
                 if (self.lewy or self.prawy) and teraz > self._do:
                     self.lewy = self.prawy = 0.0
+                    self.logiczne = (0.0, 0.0)
                     self._polecenie = None
                     self._zastosuj()
                     continue

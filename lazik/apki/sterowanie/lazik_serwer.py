@@ -164,7 +164,7 @@ def stan():
         obiekty=[dict(id=o["id"], klasa=o["klasa"], nazwa=o["nazwa"], pew=round(o["pew"], 2),
                       ramka=[round(v, 4) for v in o["ramka"]]) for o in obiekty],
         sektory=sektory, cel_id=sterownik.cel_id, cel_klasa=sterownik.cel_klasa,
-        do_sledzenia=DO_SLEDZENIA, naped=[round(naped.lewy, 2), round(naped.prawy, 2)], blad_napedu=naped.blad,
+        do_sledzenia=DO_SLEDZENIA, naped=[round(x, 2) for x in naped.logiczne], blad_napedu=naped.blad,
         blad_wizji=percepcja.blad, kamera=percepcja.stan_kamery, fps=round(percepcja.fps, 1), ms=round(percepcja.ms),
         cpu=round(system.cpu), temp_cpu=system.temp, temp_hailo=percepcja.temp_hailo, ram=round(system.ram_proc),
         zasilanie=system.zasilanie, hailo_proc=round(percepcja.hailo_proc), czujnik=czujnik["dane"],
