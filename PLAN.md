@@ -518,4 +518,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (AirPlay znowu)**: Dźwięk rwał się przez ciągły „resync” przy opóźnieniu BT (wyłączony), a mój strażnik i
   restart po graniu wyrzucały iPhone'a (usunięte). Nowy strażnik z testami i bezpiecznymi naprawami, kontrola na stronie
   Głośnik, ostrzeżenie w diodzie portalu. Przetestowane: start/stop sesji (BT łączy się w 3,4 s, dźwięk testowy gra).
+- **2026-11-05 (RestOrTrain → Garmin, etapy 1–3)**: Rozpoznanie (Pi 4B, Debian 13, Python 3.13, bez Dockera → venv +
+  systemd), biblioteka garminconnect 0.3.20, szkielet `~/restortrain-garmin`, parser + mapowanie + 10 testów (na Pi też),
+  ustawienia na stronie Automatyczne. Dalej: logowanie i wzorce JSON (Antek).
 

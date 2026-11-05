@@ -492,6 +492,18 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - Wyjątek w logowaniu wejść (zgoda Antka 2026-10-28): port 7000 i porty >= 32768 nie są logowane jako SERWEREK-SKAN
   (granie AirPlay z iPhone'a otwiera kilka portów naraz). Nazwa głośnika: „Antek Pokój rpi”.
 
+## Treningi siłowe RestOrTrain → Garmin (od 2026-11-05, w budowie)
+- Projekt `~/restortrain-garmin/` (osobne repo git na Pi, kopia w `pi/restortrain-garmin/`), venv `.venv`, biblioteka
+  `garminconnect` 0.3.20 (własne logowanie mobilne z MFA; `garth` porzucony). Spec: tryby `parse`, `login`,
+  `pobierz-wzorce`, `sync [--dry-run]`, `status` (`./rtg.sh …`). Token: `tokens/garmin_tokens.json` (700/600, poza gitem).
+- Gotowe: parser opisu (`rtg/parser.py`, testy na przykładzie „Dół B”), mapowanie PL → Garmin (`exercises.yaml`,
+  walidacja z oficjalną listą `data/garmin_exercises.json` z connect.garmin.com/web-data/exercises/Exercises.json,
+  dopasowanie dokładne → rdzenie słów → rapidfuzz ≥ 90), SQLite `data/state.db`. Różnice względem specyfikacji:
+  maszynowe prostowanie nóg w Garmin tylko jako `BANDED_EXERCISES/LEG_EXTENSION`, spięcia na wyciągu
+  `CRUNCH/KNEELING_CABLE_CRUNCH`, suwnica `SQUAT/LEG_PRESS`.
+- Ustawienia na stronie Automatyczne (moduł `garmin`: włącznik, co ile godzin, okno dni, rep_target, rest_mode,
+  przerwy, replace_original). Czeka na: `./rtg.sh login` (Antek w terminalu), trening referencyjny, generator i timer.
+
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
   przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem

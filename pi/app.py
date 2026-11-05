@@ -1598,6 +1598,17 @@ AUTOMATY_SCHEMAT = {
         ("lekcje", "bool", True, "Lekcje (z planu; kolejna lekcja tego samego przedmiotu bez przypomnienia)", None),
         ("nauka", "bool", True, "Nauka, sprawdziany z godziną, zadania domowe z godziną", None),
         ("zadania", "bool", False, "Zadania (mają też własne przypomnienie o czasie)", None)]},
+    "garmin": {"nazwa": "Treningi siłowe na zegarek (RestOrTrain → Garmin)", "pola": [
+        ("wlaczony", "bool", True, "Synchronizacja treningów siłowych z kalendarza Garmin Connect", None),
+        ("co_godz", "wybor", 1, "Odświeżanie co ile godzin", [1, 2, 3, 6, 12, 24]),
+        ("okno_dni", "liczba", 14, "Ile dni do przodu", (3, 28)),
+        ("rep_target", "wybor", "max", "Powtórzenia w kroku z zakresu (np. 8–10): max = 10, min = 8", ["max", "min"]),
+        ("rest_mode", "wybor", "timed", "Przerwa: timed = odliczanie, lap_button = do przycisku", ["timed", "lap_button"]),
+        ("przerwa_main", "liczba", 180, "Przerwa: główne ćwiczenia (s)", (15, 600)),
+        ("przerwa_accessory", "liczba", 90, "Przerwa: akcesoria (s)", (15, 600)),
+        ("przerwa_core", "liczba", 60, "Przerwa: brzuch (s)", (15, 600)),
+        ("przerwa_warmup", "liczba", 90, "Przerwa: serie rozgrzewkowe (s)", (15, 600)),
+        ("replace_original", "bool", False, "Zdejmuj z kalendarza oryginał RestOrTrain (blok czasowy)", None)]},
     "komunikacja": {"nazwa": "Komunikacja miejska", "pola": [
         ("wlaczona", "bool", True, "Odpowiedzi o odjazdach i trasach (czat, telefon)", None),
         ("odjazdow", "liczba", 10, "Ile odjazdów pokazywać", (1, 20))]},
