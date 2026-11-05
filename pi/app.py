@@ -1600,7 +1600,7 @@ AUTOMATY_SCHEMAT = {
         ("zadania", "bool", False, "Zadania (mają też własne przypomnienie o czasie)", None)]},
     "garmin": {"nazwa": "Treningi siłowe na zegarek (RestOrTrain → Garmin)", "pola": [
         ("wlaczony", "bool", True, "Synchronizacja treningów siłowych z kalendarza Garmin Connect", None),
-        ("co_godz", "wybor", 1, "Odświeżanie co ile godzin", [1, 2, 3, 6, 12, 24]),
+        ("co_min", "wybor", 10, "Sprawdzanie zmian co ile minut", [10, 15, 30, 60, 120, 360]),
         ("okno_dni", "liczba", 14, "Ile dni do przodu", (3, 28)),
         ("rep_target", "wybor", "max", "Powtórzenia w kroku z zakresu (np. 8–10): max = 10, min = 8", ["max", "min"]),
         ("rest_mode", "wybor", "timed", "Przerwa: timed = odliczanie, lap_button = do przycisku", ["timed", "lap_button"]),
@@ -2005,6 +2005,34 @@ def api_kalendarz():
     kat = request.args.get("kat")
     z = kal_zdarzenia(od, do)
     return jsonify({"zdarzenia": [x for x in z if not kat or kat == "wszystko" or x["kat"] == kat]})
+
+
+RTG = Path("/home/tonyg/restortrain-garmin")
+
+
+@app.route("/api/garmin", methods=["GET", "POST"])
+def api_garmin():
+    """RestOrTrain -> Garmin: stan (SQLite usługi, tylko odczyt) i POST {teraz: true} = synchronizacja od razu"""
+    from flask import request
+    import sqlite3
+    if request.method == "POST":
+        if (request.get_json(silent=True) or {}).get("teraz") is True:
+            (RTG / "data" / "teraz").write_text(str(time.time()))
+        return jsonify({"ok": True})
+    db_plik = RTG / "data" / "state.db"
+    if not db_plik.exists():
+        return jsonify({"zainstalowany": RTG.exists(), "przebiegi": [], "treningi": []})
+    db = sqlite3.connect(f"file:{db_plik}?mode=ro", uri=True, timeout=5)
+    przebiegi = [{"t": t, "wynik": w, "opis": o} for t, w, o in db.execute("SELECT t, wynik, opis FROM przebiegi ORDER BY t DESC LIMIT 5")]
+    treningi = [{"data": d, "tytul": t, "status": s_} for d, t, s_ in
+                db.execute("SELECT date, title, status FROM treningi WHERE date >= ? ORDER BY date", (time.strftime("%Y-%m-%d"),))]
+    db.close()
+    try:
+        zapis = "zapis_dozwolony: true" in (RTG / "config.yaml").read_text(encoding="utf-8")
+    except OSError:
+        zapis = False
+    return jsonify({"zainstalowany": True, "przebiegi": przebiegi, "treningi": treningi, "zapis_dozwolony": zapis,
+                    "czeka": (RTG / "data" / "teraz").exists()})
 
 
 @app.route("/api/intervals", methods=["GET", "POST"])

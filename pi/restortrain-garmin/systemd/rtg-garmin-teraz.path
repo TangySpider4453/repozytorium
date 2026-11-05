@@ -1,0 +1,8 @@
+[Unit]
+Description=RestOrTrain -> Garmin: przycisk „Synchronizuj teraz”
+
+[Path]
+PathExists=/home/tonyg/restortrain-garmin/data/teraz
+
+[Install]
+WantedBy=multi-user.target

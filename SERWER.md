@@ -510,7 +510,13 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   garminconnect: warmup/cooldown na czas, serie = RepeatGroupDTO [ćwiczenie reps + przerwa], serie rozgrzewkowe do
   przycisku), znacznik „auto: restortrain-garmin, src=…, hash=…” w opisie; usuwane są tylko treningi z tym znacznikiem.
   `sync --dry-run` działa (4 treningi: 5, 6, 8, 10.11). Powiadomienia: `~/bot/powiadomienia/*.json` → bot (Linphone).
-  Czeka na zgodę Antka na pierwszy zapis (etap 7), timer (etap 8), README.
+- Timer `rtg-garmin.timer` co 10 min (system, `User=tonyg`, `EnvironmentFile=-/etc/serwerek-bot/claude.env` dla Claude),
+  przycisk „🔄 Synchronizuj teraz” (portal `POST /api/garmin {teraz}` → `data/teraz` → `rtg-garmin-teraz.path`), karta
+  „🏋 Treningi siłowe na zegarek” na Automatycznych (`GET /api/garmin`: przebiegi i treningi z SQLite, tylko odczyt).
+  Tylko siła (filtr `sportTypeKey` z kalendarza przed pobraniem szczegółów), bez dni minionych i dni ze zrobionym treningiem
+  siłowym (`activityTypeId == 13`). Nieznane ćwiczenia: `claude -p` Haiku bez narzędzi (kategoria → ćwiczenie), walidacja,
+  dopisanie z `auto: true`, powiadomienie. `zapis_dozwolony: false` w config.yaml = tryb próbny (plan zmian w przebiegach,
+  bez zapisu w Garmin) do czasu zgody Antka. README w projekcie.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

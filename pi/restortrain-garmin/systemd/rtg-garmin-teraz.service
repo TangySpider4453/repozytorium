@@ -1,0 +1,13 @@
+# „Synchronizuj teraz” ze strony Automatyczne (portal tworzy data/teraz, rtg-garmin-teraz.path uruchamia to)
+[Unit]
+Description=RestOrTrain -> Garmin: synchronizacja na żądanie
+
+[Service]
+Type=oneshot
+User=tonyg
+WorkingDirectory=/home/tonyg/restortrain-garmin
+EnvironmentFile=-/etc/serwerek-bot/claude.env
+Environment=PYTHONUNBUFFERED=1 HOME=/home/tonyg
+ExecStartPre=/bin/rm -f /home/tonyg/restortrain-garmin/data/teraz
+ExecStart=/home/tonyg/restortrain-garmin/rtg.sh sync --teraz
+TimeoutStartSec=600

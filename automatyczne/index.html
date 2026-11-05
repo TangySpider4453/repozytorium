@@ -146,6 +146,21 @@ const AUTOMATY = [
        d.blad ? el("div", {class:"uw", text:`Błąd: ${d.blad}`}) : null,
        el("div", {class:"opis", style:"margin:4px 0 8px", text:`Sprawdzono: ${(d.czas || "").slice(11, 16)}`}), przelacz];
    }},
+  {ikona:"🏋", nazwa:"Treningi siłowe na zegarek", link:null,
+   opis:"RestOrTrain → natywne treningi siłowe Garmin (ćwiczenia, serie, powtórzenia, przerwy). Sprawdza zmiany co 10 min, tylko siłowe, bez zrobionych.",
+   stan: async () => {
+     const d = await json("/api/garmin");
+     if(!d.zainstalowany) return ["Jeszcze nie zainstalowane."];
+     const p = d.przebiegi[0];
+     const btn = el("button", {type:"button", class:"przelacz", text:d.czeka ? "⏳ Synchronizuję…" : "🔄 Synchronizuj teraz"});
+     btn.onclick = async ev => { ev.preventDefault(); btn.disabled = true; btn.textContent = "⏳ Synchronizuję…";
+       await fetch("/api/garmin", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({teraz:true})}); };
+     return [p ? el("div", {}, el("span", {class:p.wynik === "ok" ? "" : "uw", text:p.wynik === "ok" ? "✅" : "⚠️"}), ` ${p.t.slice(11, 16)} · ${p.opis.slice(0, 140)}`)
+               : el("div", {text:"Jeszcze nie synchronizowano."}),
+       !d.zapis_dozwolony ? el("div", {class:"opis", style:"margin:4px 0 0", text:"Tryb próbny: tylko plan zmian, bez zapisu w Garmin (czeka na Twoją zgodę)."}) : null,
+       d.treningi.length ? el("ul", {}, ...d.treningi.slice(0, 5).map(t => el("li", {text:`${t.data.slice(8)}.${t.data.slice(5, 7)} · ${t.tytul}`}))) : null,
+       el("div", {style:"margin-top:8px"}, btn)];
+   }},
   {ikona:"🔊", nazwa:"Głośnik AirPlay", link:"/strony/glosnik/",
    opis:"Pi jako głośnik AirPlay 2 (multiroom, tylko w domu): dźwięk przez AUX albo głośnik Bluetooth.",
    stan: async () => {

@@ -524,4 +524,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (RestOrTrain → Garmin, etapy 4–6)**: Logowanie Antka, pole źródła `consumerName`, wzorce z 4 prawdziwych
   treningów, parser rozszerzony o ich formy, generator + 23 testy, `sync --dry-run` na prawdziwym kalendarzu, powiadomienia
   przez bota. Czeka na zgodę na pierwszy zapis w Garmin Connect.
+- **2026-11-05 (RestOrTrain → Garmin, etapy 8–10)**: Timer co 10 min, przycisk i karta na Automatycznych, tylko siła, bez
+  zrobionych treningów, Claude Code dopisuje nieznane ćwiczenia (test: „Wyciskanie Arnolda” → SHOULDER_PRESS/ARNOLD_PRESS),
+  README. Tryb próbny do zgody na zapis.
 
