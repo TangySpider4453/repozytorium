@@ -7,15 +7,16 @@ import hashlib
 import re
 
 from .mapping import Mapa
-from .parser import Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
+from .parser import ciezar, Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
 
 SPORT = {"sportTypeId": 5, "sportTypeKey": "strength_training", "displayOrder": 3}
 TYP = {"warmup": (1, "warmup", 1), "cooldown": (2, "cooldown", 2), "interval": (3, "interval", 3), "rest": (5, "rest", 5),
        "repeat": (6, "repeat", 6)}
 KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (10, 10)}
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
+KG = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "5"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "6"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -38,7 +39,7 @@ class Kroki:
         self.nr += 1
         return self.nr
 
-    def krok(self, typ, koniec, wartosc=None, opis=None, category=None, exercise=None):
+    def krok(self, typ, koniec, wartosc=None, opis=None, category=None, exercise=None, kg=None):
         t = TYP[typ]
         k = KONIEC[koniec]
         return {"type": "ExecutableStepDTO", "stepOrder": self._nr(),
@@ -47,7 +48,8 @@ class Kroki:
                 "endCondition": {"conditionTypeId": k[0], "conditionTypeKey": koniec, "displayOrder": k[1], "displayable": True},
                 "endConditionValue": float(wartosc) if wartosc is not None else None,
                 "targetType": dict(BEZ_CELU), "category": category, "exerciseName": exercise,
-                "weightValue": None, "weightUnit": None}
+                "weightValue": kg * 1000.0 if kg else None,          # Garmin: gramy z jednostką „kilogram”
+                "weightUnit": dict(KG) if kg else None}
 
     def serie(self, ile, budowniczy):
         """grupa serii: numer grupy przed krokami w środku (jak create_repeat_group w garminconnect)"""
@@ -101,10 +103,10 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
         if d.sposob in ("nieznane", "brak"):       # bez ćwiczenia Garmin: polska nazwa w opisie kroku
             o = f"{i.name_pl}: {o}" if o else i.name_pl
         if i.duration_s:
-            cw = lambda: k.krok("interval", "time", i.duration_s, opis=o, category=d.category, exercise=d.exerciseName)
+            cw = lambda: k.krok("interval", "time", i.duration_s, opis=o, category=d.category, exercise=d.exerciseName, kg=i.weight_kg)
         else:
             ile = i.reps_max if cfg.get("rep_target", "max") == "max" else i.reps_min
-            cw = lambda: k.krok("interval", "reps", ile, opis=o, category=d.category, exercise=d.exerciseName)
+            cw = lambda: k.krok("interval", "reps", ile, opis=o, category=d.category, exercise=d.exerciseName, kg=i.weight_kg)
         ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
         return cw, d, ile_txt
 
@@ -119,7 +121,8 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
                     nieznane.append(i.exercise_ref)
                 przejscie(i.exercise_ref, f"{i.sets_max} serie rozgrzewkowe")
                 kroki.append(k.serie(i.sets_max, lambda d=d, i=i: [
-                    k.krok("interval", "lap.button", opis=f"seria rozgrzewkowa ({i.raw})", category=d.category, exercise=d.exerciseName),
+                    k.krok("interval", "lap.button", opis=f"seria rozgrzewkowa ({i.raw})", category=d.category, exercise=d.exerciseName,
+                           kg=ciezar(i.raw)),
                     przerwa("warmup")]))
             elif isinstance(i, Exercise):
                 cw, d, ile_txt = cwiczenie(i)

@@ -549,7 +549,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   („Face pull: 3x12-15, …”) i „Spięcia …: 12-15 powtórzeń” w blokach też rozumiany. Hash obejmuje teraz `exercises.yaml`
   (zmiana mapowania przebudowuje treningi). Triceps na wyciągu → `TRICEPS_PRESSDOWN`. Wpis z `category: null` =
   sposób „brak” (krok bez ćwiczenia Garmin, polska nazwa w opisie, bez Claude i powiadomień). Prostowanie nóg zostaje
-  `BANDED_EXERCISES/LEG_EXTENSION` na życzenie Antka (Garmin wie, że to czworogłowe). Testy: 34.
+  `BANDED_EXERCISES/LEG_EXTENSION` na życzenie Antka (Garmin wie, że to czworogłowe).
+- **Ciężar z planu** (2026-11-05): „— 17,5 kg na hantel”, „20-22,5 kg” (zakres = średnia, np. 21,25) → `weightValue`
+  w gramach + `weightUnit` kilogram (jak w garminconnect), też w seriach rozgrzewkowych; „zapisz kg” / „masa ciała” = bez
+  ciężaru. Serie wstępne: nazwa ćwiczenia ucinana przed dopiskiem („, 12,5 kg …”), żeby trafiała w ćwiczenie. Testy: 35.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

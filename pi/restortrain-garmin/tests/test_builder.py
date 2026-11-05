@@ -110,3 +110,14 @@ def test_rundy_jedna_grupa_przerwa_po_rundzie():
     assert g["type"] == "RepeatGroupDTO" and g["numberOfIterations"] == 3 and len(k) == 2
     typy = [(x["stepType"]["stepTypeKey"], x["endConditionValue"]) for x in g["workoutSteps"]]
     assert typy == [("interval", 10), ("interval", 15), ("rest", 90)]
+
+
+def test_ciezar_z_planu():
+    from rtg.parser import ciezar
+    assert (ciezar("— 17,5 kg na hantel"), ciezar("orientacyjnie 20-22,5 kg"), ciezar("zapisz kg"), ciezar("masa ciała")) == \
+        (17.5, 21.25, None, None)
+    w = buduj({"workoutId": 1, "title": "X", "description": "Nogi\n- Prostowanie nóg 3x10-12 — 60 kg\n- Uginanie nóg 3x10 — zapisz kg"},
+              {"przejscie": False})
+    a, b = [g["workoutSteps"][0] for g in w["workoutSegments"][0]["workoutSteps"]]
+    assert a["weightValue"] == 60000.0 and a["weightUnit"]["unitKey"] == "kilogram"
+    assert b["weightValue"] is None and b["weightUnit"] is None

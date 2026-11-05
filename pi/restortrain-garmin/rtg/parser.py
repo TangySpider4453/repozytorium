@@ -43,6 +43,24 @@ class Exercise:
     duration_s: int | None = None          # seria na czas („3x30s”)
     per_side: bool = False
     note: str = ""
+    weight_kg: float | None = None          # „17,5 kg”, „20-22,5 kg” (zakres -> średnia)
+
+    def __post_init__(self):
+        if self.weight_kg is None:
+            self.weight_kg = ciezar(self.note)
+
+
+KG_RE = re.compile(r"(\d+(?:[.,]\d+)?)(?:\s*[-–]\s*(\d+(?:[.,]\d+)?))?\s*kg\b", re.I)
+
+
+def ciezar(tekst):
+    """pierwszy ciężar z opisu w kg; zakres „od-do” = średnia (np. 20-22,5 kg -> 21,25)"""
+    m = KG_RE.search(tekst or "")
+    if not m:
+        return None
+    a = float(m.group(1).replace(",", "."))
+    b = float(m.group(2).replace(",", ".")) if m.group(2) else a
+    return round((a + b) / 2, 2)
 
 
 @dataclass
@@ -135,7 +153,8 @@ def parsuj_linie(tekst, kind):
     if (m := WSTEPNE_RE.match(tekst)) or (m := re.match(r"^(\d+)(?:\s*[-–]\s*(\d+))?\s+seri\w*\s+(?:wstępn|wstepn|rozgrzewkow)\w*\s*(.*)$", tekst, re.I)):
         a = int(m.group(1) or 2)
         b = int(m.group(2) or a)
-        return WarmupSets(raw=tekst, sets_min=min(a, b), sets_max=max(a, b), exercise_ref=m.group(3).strip())
+        ref = re.split(r"\s*[,;—–]\s*|\s+-\s+", m.group(3).strip(), maxsplit=1)[0]      # bez dopisków „, 12,5 kg …”
+        return WarmupSets(raw=tekst, sets_min=min(a, b), sets_max=max(a, b), exercise_ref=ref.strip())
     if m := CZAS_RE.match(tekst):
         return TimedBlock(raw=tekst, seconds=sekundy(int(m.group(1)), m.group(2)), kind=kind, text=m.group(3).strip())
     if m := POWT_RE.match(tekst):
