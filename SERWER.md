@@ -470,6 +470,15 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Bluetooth włączony 2026-10-28** (za zgodą Antka): w `/boot/firmware/config.txt` zakomentowane `dtoverlay=disable-bt`
   (kopia `config.txt.bak_2026-10-28_bt`), UART na GPIO to teraz `ttyS0` (`serial0`). BT był też zablokowany przez rfkill
   (zapis w `/var/lib/systemd/rfkill/*bluetooth` = 0); `airplay.py` sam robi `bluetoothctl power on`, gdy radio jest wyłączone.
+- **Niezawodność 2** (2026-11-05): przyczyna rwania/braku dźwięku: przy BT stałe ~0,08 s opóźnienia, a shairport-sync co 0,3 s
+  robił „resync” (przeskakiwał) → `resync_threshold_in_seconds = 0.0`, `drift_tolerance_in_seconds = 0.010` (płynna
+  korekta soxr). Wyrzucanie z AirPlay: strażnik restartował w trakcie grania (zły test `[active]`) i restart po każdym
+  graniu zrywał iPhone'a po pauzie → oba usunięte. Nowy strażnik `pilnuj` (co 20 s): testy (usługa, nqptp, port 7000,
+  PipeWire, BT włączony, głośnik sparowany, „dźwięk płynie” = statystyki odtwarzania w dzienniku albo wyjście
+  `running`) → `~/airplay/zdrowie.json`; naprawia tylko pewne awarie: usługa nie działa → start; głośnik BT odpadł
+  w trakcie grania → połącz (bez restartu); sesja bez dźwięku 3× z rzędu (~1 min) → restart. Strona Głośnik: karta
+  „🩺 Kontrola” + ostatnie naprawy; portal: żółta dioda „Głośnik AirPlay nie działa” po 3 min nienaprawionego problemu
+  (bot wysyła powiadomienie) albo gdy strażnik stoi > 5 min.
 - **Niezawodność** (2026-10-31): AirPlay przyjmował połączenie z iPhone'a, ale nie podawał dźwięku (strumień w PipeWire
   „suspended”, BT działał). Teraz: `stop` po każdym graniu (po zwolnieniu BT) restartuje shairport-sync za 3 s
   (`systemd-run --user --on-active=3`), a strażnik `airplay-pilnuj.timer` (co 20 s, `airplay.py pilnuj`) restartuje

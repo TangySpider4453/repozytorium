@@ -81,6 +81,7 @@ input[type=range]{width:100%}
       <p class="muted info">Tylko gdy grasz na kilku głośnikach naraz i BT jest spóźniony: przesuń w lewo (np. −0,2 s).</p></div>
       <p class="muted info">Domyślnie wyłączone: Pi gra z najmniejszym możliwym opóźnieniem.</p></div>
   </div>
+  <div class="card"><h2>🩺 Kontrola (co 20 s)</h2><ul class="lista" id="kontrola"></ul><div id="naprawy" class="muted info"></div></div>
   <p class="muted info" id="blad" role="status"></p>
 </div></main>
 <script>
@@ -115,6 +116,11 @@ function rysuj(){
     : S.bt_mac ? el("span", {}, "Wybrany: ", el("b", {text:S.bt_nazwa || S.bt_mac}), el("span", {class:"muted", text:` (${S.bt_mac})${S.bt_polaczony ? " · połączony" : " · wolny"}`}))
     : el("span", {class:"muted", text:"Nie wybrano głośnika. Włącz w nim tryb parowania i dotknij „Szukaj”."}));
   $("skan").disabled = !S.bt_dostepny;
+  const zd = S.zdrowie || {};
+  $("kontrola").replaceChildren(...(zd.testy || []).map(t => el("li", {}, el("span", {}, (t.ok ? "✅ " : "❌ ") + t.nazwa,
+    !t.ok && t.opis ? el("span", {class:"muted", text:" · " + t.opis}) : null))),
+    el("li", {class:"muted", text:zd.czas ? `Ostatnie sprawdzenie: ${zd.czas.slice(11)}` : "Strażnik jeszcze nie sprawdzał."}));
+  $("naprawy").textContent = (zd.naprawy || []).length ? "Ostatnie automatyczne naprawy: " + zd.naprawy.slice(-3).reverse().map(n => `${n.t.slice(5)} ${n.co}`).join(" · ") : "";
   $("opozn").value = S.opoznienie_bt || 0; $("opoznW").textContent = `${(S.opoznienie_bt || 0).toFixed(2).replace(".", ",")} s`;
   if(!$("opoznBox").dataset.otwarte){ const wl = !!S.opoznienie_bt; $("opoznWl").setAttribute("aria-checked", String(wl)); $("opoznBox").hidden = !wl; }
 }

@@ -3011,6 +3011,19 @@ def zdrowie_problemy(prog):
             pr.append(("temp", pz(t, prog["temp"]), "Wysoka temperatura procesora", f"{t:.1f} °C (progi {prog['temp'][0]}/{prog['temp'][1]} °C)", round(t, 1)))
     except ValueError:
         pass
+    try:                                    # głośnik AirPlay: wynik strażnika airplay-pilnuj (co 20 s)
+        az = json.loads(Path("/home/tonyg/airplay/zdrowie.json").read_text(encoding="utf-8"))
+        if not az.get("wylaczony"):
+            wiek = time.time() - time.mktime(time.strptime(az["czas"], "%Y-%m-%d %H:%M:%S"))
+            if wiek > 300:
+                pr.append(("airplay", "warn", "Głośnik AirPlay: strażnik nie działa", "Ostatnie sprawdzenie ponad 5 min temu "
+                           "(airplay-pilnuj.timer).", 1))
+            elif not az.get("ok") and time.time() - (az.get("problem_od") or time.time()) > 180:
+                zle = [t for t in az.get("testy", []) if not t.get("ok")]
+                pr.append(("airplay", "warn", "Głośnik AirPlay nie działa", "; ".join(
+                    t["nazwa"] + (f" ({t['opis']})" if t.get("opis") else "") + ": NIE" for t in zle)[:300], 1))
+    except (OSError, ValueError, KeyError):
+        pass
     out = sh(["vcgencmd", "get_throttled"])
     m = re.search(r"0x([0-9a-fA-F]+)", out)
     if m:

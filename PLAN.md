@@ -515,4 +515,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   równe Pi), dojazdy szkoła/siłownia z planem autobusów ZTM na dziś i jutro, link Kalendarz w pasku portalu.
 - **2026-10-31 (AirPlay bez dźwięku)**: shairport-sync zawiesił się z „martwym” wyjściem po zwolnieniu BT. Restart pomógł
   (sesja z iPhone'a gra, dźwięk płynie do TP-Link). Zabezpieczenia: świeży restart po każdym graniu i strażnik co 20 s.
+- **2026-11-05 (AirPlay znowu)**: Dźwięk rwał się przez ciągły „resync” przy opóźnieniu BT (wyłączony), a mój strażnik i
+  restart po graniu wyrzucały iPhone'a (usunięte). Nowy strażnik z testami i bezpiecznymi naprawami, kontrola na stronie
+  Głośnik, ostrzeżenie w diodzie portalu. Przetestowane: start/stop sesji (BT łączy się w 3,4 s, dźwięk testowy gra).
 

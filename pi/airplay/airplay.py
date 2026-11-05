@@ -127,6 +127,8 @@ general = {{
   interpolation = "soxr";
   volume_range_db = 60;
   audio_backend_latency_offset_in_seconds = {opozn:.2f};
+  resync_threshold_in_seconds = 0.0;   // bez przeskakiwania: przy BT stałe ~0,08 s opóźnienia rwało dźwięk co 0,3 s
+  drift_tolerance_in_seconds = 0.010;
 }};
 diagnostics = {{
   log_verbosity = 1;          // błędy i najważniejsze zdarzenia do dziennika (journalctl --user -u airplay)
@@ -254,45 +256,72 @@ def stop():
         bt("disconnect", u["bt_mac"])
     if not (u["tryb"] == "usb" and ustaw_wyjscie("usb", usb=u.get("usb"))):
         ustaw_wyjscie("aux")
-    # świeży shairport-sync na następne granie: po zniknięciu wyjścia BT jego strumień potrafił zostać „martwy”
-    # (iPhone połączony, a dźwięk nie płynął). Restart za 3 s, gdy ten hook już się skończy.
-    sh("systemd-run", "--user", "--collect", "--on-active=3", "systemctl", "--user", "restart", USLUGA)
 
 
-def strumien_aktywny():
-    """czy strumień AirPlay w PipeWire faktycznie gra (połączenia „[active]”)"""
-    _, out = sh("wpctl", "status")
-    sek = out.split("Streams:", 1)[1] if "Streams:" in out else ""
-    blok = sek.split("AirPlay", 1)[1].split("\n\n", 1)[0] if "AirPlay" in sek else ""
-    return "[active]" in "\n".join(blok.splitlines()[:4])
+ZDROWIE = KAT / "zdrowie.json"
+
+
+def gra_naprawde(sekund=60):
+    """shairport-sync wypisuje statystyki odtwarzania (player.c:2656) co ~8 s, gdy dźwięk płynie do wyjścia"""
+    _, out = sh("journalctl", "--user", "-u", USLUGA, "--since", f"-{sekund}s", "--no-pager", "-o", "cat", limit=15)
+    return "player.c:2656" in out or "Playback started" in out
+
+
+def wyjscie_gra():
+    """czy domyślne wyjście PipeWire faktycznie odtwarza (stan „running”)"""
+    _, out = sh("wpctl", "inspect", "@DEFAULT_AUDIO_SINK@", limit=10)
+    _, info = sh("pw-cli", "info", re.search(r"id (\d+)", out).group(1) if re.search(r"id (\d+)", out) else "0", limit=10)
+    return 'state: "running"' in info
 
 
 def pilnuj():
-    """strażnik (timer co 20 s): AirPlay gra (stan.json „gra”), ale do głośnika nic nie płynie przez 3 sprawdzenia
-    z rzędu (~1 min) -> restart shairport-sync i ponowne połączenie BT; usługa wyłączona, a powinna działać -> start"""
+    """strażnik (co 20 s): sprawdza AirPlay jak iPhone (usługa, port 7000, nqptp, PipeWire, głośnik BT) i naprawia tylko to,
+    co na pewno jest zepsute; NIGDY nie restartuje w trakcie grania, gdy dźwięk płynie. Wynik: ~/airplay/zdrowie.json
+    (strona Głośnik, dioda portalu i powiadomienie przy problemie, który się nie naprawił)."""
     u = ustawienia()
-    licznik = KAT / "pilnuj.json"
-    n = czytaj(licznik, {"n": 0})["n"]
+    z = czytaj(ZDROWIE, {"naprawy": [], "zawieszony": 0})
+    testy, naprawy = [], z.get("naprawy", [])[-10:]
+
+    def test(nazwa, ok, opis=""):
+        testy.append({"nazwa": nazwa, "ok": bool(ok), "opis": opis})
+        return ok
+
+    def naprawa(co):
+        naprawy.append({"t": time.strftime("%Y-%m-%d %H:%M"), "co": co})
+        print("pilnuj: " + co, flush=True)
+    if not u["wlaczony"]:
+        zapisz(ZDROWIE, {"czas": time.strftime("%Y-%m-%d %H:%M:%S"), "ok": True, "wylaczony": True, "testy": [], "naprawy": naprawy})
+        return
     _, akt = usluga("is-active")
-    if u["wlaczony"] and akt.strip() != "active":
+    if not test("Usługa AirPlay działa", akt.strip() == "active"):
         usluga("restart")
-        print("pilnuj: usługa nie działała, uruchamiam", flush=True)
-        return
+        naprawa("usługa AirPlay nie działała: uruchomiona")
+    test("Synchronizacja AirPlay 2 (nqptp)", sh("systemctl", "is-active", "nqptp")[1].strip() == "active", "multiroom wymaga nqptp")
+    test("iPhone może się połączyć (port 7000)", ":7000 " in sh("ss", "-ltn")[1])
+    test("Dźwięk systemu (PipeWire)", "Sinks:" in sh("wpctl", "status")[1])
+    if u["tryb"] == "bt":
+        if test("Bluetooth włączony", bt_dostepny()) and u["bt_mac"]:
+            _, info = bt("info", u["bt_mac"], limit=5)
+            test(f"Głośnik {u['bt_nazwa'] or u['bt_mac']} sparowany", "Paired: yes" in info, "sparuj go jeszcze raz na stronie Głośnik")
     s = czytaj(STAN, {"gra": False})
-    if not s.get("gra") or time.time() - s.get("t", 0) < 30 or strumien_aktywny():
-        if n:
-            zapisz(licznik, {"n": 0})
-        return
-    n += 1
-    zapisz(licznik, {"n": n})
-    if n < 3:
-        return
-    print("pilnuj: AirPlay gra, a dźwięk nie płynie: restart", flush=True)
-    zapisz(licznik, {"n": 0})
-    zapisz(STAN, {"gra": False, "t": time.time(), "uwaga": "AirPlay się zaciął i został zrestartowany: puść jeszcze raz."})
-    if u["tryb"] == "bt" and u["bt_mac"]:
-        bt("disconnect", u["bt_mac"])
-    usluga("restart")
+    if s.get("gra") and time.time() - s.get("t", 0) > 45:
+        plynie = gra_naprawde(60) or wyjscie_gra()
+        if u["tryb"] == "bt" and u["bt_mac"] and not bt_polaczony(u["bt_mac"]):
+            bt("connect", u["bt_mac"], limit=25)                 # w trakcie grania głośnik odpadł: połącz, bez restartu
+            ustaw_wyjscie("bt", u["bt_mac"]) or ustaw_wyjscie("aux")
+            naprawa("głośnik BT odpadł w trakcie grania: połączony ponownie")
+        zaw = 0 if plynie else z.get("zawieszony", 0) + 1
+        test("Dźwięk płynie do głośnika", plynie, "AirPlay połączony, ale nic nie gra")
+        if zaw >= 3:                                         # ~1 min bez żadnego dźwięku przy „grającej” sesji: zawieszony
+            zaw = 0
+            zapisz(STAN, {"gra": False, "t": time.time(), "uwaga": "AirPlay się zaciął i został uruchomiony od nowa: puść jeszcze raz."})
+            usluga("restart")
+            naprawa("AirPlay zawieszony (sesja bez dźwięku przez minutę): uruchomiony od nowa")
+    else:
+        zaw = 0
+    zle = [t for t in testy if not t["ok"]]
+    zapisz(ZDROWIE, {"czas": time.strftime("%Y-%m-%d %H:%M:%S"), "ok": not zle, "testy": testy, "naprawy": naprawy[-10:],
+                     "zawieszony": zaw, "problem_od": (z.get("problem_od") or time.time()) if zle else None})
 
 
 def stan():
@@ -302,7 +331,7 @@ def stan():
     dost = bt_dostepny()
     return {**u, "dziala": akt.strip() == "active", "gra": s.get("gra", False), "uwaga": s.get("uwaga"),
             "bt_dostepny": dost, "bt_polaczony": bt_polaczony(u["bt_mac"]) if dost else False,
-            "zbudowany": Path("/usr/local/bin/shairport-sync").exists(), "karty_usb": karty_usb()}
+            "zbudowany": Path("/usr/local/bin/shairport-sync").exists(), "karty_usb": karty_usb(), "zdrowie": czytaj(ZDROWIE, {})}
 
 
 if __name__ == "__main__":
