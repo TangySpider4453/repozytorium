@@ -539,4 +539,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   treningi 6, 8, 10.11 przebudowane, kolejny przebieg bez zmian; przełącznik na stronie Automatyczne.
 - **2026-11-05 (plan lekcji → Google Calendar)**: moduł `gkal.py` (konto usługi, aktualizacja po każdym odczycie
   Mobidziennika), ustawienia na stronach. Mapowanie sprawdzone na prawdziwym planie (41 lekcji). Czeka na klucz Google.
-
+- **2026-11-05 (Garmin: rundy)**: RestOrTrain zaczął dawać ćwiczenia naprzemiennie („3 rundy”, „po każdej parze
+  odpocznij”); parser składa je w rundy (A, B, przerwa po rundzie) zamiast osobnych ćwiczeń i kroku 90 s „na czas”.
+  Treningi 6, 8, 10.11 przebudowane; triceps na wyciągu poprawiony.

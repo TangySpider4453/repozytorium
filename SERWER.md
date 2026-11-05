@@ -543,6 +543,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   Martwy ciąg (4×4–6)” (ustawienie `przejscie`). Hash w bazie = opis + `WERSJA` budowy + ustawienia (przerwy, tryb,
   przejścia): zmiana na stronie albo w kodzie sama przebudowuje zaplanowane treningi. Pozycje kalendarza usunięte w tym
   samym przebiegu (404) są pomijane (to był błąd „API Error 404”).
+- **Rundy / superserie** (2026-11-05): nagłówek „… — 3 rundy naprzemiennie” albo linia „90s odpoczynku po obu
+  ćwiczeniach” / „Po każdej parze odpocznij 90-120s” → `Circuit`: jedna grupa RepeatGroupDTO ×rundy [ćwiczenie A,
+  ćwiczenie B, przerwa po rundzie (górna wartość)], przed nią „Przygotuj: A + B (3 rundy: …)”. Format akapitowy
+  („Face pull: 3x12-15, …”) i „Spięcia …: 12-15 powtórzeń” w blokach też rozumiany. Hash obejmuje teraz `exercises.yaml`
+  (zmiana mapowania przebudowuje treningi). Triceps na wyciągu → `TRICEPS_PRESSDOWN`. Testy: 33.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

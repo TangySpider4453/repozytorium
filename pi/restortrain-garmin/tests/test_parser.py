@@ -68,3 +68,33 @@ def test_formy_z_prawdziwych_treningow():
     assert isinstance(r[1], WarmupSets) and (r[1].sets_max, r[1].exercise_ref) == (2, "Wyciskanie hantli na skosie dodatnim")
     assert isinstance(r[2], WarmupSets) and (r[2].sets_max, r[2].exercise_ref) == (2, "przysiadu")
     assert isinstance(r[3], WarmupSets) and r[3].exercise_ref == "Wyciskanie hantli na skosie dodatnim"
+
+
+def test_rundy_naprzemiennie():
+    from rtg.parser import Circuit
+    s = parsuj("Klatka i plecy — 3 rundy naprzemiennie\n- Wyciskanie hantli na skosie dodatnim 1x8-10\n"
+               "- Wiosłowanie hantlem 1x8-10 na stronę\n- 90s odpoczynku po obu ćwiczeniach\n"
+               "Kaptury\n- Szrugsy z hantlami 3x10-12\n- Unoszenie bokiem 3x12\n")
+    c = s[0].items[0]
+    assert len(s[0].items) == 1 and isinstance(c, Circuit)
+    assert (c.rounds, c.rest_s, [x.name_pl for x in c.exercises]) == (3, 90, ["Wyciskanie hantli na skosie dodatnim", "Wiosłowanie hantlem"])
+    assert all(isinstance(i, Exercise) for i in s[1].items)      # zwykła sekcja bez linii przerwy: bez rund
+
+
+def test_para_z_linia_przerwy():
+    from rtg.parser import Circuit
+    s = parsuj("Akcesoria nóg — naprzemiennie tylko jeśli stanowiska są blisko\n- Prostowanie nóg 3x10-12\n"
+               "- Uginanie nóg 3x10-12\n- Po każdej parze odpocznij 90-120s; jeśli musisz chodzić, osobno\n"
+               "- Wspięcia na palce 3x12-15\n")
+    c, w = s[0].items
+    assert isinstance(c, Circuit) and (c.rounds, c.rest_s) == (3, 120) and isinstance(w, Exercise)
+    assert not any(isinstance(i, Unparsed) for i in s[0].items)
+
+
+def test_format_akapitowy_i_powtorzenia():
+    from rtg.parser import Circuit
+    s = parsuj("Face pull: 3x12-15, orientacyjnie 10-15 kg, lekko.\n\nBrzuch — blok A 3 rundy:\n"
+               "- Spięcia brzucha na wyciągu: 12-15 powtórzeń, ciężar kontrolowany.\n- Unoszenie nóg w zwisie: 8-12 powtórzeń\n")
+    assert isinstance(s[0].items[0], Exercise) and s[0].items[0].name_pl == "Face pull"
+    c = s[1].items[0]
+    assert isinstance(c, Circuit) and c.rounds == 3 and c.exercises[0].reps_max == 15

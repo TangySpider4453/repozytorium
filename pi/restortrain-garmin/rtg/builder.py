@@ -7,7 +7,7 @@ import hashlib
 import re
 
 from .mapping import Mapa
-from .parser import Exercise, TimedBlock, Unparsed, WarmupSets, parsuj
+from .parser import Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
 
 SPORT = {"sportTypeId": 5, "sportTypeKey": "strength_training", "displayOrder": 3}
 TYP = {"warmup": (1, "warmup", 1), "cooldown": (2, "cooldown", 2), "interval": (3, "interval", 3), "rest": (5, "rest", 5),
@@ -15,7 +15,7 @@ TYP = {"warmup": (1, "warmup", 1), "cooldown": (2, "cooldown", 2), "interval": (
 KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (10, 10)}
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "3"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "4"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -92,6 +92,22 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
         if cfg.get("przejscie", True):
             kroki.append(k.krok("rest", "lap.button", opis=f"Przygotuj: {nazwa}" + (f" ({szczegol})" if szczegol else "")))
 
+    def cwiczenie(i):
+        """(fabryka kroku ćwiczenia, dopasowanie Garmin, opis ilości „4–6” / „30 s”)"""
+        d = mapa.znajdz(i.name_pl)
+        if d.sposob == "nieznane" and nieznane is not None:
+            nieznane.append(i.name_pl)
+        o = opis_kroku(i)
+        if d.sposob == "nieznane":                 # bez dopasowania: polska nazwa w opisie kroku
+            o = f"{i.name_pl}: {o}" if o else i.name_pl
+        if i.duration_s:
+            cw = lambda: k.krok("interval", "time", i.duration_s, opis=o, category=d.category, exercise=d.exerciseName)
+        else:
+            ile = i.reps_max if cfg.get("rep_target", "max") == "max" else i.reps_min
+            cw = lambda: k.krok("interval", "reps", ile, opis=o, category=d.category, exercise=d.exerciseName)
+        ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
+        return cw, d, ile_txt
+
     for sek in parsuj(opis):
         for i in sek.items:
             if isinstance(i, TimedBlock):
@@ -106,20 +122,17 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
                     k.krok("interval", "lap.button", opis=f"seria rozgrzewkowa ({i.raw})", category=d.category, exercise=d.exerciseName),
                     przerwa("warmup")]))
             elif isinstance(i, Exercise):
-                d = mapa.znajdz(i.name_pl)
-                if d.sposob == "nieznane" and nieznane is not None:
-                    nieznane.append(i.name_pl)
-                o = opis_kroku(i)
-                if d.sposob == "nieznane":                 # bez dopasowania: polska nazwa w opisie kroku
-                    o = f"{i.name_pl}: {o}" if o else i.name_pl
-                if i.duration_s:
-                    cw = lambda d=d, i=i, o=o: k.krok("interval", "time", i.duration_s, opis=o, category=d.category, exercise=d.exerciseName)
-                else:
-                    ile = i.reps_max if cfg.get("rep_target", "max") == "max" else i.reps_min
-                    cw = lambda d=d, o=o, ile=ile: k.krok("interval", "reps", ile, opis=o, category=d.category, exercise=d.exerciseName)
-                ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
+                cw, d, ile_txt = cwiczenie(i)
                 przejscie(i.name_pl, f"{i.sets}×{ile_txt}")
                 kroki.append(k.serie(i.sets, lambda cw=cw, d=d, rc=sek.rest_class: [cw(), przerwa(rc, d.rest_s)]))
+            elif isinstance(i, Circuit):              # rundy: A, B (, C…) jedno po drugim, przerwa dopiero po rundzie
+                cz = [cwiczenie(c) for c in i.exercises]
+                przejscie(" + ".join(c.name_pl for c in i.exercises), f"{i.rounds} rundy: " +
+                          ", ".join(t for _, _, t in cz))
+                kroki.append(k.serie(i.rounds, lambda cz=cz, i=i, rc=sek.rest_class: [cw() for cw, _, _ in cz] +
+                                     [przerwa(rc, i.rest_s)]))
+            elif isinstance(i, RoundRest):
+                pass                                    # przerwa bez pary ćwiczeń: przerwy między seriami już są
             elif isinstance(i, Unparsed):
                 kroki.append(k.krok("interval", "lap.button", opis=i.raw))
     tytul = zrodlo.get("workoutName") or zrodlo.get("title") or "Trening siłowy"

@@ -98,3 +98,15 @@ def test_ksztalt_jak_trening_referencyjny():
         for k in kroki_plaskie(w["workoutSegments"][0]["workoutSteps"]):
             if k["type"] == typ:
                 assert set(k) <= set(wz), (typ, set(k) - set(wz))
+
+
+def test_rundy_jedna_grupa_przerwa_po_rundzie():
+    w = buduj({"workoutId": 5, "title": "Full upper — x", "description": (
+        "Barki — 3 rundy naprzemiennie\n- Wyciskanie hantli nad głowę 1x8-10\n- Unoszenie bokiem 1x12-15\n"
+        "- 90s odpoczynku po obu ćwiczeniach\n")}, CFG)
+    k = w["workoutSegments"][0]["workoutSteps"]
+    assert k[0]["description"].startswith("Przygotuj: Wyciskanie hantli nad głowę + Unoszenie bokiem (3 rundy")
+    g = k[1]
+    assert g["type"] == "RepeatGroupDTO" and g["numberOfIterations"] == 3 and len(k) == 2
+    typy = [(x["stepType"]["stepTypeKey"], x["endConditionValue"]) for x in g["workoutSteps"]]
+    assert typy == [("interval", 10), ("interval", 15), ("rest", 90)]

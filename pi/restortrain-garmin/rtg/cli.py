@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from .mapping import Mapa
-from .parser import Exercise, TimedBlock, Unparsed, WarmupSets, parsuj
+from .parser import Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
 
 KAT = Path(__file__).resolve().parent.parent
 
@@ -36,6 +36,14 @@ def drukuj_parse(tekst):
                 print(f"  🏋  {i.name_pl}: {i.sets} serie × {ile}{' (na stronę)' if i.per_side else ''}"
                       f"{' · ' + i.note if i.note else ''}\n      -> {d.category}/{d.exerciseName} [{d.sposob}"
                       f"{f' {d.wynik:.0f}' if d.sposob == 'rozmyte' else ''}]")
+            elif isinstance(i, Circuit):
+                print(f"  🔁 {i.rounds} rundy, przerwa po rundzie: {i.rest_s or 'jak w sekcji'} s")
+                for c in i.exercises:
+                    d = m.znajdz(c.name_pl)
+                    print(f"      · {c.name_pl}: {c.reps_min}-{c.reps_max} powt.{' (na stronę)' if c.per_side else ''}"
+                          f" -> {d.category}/{d.exerciseName} [{d.sposob}]")
+            elif isinstance(i, RoundRest):
+                print(f"  ⏸  {i.raw} (pominięte)")
             elif isinstance(i, Unparsed):
                 print(f"  ❓ nie rozumiem: {i.raw} (krok do przycisku okrążenia)")
 

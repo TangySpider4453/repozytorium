@@ -109,7 +109,7 @@ cwiczenia:
   - nazwa: prostowanie ramion na wyciągu
     aliasy: [prostowanie przedramion na wyciągu, triceps na wyciągu, prostowanie tricepsa na wyciągu]
     category: TRICEPS_EXTENSION
-    exerciseName: REVERSE_GRIP_TRICEPS_PRESSDOWN
+    exerciseName: TRICEPS_PRESSDOWN
   - nazwa: prostowanie ramion nad głową
     aliasy: [wyciskanie francuskie nad głową]
     category: TRICEPS_EXTENSION
