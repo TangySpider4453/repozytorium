@@ -530,4 +530,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (RestOrTrain → Garmin: pierwszy zapis)**: Za zgodą Antka zapis włączony; utworzony i zaplanowany jeden
   trening „Dół B [str]” na 6.11 (11 kroków: rozgrzewka 10 min, 4 serie rozgrzewkowe, 8 ćwiczeń z seriami i przerwami,
   schłodzenie 5 min). Ponowny przebieg: bez zmian (bez duplikatu). Timer wstrzymany do potwierdzenia na zegarku.
+- **2026-11-05 (Garmin: nazwa „Siłka …”)**: Treningi nazywane „Siłka” + początek tytułu („Siłka Dół B”); trening na 6.11
+  podmieniony (stary usunięty, nowy zaplanowany), kolejny przebieg bez zmian.
 

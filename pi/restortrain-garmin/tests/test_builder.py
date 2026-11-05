@@ -23,7 +23,7 @@ def kroki_plaskie(kroki):
 
 def test_dol_b_kryteria_akceptacji():
     w = buduj(zrodlo_dol_b(), CFG)
-    assert w["workoutName"] == "Dół B — martwy ciąg, suwnica i brzuch [str]"
+    assert w["workoutName"] == "Siłka Dół B"
     assert "auto: restortrain-garmin, src=123" in w["description"] and nasz(w)
     k = w["workoutSegments"][0]["workoutSteps"]
     assert k[0]["stepType"]["stepTypeKey"] == "warmup" and k[0]["endConditionValue"] == 600
@@ -59,7 +59,9 @@ def test_nieznane_cwiczenie_trafia_do_opisu_i_listy():
 
 
 def test_nazwa():
-    assert nazwa_treningu("Push — skos - 80 min") == "Push — skos [str]"
+    assert nazwa_treningu("Push — skos - 80 min") == "Siłka Push"
+    assert nazwa_treningu("Full upper — większa objętość i brzuch") == "Siłka Full upper"
+    assert nazwa_treningu("Trening") == "Siłka Trening"
 
 
 @pytest.mark.parametrize("plik", sorted(glob.glob(str(FIX / "restortrain_*.json"))))

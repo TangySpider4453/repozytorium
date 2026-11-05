@@ -22,8 +22,11 @@ def hash_opisu(opis):
 
 
 def nazwa_treningu(tytul):
-    """„Dół B — martwy ciąg, suwnica i brzuch - 90 min” -> „Dół B — martwy ciąg, suwnica i brzuch [str]”"""
-    return re.sub(r"\s+-\s+\d+\s*min\s*$", "", (tytul or "").strip()) + " [str]"
+    """„Dół B — martwy ciąg, suwnica i brzuch - 90 min” -> „Siłka Dół B”: sam początek (przed „—” / „ - ”) z dopiskiem
+    „Siłka”, żeby na zegarku było widać różnicę względem oryginału RestOrTrain"""
+    t = re.sub(r"\s+-\s+\d+\s*min\s*$", "", (tytul or "").strip())
+    poczatek = re.split(r"\s+[—–-]\s+|:", t, maxsplit=1)[0].strip() or t
+    return f"Siłka {poczatek}"
 
 
 class Kroki:

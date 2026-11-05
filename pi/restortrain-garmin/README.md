@@ -14,7 +14,7 @@ pokazuje kolejne ćwiczenie, a po treningu Garmin zapisuje poszczególne ćwicze
 - Stan w `data/state.db` (SQLite). Nowy trening → utwórz i zaplanuj; zmieniony opis → usuń nasz stary i utwórz nowy;
   oryginał zniknął / przeniesiony → usuń nasz z tego dnia; bez zmian → nic (bez duplikatów).
 - Usuwa **wyłącznie** treningi z dopiskiem `auto: restortrain-garmin` w opisie (sprawdza to w Garmin przed usunięciem).
-- Nazwa: tytuł oryginału + ` [str]`. Ciężaru nie ustawia (wpisujesz go na zegarku).
+- Nazwa: „Siłka” + początek tytułu oryginału (przed „—”), np. „Dół B — martwy ciąg…” → „Siłka Dół B”. Ciężaru nie ustawia (wpisujesz go na zegarku).
 
 ## Komendy
 ```
@@ -60,4 +60,4 @@ sudo systemctl disable --now rtg-garmin.timer rtg-garmin-teraz.path
 sudo rm /etc/systemd/system/rtg-garmin*.{service,timer,path} && sudo systemctl daemon-reload
 rm -rf ~/restortrain-garmin        # usuwa też token
 ```
-Treningi `[str]` w Garmin Connect zostają; usuniesz je w aplikacji.
+Treningi „Siłka …” w Garmin Connect zostają; usuniesz je w aplikacji.

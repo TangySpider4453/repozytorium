@@ -69,9 +69,16 @@ def usun_nasz(g, workout_id, pozycje, dry_run, zmiany):
         return
     for p in pozycje:
         if str(p.get("workoutId")) == str(workout_id) and p.get("id"):
-            g.unschedule_workout(p["id"])
+            try:
+                g.unschedule_workout(p["id"])
+            except Exception as ex:             # 404: już odplanowany (Garmin zdejmuje go też przy usunięciu)
+                log.info("odplanowanie %s: %s", p["id"], type(ex).__name__)
             time.sleep(0.5)
-    g.delete_workout(workout_id)
+    try:
+        g.delete_workout(workout_id)
+    except Exception as ex:
+        if "404" not in str(ex) and "NotFound" not in type(ex).__name__:
+            raise
 
 
 def utworz(g, zrodlo, data, cfg, mapa, dry_run, zmiany, nieznane, pokaz_json=False):

@@ -517,6 +517,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   siłowym (`activityTypeId == 13`). Nieznane ćwiczenia: `claude -p` Haiku bez narzędzi (kategoria → ćwiczenie), walidacja,
   dopisanie z `auto: true`, powiadomienie. `zapis_dozwolony: false` w config.yaml = tryb próbny (plan zmian w przebiegach,
   bez zapisu w Garmin) do czasu zgody Antka. README w projekcie.
+- Zapis włączony 2026-11-05 (zgoda). Nazwa treningu: „Siłka ” + początek tytułu (przed „—”), np. „Siłka Dół B”.
+  Usuwanie odporne na 404 (Garmin odplanowuje przy usunięciu). Timer wstrzymany do potwierdzenia na zegarku.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
