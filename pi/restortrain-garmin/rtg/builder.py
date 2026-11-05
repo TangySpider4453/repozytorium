@@ -7,7 +7,7 @@ import hashlib
 import re
 
 from .mapping import Mapa
-from .parser import ciezar, Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
+from .parser import ciezar, wszystkie_cwiczenia, Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
 
 SPORT = {"sportTypeId": 5, "sportTypeKey": "strength_training", "displayOrder": 3}
 TYP = {"warmup": (1, "warmup", 1), "cooldown": (2, "cooldown", 2), "interval": (3, "interval", 3), "rest": (5, "rest", 5),
@@ -16,7 +16,7 @@ KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (1
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 KG = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "6"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "7"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -62,14 +62,31 @@ class Kroki:
                 "endConditionValue": float(ile), "workoutSteps": budowniczy()}
 
 
-def opis_kroku(c):
+def wskazowki(c):
+    """wskazówki RestOrTrain do ćwiczenia: kąt ławki z nazwy („… na skosie dodatnim 30°”) + dopisek z planu"""
     czesci = []
-    if c.reps_max:
-        czesci.append(f"{c.reps_min}–{c.reps_max} powt." if c.reps_min != c.reps_max else f"{c.reps_max} powt.")
+    kat = re.search(r"\d+\s*°", c.name_pl)
+    if kat and kat.group(0).replace(" ", "") not in (c.note or "").replace(" ", ""):
+        czesci.append(f"ławka {kat.group(0).replace(' ', '')}")
     if c.note:
         czesci.append(c.note)
     if c.per_side and not re.search(r"na\s+(nog|stron|rek|ręk)", c.note or "", re.I):
         czesci.append("na stronę")
+    return ", ".join(czesci)
+
+
+def kat_lawki(c):
+    """„ławka 30°” z nazwy albo dopisku ćwiczenia (do przygotowania serii rozgrzewkowych)"""
+    m = re.search(r"(\d+)\s*°", f"{c.name_pl} {c.note}")
+    return f"ławka {m.group(1)}°" if m else ""
+
+
+def opis_kroku(c):
+    czesci = []
+    if c.reps_max:
+        czesci.append(f"{c.reps_min}–{c.reps_max} powt." if c.reps_min != c.reps_max else f"{c.reps_max} powt.")
+    if w := wskazowki(c):
+        czesci.append(w)
     return ", ".join(czesci)
 
 
@@ -110,7 +127,10 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
         ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
         return cw, d, ile_txt
 
-    for sek in parsuj(opis):
+    sekcje = parsuj(opis)
+    po_nazwie = {c.name_pl: c for c in wszystkie_cwiczenia(sekcje)}
+
+    for sek in sekcje:
         for i in sek.items:
             if isinstance(i, TimedBlock):
                 typ = "warmup" if sek.kind == "warmup" else "cooldown" if sek.kind == "cooldown" else "interval"
@@ -119,19 +139,22 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
                 d = mapa.znajdz(i.exercise_ref)
                 if d.sposob == "nieznane" and nieznane is not None:
                     nieznane.append(i.exercise_ref)
-                przejscie(i.exercise_ref, f"{i.sets_max} serie rozgrzewkowe")
+                kat = kat_lawki(po_nazwie[i.exercise_ref]) if i.exercise_ref in po_nazwie else ""
+                kat = "" if kat.split()[-1:] and kat.split()[-1] in i.raw else kat
+                przejscie(i.exercise_ref, ", ".join(x for x in (f"{i.sets_max} serie rozgrzewkowe", kat, i.note) if x))
                 kroki.append(k.serie(i.sets_max, lambda d=d, i=i: [
                     k.krok("interval", "lap.button", opis=f"seria rozgrzewkowa ({i.raw})", category=d.category, exercise=d.exerciseName,
                            kg=ciezar(i.raw)),
                     przerwa("warmup")]))
             elif isinstance(i, Exercise):
                 cw, d, ile_txt = cwiczenie(i)
-                przejscie(i.name_pl, f"{i.sets}×{ile_txt}")
+                przejscie(i.name_pl, f"{i.sets}×{ile_txt}" + (f", {w}" if (w := wskazowki(i)) else ""))
                 kroki.append(k.serie(i.sets, lambda cw=cw, d=d, rc=sek.rest_class: [cw(), przerwa(rc, d.rest_s)]))
             elif isinstance(i, Circuit):              # rundy: A, B (, C…) jedno po drugim, przerwa dopiero po rundzie
                 cz = [cwiczenie(c) for c in i.exercises]
+                rady = "; ".join(f"{c.name_pl}: {w}" for c in i.exercises if (w := wskazowki(c)))
                 przejscie(" + ".join(c.name_pl for c in i.exercises), f"{i.rounds} rundy: " +
-                          ", ".join(t for _, _, t in cz))
+                          ", ".join(t for _, _, t in cz) + (f" · {rady}" if rady else ""))
                 kroki.append(k.serie(i.rounds, lambda cz=cz, i=i, rc=sek.rest_class: [cw() for cw, _, _ in cz] +
                                      [przerwa(rc, i.rest_s)]))
             elif isinstance(i, RoundRest):

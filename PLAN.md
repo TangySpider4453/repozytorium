@@ -548,3 +548,4 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   treningi przebudowane.
 - **2026-11-05 (Garmin: ciężar)**: ciężar z planu RestOrTrain trafia do kroków na zegarku (zakres od-do = średnia);
   serie wstępne z dopiskiem ciężaru znów trafiają w ćwiczenie. Treningi 6, 8, 10.11 przebudowane i sprawdzone.
+- **2026-11-05 (Garmin: wskazówki)**: kąt ławki i dopiski RestOrTrain w komentarzu ćwiczenia i w kroku „Przygotuj”.

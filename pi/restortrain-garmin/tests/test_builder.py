@@ -32,7 +32,7 @@ def test_dol_b_kryteria_akceptacji():
     assert rozgrz["workoutSteps"][0]["endCondition"]["conditionTypeKey"] == "lap.button"
     assert rozgrz["workoutSteps"][0]["exerciseName"] == "BARBELL_DEADLIFT"
     przej = [x for x in k if x["type"] == "ExecutableStepDTO" and (x.get("description") or "").startswith("Przygotuj:")]
-    assert len(przej) == 9 and przej[1]["description"] == "Przygotuj: Martwy ciąg (4×4–6)"
+    assert len(przej) == 9 and przej[1]["description"] == "Przygotuj: Martwy ciąg (4×4–6, 1-2 powtórzenia w zapasie)"
     assert all(x["endCondition"]["conditionTypeKey"] == "lap.button" and x["stepType"]["stepTypeKey"] == "rest" for x in przej)
     grupy = [x for x in k[3:] if x["type"] == "RepeatGroupDTO"]
     assert len(grupy) == 8
@@ -121,3 +121,13 @@ def test_ciezar_z_planu():
     a, b = [g["workoutSteps"][0] for g in w["workoutSegments"][0]["workoutSteps"]]
     assert a["weightValue"] == 60000.0 and a["weightUnit"]["unitKey"] == "kilogram"
     assert b["weightValue"] is None and b["weightUnit"] is None
+
+
+def test_wskazowki_w_komentarzach_i_przygotowaniu():
+    w = buduj({"workoutId": 1, "title": "X", "description":
+               "Rozgrzewka\n- 2 lekkie serie wyciskania hantli na skosie 30°, 12,5 kg na hantel\n"
+               "Klatka\n- Wyciskanie hantli na skosie dodatnim 30° 4x8-10 — 17,5 kg na hantel\n"}, CFG)
+    k = w["workoutSegments"][0]["workoutSteps"]
+    assert k[0]["description"] == "Przygotuj: Wyciskanie hantli na skosie dodatnim 30° (2 serie rozgrzewkowe, 12,5 kg na hantel)"
+    assert k[2]["description"] == "Przygotuj: Wyciskanie hantli na skosie dodatnim 30° (4×8–10, ławka 30°, 17,5 kg na hantel)"
+    assert k[3]["workoutSteps"][0]["description"] == "8–10 powt., ławka 30°, 17,5 kg na hantel"

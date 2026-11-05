@@ -77,6 +77,7 @@ class WarmupSets:
     sets_min: int
     sets_max: int
     exercise_ref: str
+    note: str = ""                          # dopisek: „12,5 kg na hantel”, „ciężar stopniowo zwiększaj”
 
 
 @dataclass
@@ -153,8 +154,9 @@ def parsuj_linie(tekst, kind):
     if (m := WSTEPNE_RE.match(tekst)) or (m := re.match(r"^(\d+)(?:\s*[-–]\s*(\d+))?\s+seri\w*\s+(?:wstępn|wstepn|rozgrzewkow)\w*\s*(.*)$", tekst, re.I)):
         a = int(m.group(1) or 2)
         b = int(m.group(2) or a)
-        ref = re.split(r"\s*[,;—–]\s*|\s+-\s+", m.group(3).strip(), maxsplit=1)[0]      # bez dopisków „, 12,5 kg …”
-        return WarmupSets(raw=tekst, sets_min=min(a, b), sets_max=max(a, b), exercise_ref=ref.strip())
+        ref, *dop = re.split(r"\s*[,;—–]\s*|\s+-\s+", m.group(3).strip(), maxsplit=1)   # bez dopisków „, 12,5 kg …”
+        return WarmupSets(raw=tekst, sets_min=min(a, b), sets_max=max(a, b), exercise_ref=ref.strip(),
+                          note=(dop[0] if dop else "").strip(" ,;.-–—"))
     if m := CZAS_RE.match(tekst):
         return TimedBlock(raw=tekst, seconds=sekundy(int(m.group(1)), m.group(2)), kind=kind, text=m.group(3).strip())
     if m := POWT_RE.match(tekst):
