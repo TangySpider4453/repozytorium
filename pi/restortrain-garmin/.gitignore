@@ -7,3 +7,6 @@ data/*.log
 __pycache__/
 .venv/
 .pytest_cache/
+data/sync.lock
+data/teraz
+data/llm_nieudane.json

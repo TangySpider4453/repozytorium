@@ -518,7 +518,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   dopisanie z `auto: true`, powiadomienie. `zapis_dozwolony: false` w config.yaml = tryb próbny (plan zmian w przebiegach,
   bez zapisu w Garmin) do czasu zgody Antka. README w projekcie.
 - Zapis włączony 2026-11-05 (zgoda). Nazwa treningu: „Siłka ” + początek tytułu (przed „—”), np. „Siłka Dół B”.
-  Usuwanie odporne na 404 (Garmin odplanowuje przy usunięciu). Timer wstrzymany do potwierdzenia na zegarku.
+  Usuwanie odporne na 404. Bezpiecznik (po błędnym usunięciu „Siłka Dół B” przy przebiegu z przycisku): gdy kalendarz
+  wróci bez treningów siłowych, nic nie jest usuwane; nasz trening jest usuwany dopiero, gdy oryginału brak w 2 kolejnych
+  przebiegach (status `brak1`); blokada `data/sync.lock` (timer i przycisk nie działają naraz). Timer włączony po
+  potwierdzeniu Antka (6.11 „Siłka Dół B” widoczny na zegarku); utworzone: Siłka Dół B 6.11, Full upper 8.11, Dół A 10.11.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

@@ -96,6 +96,12 @@ def utworz(g, zrodlo, data, cfg, mapa, dry_run, zmiany, nieznane, pokaz_json=Fal
 
 
 def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
+    import fcntl
+    blokada = open(KAT / "data" / "sync.lock", "w")
+    try:                                    # timer i przycisk „teraz” naraz: drugi przebieg czeka na pierwszy
+        fcntl.flock(blokada, fcntl.LOCK_EX)
+    except OSError:
+        pass
     cfg = konfiguracja()
     db = baza()
     teraz = datetime.now().isoformat(timespec="seconds")
@@ -147,13 +153,26 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
                 db.execute("INSERT OR REPLACE INTO treningi VALUES (?,?,?,?,?,?,?,?,?)",
                            (src, d, h, str(wid), str(sid or ""), str(p.get("id") or ""), w.get("workoutName"),
                             "zastapiony" if cfg.get("replace_original") else "ok", teraz))
-        # oryginał zniknął z kalendarza (RestOrTrain przeniósł / usunął): usuń nasz odpowiednik
-        for src, d, gen, status in db.execute("SELECT source_workout_id, date, generated_workout_id, status FROM treningi WHERE date >= ?",
-                                               (od.isoformat(),)).fetchall():
-            if (src, d) not in aktualne and status != "zastapiony" and d <= do.isoformat() and d not in zrobione:
+        # oryginał zniknął z kalendarza (RestOrTrain przeniósł / usunął): usuń nasz odpowiednik. Bezpiecznik: nic nie
+        # usuwamy, gdy kalendarz wrócił bez żadnego treningu siłowego (chwilowa odpowiedź Garmina), a nasz trening dopiero
+        # wtedy, gdy oryginału brak przy 2 kolejnych przebiegach (status „brak1” po pierwszym)
+        if pozycje or not db.execute("SELECT 1 FROM treningi WHERE date >= ?", (od.isoformat(),)).fetchone():
+            for src, d, gen, status in db.execute("SELECT source_workout_id, date, generated_workout_id, status FROM treningi WHERE date >= ?",
+                                                   (od.isoformat(),)).fetchall():
+                if (src, d) in aktualne or status == "zastapiony" or d > do.isoformat() or d in zrobione:
+                    if status == "brak1" and not dry_run:
+                        db.execute("UPDATE treningi SET status='ok' WHERE source_workout_id=? AND date=?", (src, d))
+                    continue
+                if status != "brak1":
+                    if not dry_run:
+                        db.execute("UPDATE treningi SET status='brak1' WHERE source_workout_id=? AND date=?", (src, d))
+                    zmiany.append(f"oryginał z {d} zniknął (usunę nasz przy następnym sprawdzeniu, jeśli dalej go nie ma)")
+                    continue
                 usun_nasz(g, gen, pozycje, dry_run, zmiany)
                 if not dry_run:
                     db.execute("DELETE FROM treningi WHERE source_workout_id=? AND date=?", (src, d))
+        else:
+            log.warning("kalendarz bez treningów siłowych, a w bazie są przyszłe: pomijam usuwanie (chwilowa odpowiedź?)")
         wynik, opis = "ok", "; ".join(zmiany) or "bez zmian"
     except BrakLogowania as ex:
         wynik, opis = "blad", str(ex)

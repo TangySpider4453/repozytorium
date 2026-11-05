@@ -532,4 +532,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   schłodzenie 5 min). Ponowny przebieg: bez zmian (bez duplikatu). Timer wstrzymany do potwierdzenia na zegarku.
 - **2026-11-05 (Garmin: nazwa „Siłka …”)**: Treningi nazywane „Siłka” + początek tytułu („Siłka Dół B”); trening na 6.11
   podmieniony (stary usunięty, nowy zaplanowany), kolejny przebieg bez zmian.
+- **2026-11-05 (Garmin: działa automatycznie)**: Antek potwierdził trening na zegarku; timer co 10 min włączony. Jeden
+  przebieg błędnie usunął „Siłka Dół B” (chwilowo pusty kalendarz?) → bezpiecznik usuwania i blokada przebiegów; trzy
+  treningi utworzone ponownie (6, 8, 10.11), kolejny przebieg bez zmian.
 
