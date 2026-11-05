@@ -46,7 +46,8 @@
     "Edit(//home/tonyg/bot/sudo_czeka.json)",
     "Write(//home/tonyg/bot/sudo_czeka.json)",
     "Read(//home/tonyg/portal/dane/google_cookies.txt)",
-    "Read(//home/tonyg/bot/google/kalendarz-klucz.json)",
+    "Read(//home/tonyg/bot/google/**)",
+    "Grep(//home/tonyg/bot/google/**)",
     "Read(//home/tonyg/bot/poczta/**)",
     "Grep(//home/tonyg/bot/poczta/**)"
   ],

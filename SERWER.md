@@ -454,7 +454,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   czerwone; sala w miejscu, nauczyciel / zamiast / info / zadanie domowe w opisie. Zarządza tylko wydarzeniami z
   `extendedProperties.private.zrodlo == serwerek-mobi`. Ustawienia `gkal` (strona Mobidziennik i Automatyczne):
   włącznik, odwołane pokazuj/usuń, sprawdziany, przypomnienie przed lekcją. 3 błędy z rzędu → powiadomienie.
-- Czeka na: klucz konta usługi i identyfikator kalendarza od Antka.
+- Wariant OAuth (Antek podał klienta OAuth typu „web” zamiast konta usługi): `~/bot/google/oauth-klient.json` (600),
+  zakres `calendar.app.created` (aplikacja widzi tylko kalendarz, który sama utworzy: „Plan lekcji”), jednorazowa
+  autoryzacja: `python3 ~/bot/gkal.py link` → Antek zatwierdza → adres `http://localhost:8765/?code=…` →
+  `python3 ~/bot/gkal.py kod '<adres>'` zapisuje `oauth-token.json` (refresh_token, 600). Ekran zgody musi być
+  „In production” (w trybie testowym Google unieważnia refresh_token po 7 dniach). Katalog `~/bot/google/` zablokowany
+  dla Claude w bocie (strażnik + uprawnienia).
 
 ## Oceny: okresy i symulacja (od 2026-10-26)
 - `mobi.py` czyta `oceny/?semestr=1` i `=2`: `oceny_okresy`, `okres` (II, gdy ma oceny), `oceny_rok` (oba razem),

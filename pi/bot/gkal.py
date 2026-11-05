@@ -21,7 +21,11 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 KAT = Path(__file__).resolve().parent / "google"
-KLUCZ = KAT / "kalendarz-klucz.json"
+KLUCZ = KAT / "kalendarz-klucz.json"            # wariant 1: konto usługi
+OAUTH_KLIENT = KAT / "oauth-klient.json"         # wariant 2: klient OAuth (Antek autoryzuje raz, zakres calendar.app.created)
+OAUTH_TOKEN = KAT / "oauth-token.json"           # {"refresh_token": …}
+ZAKRES_APP = "https://www.googleapis.com/auth/calendar.app.created"   # tylko kalendarze utworzone przez tę aplikację
+PRZEKIEROWANIE = "http://localhost:8765"
 KONFIG = KAT / "kalendarz.json"
 STAN = KAT / "kalendarz-stan.json"
 API = "https://www.googleapis.com/calendar/v3"
@@ -32,7 +36,36 @@ _TOKEN = {"t": 0.0, "token": None}
 
 
 def skonfigurowany():
-    return KLUCZ.exists() and KONFIG.exists()
+    return (KLUCZ.exists() and KONFIG.exists()) or (OAUTH_KLIENT.exists() and OAUTH_TOKEN.exists())
+
+
+def _klient():
+    d = json.loads(OAUTH_KLIENT.read_text(encoding="utf-8"))
+    return d.get("web") or d.get("installed")
+
+
+def adres_autoryzacji():
+    k = _klient()
+    return k["auth_uri"] + "?" + urllib.parse.urlencode({
+        "client_id": k["client_id"], "redirect_uri": PRZEKIEROWANIE, "response_type": "code", "scope": ZAKRES_APP,
+        "access_type": "offline", "prompt": "consent"})
+
+
+def wymien_kod(kod_albo_adres):
+    """kod z przekierowania (albo cały adres http://localhost:8765/?code=…) -> refresh_token zapisany w oauth-token.json"""
+    kod = kod_albo_adres.strip()
+    if "code=" in kod:
+        kod = urllib.parse.parse_qs(urllib.parse.urlparse(kod).query)["code"][0]
+    k = _klient()
+    dane = urllib.parse.urlencode({"code": kod, "client_id": k["client_id"], "client_secret": k["client_secret"],
+                                   "redirect_uri": PRZEKIEROWANIE, "grant_type": "authorization_code"}).encode()
+    with urllib.request.urlopen(urllib.request.Request(k["token_uri"], data=dane), timeout=30) as r:
+        d = json.loads(r.read())
+    if not d.get("refresh_token"):
+        raise RuntimeError("Google nie zwrócił refresh_token (spróbuj jeszcze raz z nowym linkiem)")
+    OAUTH_TOKEN.write_text(json.dumps({"refresh_token": d["refresh_token"]}), encoding="utf-8")
+    OAUTH_TOKEN.chmod(0o600)
+    return True
 
 
 def _b64(b):
@@ -42,6 +75,14 @@ def _b64(b):
 def token():
     """token dostępu (1 h) z konta usługi: JWT podpisany kluczem prywatnym -> oauth2.googleapis.com/token"""
     if _TOKEN["token"] and time.time() < _TOKEN["t"] - 120:
+        return _TOKEN["token"]
+    if not KLUCZ.exists():                          # klient OAuth: odświeżenie tokenem z jednorazowej autoryzacji
+        k = _klient()
+        dane = urllib.parse.urlencode({"client_id": k["client_id"], "client_secret": k["client_secret"], "grant_type": "refresh_token",
+                                       "refresh_token": json.loads(OAUTH_TOKEN.read_text(encoding="utf-8"))["refresh_token"]}).encode()
+        with urllib.request.urlopen(urllib.request.Request(k["token_uri"], data=dane), timeout=30) as r:
+            d = json.loads(r.read())
+        _TOKEN.update(token=d["access_token"], t=time.time() + d.get("expires_in", 3600))
         return _TOKEN["token"]
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding
@@ -126,6 +167,10 @@ def synchronizuj(stan_mobi, ust):
     """wydarzenia z planu -> kalendarz Google: dodaj / zmień / usuń tylko nasze, od dziś do końca znanego planu"""
     if not skonfigurowany():
         return None
+    if not KONFIG.exists():                         # OAuth: aplikacja sama tworzy swój kalendarz „Plan lekcji”
+        k = _api("POST", "/calendars", {"summary": "Plan lekcji", "description": "Z Mobidziennika (serwerek, automatycznie)",
+                                        "timeZone": STREFA})
+        KONFIG.write_text(json.dumps({"id": k["id"]}), encoding="utf-8")
     kal = urllib.parse.quote(json.loads(KONFIG.read_text(encoding="utf-8"))["id"], safe="")
     chce = wydarzenia(stan_mobi, ust)
     dni = sorted(x["data"] for x in stan_mobi.get("plan", []))
@@ -180,3 +225,11 @@ def zapisz_blad(opis):
         s = {}
     s.update(blad=opis[:300], czas_bledu=datetime.now().isoformat(timespec="seconds"))
     STAN.write_text(json.dumps(s, ensure_ascii=False), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.argv[1:2] == ["link"]:
+        print(adres_autoryzacji())
+    elif sys.argv[1:2] == ["kod"]:
+        print("OK" if wymien_kod(sys.argv[2]) else "?")
