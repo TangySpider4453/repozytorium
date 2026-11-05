@@ -872,5 +872,7 @@ function qRestore(){
   if(t&&Date.now()-t.czas<3*3600*1000&&document.getElementById(t.id))showTab(t.id);
 })();
 </script>
+<script>/* zakładka z adresu (np. #fiszki z kalendarza): pierwszeństwo przed zapamiętaną */
+addEventListener("load",()=>{const h=decodeURIComponent(location.hash.slice(1));if(h&&typeof showTab==="function"&&document.getElementById(h))showTab(h)});</script>
 </body>
 </html>

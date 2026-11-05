@@ -1,0 +1,7 @@
+[Unit]
+Description=Dziennik systemu na NAS (Logi/system)
+
+[Service]
+Type=oneshot
+Nice=10
+ExecStart=/usr/local/sbin/logi-na-nas

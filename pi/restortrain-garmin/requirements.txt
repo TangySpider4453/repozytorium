@@ -1,0 +1,4 @@
+garminconnect==0.3.20
+PyYAML>=6
+rapidfuzz>=3
+pytest>=8

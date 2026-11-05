@@ -1,0 +1,12 @@
+# sekrety i stan: nigdy do gita
+tokens/
+.garminconnect/
+data/state.db
+data/*.log
+*.pyc
+__pycache__/
+.venv/
+.pytest_cache/
+data/sync.lock
+data/teraz
+data/llm_nieudane.json

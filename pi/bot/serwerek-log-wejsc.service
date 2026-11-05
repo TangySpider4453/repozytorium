@@ -1,0 +1,12 @@
+[Unit]
+Description=Zapis polaczen z sieci domowej do SSH, Samby, VNC i panelu MC (dla bota Telegram)
+After=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/serwerek-bot/serwerek-log-wejsc.nft
+ExecStop=/usr/sbin/nft delete table inet serwerek_log
+
+[Install]
+WantedBy=multi-user.target

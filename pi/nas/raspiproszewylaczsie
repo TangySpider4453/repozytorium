@@ -1,0 +1,76 @@
+#!/bin/bash
+# Bezpieczne wylaczenie Raspberry Pi (komenda w terminalu: raspiproszewylaczsie).
+#   raspiproszewylaczsie          pyta o potwierdzenie; gdy trwa nocna kopia, czeka az sie skonczy
+#   raspiproszewylaczsie --teraz  nie czeka na kopie (przerywa ja; dokonczy sie przy nastepnej)
+#   dodaj -t, zeby nie pytac o potwierdzenie
+# Kolejnosc: kopia systemu -> zapis i zatrzymanie swiata Minecraft -> portal -> logi na NAS -> odlaczenie NAS -> poweroff.
+# Pi wlaczy sie ponownie dopiero po odlaczeniu i podlaczeniu zasilania.
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+TERAZ=0; TAK=0
+for a in "$@"; do
+    case "$a" in --teraz) TERAZ=1 ;; -t|--tak) TAK=1 ;; esac
+done
+R=/mnt/nas/Raspberry
+MC=/home/tonyg/powernukkitx
+DZIENNIK=/home/tonyg/portal/dane/zdrowie/dziennik.log
+krok() { echo "==> $*"; logger -t raspiproszewylaczsie "$*"; }
+
+echo "Bezpieczne wylaczenie Raspberry Pi."
+echo "Serwer Minecraft zostanie zapisany i zatrzymany (gracze zostana rozlaczeni), strony przestana dzialac."
+echo "Wlaczysz Pi ponownie, odlaczajac i podlaczajac zasilanie."
+if [ $TAK = 0 ]; then
+    read -r -p "Wylaczyc? [t/N] " odp
+    case "$odp" in t|T|tak|TAK) ;; *) echo "Nic nie zrobiono."; exit 0 ;; esac
+fi
+
+# 1. nocna kopia systemu
+if systemctl is-active -q kopia-pi || [ "$(systemctl is-active kopia-pi)" = activating ]; then
+    if [ $TERAZ = 1 ]; then
+        krok "Przerywam nocna kopie systemu (dokonczy sie przy nastepnej)"
+        systemctl stop kopia-pi
+        mountpoint -q /mnt/pi-kopia && { umount /mnt/pi-kopia || umount -l /mnt/pi-kopia; }
+        losetup -j "$R/Kopia-systemu/raspberry-system.img" -O NAME -n 2>/dev/null | xargs -r -n1 losetup -d
+        [ -d "$R/Logi" ] && echo "$(date '+%Y-%m-%d %H:%M:%S') PRZERWANA przez raspiproszewylaczsie --teraz" >> "$R/Logi/kopia-systemu.log"
+    else
+        krok "Trwa kopia systemu na NAS, czekam az sie skonczy (Ctrl+C = zostaw Pi wlaczone; --teraz = nie czekaj)"
+        while [ "$(systemctl is-active kopia-pi)" = activating ]; do
+            printf '\r    skopiowane: %s   ' "$(df -h --output=used /mnt/pi-kopia 2>/dev/null | tail -1 | tr -d ' ')"
+            sleep 15
+        done
+        echo
+    fi
+fi
+
+# 2. Minecraft: zapis swiata i normalne zatrzymanie przez konsole serwera
+if systemctl is-active -q powernukkitx; then
+    krok "Zapisuje swiat Minecraft i zatrzymuje serwer"
+    if [ -p "$MC/console.fifo" ]; then
+        echo "save-all" > "$MC/console.fifo"; sleep 5
+        echo "stop" > "$MC/console.fifo"
+        for _ in $(seq 1 90); do systemctl is-active -q powernukkitx || break; sleep 1; done
+    fi
+    systemctl is-active -q powernukkitx && systemctl stop powernukkitx
+fi
+systemctl stop playit 2>/dev/null
+
+# 3. portal (zapisuje logi zdrowia; render filmu wznowi sie po wlaczeniu)
+krok "Zatrzymuje portal"
+echo "$(date '+%Y-%m-%d %H:%M:%S') WYLACZENIE reczne (raspiproszewylaczsie)" >> "$DZIENNIK"
+systemctl stop home-portal
+
+# 4. ostatnie logi na NAS
+if mountpoint -q /mnt/nas && [ -f "$R/.nas" ]; then
+    krok "Wysylam ostatnie logi na NAS"
+    cp /home/tonyg/portal/dane/zdrowie/dziennik.log "$R/Logi/zdrowie-dziennik.log" 2>/dev/null
+    cp /home/tonyg/portal/dane/zdrowie/incydenty.json "$R/Logi/zdrowie-incydenty.json" 2>/dev/null
+    /usr/local/sbin/logi-na-nas
+    sync
+    umount /mnt/nas || umount -l /mnt/nas
+else
+    krok "NAS niedostepny: logi zostaja na Pi i trafia na NAS po ponownym wlaczeniu"
+fi
+
+# 5. wylaczenie
+sync
+krok "Wylaczam Raspberry Pi. Gdy zielona dioda na plytce przestanie migac, mozna odlaczyc zasilanie."
+systemctl poweroff

@@ -1,0 +1,450 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Łazik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Układ: pionowy łańcuch łączności (Ty > stacja > satelita > łazik), potem priorytety, prędkości, etapy, zakupy.
+   Łącze B = turkus (ciągłe), łącze A = bursztyn (przerywane). Reszta w neutralnych błękitnoszarościach. */
+:root{
+  --bg:#EDF0F3; --surface:#F8FAFB; --ink:#16212B; --muted:#566676; --line:#CBD4DC;
+  --a:#A85F05; --a-soft:#F4E4CB; --b:#0B6E8A; --b-soft:#D3E9F0; --crit:#B3362B; --ok:#2E7B4E;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D141B; --surface:#141D26; --ink:#E4EAF0; --muted:#93A3B2; --line:#26333F;
+  --a:#E9A23B; --a-soft:#3A2A10; --b:#52B7D4; --b-soft:#0F303B; --crit:#F07167; --ok:#6CCB91; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D141B; --surface:#141D26; --ink:#E4EAF0; --muted:#93A3B2; --line:#26333F;
+  --a:#E9A23B; --a-soft:#3A2A10; --b:#52B7D4; --b-soft:#0F303B; --crit:#F07167; --ok:#6CCB91; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0}
+.wrap{max-width:980px;margin:0 auto;padding-block:32px 64px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.05;margin:0;text-wrap:balance;letter-spacing:.005em}
+h1{font-size:clamp(44px,9vw,76px);font-weight:700}
+h2{font-size:clamp(28px,5vw,38px)}
+h3{font-size:22px}
+p{margin:0}
+.lead{font-size:clamp(17px,2.6vw,20px);max-width:62ch;color:var(--ink)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-size:.86em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+.sec-head{display:flex;flex-direction:column;gap:8px}
+.sec-head p{max-width:66ch;color:var(--muted)}
+
+/* nagłówek */
+.hero{display:flex;flex-direction:column;gap:16px;padding-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:32px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--mono);font-size:12px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--surface)}
+.chip.a{color:var(--a);border-color:var(--a);background:var(--a-soft)}
+.chip.b{color:var(--b);border-color:var(--b);background:var(--b-soft)}
+
+/* łańcuch węzłów */
+.chain{display:flex;flex-direction:column;align-items:stretch}
+.node{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:12px 28px}
+.node.you{padding:12px 20px;grid-template-columns:1fr;border-style:dashed}
+.node h3{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.node .model{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.node ul{margin:0;padding-left:18px;color:var(--ink)}
+.node li{margin:2px 0}
+.meter{display:flex;align-items:center;gap:10px;margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.meter .seg{display:flex;gap:3px}
+.meter .seg i{width:18px;height:8px;border-radius:2px;background:var(--line)}
+.meter .seg i.on{background:var(--ink)}
+.link{position:relative;height:74px;display:flex;align-items:center;justify-content:center}
+.link::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:0;border-left:3px solid var(--b);transform:translateX(-1.5px)}
+.link.a::before{border-left:3px dashed var(--a)}
+.link span{position:relative;background:var(--bg);padding:3px 12px;border-radius:999px;font-family:var(--mono);font-size:12px;border:1px solid currentColor;color:var(--b);background:var(--b-soft)}
+.link.a span{color:var(--a);background:var(--a-soft)}
+.link.http span{color:var(--muted);background:var(--bg)}
+.link.http::before{border-left:3px dotted var(--muted)}
+
+/* priorytety */
+.prio{display:flex;flex-direction:column;gap:8px}
+.prow{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:center;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.pid{font-family:var(--display);font-weight:700;font-size:26px;text-align:center;line-height:1}
+.prow b{font-weight:600}
+.prow span.d{display:block;color:var(--muted);font-size:14px}
+.prow[data-p="0"]{border-left:5px solid var(--crit)}
+.prow[data-p="0"] .pid{color:var(--crit)}
+.prow[data-p="1"]{border-left:5px solid var(--b)}
+.prow[data-p="2"]{border-left:5px solid color-mix(in srgb,var(--b) 70%,var(--line))}
+.prow[data-p="3"]{border-left:5px solid color-mix(in srgb,var(--b) 50%,var(--line))}
+.prow[data-p="4"]{border-left:5px solid color-mix(in srgb,var(--b) 32%,var(--line))}
+.prow[data-p="5"]{border-left:5px solid var(--line)}
+
+/* wykres prędkości */
+.bars{display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.brow{display:grid;grid-template-columns:150px minmax(0,1fr) 70px;gap:12px;align-items:center}
+.brow .lab{font-family:var(--mono);font-size:13px}
+.brow .lab small{display:block;color:var(--muted);font-size:11.5px}
+.track{height:14px;background:var(--bg);border-radius:3px;position:relative;overflow:hidden}
+.fill{height:100%;background:var(--a);border-radius:3px}
+.brow .val{font-family:var(--mono);font-size:13px;text-align:right}
+.bars .axis{display:grid;grid-template-columns:150px minmax(0,1fr) 70px;gap:12px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.bars .axis div:nth-child(2){display:flex;justify-content:space-between}
+.note{font-size:14px;color:var(--muted);max-width:70ch}
+
+/* mapa: kafelki */
+.mapbox{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;background:var(--line);border:2px solid var(--line);border-radius:6px;overflow:hidden;max-width:420px;width:100%}
+.cell{aspect-ratio:1;background:var(--surface)}
+.cell.w{background:var(--ink);opacity:.82}
+.cell.u{background:var(--bg)}
+.cell.n{outline:2px solid var(--a);outline-offset:-2px;background:var(--a-soft)}
+.cell.n.w{background:var(--a);opacity:1}
+.legend{display:flex;flex-direction:column;gap:10px;font-size:15px}
+.legend div{display:flex;gap:10px;align-items:flex-start}
+.sw{flex:none;width:16px;height:16px;border-radius:3px;margin-top:3px;border:1px solid var(--line)}
+
+/* porównanie pasm */
+.callout{background:var(--a-soft);border-left:5px solid var(--a);border-radius:6px;padding:14px 16px;max-width:72ch}
+.callout b{display:block;font-family:var(--display);font-size:22px;font-weight:600;line-height:1.2;margin-bottom:4px}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.tbl table{border-collapse:collapse;width:100%;min-width:560px;font-size:14.5px}
+.tbl th,.tbl td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th{font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .num{font-family:var(--mono);font-size:13.5px}
+.tbl tr.bad td:first-child{color:var(--crit);font-weight:600}
+.tbl tr.good td:first-child{color:var(--ok);font-weight:600}
+
+/* etapy */
+.stages{display:flex;flex-direction:column;gap:22px}
+.phase{display:flex;flex-direction:column;gap:10px}
+.phase h3 .tag{font-family:var(--mono);font-size:12px;font-weight:400;margin-left:8px;color:var(--muted)}
+.srow{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;padding:10px 0;border-top:1px solid var(--line)}
+.sid{font-family:var(--mono);font-weight:500;font-size:14px;color:var(--b)}
+.srow b{font-weight:600}
+.srow span.d{display:block;color:var(--muted);font-size:14.5px}
+
+/* zakupy */
+.shop{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.card h3{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.card h3 .cnt{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--muted)}
+.item{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start}
+.item input{width:18px;height:18px;margin-top:3px;accent-color:var(--b)}
+.item label{cursor:pointer}
+.item small{display:block;color:var(--muted);font-size:13.5px}
+.item input:checked + label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.shop-link{display:inline-block;font-family:var(--display);font-size:22px;font-weight:600;text-decoration:none;color:var(--bg);background:var(--b);padding:8px 18px;border-radius:8px}
+.badge{font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:1px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.must{border-color:var(--crit);color:var(--crit)}
+.badge.rec{border-color:var(--b);color:var(--b)}
+.progress{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.progress .pt{flex:1;height:8px;background:var(--line);border-radius:4px;overflow:hidden;max-width:320px}
+.progress .pf{height:100%;width:0;background:var(--ok);transition:width .25s}
+
+/* ryzyka i pytania */
+.risks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.risk{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.risk b{display:block;font-weight:600;margin-bottom:2px}
+.risk span{color:var(--muted);font-size:14.5px}
+.risk.hi{border-top:4px solid var(--crit)}
+.risk.mid{border-top:4px solid var(--a)}
+.risk.lo{border-top:4px solid var(--line)}
+.qs{display:flex;flex-direction:column;gap:10px;counter-reset:q}
+.q{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start}
+.q::before{counter-increment:q;content:counter(q);font-family:var(--display);font-weight:700;font-size:22px;line-height:1.1;color:var(--a)}
+
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+:focus-visible{outline:2px solid var(--b);outline-offset:2px}
+
+@media (max-width:720px){
+  .node{grid-template-columns:minmax(0,1fr)}
+  .mapbox{grid-template-columns:minmax(0,1fr)}
+  .brow,.bars .axis{grid-template-columns:minmax(0,1fr) 62px}
+  .brow .lab{grid-column:1 / -1}
+  .bars .axis div:first-child{display:none}
+  .bars .axis{grid-template-columns:minmax(0,1fr) 62px}
+  .bars .axis div:nth-child(3){display:none}
+}
+@media (prefers-reduced-motion:reduce){.progress .pf{transition:none}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Koncepcja v2 · 18.10.2026</div>
+  <h1>Łazik</h1>
+  <p class="lead">Autonomiczny łazik w klimacie Księżyca i Marsa. Sam buduje mapę, rozpoznaje obiekty i wykonuje misje. Ty wydajesz polecenia na mapie, a wszystko idzie przez radio LoRa, bez WiFi i internetu w terenie.</p>
+  <div class="chips">
+    <span class="chip b">łącze B: 433 MHz, ciągłe</span>
+    <span class="chip a">łącze A: 868 MHz, przerywane, szybsze</span>
+    <span class="chip">mapa z kamery głębi</span>
+    <span class="chip">polecenia podpisane (HMAC)</span>
+    <span class="chip">bufory w trzech węzłach</span>
+  </div>
+</header>
+
+<section id="architektura">
+  <div class="sec-head">
+    <h2>Trzy węzły, dwa łącza</h2>
+    <p>Polecenie płynie od Ciebie do łazika, raport wraca tą samą drogą. Gdy któreś łącze znika, wiadomość czeka w buforze najbliższego węzła i idzie dalej po powrocie sygnału.</p>
+  </div>
+  <div class="chain">
+    <div class="node you">
+      <div><h3>Ty <span class="model">telefon, PC, ekran dotykowy</span></h3>
+      <p class="muted">Strona WWW przez Tailscale (HTTPS). Mapa, przyciski misji, stan łączy.</p></div>
+    </div>
+    <div class="link http"><span>Tailscale · HTTPS</span></div>
+
+    <div class="node">
+      <div>
+        <h3>Stacja domowa</h3>
+        <div class="model">RPi Zero 2W · a1 · radio B 433 MHz</div>
+        <div class="meter">bufor <span class="seg"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span> mały</div>
+      </div>
+      <ul>
+        <li>serwer strony i kolejka poleceń</li>
+        <li>wyświetlacz OLED ze stanem łączy</li>
+        <li>łącze B jest stabilne, więc bufor mały</li>
+      </ul>
+    </div>
+    <div class="link b"><span>łącze B · 433 MHz · ciągłe</span></div>
+
+    <div class="node">
+      <div>
+        <h3>Satelita</h3>
+        <div class="model">RPi Zero 2W · a2 · radia 433 i 868 MHz</div>
+        <div class="meter">bufor <span class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span> duży</div>
+      </div>
+      <ul>
+        <li>przekaźnik z pamięcią na karcie SD</li>
+        <li>trzyma polecenia i raporty, gdy łazik jest poza zasięgiem</li>
+        <li>dwa radia na różnych pasmach (433 i 868 MHz), osobne anteny daleko od siebie</li>
+      </ul>
+    </div>
+    <div class="link a"><span>łącze A · 868 MHz · przerywane · szybsze</span></div>
+
+    <div class="node">
+      <div>
+        <h3>Łazik</h3>
+        <div class="model">Raspberry Pi 5 · AI HAT+ · radio A 868 MHz</div>
+        <div class="meter">bufor <span class="seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> duży</div>
+      </div>
+      <ul>
+        <li>SLAM wizyjny: mapa siatkowa 2D z kamery głębi, IMU i enkoderów (bez LiDAR-u)</li>
+        <li>rozpoznawanie obiektów na akceleratorze AI</li>
+        <li>nawigacja, misje, powrót do bazy, kolejka misji także bez łączności</li>
+        <li>BME280, kamera, silniki z enkoderami</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="priorytety">
+  <div class="sec-head">
+    <h2>Co przechodzi pierwsze</h2>
+    <p>Łącze jest wolne, więc każda wiadomość ma priorytet. Gdy radio jest zajęte długim plikiem, STOP i tak przejdzie przed nim.</p>
+  </div>
+  <div class="prio">
+    <div class="prow" data-p="0"><div class="pid">P0</div><div><b>Awaryjne</b><span class="d">STOP, wróć do bazy. Kilkanaście bajtów, zawsze na początku kolejki.</span></div></div>
+    <div class="prow" data-p="1"><div class="pid">P1</div><div><b>Polecenia misji i potwierdzenia</b><span class="d">Jedź w punkt na mapie, zrób pomiar i zdjęcie. Każde potwierdzone.</span></div></div>
+    <div class="prow" data-p="2"><div class="pid">P2</div><div><b>Status i telemetria</b><span class="d">Bateria, BME280, jakość łączy, długości kolejek.</span></div></div>
+    <div class="prow" data-p="3"><div class="pid">P3</div><div><b>Zmiany mapy</b><span class="d">Tylko kafelki zmienione od ostatniej potwierdzonej wersji, plus lista obiektów.</span></div></div>
+    <div class="prow" data-p="4"><div class="pid">P4</div><div><b>Miniaturki</b><span class="d">Mały podgląd zdjęcia, szybki, wysyłany w kawałkach.</span></div></div>
+    <div class="prow" data-p="5"><div class="pid">P5</div><div><b>Pełne pliki i cały bufor z karty</b><span class="d">Minuty lub godziny. Wznawiane od miejsca przerwania.</span></div></div>
+  </div>
+</section>
+
+<section id="radio">
+  <div class="sec-head">
+    <h2>Ile naprawdę przejdzie przez LoRa</h2>
+    <p>Czas przesłania miniaturki 4 KB przy różnych ustawieniach radia (SF, pasmo 125 kHz, jeśli nie podano inaczej). Im dalszy zasięg, tym wolniej. System ma sam dobierać kompromis do jakości sygnału.</p>
+  </div>
+  <div class="bars" role="img" aria-label="Czas przesłania 4 KB: SF12 około 140 s, SF10 34 s, SF9 19 s, SF7 6 s, SF7 z pasmem 500 kHz 1,5 s">
+    <div class="brow"><div class="lab">SF12<small>0,23 kbps · największy zasięg</small></div><div class="track"><div class="fill" data-t="140"></div></div><div class="val">140 s</div></div>
+    <div class="brow"><div class="lab">SF10<small>0,98 kbps</small></div><div class="track"><div class="fill" data-t="34"></div></div><div class="val">34 s</div></div>
+    <div class="brow"><div class="lab">SF9<small>1,76 kbps</small></div><div class="track"><div class="fill" data-t="19"></div></div><div class="val">19 s</div></div>
+    <div class="brow"><div class="lab">SF7<small>5,5 kbps</small></div><div class="track"><div class="fill" data-t="6"></div></div><div class="val">6 s</div></div>
+    <div class="brow"><div class="lab">SF7, 500 kHz<small>22 kbps · najmniejszy zasięg</small></div><div class="track"><div class="fill" data-t="1.5"></div></div><div class="val">1,5 s</div></div>
+    <div class="axis"><div></div><div><span>1 s</span><span>10 s</span><span>100 s</span></div><div></div></div>
+  </div>
+  <p class="note">Skala logarytmiczna. Wartości teoretyczne, bez narzutu na ramki, korekcję i potwierdzenia. Przepisy pasm 433 i 868 MHz ograniczają czas nadawania (zwykle 1–10%), więc realnie może być 10–100 razy wolniej. Dla DX-LR03 pasmo 500 kHz nie jest sprawdzone.</p>
+</section>
+
+<section id="pasma">
+  <div class="sec-head">
+    <h2>433 MHz kontra 868 MHz</h2>
+    <p>Prędkość radia zależy od ustawień (SF i szerokość kanału), a nie od pasma. Zasięg i dozwolony czas nadawania już od pasma zależą. Wyniki z obliczeń, założenia są w dokumentacji (sekcja 3a).</p>
+  </div>
+  <div class="callout"><b>Zwykłe 868 MHz jest około 10 razy wolniejsze niż 433 MHz.</b> Podpasmo 868,0–868,6 MHz pozwala nadawać przez 1% czasu, a 433 MHz przez 10%. Szybsze łącze daje dopiero podpasmo 869,4–869,65 MHz (10% czasu, do 500 mW, kanał 250 kHz). Tam trzeba ustawić łącze A.</div>
+
+  <h3>Średnia prędkość po limicie czasu nadawania</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Pasmo</th><th>Limit</th><th>Moc</th><th>Kanał</th><th>SF9: średnia</th><th>4 KB przy SF9</th><th>4 KB przy SF7</th></tr></thead>
+    <tbody>
+      <tr><td>433 MHz</td><td>10%</td><td>10 mW</td><td>125 kHz</td><td class="num">176 bps</td><td class="num">3,1 min</td><td class="num">60 s</td></tr>
+      <tr class="bad"><td>868,0–868,6 MHz</td><td>1%</td><td>25 mW</td><td>125 kHz</td><td class="num">17,6 bps</td><td class="num">31 min</td><td class="num">10 min</td></tr>
+      <tr class="good"><td>869,4–869,65 MHz</td><td>10%</td><td>500 mW</td><td>250 kHz</td><td class="num">352 bps</td><td class="num">1,5 min</td><td class="num">30 s</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Zasięg przy limitach mocy w UE (kanał 125 kHz)</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Ustawienie</th><th>Czułość</th><th>Otwarty teren: 433 / 868</th><th>Przeszkody: 433 / 868</th><th>433 dalej o</th></tr></thead>
+    <tbody>
+      <tr><td>SF12</td><td class="num">−137 dBm</td><td class="num">32,5 / 27,3 km</td><td class="num">3,0 / 2,6 km</td><td class="num">×1,14–1,19</td></tr>
+      <tr><td>SF10</td><td class="num">−132 dBm</td><td class="num">21,2 / 17,8 km</td><td class="num">2,2 / 1,9 km</td><td class="num">×1,14–1,19</td></tr>
+      <tr><td>SF9</td><td class="num">−129,5 dBm</td><td class="num">17,1 / 14,4 km</td><td class="num">1,8 / 1,6 km</td><td class="num">×1,14–1,19</td></tr>
+      <tr><td>SF7</td><td class="num">−124,5 dBm</td><td class="num">11,2 / 9,4 km</td><td class="num">1,3 / 1,2 km</td><td class="num">×1,14–1,19</td></tr>
+      <tr><td>SF7, 500 kHz</td><td class="num">−118,5 dBm</td><td class="num">6,7 / 5,6 km</td><td class="num">0,9 / 0,8 km</td><td class="num">×1,14–1,19</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Zasięg to górna granica przy widoczności, bez horyzontu i zakłóceń. Realnie krócej. Przy tej samej mocy 433 MHz ma o 6 dB mniejsze tłumienie (około 1,5–2 razy dalej), ale 868 MHz ma 4 dB więcej dozwolonej mocy, więc przewaga 433 MHz kurczy się do 15–20%. Podpasmo 869,4–869,65 MHz daje około 1,7–2 razy większy zasięg niż 433 MHz. UART 9600 baud w DX-LR03 przenosi tylko 7,7 kbps, więc nie obsłuży kanału 500 kHz.</p>
+</section>
+
+<section id="mapa">
+  <div class="sec-head">
+    <h2>Mapa po radiu: tylko to, co się zmieniło</h2>
+    <p>Łazik trzyma siatkę zajętości (np. 5 cm na komórkę) podzieloną na kafelki. Po radiu idą tylko kafelki zmienione od wersji, którą stacja już potwierdziła, po 2 bity na komórkę i skompresowane.</p>
+  </div>
+  <div class="mapbox">
+    <div class="grid" id="grid" role="img" aria-label="Siatka mapy z kilkoma zaznaczonymi kafelkami do wysłania"></div>
+    <div class="legend">
+      <div><span class="sw" style="background:var(--ink);opacity:.82"></span><span>Zajęte (przeszkoda)</span></div>
+      <div><span class="sw" style="background:var(--surface)"></span><span>Wolne</span></div>
+      <div><span class="sw" style="background:var(--bg)"></span><span>Nieznane</span></div>
+      <div><span class="sw" style="background:var(--a-soft);outline:2px solid var(--a);outline-offset:-2px"></span><span><b>Zmienione, idą w paczce</b> (<span id="chg">0</span> z 72 komórek)</span></div>
+      <p class="note">Obiekty rozpoznane przez AI idą jako krótka lista (typ i pozycja, kilka bajtów na obiekt), a nie jako obrazy. Pełna mapa i pełne zdjęcia dopiero na żądanie, w kawałkach.</p>
+    </div>
+  </div>
+</section>
+
+<section id="etapy">
+  <div class="sec-head">
+    <h2>Etapy prac</h2>
+    <p>Pierwsze pięć da się zrobić na dwóch Zero 2W, które już są. Sprzęt na łazika potrzebny dopiero od E5.</p>
+  </div>
+  <div class="stages">
+    <div class="phase">
+      <h3>Radio i protokół <span class="tag">na obecnym sprzęcie</span></h3>
+      <div class="srow"><div class="sid">E0</div><div><b>Zasilanie i okablowanie</b><span class="d">Stabilne 5 V dla a1 i a2, stanowisko testowe.</span></div></div>
+      <div class="srow"><div class="sid">E1</div><div><b>Badanie radia</b><span class="d">Realne prędkości i zasięg DX-LR03. Decyzja: zostajemy czy przechodzimy na moduły SX1262.</span></div></div>
+      <div class="srow"><div class="sid">E2</div><div><b>Protokół store-and-forward</b><span class="d">Kolejki trwałe, priorytety, podpisy HMAC, potwierdzenia, wznawianie.</span></div></div>
+      <div class="srow"><div class="sid">E3</div><div><b>Satelita z dwoma radiami</b><span class="d">Przekazywanie, bufor, test odcięcia łącza A lub B.</span></div></div>
+      <div class="srow"><div class="sid">E4</div><div><b>Strona WWW i OLED</b><span class="d">Polecenia i statusy z atrapą łazika.</span></div></div>
+    </div>
+    <div class="phase">
+      <h3>Łazik <span class="tag">wymaga zakupów</span></h3>
+      <div class="srow"><div class="sid">E5</div><div><b>Sprzęt łazika</b><span class="d">Pi 5, zasilanie, podwozie, silniki z enkoderami, IMU, kamera głębi, stop awaryjny.</span></div></div>
+      <div class="srow"><div class="sid">E6</div><div><b>SLAM i nawigacja lokalnie</b><span class="d">Bez radia: misje GOTO, EXPLORE, RETURN_HOME.</span></div></div>
+      <div class="srow"><div class="sid">E7</div><div><b>Akcelerator AI</b><span class="d">Rozpoznawanie obiektów i warstwa obiektów w mapie.</span></div></div>
+    </div>
+    <div class="phase">
+      <h3>Całość i teren</h3>
+      <div class="srow"><div class="sid">E8</div><div><b>Mapa po radiu</b><span class="d">Kafelki, delty, kompresja, wpięcie w protokół.</span></div></div>
+      <div class="srow"><div class="sid">E9</div><div><b>Zdjęcia</b><span class="d">Miniaturka (P4) i pełne pliki lub bufor (P5), wznawialne.</span></div></div>
+      <div class="srow"><div class="sid">E10</div><div><b>Adaptacja radia i testy w terenie</b><span class="d">Dobór SF do jakości łącza, testy rozłączeń i zasięgu.</span></div></div>
+      <div class="srow"><div class="sid">E11</div><div><b>Później</b><span class="d">GPS i kompas, pad Xbox, stacja dokująca.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="zakupy">
+  <div class="sec-head">
+    <h2>Lista zakupów</h2>
+    <p>Pełna lista rzeczy do projektu jest na osobnej stronie. Zaznaczasz tam, co jest do kupienia, zamówione albo już masz, a stan zapisuje się na serwerze, więc widać go z telefonu i komputera.</p>
+  </div>
+  <div class="progress"><span id="pt">wczytywanie…</span><div class="pt"><div class="pf" id="pf"></div></div></div>
+  <p><a class="shop-link" href="zakupy.html">Otwórz listę zakupów →</a></p>
+</section>
+
+<section id="ryzyka">
+  <div class="sec-head"><h2>Na co uważać</h2></div>
+  <div class="risks">
+    <div class="risk hi"><b>Przepustowość i limity nadawania</b><span>Największe ograniczenie. Mapa i zdjęcia muszą być bardzo oszczędne.</span></div>
+    <div class="risk hi"><b>Zasilanie Pi 5</b><span>Potrzebuje 5 V / 5 A. Zapady napięcia to restarty, jak dziś na a2.</span></div>
+    <div class="risk hi"><b>Bezpieczeństwo poleceń</b><span>Radio jest otwarte. Podpisy HMAC i licznik przeciw powtórkom są obowiązkowe.</span></div>
+    <div class="risk mid"><b>Dwa radia w satelicie</b><span>Różne pasma (433 i 868 MHz) i odsunięte anteny, żeby się nie zagłuszały.</span></div>
+    <div class="risk mid"><b>DX-LR03 (łącze B)</b><span>Brak RSSI na pakiet, reset przy komendach AT. Przy łączu B to akceptowalne, ale zmierzymy w E1.</span></div>
+    <div class="risk mid"><b>Wizyjny SLAM w terenie</b><span>Ciemność, ostre światło i cienie, jednolite podłoże, wąskie pole widzenia. Zapas: dołożenie LiDAR-u bez zmiany architektury.</span></div>
+    <div class="risk mid"><b>Pasmo 868 MHz</b><span>W Europie LoRa to 868, nie 850. Limity mocy i czasu nadawania (zwykle 1% duty cycle).</span></div>
+    <div class="risk lo"><b>Karta SD satelity</b><span>Bufor zużywa pamięć. Karta high endurance i zapis blokowy.</span></div>
+    <div class="risk lo"><b>Rozmiar projektu</b><span>Duży. Trzymać się etapów i dokumentować po każdym.</span></div>
+  </div>
+</section>
+
+<section id="pytania">
+  <div class="sec-head"><h2>Do ustalenia</h2></div>
+  <div class="qs">
+    <div class="q"><div>Czy „850 MHz” to 868 MHz? Tylko ono jest pasmem LoRa w Europie.</div></div>
+    <div class="q"><div>Czy a1 ma być stacją domową, a a2 satelitą?</div></div>
+    <div class="q"><div>Jaki zasięg łączy A i B? Od tego zależy SF i czy 868 MHz da realną przewagę prędkości.</div></div>
+    <div class="q"><div>ROS 2 na łaziku: Ubuntu 24.04 czy Docker na Raspberry Pi OS?</div></div>
+  </div>
+</section>
+
+<footer>Pełny plan, protokół i dziennik zmian są w plikach dokumentacji projektu (część 3 pliku głównego, dziennik kodu). Ta strona to wizualne podsumowanie koncepcji z 18.10.2026.</footer>
+</div>
+
+<script>
+(function(){
+  // wykres prędkości, skala logarytmiczna 1 s .. 200 s
+  document.querySelectorAll('.fill').forEach(function(f){
+    var t=parseFloat(f.getAttribute('data-t'));
+    var pct=Math.max(3,Math.log(t)/Math.log(200)*100);
+    f.style.width=pct.toFixed(1)+'%';
+  });
+
+  // mapa: siatka 12 x 6 z prostym "pomieszczeniem", zmienione kafelki 4x3 w prawej części
+  var W=12,H=6,g=document.getElementById('grid'),chg=0;
+  var walls=new Set();
+  function wall(x,y){walls.add(x+','+y)}
+  for(var x=0;x<W;x++){wall(x,0);wall(x,H-1)}
+  for(var y=0;y<H;y++){wall(0,y);wall(W-1,y)}
+  [[4,1],[4,2],[4,3],[8,3],[9,3],[9,4]].forEach(function(p){wall(p[0],p[1])});
+  var unknown=new Set(['10,1','10,2','11,1','11,2','10,3','11,3']);
+  for(var y=0;y<H;y++){
+    for(var x=0;x<W;x++){
+      var c=document.createElement('div');c.className='cell';
+      var k=x+','+y;
+      if(walls.has(k))c.classList.add('w');
+      else if(x>=9&&y<=3&&unknown.has(k))c.classList.add('u');
+      var changed=(x>=7&&x<=10&&y>=1&&y<=3);
+      if(changed){c.classList.add('n');chg++}
+      g.appendChild(c);
+    }
+  }
+  document.getElementById('chg').textContent=chg;
+
+  // podsumowanie listy zakupów z serwera (pełna lista: zakupy.html)
+  fetch('/api/zakupy',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+    var all=[];d.kategorie.forEach(function(k){all=all.concat(k.pozycje)});
+    var mam=all.filter(function(p){return p.status==='mam'}).length;
+    var zam=all.filter(function(p){return p.status==='zamowione'}).length;
+    document.getElementById('pt').textContent=mam+' z '+all.length+' mam, '+zam+' zamówione';
+    document.getElementById('pf').style.width=(all.length?mam/all.length*100:0)+'%';
+  }).catch(function(){document.getElementById('pt').textContent='lista dostępna na stronie zakupów'});
+      });
+      row.appendChild(cb);row.appendChild(lb);card.appendChild(row);
+    });
+    card._cnt=cnt;shop.appendChild(card);
+  });
+  function refresh(){
+    var done=0;
+    shop.querySelectorAll('.card').forEach(function(card){
+      var boxes=card.querySelectorAll('input'),d=0;
+      boxes.forEach(function(b){if(b.checked)d++});
+      card._cnt.textContent=d+' / '+boxes.length;
+      done+=d;
+    });
+    document.getElementById('pt').textContent=done+' z '+total;
+    document.getElementById('pf').style.width=(total?done/total*100:0)+'%';
+  }
+  refresh();
+})();
+</script>
+
+</body></html>

@@ -1,0 +1,27 @@
+#!/bin/bash
+# Pilnuje polaczenia z NAS (timer co 2 min + przy starcie): //172.23.0.28/Tony-Folder -> /mnt/nas.
+# Poswiadczenia: /etc/nas-credentials (tylko root). Opcje montowania sa w /etc/fstab.
+# Po zamontowaniu tworzy widoczne foldery w Tony-Folder/Raspberry/ i znacznik .nas (portal i kopia sprawdzaja go,
+# zeby nigdy nie pisac do pustego katalogu /mnt/nas na karcie, gdy NAS jest wylaczony).
+NAS=/mnt/nas
+if mountpoint -q "$NAS"; then
+    # zamontowany, ale czy odpowiada? (zawieszone polaczenie: odmontuj i sprobuj od nowa)
+    if ! timeout 15 stat -t "$NAS/Raspberry" > /dev/null 2>&1; then
+        logger -t nas-montuj "NAS nie odpowiada, odmontowuje"
+        umount -l "$NAS"
+    fi
+fi
+if ! mountpoint -q "$NAS"; then
+    mkdir -p "$NAS"
+    timeout 40 mount "$NAS" 2>&1 | logger -t nas-montuj
+    mountpoint -q "$NAS" && logger -t nas-montuj "NAS zamontowany"
+fi
+if mountpoint -q "$NAS"; then
+    R=$NAS/Raspberry
+    mkdir -p "$R/Logi/system" "$R/Progres-zdjecia/Usuniete" "$R/Progres-filmy" "$R/Kopia-systemu"
+    [ -f "$R/.nas" ] || echo "Folder Raspberry Pi (portal, logi, kopia systemu). Nie usuwac." > "$R/.nas"
+    [ -f "$R/CZYTAJ.txt" ] || cp /usr/local/lib/kopia-pi/CZYTAJ.txt "$R/CZYTAJ.txt" 2>/dev/null
+    # lista komend projektu: zawsze aktualna wersja z Pi
+    cmp -s /usr/local/lib/kopia-pi/komendy.txt "$R/komendy.txt" || cp /usr/local/lib/kopia-pi/komendy.txt "$R/komendy.txt" 2>/dev/null
+fi
+exit 0

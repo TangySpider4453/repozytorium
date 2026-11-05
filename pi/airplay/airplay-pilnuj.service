@@ -1,0 +1,7 @@
+# Strażnik głośnika AirPlay (airplay.py pilnuj): uruchamiany co 20 s przez airplay-pilnuj.timer (usługi użytkownika tonyg).
+[Unit]
+Description=Strażnik AirPlay (czy dźwięk naprawdę płynie)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/tonyg/airplay/airplay.py pilnuj

@@ -1,0 +1,9 @@
+ZAWODOWE - program od nauczyciela (ASTORINO Web Lab)
+====================================================
+Strona: http://100.108.241.58/strony/zawodowe/  (w domu: http://172.23.0.20/strony/zawodowe/)
+
+Nowa wersja programu:
+  1. Wrzuc nowy plik .html do tego folderu (nazwa dowolna).
+  2. Usun stary plik.
+  3. Odswiez strone - Pi samo bierze najnowszy plik .html z tego folderu.
+Pi trzyma kopie ostatniej wersji u siebie, wiec strona dziala tez, gdy NAS jest wylaczony.
