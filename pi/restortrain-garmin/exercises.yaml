@@ -20,8 +20,8 @@ cwiczenia:
     exerciseName: DUMBBELL_BULGARIAN_SPLIT_SQUAT
   - nazwa: prostowanie nóg
     aliasy: [wyprosty nóg, wyprosty nóg na maszynie, prostowanie nóg na maszynie]
-    category: null                    # Garmin nie ma maszynowego leg extension (LEG_EXTENSION jest tylko z gumą):
-    exerciseName: null                # krok bez ćwiczenia Garmin, polska nazwa w opisie
+    category: BANDED_EXERCISES        # Garmin nie ma maszynowego leg extension; ten sam ruch (czworogłowe) z gumą
+    exerciseName: LEG_EXTENSION
   - nazwa: uginanie nóg
     aliasy: [uginanie nóg na maszynie, uginanie nóg leżąc, leg curl]
     category: LEG_CURL

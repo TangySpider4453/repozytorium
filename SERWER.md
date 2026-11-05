@@ -516,7 +516,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - Gotowe: parser opisu (`rtg/parser.py`, testy na przykładzie „Dół B”), mapowanie PL → Garmin (`exercises.yaml`,
   walidacja z oficjalną listą `data/garmin_exercises.json` z connect.garmin.com/web-data/exercises/Exercises.json,
   dopasowanie dokładne → rdzenie słów → rapidfuzz ≥ 90), SQLite `data/state.db`. Różnice względem specyfikacji:
-  maszynowe prostowanie nóg bez odpowiednika w Garmin (krok bez ćwiczenia, nazwa w opisie), spięcia na wyciągu
+  maszynowe prostowanie nóg w Garmin tylko jako `BANDED_EXERCISES/LEG_EXTENSION` (zostawione: czworogłowe), spięcia na wyciągu
   `CRUNCH/KNEELING_CABLE_CRUNCH`, suwnica `SQUAT/LEG_PRESS`.
 - Ustawienia na stronie Automatyczne (moduł `garmin`: włącznik, co ile godzin, okno dni, rep_target, rest_mode,
   przerwy, replace_original).
@@ -547,9 +547,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ćwiczeniach” / „Po każdej parze odpocznij 90-120s” → `Circuit`: jedna grupa RepeatGroupDTO ×rundy [ćwiczenie A,
   ćwiczenie B, przerwa po rundzie (górna wartość)], przed nią „Przygotuj: A + B (3 rundy: …)”. Format akapitowy
   („Face pull: 3x12-15, …”) i „Spięcia …: 12-15 powtórzeń” w blokach też rozumiany. Hash obejmuje teraz `exercises.yaml`
-  (zmiana mapowania przebudowuje treningi). Triceps na wyciągu → `TRICEPS_PRESSDOWN`. Prostowanie nóg na maszynie:
-  Garmin nie ma odpowiednika (`BANDED_EXERCISES/LEG_EXTENSION` to guma), więc wpis z `category: null` = sposób „brak”:
-  krok bez ćwiczenia Garmin, polska nazwa w opisie, bez Claude i powiadomień. Testy: 34.
+  (zmiana mapowania przebudowuje treningi). Triceps na wyciągu → `TRICEPS_PRESSDOWN`. Wpis z `category: null` =
+  sposób „brak” (krok bez ćwiczenia Garmin, polska nazwa w opisie, bez Claude i powiadomień). Prostowanie nóg zostaje
+  `BANDED_EXERCISES/LEG_EXTENSION` na życzenie Antka (Garmin wie, że to czworogłowe). Testy: 34.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

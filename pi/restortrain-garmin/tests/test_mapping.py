@@ -39,11 +39,12 @@ def test_nieznane_i_rozmyte():
     assert m.znajdz("Przyciąganie drążka z góry").exerciseName == "LAT_PULLDOWN"
 
 
-def test_prostowanie_nog_bez_odpowiednika_garmin():
+def test_wpis_bez_odpowiednika_garmin():
     from rtg.builder import buduj
     from rtg.mapping import bledy_walidacji, oficjalne, wczytaj
-    assert Mapa().znajdz("Prostowanie nóg na maszynie").sposob == "brak"
-    assert not bledy_walidacji(wczytaj(), oficjalne())
-    w = buduj({"workoutId": 1, "title": "X", "description": "Nogi\n- Prostowanie nóg 3x10-12"}, {"przejscie": False}, nieznane=(nz := []))
+    mapa = Mapa([{"nazwa": "prostowanie nóg", "category": None, "exerciseName": None}])   # wpis „brak odpowiednika”
+    assert mapa.znajdz("Prostowanie nóg").sposob == "brak"
+    assert not bledy_walidacji(wczytaj(), oficjalne()) and not bledy_walidacji(mapa.wpisy, oficjalne())
+    w = buduj({"workoutId": 1, "title": "X", "description": "Nogi\n- Prostowanie nóg 3x10-12"}, {"przejscie": False}, mapa, nieznane=(nz := []))
     c = w["workoutSegments"][0]["workoutSteps"][0]["workoutSteps"][0]
     assert c["category"] is None and c["description"].startswith("Prostowanie nóg: 10–12") and nz == []
