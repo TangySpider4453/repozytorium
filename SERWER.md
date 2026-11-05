@@ -444,6 +444,18 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   strony Nauki (`kal_link_nauki`: przedmiot z „Przedmiot: …”, najbliższy sprawdzian, zakładka z treści: fiszki, quiz,
   otwarte…; strony nauki otwierają zakładkę z `#id`). Link „🗓️ Kalendarz” w pasku portalu.
 
+## Plan lekcji → Google Calendar (od 2026-11-05)
+- `pi/bot/gkal.py`, wołane z `petla_mobi` zaraz po każdym `mobi.sprawdz` (`kalendarz_google`, co 10 min 6–22). Google
+  Calendar API przez **konto usługi** (JWT RS256 z `cryptography`, urllib; bez nowych pakietów i bez wygasających tokenów).
+  Pliki: `~/bot/google/kalendarz-klucz.json` (klucz, 600; strażnik i uprawnienia blokują odczyt Claude),
+  `~/bot/google/kalendarz.json` `{"id": "…@group.calendar.google.com"}`, stan `kalendarz-stan.json`.
+- Wydarzenia od dziś do końca znanego planu (ten i następny tydzień): stały id z (data, godzina, grupa) → zmiana planu
+  podmienia wydarzenie; „(zastępstwo)” żółte, „❌ … (odwołana)” szare i „wolne” (albo usuwane — ustawienie), „📝 Sprawdzian:”
+  czerwone; sala w miejscu, nauczyciel / zamiast / info / zadanie domowe w opisie. Zarządza tylko wydarzeniami z
+  `extendedProperties.private.zrodlo == serwerek-mobi`. Ustawienia `gkal` (strona Mobidziennik i Automatyczne):
+  włącznik, odwołane pokazuj/usuń, sprawdziany, przypomnienie przed lekcją. 3 błędy z rzędu → powiadomienie.
+- Czeka na: klucz konta usługi i identyfikator kalendarza od Antka.
+
 ## Oceny: okresy i symulacja (od 2026-10-26)
 - `mobi.py` czyta `oceny/?semestr=1` i `=2`: `oceny_okresy`, `okres` (II, gdy ma oceny), `oceny_rok` (oba razem),
   `srednia` (ze średnich przedmiotów), `srednia_ocen` (ze wszystkich ocen). Strona Mobidziennik: zakładki I / II / cały rok,

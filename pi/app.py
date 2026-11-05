@@ -1567,6 +1567,11 @@ AUTOMATY_SCHEMAT = {
         ("rano", "godzina", "06:45", "Godzina telefonu rano", None),
         ("dzwon_wieczor", "bool", False, "Telefon wieczorem, gdy w dzienniku coś się zmieniło", None),
         ("wieczor", "godzina", "19:00", "Godzina telefonu wieczorem", None)]},
+    "gkal": {"nazwa": "Plan lekcji w Google Calendar", "pola": [
+        ("wlaczony", "bool", True, "Plan lekcji z Mobidziennika do Google Calendar (po każdym odczycie dziennika)", None),
+        ("odwolane", "wybor", "pokazuj", "Odwołane lekcje", ["pokazuj", "usuń"]),
+        ("sprawdziany", "bool", True, "Oznaczaj sprawdziany i kartkówki (📝, czerwone)", None),
+        ("przypomnienie", "wybor", 0, "Powiadomienie w telefonie przed lekcją (min, 0 = brak)", [0, 5, 10, 15, 30])]},
     "sprawdziany": {"nazwa": "Sprawdziany i kartkówki", "pola": [
         ("wlaczone", "bool", True, "Przypomnienia o sprawdzianach", None),
         ("za3", "bool", True, "Także 3 dni przed sprawdzianem", None),

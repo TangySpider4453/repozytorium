@@ -37,6 +37,7 @@ import pamiec
 import poczta
 import mobi
 import intervals
+import gkal
 import szybkie
 import klaud
 
@@ -1777,6 +1778,28 @@ def mobi_zmiana(tekst):
     MOBI_ZMIANY.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+def kalendarz_google():
+    """plan z Mobidziennika -> Google Calendar zaraz po odczycie (gkal.py); błąd: zapis + powiadomienie raz"""
+    ug = ust("gkal")
+    if not gkal.skonfigurowany() or not ug.get("wlaczony", True):
+        return
+    try:
+        w = gkal.synchronizuj(mobi.wczytaj("stan", {}), ug)
+        if w and (w["dodane"] or w["zmienione"] or w["usuniete"]):
+            print(f"kalendarz Google: +{w['dodane']} ~{w['zmienione']} -{w['usuniete']}", flush=True)
+        KAL_BLAD["n"] = 0
+    except Exception as ex:
+        opis = f"{type(ex).__name__}: {ex}"
+        print(f"kalendarz Google: {opis}", flush=True)
+        gkal.zapisz_blad(opis)
+        KAL_BLAD["n"] += 1
+        if KAL_BLAD["n"] == 3:
+            powiadom(f"📆 Plan lekcji nie trafia do Google Calendar (3 razy z rzędu): {opis[:200]}")
+
+
+KAL_BLAD = {"n": 0}
+
+
 def mobi_telefon(u):
     """o godzinie „rano” / „wieczor” (do 30 min później): telefon ze zmianami od ostatniego telefonu, jeśli jakieś są"""
     teraz = datetime.now()
@@ -1818,6 +1841,7 @@ def petla_mobi():
             if mobi.skonfigurowany() and (na_zadanie or u.get("wlaczony", True) and u.get("od", 6) <= godz < u.get("do", 22)
                                           and time.time() - mobi.OSTATNIO["t"] >= u.get("co_min", 10) * 60 - 10):
                 mobi.sprawdz(mobi_zmiana, mobi_nowy_sprawdzian)
+                kalendarz_google()
             if u.get("wlaczony", True):
                 mobi_telefon(u)
         except Exception as ex:

@@ -537,4 +537,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   treningi utworzone ponownie (6, 8, 10.11), kolejny przebieg bez zmian.
 - **2026-11-05 (Garmin: przygotowanie do ćwiczenia)**: przed każdym ćwiczeniem przerwa do LAP z nazwą następnego ćwiczenia;
   treningi 6, 8, 10.11 przebudowane, kolejny przebieg bez zmian; przełącznik na stronie Automatyczne.
+- **2026-11-05 (plan lekcji → Google Calendar)**: moduł `gkal.py` (konto usługi, aktualizacja po każdym odczycie
+  Mobidziennika), ustawienia na stronach. Mapowanie sprawdzone na prawdziwym planie (41 lekcji). Czeka na klucz Google.
 
