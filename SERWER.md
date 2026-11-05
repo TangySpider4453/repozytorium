@@ -502,7 +502,15 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   maszynowe prostowanie nóg w Garmin tylko jako `BANDED_EXERCISES/LEG_EXTENSION`, spięcia na wyciągu
   `CRUNCH/KNEELING_CABLE_CRUNCH`, suwnica `SQUAT/LEG_PRESS`.
 - Ustawienia na stronie Automatyczne (moduł `garmin`: włącznik, co ile godzin, okno dni, rep_target, rest_mode,
-  przerwy, replace_original). Czeka na: `./rtg.sh login` (Antek w terminalu), trening referencyjny, generator i timer.
+  przerwy, replace_original).
+- Zalogowane (token w `tokens/`). Źródło RestOrTrain w JSON: `workout.consumerName == "RestOrTrain"` (consumer
+  `b79d9065-…`), sport `strength_training`, oryginał = 1 krok `interval` na czas (np. 5400 s). Parser obsługuje też formy
+  z prawdziwych treningów: „8-10m …” (= 10 min), „2 lekkie serie …”, „Lekkie serie wstępne przysiadu”, „… pierwszego
+  ćwiczenia” (= pierwsze ćwiczenie treningu). Generator `rtg/builder.py` (kroki jak w JSON Garmina / modelach
+  garminconnect: warmup/cooldown na czas, serie = RepeatGroupDTO [ćwiczenie reps + przerwa], serie rozgrzewkowe do
+  przycisku), znacznik „auto: restortrain-garmin, src=…, hash=…” w opisie; usuwane są tylko treningi z tym znacznikiem.
+  `sync --dry-run` działa (4 treningi: 5, 6, 8, 10.11). Powiadomienia: `~/bot/powiadomienia/*.json` → bot (Linphone).
+  Czeka na zgodę Antka na pierwszy zapis (etap 7), timer (etap 8), README.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

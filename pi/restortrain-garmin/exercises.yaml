@@ -99,7 +99,7 @@ cwiczenia:
     category: CURL
     exerciseName: BARBELL_BICEPS_CURL
   - nazwa: uginanie ramion z hantlami
-    aliasy: [biceps hantle, uginanie z hantlami]
+    aliasy: [biceps hantle, uginanie z hantlami, uginanie bicepsa, uginanie bicepsa z hantlami]
     category: CURL
     exerciseName: DUMBBELL_BICEPS_CURL
   - nazwa: wyciskanie francuskie
@@ -107,7 +107,7 @@ cwiczenia:
     category: TRICEPS_EXTENSION
     exerciseName: DUMBBELL_LYING_TRICEPS_EXTENSION
   - nazwa: prostowanie ramion na wyciągu
-    aliasy: [prostowanie przedramion na wyciągu, triceps na wyciągu]
+    aliasy: [prostowanie przedramion na wyciągu, triceps na wyciągu, prostowanie tricepsa na wyciągu]
     category: TRICEPS_EXTENSION
     exerciseName: REVERSE_GRIP_TRICEPS_PRESSDOWN
   - nazwa: prostowanie ramion nad głową
@@ -119,7 +119,7 @@ cwiczenia:
     category: LATERAL_RAISE
     exerciseName: DUMBBELL_LATERAL_RAISE
   - nazwa: szrugsy
-    aliasy: [szrugsy z hantlami stojąc, szrugi, kaptury]
+    aliasy: [szrugsy z hantlami stojąc, szrugsy z hantlami, szrugi, kaptury]
     category: SHRUG
     exerciseName: DUMBBELL_SHRUG
   - nazwa: odwodzenie ramion w opadzie
@@ -127,7 +127,7 @@ cwiczenia:
     category: LATERAL_RAISE
     exerciseName: BENT_OVER_LATERAL_RAISE
   - nazwa: rozpiętki na wyciągu
-    aliasy: [rozpiętki na wyciągu z dołu do góry, krzyżowanie linek]
+    aliasy: [rozpiętki na wyciągu z dołu do góry, krzyżowanie linek, rozpiętki na maszynie, butterfly, pec deck]
     category: FLYE
     exerciseName: CABLE_CROSSOVER
   - nazwa: woodchop na wyciągu

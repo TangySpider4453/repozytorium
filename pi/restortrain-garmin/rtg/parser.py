@@ -73,8 +73,11 @@ class Section:
 
 
 ITEM_RE = re.compile(r"^\s*[-–•*]\s*(.+?)\s*$")
-CZAS_RE = re.compile(r"^(\d+)\s*(min\w*|m|sek\w*|s)\b\.?\s*(.*)$", re.I)
-WSTEPNE_RE = re.compile(r"^(\d+)(?:\s*[-–]\s*(\d+))?\s+seri\w*\s+(?:wstępn|wstepn|rozgrzewkow)\w*\s*(.*)$", re.I)
+CZAS_RE = re.compile(r"^(?:\d+\s*[-–]\s*)?(\d+)\s*(min\w*|m|sek\w*|s)\b\.?\s*(.*)$", re.I)     # „8-10m” = 10 min
+# serie rozgrzewkowe: „3-4 serie wstępne martwego ciągu”, „2 lekkie serie wyciskania hantli”, „Lekkie serie wstępne
+# przysiadu” (bez liczby = 2), „2 lekkie serie pierwszego ćwiczenia” (= pierwsze ćwiczenie główne)
+WSTEPNE_RE = re.compile(r"^(?:(\d+)(?:\s*[-–]\s*(\d+))?\s+)?(?:(?:lekk|wstępn|wstepn|rozgrzewkow)\w*\s+)+seri\w*"
+                        r"(?:\s+(?:wstępn|wstepn|rozgrzewkow|lekk)\w*)*\s*(.*)$", re.I)
 CWICZENIE_RE = re.compile(
     r"^(?P<name>.+?)\s+(?P<sets>\d+)\s*[x×X]\s*(?P<a>\d+)(?:\s*[-–]\s*(?P<b>\d+))?\s*(?P<unit>s|sek|min|m)?(?![\w])\s*(?P<rest>.*)$")
 NA_STRONE_RE = re.compile(r"\bna\s+(nog[eę]|stron[eę]|r[eę]k[eę]|ka[zż]d[aą]\s+(nog[eę]|stron[eę]|r[eę]k[eę]))\b", re.I)
@@ -99,8 +102,8 @@ def sekundy(liczba, jednostka):
 
 
 def parsuj_linie(tekst, kind):
-    if m := WSTEPNE_RE.match(tekst):
-        a = int(m.group(1))
+    if (m := WSTEPNE_RE.match(tekst)) or (m := re.match(r"^(\d+)(?:\s*[-–]\s*(\d+))?\s+seri\w*\s+(?:wstępn|wstepn|rozgrzewkow)\w*\s*(.*)$", tekst, re.I)):
+        a = int(m.group(1) or 2)
         b = int(m.group(2) or a)
         return WarmupSets(raw=tekst, sets_min=min(a, b), sets_max=max(a, b), exercise_ref=m.group(3).strip())
     if m := CZAS_RE.match(tekst):
@@ -120,7 +123,8 @@ def parsuj_linie(tekst, kind):
 
 
 def parsuj(opis):
-    """opis -> [Section]; elementy przed pierwszym nagłówkiem trafiają do sekcji „Trening” (main)"""
+    """opis -> [Section]; elementy przed pierwszym nagłówkiem trafiają do sekcji „Trening” (main).
+    „pierwszego ćwiczenia” w seriach rozgrzewkowych = pierwsze ćwiczenie z serii w treningu."""
     sekcje = []
     for linia in (opis or "").splitlines():
         if not linia.strip():
@@ -134,6 +138,17 @@ def parsuj(opis):
             sekcje.append(Section(name="Trening", kind="main", rest_class="main"))
         s = sekcje[-1]
         s.items.append(parsuj_linie(m.group(1), s.kind))
+    cwiczenia = [i.name_pl for x in sekcje for i in x.items if isinstance(i, Exercise)]
+    rdzenie = lambda t: {w[:5] for w in normalizuj(t).split() if len(w) > 2}
+    for x in sekcje:
+        for i in x.items:
+            if not isinstance(i, WarmupSets) or not cwiczenia:
+                continue
+            if re.search(r"pierwsz\w*\s+(ćwicz|cwicz)|^$", i.exercise_ref, re.I):
+                i.exercise_ref = cwiczenia[0]
+            else:                                   # „wyciskania hantli” -> „Wyciskanie hantli na skosie dodatnim”
+                r = rdzenie(i.exercise_ref)
+                i.exercise_ref = next((c for c in cwiczenia if r and r <= rdzenie(c)), i.exercise_ref)
     return sekcje
 
 

@@ -43,7 +43,10 @@ def api(g, metoda, sciezka, **kw):
     """surowe zapytanie do connectapi z ponowieniami (429/5xx: 2, 4, 8, 16 s)"""
     for proba in range(5):
         try:
-            return g.connectapi(sciezka, method=metoda, **kw)
+            if metoda == "GET":
+                return g.client.connectapi(sciezka, **kw)
+            # zapisy: transport biblioteki (POST/PUT/DELETE z nagłówkami sesji), api=True = odpowiedź jako JSON
+            return {"POST": g.client.post, "PUT": g.client.put, "DELETE": g.client.delete}[metoda]("connectapi", sciezka, api=True, **kw)
         except Exception as ex:
             kod = getattr(getattr(ex, "response", None), "status_code", None) or 0
             tekst = str(ex)

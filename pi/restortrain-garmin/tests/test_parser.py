@@ -58,3 +58,13 @@ def test_bez_naglowka_i_rozpoznanie():
 def test_normalizacja():
     assert normalizuj("  Spięcia  BRZUCHA na wyciągu ") == "spiecia brzucha na wyciagu"
     assert normalizuj("Martwy ciąg, łydki") == "martwy ciag, lydki"
+
+
+def test_formy_z_prawdziwych_treningow():
+    s = parsuj("Rozgrzewka\n- 8-10m mobilizacji barków i łopatek\n- 2 lekkie serie wyciskania hantli\n- Lekkie serie wstępne przysiadu\n"
+               "- 2 lekkie serie pierwszego ćwiczenia\nGłówne\n- Wyciskanie hantli na skosie dodatnim 5x6-8")
+    r = s[0].items
+    assert isinstance(r[0], TimedBlock) and r[0].seconds == 600
+    assert isinstance(r[1], WarmupSets) and (r[1].sets_max, r[1].exercise_ref) == (2, "Wyciskanie hantli na skosie dodatnim")
+    assert isinstance(r[2], WarmupSets) and (r[2].sets_max, r[2].exercise_ref) == (2, "przysiadu")
+    assert isinstance(r[3], WarmupSets) and r[3].exercise_ref == "Wyciskanie hantli na skosie dodatnim"

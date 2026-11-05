@@ -521,4 +521,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (RestOrTrain → Garmin, etapy 1–3)**: Rozpoznanie (Pi 4B, Debian 13, Python 3.13, bez Dockera → venv +
   systemd), biblioteka garminconnect 0.3.20, szkielet `~/restortrain-garmin`, parser + mapowanie + 10 testów (na Pi też),
   ustawienia na stronie Automatyczne. Dalej: logowanie i wzorce JSON (Antek).
+- **2026-11-05 (RestOrTrain → Garmin, etapy 4–6)**: Logowanie Antka, pole źródła `consumerName`, wzorce z 4 prawdziwych
+  treningów, parser rozszerzony o ich formy, generator + 23 testy, `sync --dry-run` na prawdziwym kalendarzu, powiadomienia
+  przez bota. Czeka na zgodę na pierwszy zapis w Garmin Connect.
 

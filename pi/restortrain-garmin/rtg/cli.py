@@ -51,6 +51,7 @@ def main(argv=None):
     pw.add_argument("nazwa", nargs="?", help="nazwa ręcznie utworzonego treningu referencyjnego")
     ss = sub.add_parser("sync")
     ss.add_argument("--dry-run", action="store_true")
+    ss.add_argument("--teraz", action="store_true", help="bez czekania na odstęp z ustawień (przycisk „Synchronizuj teraz”)")
     sub.add_parser("status")
     a = p.parse_args(argv)
     if a.cmd == "parse":
@@ -64,7 +65,7 @@ def main(argv=None):
         pobierz_wzorce(a.nazwa)
     elif a.cmd == "sync":
         from .sync import synchronizuj
-        sys.exit(synchronizuj(dry_run=a.dry_run))
+        sys.exit(synchronizuj(dry_run=a.dry_run, wymus=a.teraz))
     elif a.cmd == "status":
         from .stan import drukuj_status
         drukuj_status()

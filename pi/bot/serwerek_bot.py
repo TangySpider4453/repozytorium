@@ -2304,10 +2304,28 @@ def ponow_zadanie(todo_id, minuty=None, powod="", prosba=False):
         print(f"ponow_zadanie: {ex}", flush=True)
 
 
+POWIADOMIENIA_ZEW = KATALOG / "powiadomienia"   # inne usługi na Pi (np. restortrain-garmin): plik JSON {tekst, od}
+
+
+def powiadomienia_zewnetrzne():
+    for p in sorted(POWIADOMIENIA_ZEW.glob("*.json")) if POWIADOMIENIA_ZEW.exists() else []:
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(d.get("tekst"), str) and d["tekst"].strip():
+                powiadom(d["tekst"][:1500])
+        except (OSError, ValueError):
+            pass
+        p.unlink(missing_ok=True)
+
+
 def petla_telefonu():
     """wyniki polaczen i rozmow z uslugi telefonu -> wiadomosci w Telegramie"""
     while True:
         time.sleep(3)
+        try:
+            powiadomienia_zewnetrzne()
+        except Exception as ex:
+            print(f"powiadomienia zewnętrzne: {ex}", flush=True)
         try:
             for p in sorted((TELEFON / "wyniki").glob("*.json")):
                 w = json.loads(p.read_text(encoding="utf-8"))
