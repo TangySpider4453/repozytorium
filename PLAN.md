@@ -535,4 +535,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (Garmin: działa automatycznie)**: Antek potwierdził trening na zegarku; timer co 10 min włączony. Jeden
   przebieg błędnie usunął „Siłka Dół B” (chwilowo pusty kalendarz?) → bezpiecznik usuwania i blokada przebiegów; trzy
   treningi utworzone ponownie (6, 8, 10.11), kolejny przebieg bez zmian.
+- **2026-11-05 (Garmin: przygotowanie do ćwiczenia)**: przed każdym ćwiczeniem przerwa do LAP z nazwą następnego ćwiczenia;
+  treningi 6, 8, 10.11 przebudowane, kolejny przebieg bez zmian; przełącznik na stronie Automatyczne.
 

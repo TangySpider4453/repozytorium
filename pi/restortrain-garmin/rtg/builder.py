@@ -15,6 +15,7 @@ TYP = {"warmup": (1, "warmup", 1), "cooldown": (2, "cooldown", 2), "interval": (
 KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (10, 10)}
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 ZNACZNIK = "auto: restortrain-garmin"
+WERSJA = "3"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -86,6 +87,11 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
             return k.krok("rest", "lap.button", opis=f"przerwa ok. {s} s")
         return k.krok("rest", "time", s)
 
+    def przejscie(nazwa, szczegol=""):
+        """przerwa do przycisku LAP przed ćwiczeniem: czas na przygotowanie stanowiska, w opisie co będzie"""
+        if cfg.get("przejscie", True):
+            kroki.append(k.krok("rest", "lap.button", opis=f"Przygotuj: {nazwa}" + (f" ({szczegol})" if szczegol else "")))
+
     for sek in parsuj(opis):
         for i in sek.items:
             if isinstance(i, TimedBlock):
@@ -95,6 +101,7 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
                 d = mapa.znajdz(i.exercise_ref)
                 if d.sposob == "nieznane" and nieznane is not None:
                     nieznane.append(i.exercise_ref)
+                przejscie(i.exercise_ref, f"{i.sets_max} serie rozgrzewkowe")
                 kroki.append(k.serie(i.sets_max, lambda d=d, i=i: [
                     k.krok("interval", "lap.button", opis=f"seria rozgrzewkowa ({i.raw})", category=d.category, exercise=d.exerciseName),
                     przerwa("warmup")]))
@@ -110,6 +117,8 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
                 else:
                     ile = i.reps_max if cfg.get("rep_target", "max") == "max" else i.reps_min
                     cw = lambda d=d, o=o, ile=ile: k.krok("interval", "reps", ile, opis=o, category=d.category, exercise=d.exerciseName)
+                ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
+                przejscie(i.name_pl, f"{i.sets}×{ile_txt}")
                 kroki.append(k.serie(i.sets, lambda cw=cw, d=d, rc=sek.rest_class: [cw(), przerwa(rc, d.rest_s)]))
             elif isinstance(i, Unparsed):
                 kroki.append(k.krok("interval", "lap.button", opis=i.raw))

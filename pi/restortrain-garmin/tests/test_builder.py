@@ -27,11 +27,14 @@ def test_dol_b_kryteria_akceptacji():
     assert "auto: restortrain-garmin, src=123" in w["description"] and nasz(w)
     k = w["workoutSegments"][0]["workoutSteps"]
     assert k[0]["stepType"]["stepTypeKey"] == "warmup" and k[0]["endConditionValue"] == 600
-    rozgrz = k[1]
+    rozgrz = k[2]
     assert rozgrz["type"] == "RepeatGroupDTO" and rozgrz["numberOfIterations"] == 4
     assert rozgrz["workoutSteps"][0]["endCondition"]["conditionTypeKey"] == "lap.button"
     assert rozgrz["workoutSteps"][0]["exerciseName"] == "BARBELL_DEADLIFT"
-    grupy = [x for x in k[2:] if x["type"] == "RepeatGroupDTO"]
+    przej = [x for x in k if x["type"] == "ExecutableStepDTO" and (x.get("description") or "").startswith("Przygotuj:")]
+    assert len(przej) == 9 and przej[1]["description"] == "Przygotuj: Martwy ciąg (4×4–6)"
+    assert all(x["endCondition"]["conditionTypeKey"] == "lap.button" and x["stepType"]["stepTypeKey"] == "rest" for x in przej)
+    grupy = [x for x in k[3:] if x["type"] == "RepeatGroupDTO"]
     assert len(grupy) == 8
     assert [g["numberOfIterations"] for g in grupy] == [4, 4, 3, 3, 3, 3, 3, 3]
     cw = [g["workoutSteps"][0] for g in grupy]
@@ -47,6 +50,8 @@ def test_dol_b_kryteria_akceptacji():
 def test_opcje_min_i_przycisk():
     w = buduj(zrodlo_dol_b(), {**CFG, "rep_target": "min", "rest_mode": "lap_button"})
     g = [x for x in w["workoutSegments"][0]["workoutSteps"] if x["type"] == "RepeatGroupDTO"][1]
+    assert not [x for x in buduj(zrodlo_dol_b(), {**CFG, "przejscie": False})["workoutSegments"][0]["workoutSteps"]
+                if (x.get("description") or "").startswith("Przygotuj")]
     assert g["workoutSteps"][0]["endConditionValue"] == 4
     assert g["workoutSteps"][1]["endCondition"]["conditionTypeKey"] == "lap.button"
 
@@ -54,7 +59,7 @@ def test_opcje_min_i_przycisk():
 def test_nieznane_cwiczenie_trafia_do_opisu_i_listy():
     nz = []
     w = buduj({"workoutId": 1, "title": "X", "description": "Główne\n- Żonglowanie kettlem 3x10"}, CFG, nieznane=nz)
-    c = w["workoutSegments"][0]["workoutSteps"][0]["workoutSteps"][0]
+    c = w["workoutSegments"][0]["workoutSteps"][1]["workoutSteps"][0]
     assert nz == ["Żonglowanie kettlem"] and c["category"] is None and c["description"].startswith("Żonglowanie kettlem")
 
 

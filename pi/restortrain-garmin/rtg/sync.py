@@ -16,7 +16,7 @@ from pathlib import Path
 
 import yaml
 
-from .builder import buduj, hash_opisu, nasz
+from .builder import WERSJA, buduj, hash_opisu, nasz
 from .garmin import BrakLogowania, api, polacz
 from .mapping import Mapa, dopisz_nieznane
 from .parser import wyglada_na_silowy
@@ -35,7 +35,7 @@ def konfiguracja():
     try:                                    # ustawienia ze strony (portal na tym samym Pi)
         with urllib.request.urlopen("http://127.0.0.1/api/automaty", timeout=5) as r:
             g = json.loads(r.read())["wartosci"]["garmin"]
-        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original") if k in g})
+        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original", "przejscie") if k in g})
         cfg["przerwy_s"] = {k: g.get(f"przerwa_{k}", cfg["przerwy_s"].get(k)) for k in ("main", "accessory", "core", "warmup")}
     except (OSError, ValueError, KeyError):
         pass
@@ -132,11 +132,18 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
                 continue
             if (str(p["workoutId"]), p["date"]) in {(r[0], r[1]) for r in db.execute("SELECT generated_workout_id, date FROM treningi")}:
                 continue                                    # nasz wygenerowany trening: bez pobierania szczegółów
-            w = api(g, "GET", f"/workout-service/workout/{p['workoutId']}")
+            try:
+                w = api(g, "GET", f"/workout-service/workout/{p['workoutId']}")
+            except Exception as ex:             # 404: np. nasz stary trening usunięty chwilę wcześniej w tym przebiegu
+                if "404" in str(ex) or "NotFound" in type(ex).__name__:
+                    continue
+                raise
             time.sleep(0.3)
             if nasz(w) or w.get("consumerName") != ZRODLO or not wyglada_na_silowy(w.get("description") or ""):
                 continue
-            src, d, h = str(w["workoutId"]), p["date"], hash_opisu(w.get("description"))
+            # hash: opis + wersja budowy + ustawienia (zmiana przerw / trybu na stronie też przebudowuje treningi)
+            ust = json.dumps({k: cfg.get(k) for k in ("rep_target", "rest_mode", "przerwy_s", "przejscie")}, sort_keys=True)
+            src, d, h = str(w["workoutId"]), p["date"], hash_opisu((w.get("description") or "") + WERSJA + ust)
             aktualne.add((src, d))
             if cfg.get("llm_fallback") and dopisz_nieznane(w.get("description") or "", mapa):
                 mapa = Mapa()                               # Claude Code dopisał ćwiczenia do exercises.yaml

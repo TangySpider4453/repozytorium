@@ -522,6 +522,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   wróci bez treningów siłowych, nic nie jest usuwane; nasz trening jest usuwany dopiero, gdy oryginału brak w 2 kolejnych
   przebiegach (status `brak1`); blokada `data/sync.lock` (timer i przycisk nie działają naraz). Timer włączony po
   potwierdzeniu Antka (6.11 „Siłka Dół B” widoczny na zegarku); utworzone: Siłka Dół B 6.11, Full upper 8.11, Dół A 10.11.
+- **Przejścia** (2026-11-05): przed każdym ćwiczeniem (i seriami rozgrzewkowymi) krok `rest` do LAP z opisem „Przygotuj:
+  Martwy ciąg (4×4–6)” (ustawienie `przejscie`). Hash w bazie = opis + `WERSJA` budowy + ustawienia (przerwy, tryb,
+  przejścia): zmiana na stronie albo w kodzie sama przebudowuje zaplanowane treningi. Pozycje kalendarza usunięte w tym
+  samym przebiegu (404) są pomijane (to był błąd „API Error 404”).
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

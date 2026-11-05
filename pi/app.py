@@ -1608,6 +1608,7 @@ AUTOMATY_SCHEMAT = {
         ("przerwa_accessory", "liczba", 90, "Przerwa: akcesoria (s)", (15, 600)),
         ("przerwa_core", "liczba", 60, "Przerwa: brzuch (s)", (15, 600)),
         ("przerwa_warmup", "liczba", 90, "Przerwa: serie rozgrzewkowe (s)", (15, 600)),
+        ("przejscie", "bool", True, "Przed każdym ćwiczeniem przerwa do LAP z nazwą ćwiczenia („Przygotuj: …”)", None),
         ("replace_original", "bool", False, "Zdejmuj z kalendarza oryginał RestOrTrain (blok czasowy)", None)]},
     "komunikacja": {"nazwa": "Komunikacja miejska", "pola": [
         ("wlaczona", "bool", True, "Odpowiedzi o odjazdach i trasach (czat, telefon)", None),
