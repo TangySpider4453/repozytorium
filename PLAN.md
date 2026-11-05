@@ -527,4 +527,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (RestOrTrain → Garmin, etapy 8–10)**: Timer co 10 min, przycisk i karta na Automatycznych, tylko siła, bez
   zrobionych treningów, Claude Code dopisuje nieznane ćwiczenia (test: „Wyciskanie Arnolda” → SHOULDER_PRESS/ARNOLD_PRESS),
   README. Tryb próbny do zgody na zapis.
+- **2026-11-05 (RestOrTrain → Garmin: pierwszy zapis)**: Za zgodą Antka zapis włączony; utworzony i zaplanowany jeden
+  trening „Dół B [str]” na 6.11 (11 kroków: rozgrzewka 10 min, 4 serie rozgrzewkowe, 8 ćwiczeń z seriami i przerwami,
+  schłodzenie 5 min). Ponowny przebieg: bez zmian (bez duplikatu). Timer wstrzymany do potwierdzenia na zegarku.
 

@@ -52,6 +52,7 @@ def main(argv=None):
     ss = sub.add_parser("sync")
     ss.add_argument("--dry-run", action="store_true")
     ss.add_argument("--teraz", action="store_true", help="bez czekania na odstęp z ustawień (przycisk „Synchronizuj teraz”)")
+    ss.add_argument("--do", help="ostatni dzień okna RRRR-MM-DD (np. pierwszy próbny zapis tylko na jutro)")
     sub.add_parser("status")
     a = p.parse_args(argv)
     if a.cmd == "parse":
@@ -65,7 +66,7 @@ def main(argv=None):
         pobierz_wzorce(a.nazwa)
     elif a.cmd == "sync":
         from .sync import synchronizuj
-        sys.exit(synchronizuj(dry_run=a.dry_run, wymus=a.teraz))
+        sys.exit(synchronizuj(dry_run=a.dry_run, wymus=a.teraz, do_dnia=a.do))
     elif a.cmd == "status":
         from .stan import drukuj_status
         drukuj_status()

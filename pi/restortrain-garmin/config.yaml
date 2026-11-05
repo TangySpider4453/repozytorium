@@ -1,7 +1,7 @@
 # restortrain-garmin: konfiguracja (bez sekretów; token logowania jest w tokens/, uprawnienia 600/700, poza gitem)
 okno_dni: 14                 # ile dni do przodu sprawdzać w kalendarzu Garmin Connect
 co_min: 10                   # co ile minut sprawdzać zmiany (timer budzi co 10 min)
-zapis_dozwolony: false       # false = tylko plan zmian (bez zapisu w Garmin); true po zgodzie Antka
+zapis_dozwolony: true        # zgoda Antka 2026-11-05: zapis w Garmin Connect włączony
 rep_target: max              # liczba powtórzeń w kroku: max (górna granica zakresu) albo min
 rest_mode: timed             # przerwa: timed (odliczanie) albo lap_button (do przycisku okrążenia)
 przerwy_s:                   # przerwy między seriami

@@ -88,7 +88,7 @@ def utworz(g, zrodlo, data, cfg, mapa, dry_run, zmiany, nieznane, pokaz_json=Fal
     return wid, (s or {}).get("workoutScheduleId") or (s or {}).get("id")
 
 
-def synchronizuj(dry_run=False, wymus=False):
+def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
     cfg = konfiguracja()
     db = baza()
     teraz = datetime.now().isoformat(timespec="seconds")
@@ -109,7 +109,7 @@ def synchronizuj(dry_run=False, wymus=False):
     try:
         g = polacz()
         od = date.today()
-        do = od + timedelta(days=int(cfg.get("okno_dni", 14)))
+        do = date.fromisoformat(do_dnia) if do_dnia else od + timedelta(days=int(cfg.get("okno_dni", 14)))
         pozycje, zrobione = kalendarz(g, od, do)
         mapa = Mapa()
         aktualne = set()
