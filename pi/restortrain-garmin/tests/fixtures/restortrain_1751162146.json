@@ -75,7 +75,7 @@
  },
  "workout": {
   "workoutId": 1751162146,
-  "ownerId": 96684258,
+  "ownerId": 0,
   "workoutName": "Full upper — większa objętość i brzuch",
   "description": "Rozgrzewka\n- 8m mobilizacji barków i łopatek\n- 2 lekkie serie pierwszego ćwiczenia\n\nKlatka i plecy\n- Wyciskanie hantli na skosie dodatnim 3x8-10\n- Wiosłowanie hantlem 4x8-10 na stronę\n- Ściąganie drążka wyciągu 3x10-12\n\nBarki i kaptury\n- Wyciskanie hantli nad głowę 3x8-10\n- Unoszenie bokiem 3x12-15\n- Szrugsy z hantlami 3x10-12\n\nRamiona\n- Uginanie bicepsa 3x10-12\n- Prostowanie tricepsa na wyciągu 3x10-12\n\nBrzuch\n- Woodchop 3x10-12 na stronę\n- Rollout z kolan 2x6-10, częściowy zakres\n\nSchłodzenie\n- 5m spokojnej mobilizacji",
   "updatedDate": "2026-11-03T18:45:51.0",
@@ -87,16 +87,7 @@
   },
   "subSportType": null,
   "trainingPlanId": null,
-  "author": {
-   "userProfilePk": 96684258,
-   "displayName": "541973b8-3763-484b-a3ac-53d0539b262c",
-   "fullName": "Antek",
-   "profileImgNameLarge": null,
-   "profileImgNameMedium": "c9c81145-b9f0-479d-90c7-714346ebfcd6-prfr.png",
-   "profileImgNameSmall": "c9c81145-b9f0-479d-90c7-714346ebfcd6-prth.png",
-   "userPro": false,
-   "vivokidUser": false
-  },
+  "author": null,
   "sharedWithUsers": null,
   "estimatedDurationInSecs": 5100,
   "estimatedDistanceInMeters": null,

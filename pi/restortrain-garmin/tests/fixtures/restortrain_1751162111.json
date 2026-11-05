@@ -75,7 +75,7 @@
  },
  "workout": {
   "workoutId": 1751162111,
-  "ownerId": 96684258,
+  "ownerId": 0,
   "workoutName": "Dół B — martwy ciąg, suwnica i brzuch",
   "description": "Rozgrzewka\n- 10m mobilizacji bioder i stawów skokowych\n- 3-4 serie wstępne martwego ciągu\n\nGłówne ćwiczenia\n- Martwy ciąg 4x4-6, 1-2 powtórzenia w zapasie\n- Suwnica jednonóż 4x8-10 na nogę\n- Bułgary 3x8-10 na nogę\n\nAkcesoria nóg\n- Prostowanie nóg 3x10-12\n- Uginanie nóg 3x10-12\n- Wspięcia na palce 3x12-15\n\nBrzuch\n- Spięcia brzucha na wyciągu 3x10-12\n- Unoszenie nóg w zwisie 3x8-12\n\nSchłodzenie\n- 5m spokojnej mobilizacji",
   "updatedDate": "2026-11-03T18:45:48.0",
@@ -87,16 +87,7 @@
   },
   "subSportType": null,
   "trainingPlanId": null,
-  "author": {
-   "userProfilePk": 96684258,
-   "displayName": "541973b8-3763-484b-a3ac-53d0539b262c",
-   "fullName": "Antek",
-   "profileImgNameLarge": null,
-   "profileImgNameMedium": "c9c81145-b9f0-479d-90c7-714346ebfcd6-prfr.png",
-   "profileImgNameSmall": "c9c81145-b9f0-479d-90c7-714346ebfcd6-prth.png",
-   "userPro": false,
-   "vivokidUser": false
-  },
+  "author": null,
   "sharedWithUsers": null,
   "estimatedDurationInSecs": 5400,
   "estimatedDistanceInMeters": null,
