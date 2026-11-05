@@ -15,7 +15,7 @@ TYP = {"warmup": (1, "warmup", 1), "cooldown": (2, "cooldown", 2), "interval": (
 KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (10, 10)}
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "4"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "5"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -98,7 +98,7 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
         if d.sposob == "nieznane" and nieznane is not None:
             nieznane.append(i.name_pl)
         o = opis_kroku(i)
-        if d.sposob == "nieznane":                 # bez dopasowania: polska nazwa w opisie kroku
+        if d.sposob in ("nieznane", "brak"):       # bez ćwiczenia Garmin: polska nazwa w opisie kroku
             o = f"{i.name_pl}: {o}" if o else i.name_pl
         if i.duration_s:
             cw = lambda: k.krok("interval", "time", i.duration_s, opis=o, category=d.category, exercise=d.exerciseName)

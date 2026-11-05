@@ -542,3 +542,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (Garmin: rundy)**: RestOrTrain zaczął dawać ćwiczenia naprzemiennie („3 rundy”, „po każdej parze
   odpocznij”); parser składa je w rundy (A, B, przerwa po rundzie) zamiast osobnych ćwiczeń i kroku 90 s „na czas”.
   Treningi 6, 8, 10.11 przebudowane; triceps na wyciągu poprawiony.
+- **2026-11-05 (Garmin: prostowanie nóg)**: zamiast prostowania z gumą krok bez ćwiczenia Garmin z nazwą „Prostowanie nóg”
+  (Garmin nie ma wersji na maszynie); notatki z ciężarem bez myślnika; treningi 6, 8, 10.11 przebudowane.

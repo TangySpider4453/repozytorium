@@ -21,7 +21,7 @@ class Dopasowanie:
     category: str | None
     exerciseName: str | None
     nazwa: str | None              # wpis z exercises.yaml
-    sposob: str                    # dokladne | rdzen | rozmyte | nieznane
+    sposob: str                    # dokladne | rdzen | rozmyte | nieznane | brak (Garmin nie ma odpowiednika)
     wynik: float = 100.0
     rest_s: int | None = None
 
@@ -38,7 +38,8 @@ def wczytaj(sciezka=KAT / "exercises.yaml"):
 
 def bledy_walidacji(wpisy, lista):
     """wpisy, których para category/exerciseName nie istnieje na oficjalnej liście Garmina"""
-    return [w for w in wpisy if w.get("exerciseName") not in lista.get(w.get("category"), set())]
+    return [w for w in wpisy if not (w.get("category") is None and w.get("exerciseName") is None)
+            and w.get("exerciseName") not in lista.get(w.get("category"), set())]
 
 
 def rdzen(t):
@@ -54,6 +55,8 @@ class Mapa:
                 self.klucze.setdefault(normalizuj(n), w)
 
     def _wynik(self, w, sposob, wynik=100.0):
+        if w["category"] is None:                            # świadomie bez odpowiednika (np. maszyna do prostowania nóg)
+            sposob = "brak"
         return Dopasowanie(w["category"], w["exerciseName"], w["nazwa"], sposob, wynik, w.get("rest_s"))
 
     def znajdz(self, nazwa_pl):

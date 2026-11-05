@@ -140,13 +140,13 @@ def parsuj_linie(tekst, kind):
         return TimedBlock(raw=tekst, seconds=sekundy(int(m.group(1)), m.group(2)), kind=kind, text=m.group(3).strip())
     if m := POWT_RE.match(tekst):
         a, b = int(m.group("a")), int(m.group("b") or m.group("a"))
-        reszta = m.group("rest").strip(" ,;.-–")
+        reszta = m.group("rest").strip(" ,;.-–—")
         return Exercise(raw=tekst, name_pl=m.group("name").strip(" ,"), sets=1, reps_min=min(a, b), reps_max=max(a, b),
                         per_side=bool(NA_STRONE_RE.search(reszta)), note=reszta)
     if m := CWICZENIE_RE.match(tekst):
         a = int(m.group("a"))
         b = int(m.group("b") or a)
-        reszta = m.group("rest").strip(" ,;.-–")
+        reszta = m.group("rest").strip(" ,;.-–—")
         per_side = bool(NA_STRONE_RE.search(reszta))
         if m.group("unit"):                            # seria na czas: „3x30s”, „3x1min”
             return Exercise(raw=tekst, name_pl=m.group("name").strip(" ,:"), sets=int(m.group("sets")),

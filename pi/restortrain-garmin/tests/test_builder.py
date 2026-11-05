@@ -39,7 +39,7 @@ def test_dol_b_kryteria_akceptacji():
     assert [g["numberOfIterations"] for g in grupy] == [4, 4, 3, 3, 3, 3, 3, 3]
     cw = [g["workoutSteps"][0] for g in grupy]
     assert [c["endConditionValue"] for c in cw] == [6, 10, 10, 12, 12, 15, 12, 12]
-    assert all(c["endCondition"]["conditionTypeKey"] == "reps" and c["category"] for c in cw)
+    assert all(c["endCondition"]["conditionTypeKey"] == "reps" and (c["category"] or c["description"].startswith("Prostowanie nóg")) for c in cw)
     assert [g["workoutSteps"][1]["endConditionValue"] for g in grupy] == [180, 180, 180, 90, 90, 90, 60, 60]
     assert cw[0]["description"] == "4–6 powt., 1-2 powtórzenia w zapasie"
     assert k[-1]["stepType"]["stepTypeKey"] == "cooldown" and k[-1]["endConditionValue"] == 300
