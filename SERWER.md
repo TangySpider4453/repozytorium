@@ -556,9 +556,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Wskazówki** (2026-11-05): komentarz kroku i krok „Przygotuj” zawierają dopiski z planu (ciężar, „ławka 30°” także
   z nazwy ćwiczenia, zapas powtórzeń itd.); przy rundach wskazówki każdego ćwiczenia; przygotowanie serii rozgrzewkowych
   dostaje kąt ławki ćwiczenia, którego dotyczą.
-- **Jednostronne** (2026-11-06): „na nogę / na rękę / na stronę”, „jednonóż”, „jednorącz” → w każdej serii dwa kroki
-  ćwiczenia „Lewa noga: …” i „Prawa noga: …” (ręka / strona), przerwa po obu; także w rundach (ustawienie `strony`,
-  domyślnie włączone). „25 kg na stronę plus sztanga” to talerze, nie jednostronne: ciężar = 2 × 25 + gryf 20 = 70 kg
+- **Jednostronne** (2026-11-06, zmienione tego samego dnia): „na nogę / na rękę / na stronę”, „jednonóż”, „jednorącz”
+  → JEDEN krok na serię „Na nogę: 8–10 powt. … (razem obie: 16–20)”, cel = powtórzenia × 2 (zegarek liczy obie strony;
+  osobne kroki lewa/prawa źle się liczyły). Raport dzieli wynik na 2 („10×20 kg” na nogę, nieparzyste „9,5”); stare
+  aktywności z krokami L/P nadal raportowane jako „L 10 / P 10”. Ustawienie `strony: false` = zwykły krok bez ×2. „25 kg na stronę plus sztanga” to talerze, nie jednostronne: ciężar = 2 × 25 + gryf 20 = 70 kg
   (`GRYF_KG`).
 - **Analiza AI** (2026-11-06, `rtg/ai.py`, `ai_analiza: true`): opis treningu czyta Claude Sonnet (`claude -p --tools ""`,
   model `claude-sonnet-5-5`, logowanie z `claude.env` usługi — z sesji SSH bez niego „Not logged in”). Zwraca JSON
@@ -569,8 +570,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Raporty ze zrobionych treningów** (2026-11-06, `rtg/raport.py`, w każdym przebiegu synchronizacji po commicie):
   ostatnie 20 aktywności `strength_training` → `/activity-service/activity/<id>/exerciseSets` (ciężar w gramach).
   Seria ma `wktStepIndex` = indeks kroku na zegarku (FIT: dzieci grupy, potem krok powtórzenia; `indeksy_fit`), więc
-  serie trafiają do pozycji naszego treningu (nazwa z „Przygotuj: …”, lewa/prawa razem: „L 10 / P 10 × 30 kg”, brak
-  ciężaru po jednej stronie = ten z drugiej) i widać, czego nie zrobiono. Aktywność z oryginału RestOrTrain (jeden krok
+  serie trafiają do pozycji naszego treningu (nazwa z „Przygotuj: …”, jednostronne: połowa powtórzeń na stronę) i widać, czego nie zrobiono. Aktywność z oryginału RestOrTrain (jeden krok
   na czas) nie ma serii: raport mówi o tym wprost; trening bez naszego planu: serie po nazwach Garmin (polskie z
   exercises.yaml). Pliki `data/raporty/<activityId>.json` (świeże ≤ 2 dni odświeżane: poprawki w Garmin Connect),
   `data/plany/<workoutId>.json` (plany do zrobienia, raz na trening). Nowy trening (start < 12 h): tekst na Linphone

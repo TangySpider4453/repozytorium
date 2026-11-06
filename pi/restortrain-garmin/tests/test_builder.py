@@ -38,7 +38,7 @@ def test_dol_b_kryteria_akceptacji():
     assert len(grupy) == 8
     assert [g["numberOfIterations"] for g in grupy] == [4, 4, 3, 3, 3, 3, 3, 3]
     cw = [g["workoutSteps"][0] for g in grupy]
-    assert [c["endConditionValue"] for c in cw] == [6, 10, 10, 12, 12, 15, 12, 12]
+    assert [c["endConditionValue"] for c in cw] == [6, 20, 20, 12, 12, 15, 12, 12]   # suwnica, bułgary: obie nogi razem
     assert all(c["endCondition"]["conditionTypeKey"] == "reps" and (c["category"] or c["description"].startswith("Prostowanie nóg")) for c in cw)
     assert [g["workoutSteps"][-1]["endConditionValue"] for g in grupy] == [180, 180, 180, 90, 90, 90, 60, 60]
     assert cw[0]["description"] == "4–6 powt., 1-2 powtórzenia w zapasie"
@@ -133,18 +133,19 @@ def test_wskazowki_w_komentarzach_i_przygotowaniu():
     assert k[3]["workoutSteps"][0]["description"] == "8–10 powt., ławka 30°, 17,5 kg na hantel"
 
 
-def test_jednostronne_lewa_i_prawa():
+def test_jednostronne_jeden_krok_razy_dwa():
     w = buduj({"workoutId": 1, "title": "X", "description": "Nogi\n- Suwnica jednonóż 4x8-10 na nogę — 80 kg\n"
                "- Wiosłowanie hantlem jednorącz 3x10\n- Woodchop 3x12 na stronę\n- Martwy ciąg 3x5"}, {"przejscie": False})
     g = w["workoutSegments"][0]["workoutSteps"]
     s = [[x.get("description") for x in grp["workoutSteps"]] for grp in g]
-    assert s[0] == ["Lewa noga: 8–10 powt., 80 kg", "Prawa noga: 8–10 powt., 80 kg", None]
-    assert s[1][:2] == ["Lewa ręka: 10 powt.", "Prawa ręka: 10 powt."]
-    assert s[2][:2] == ["Lewa strona: 12 powt.", "Prawa strona: 12 powt."]
-    assert len(s[3]) == 2                                              # obustronne bez zmian
+    assert s[0] == ["Na nogę: 8–10 powt., 80 kg (razem obie: 16–20)", None]
+    assert g[0]["workoutSteps"][0]["endConditionValue"] == 20.0          # zegarek liczy obie nogi
+    assert s[1][0] == "Na rękę: 10 powt. (razem obie: 20)" and s[2][0] == "Na stronę: 12 powt. (razem obie: 24)"
+    assert len(s[3]) == 2 and g[3]["workoutSteps"][0]["endConditionValue"] == 5.0   # obustronne bez zmian
     p = buduj({"workoutId": 1, "title": "X", "description": "N\n- Przysiad ze sztangą 4x6-8 — 25 kg na stronę plus sztanga"},
               {"przejscie": False})["workoutSegments"][0]["workoutSteps"][0]["workoutSteps"]
     assert len(p) == 2 and p[0]["weightValue"] == 70000.0              # talerze „na stronę” to nie jednostronne
-    assert g[0]["workoutSteps"][1]["weightValue"] == 80000.0
-    assert len(buduj({"workoutId": 1, "title": "X", "description": "N\n- Bułgary 3x8 na nogę"},
-                     {"przejscie": False, "strony": False})["workoutSegments"][0]["workoutSteps"][0]["workoutSteps"]) == 2
+    assert g[0]["workoutSteps"][0]["weightValue"] == 80000.0
+    b = buduj({"workoutId": 1, "title": "X", "description": "N\n- Bułgary 3x8 na nogę"},
+              {"przejscie": False, "strony": False})["workoutSegments"][0]["workoutSteps"][0]["workoutSteps"]
+    assert b[0]["endConditionValue"] == 8.0

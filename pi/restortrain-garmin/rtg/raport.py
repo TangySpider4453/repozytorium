@@ -83,11 +83,15 @@ def plan_z_treningu(w):
                 grupy[-1]["indeksy"].append(po_kroku[id(x)])
                 grupy[-1]["strony"] = strona.group(2)
                 continue
-            grupy.append({"krok": x, "indeksy": [po_kroku[id(x)]], "strony": None})
+            razem = re.match(r"Na (nogę|rękę|stronę): ", x.get("description") or "")
+            grupy.append({"krok": x, "indeksy": [po_kroku[id(x)]], "strony": None,
+                          "razem": {"nogę": "noga", "rękę": "ręka", "stronę": "strona"}[razem.group(1)] if razem else None})
         for j, gr in enumerate(grupy):
             x = gr["krok"]
             n = nazwy[j] if j < len(nazwy) else (x.get("exerciseName") or "ćwiczenie").replace("_", " ").lower()
             ile = x.get("endConditionValue")
+            if gr.get("razem") and ile:
+                ile = ile / 2                       # cel kroku = obie strony razem
             kg = (x.get("weightValue") or 0) / 1000
             if len(grupy) > 1:
                 plan = f"{k['numberOfIterations']} rundy" + (f", {int(ile)} powt." if ile and x["endCondition"]["conditionTypeKey"] == "reps" else "")
@@ -96,7 +100,7 @@ def plan_z_treningu(w):
             if kg and "kg" not in plan:
                 plan += f", {_kg(kg)}"
             pozycje.append({"nazwa": n + (" – rozgrzewka" if rozgrzewka else ""), "plan": plan, "serie": k["numberOfIterations"],
-                            "strony": gr["strony"], "indeksy": gr["indeksy"], "rozgrzewka": rozgrzewka})
+                            "strony": gr["strony"], "razem": gr.get("razem"), "indeksy": gr["indeksy"], "rozgrzewka": rozgrzewka})
     return pozycje
 
 
@@ -119,6 +123,14 @@ def _seria(s):
     r = s.get("repetitionCount")
     kg = (s.get("weight") or 0) / 1000
     t = str(r) if r else "?"
+    return f"{t}×{_kg(kg)}" if kg else t
+
+
+def _seria_pol(s):
+    """seria jednostronna liczona razem: 20 powtórzeń obu nóg -> „10×20 kg” na nogę (nieparzyste: 10,5)"""
+    r = s.get("repetitionCount")
+    kg = (s.get("weight") or 0) / 1000
+    t = (f"{r / 2:g}".replace(".", ",")) if r else "?"
     return f"{t}×{_kg(kg)}" if kg else t
 
 
@@ -147,6 +159,9 @@ def raport(akt, sety, trening=None, nazwy_pl=None):
                 lewe, prawe = (po_indeksie.get(p["indeksy"][0], []), po_indeksie.get(p["indeksy"][1], []) if len(p["indeksy"]) > 1 else [])
                 n = max(len(lewe), len(prawe))
                 opis = [_seria_obu(lewe[i] if i < len(lewe) else None, prawe[i] if i < len(prawe) else None, p["strony"]) for i in range(n)]
+            elif p.get("razem"):                # jeden krok na obie strony: wynik na jedną stronę = połowa
+                ss = [s for i in p["indeksy"] for s in po_indeksie.get(i, [])]
+                n, opis = len(ss), [_seria_pol(s) for s in ss]
             else:
                 ss = [s for i in p["indeksy"] for s in po_indeksie.get(i, [])]
                 n, opis = len(ss), [_seria(s) for s in ss]
@@ -156,7 +171,8 @@ def raport(akt, sety, trening=None, nazwy_pl=None):
                     niezrobione.append(f"- {p['nazwa']} (plan: {p['plan']})")
                 continue
             brak = f" — {n} z {p['serie']} serii" if n < p["serie"] and not p["rozgrzewka"] else ""
-            zrobione.append(f"- {p['nazwa']}{' (na ' + {'noga': 'nogę', 'ręka': 'rękę'}.get(p['strony'], 'stronę') + ')' if p['strony'] else ''}: "
+            st = p["strony"] or p.get("razem")
+            zrobione.append(f"- {p['nazwa']}{' (na ' + {'noga': 'nogę', 'ręka': 'rękę'}.get(st, 'stronę') + ')' if st else ''}: "
                             f"{', '.join(opis)} (plan: {p['plan']}){brak}")
         # serie spoza planu (ćwiczenie dodane na zegarku)
         reszta = [s for s in aktywne if s.get("wktStepIndex") not in uzyte and s.get("exercises") and (s["exercises"][0].get("name"))]
