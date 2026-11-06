@@ -20,12 +20,12 @@ cwiczenia:
     exerciseName: DUMBBELL_BULGARIAN_SPLIT_SQUAT
   - nazwa: prostowanie nóg
     aliasy: [wyprosty nóg, wyprosty nóg na maszynie, prostowanie nóg na maszynie]
-    category: BANDED_EXERCISES        # Garmin nie ma maszynowego leg extension; ten sam ruch (czworogłowe) z gumą
-    exerciseName: LEG_EXTENSION
+    category: CRUNCH                  # „Weighted Leg Extensions” (u Garmina w kategorii CRUNCH, mięśnie: QUADS)
+    exerciseName: WEIGHTED_LEG_EXTENSIONS
   - nazwa: uginanie nóg
     aliasy: [uginanie nóg na maszynie, uginanie nóg leżąc, leg curl]
     category: LEG_CURL
-    exerciseName: LEG_CURL
+    exerciseName: WEIGHTED_LEG_CURL
   - nazwa: wspięcia na palce
     aliasy: [łydki, wspięcia na łydki, wspięcia stojąc]
     category: CALF_RAISE
