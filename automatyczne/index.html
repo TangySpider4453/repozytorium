@@ -146,6 +146,14 @@ const AUTOMATY = [
        d.blad ? el("div", {class:"uw", text:`Błąd: ${d.blad}`}) : null,
        el("div", {class:"opis", style:"margin:4px 0 8px", text:`Sprawdzono: ${(d.czas || "").slice(11, 16)}`}), przelacz];
    }},
+  {ikona:"📈", nazwa:"Siłownia: zrobione treningi", link:"/strony/silownia/",
+   opis:"Co zrobiłeś na treningu siłowym (z Garmina): serie, powtórzenia, ciężary i czego nie zrobiłeś. Gotowe do wklejenia w RestOrTrain; po treningu przychodzi też na Linphone.",
+   stan: async () => {
+     const d = await json("/api/garmin/silownia");
+     const z = d.zrobione[0], p = d.do_zrobienia[0];
+     return [z ? el("div", {}, "Ostatni: ", el("span", {class:"dzis", text:`${z.data.slice(8)}.${z.data.slice(5, 7)}`}), ` · ${z.tytul}`) : el("div", {text:"Jeszcze bez zrobionych treningów."}),
+       p ? el("div", {class:"opis", style:"margin:4px 0 0", text:`Następny: ${p.data.slice(8)}.${p.data.slice(5, 7)} · ${p.tytul}`}) : null];
+   }},
   {ikona:"🏋", nazwa:"Treningi siłowe na zegarek", link:null,
    opis:"RestOrTrain → natywne treningi siłowe Garmin (ćwiczenia, serie, powtórzenia, przerwy). Sprawdza zmiany co 10 min, tylko siłowe, bez zrobionych.",
    stan: async () => {

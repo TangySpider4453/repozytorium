@@ -565,7 +565,20 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (sekcje: czas / serie_rozgrzewkowe / cwiczenie / rundy, kg całkowite, jednostronne + strona), walidowany i zamieniany
   na obiekty parsera. Jedno zapytanie na nowy lub zmieniony opis (~15–30 s), wynik w `data/ai_cache.json` (klucz: hash
   opisu + wersja promptu + model); przebudowy z pamięci. Nieudana odpowiedź → parser regułowy. Garmin ucina opis
-  RestOrTrain do ~1000 znaków („…”), więc końcówki dłuższych treningów (np. brzuch w Full upper) nie ma w źródle. Testy: 41.
+  RestOrTrain do ~1000 znaków („…”), więc końcówki dłuższych treningów (np. brzuch w Full upper) nie ma w źródle.
+- **Raporty ze zrobionych treningów** (2026-11-06, `rtg/raport.py`, w każdym przebiegu synchronizacji po commicie):
+  ostatnie 20 aktywności `strength_training` → `/activity-service/activity/<id>/exerciseSets` (ciężar w gramach).
+  Seria ma `wktStepIndex` = indeks kroku na zegarku (FIT: dzieci grupy, potem krok powtórzenia; `indeksy_fit`), więc
+  serie trafiają do pozycji naszego treningu (nazwa z „Przygotuj: …”, lewa/prawa razem: „L 10 / P 10 × 30 kg”, brak
+  ciężaru po jednej stronie = ten z drugiej) i widać, czego nie zrobiono. Aktywność z oryginału RestOrTrain (jeden krok
+  na czas) nie ma serii: raport mówi o tym wprost; trening bez naszego planu: serie po nazwach Garmin (polskie z
+  exercises.yaml). Pliki `data/raporty/<activityId>.json` (świeże ≤ 2 dni odświeżane: poprawki w Garmin Connect),
+  `data/plany/<workoutId>.json` (plany do zrobienia, raz na trening). Nowy trening (start < 12 h): tekst na Linphone
+  przez `~/bot/powiadomienia` (części po ≤ 1400 znaków), ustawienie `raport_linphone` (strona, domyślnie wł.).
+- Strona **`/strony/silownia/`** (repo `silownia/`): zakładki ✅ Zrobione / 📋 Do zrobienia, wybór treningu z listy,
+  tekst raportu i „📋 Kopiuj do RestOrTrain” (clipboard, zapas: zaznaczenie + execCommand), ustawienia `garmin` na dole.
+  Portal `GET /api/garmin/silownia` (czyta pliki usługi; dni ze zrobionym treningiem znikają z „do zrobienia”).
+  Karta „📈 Siłownia: zrobione treningi” na Automatycznych. Testy: 44 (raport na prawdziwych danych Dół B 6.11).
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

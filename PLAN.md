@@ -555,3 +555,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   „kg na stronę plus sztanga” liczone jako ciężar całkowity (talerze × 2 + gryf 20 kg).
 - **2026-11-06 (Garmin: analiza AI)**: opis RestOrTrain czyta Sonnet przez lokalny Claude Code (raz na zmianę opisu,
   pamięć podręczna), regułowy parser jako zapas; 3 treningi przebudowane z analizy AI i sprawdzone.
+- **2026-11-06 (Siłownia: raporty)**: strona `/strony/silownia/` z raportami zrobionych treningów z Garmina (serie,
+  powtórzenia, ciężary, niezrobione) do skopiowania w RestOrTrain i planami do zrobienia; po treningu raport na Linphone.

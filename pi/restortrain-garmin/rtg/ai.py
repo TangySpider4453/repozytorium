@@ -128,7 +128,8 @@ def na_sekcje(dane):
             elif t == "serie_rozgrzewkowe":
                 n = _int(e.get("serie") or 2, 1, 10, "serie")
                 kg = e.get("kg")
-                uw = ", ".join(x for x in (f"{kg:g} kg".replace(".", ",") if isinstance(kg, (int, float)) and kg > 0 else "",
+                uwagi = (e.get("uwagi") or "").strip()
+                uw = ", ".join(x for x in (f"{kg:g} kg".replace(".", ",") if isinstance(kg, (int, float)) and kg > 0 and "kg" not in uwagi else "",
                                            (e.get("uwagi") or "").strip()) if x)
                 ref = (e.get("cwiczenie") or "").strip()
                 sek.items.append(WarmupSets(raw=f"{n} serie rozgrzewkowe: {ref}" + (f", {uw}" if uw else ""),

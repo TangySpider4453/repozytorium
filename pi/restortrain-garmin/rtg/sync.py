@@ -36,7 +36,7 @@ def konfiguracja():
     try:                                    # ustawienia ze strony (portal na tym samym Pi)
         with urllib.request.urlopen("http://127.0.0.1/api/automaty", timeout=5) as r:
             g = json.loads(r.read())["wartosci"]["garmin"]
-        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original", "przejscie") if k in g})
+        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original", "przejscie", "raport_linphone") if k in g})
         cfg["przerwy_s"] = {k: g.get(f"przerwa_{k}", cfg["przerwy_s"].get(k)) for k in ("main", "accessory", "core", "warmup")}
     except (OSError, ValueError, KeyError):
         pass
@@ -182,6 +182,15 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
                     db.execute("DELETE FROM treningi WHERE source_workout_id=? AND date=?", (src, d))
         else:
             log.warning("kalendarz bez treningów siłowych, a w bazie są przyszłe: pomijam usuwanie (chwilowa odpowiedź?)")
+        if not dry_run:
+            db.commit()
+            try:                                # zrobione treningi -> raporty (strona + Linphone), plany do zrobienia
+                from .raport import sprawdz_zrobione, zapisz_plany
+                if (n := sprawdz_zrobione(g, cfg)):
+                    zmiany.append(f"nowe raporty: {n}")
+                zapisz_plany(g, db)
+            except Exception as ex:             # raport nie może zepsuć synchronizacji
+                log.warning("raporty: %s: %s", type(ex).__name__, ex)
         wynik, opis = "ok", "; ".join(zmiany) or "bez zmian"
     except BrakLogowania as ex:
         wynik, opis = "blad", str(ex)

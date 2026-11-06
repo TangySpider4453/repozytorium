@@ -1614,7 +1614,8 @@ AUTOMATY_SCHEMAT = {
         ("przerwa_core", "liczba", 60, "Przerwa: brzuch (s)", (15, 600)),
         ("przerwa_warmup", "liczba", 90, "Przerwa: serie rozgrzewkowe (s)", (15, 600)),
         ("przejscie", "bool", True, "Przed każdym ćwiczeniem przerwa do LAP z nazwą ćwiczenia („Przygotuj: …”)", None),
-        ("replace_original", "bool", False, "Zdejmuj z kalendarza oryginał RestOrTrain (blok czasowy)", None)]},
+        ("replace_original", "bool", False, "Zdejmuj z kalendarza oryginał RestOrTrain (blok czasowy)", None),
+        ("raport_linphone", "bool", True, "Po treningu raport (co zrobione, ciężary, czego nie) na Linphone do wklejenia w RestOrTrain", None)]},
     "komunikacja": {"nazwa": "Komunikacja miejska", "pola": [
         ("wlaczona", "bool", True, "Odpowiedzi o odjazdach i trasach (czat, telefon)", None),
         ("odjazdow", "liczba", 10, "Ile odjazdów pokazywać", (1, 20))]},
@@ -2039,6 +2040,24 @@ def api_garmin():
         zapis = False
     return jsonify({"zainstalowany": True, "przebiegi": przebiegi, "treningi": treningi, "zapis_dozwolony": zapis,
                     "czeka": (RTG / "data" / "teraz").exists()})
+
+
+@app.route("/api/garmin/silownia")
+def api_garmin_silownia():
+    """raporty ze zrobionych treningów siłowych (tekst do RestOrTrain) i plany do zrobienia (pliki usługi rtg, odczyt)"""
+    def wczytaj(kat):
+        wynik = []
+        for p in (RTG / "data" / kat).glob("*.json"):
+            try:
+                wynik.append(json.loads(p.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                pass
+        return wynik
+    zrobione = sorted(wczytaj("raporty"), key=lambda x: (x.get("data", ""), x.get("start", "")), reverse=True)
+    zrobione_dni = {x.get("data") for x in zrobione if x.get("z_planem") or x.get("tekst")}
+    plan = sorted((x for x in wczytaj("plany") if x.get("data") not in zrobione_dni), key=lambda x: x.get("data", ""))
+    return jsonify({"zrobione": [{k: x.get(k) for k in ("id", "data", "start", "tytul", "minuty", "tekst", "z_planem")} for x in zrobione[:60]],
+                    "do_zrobienia": [{k: x.get(k) for k in ("id", "data", "tytul", "tekst")} for x in plan]})
 
 
 @app.route("/api/intervals", methods=["GET", "POST"])

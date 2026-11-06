@@ -16,7 +16,7 @@ KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (1
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 KG = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "10"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "11"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
