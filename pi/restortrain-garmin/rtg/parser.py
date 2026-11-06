@@ -48,6 +48,20 @@ class Exercise:
     def __post_init__(self):
         if self.weight_kg is None:
             self.weight_kg = ciezar(self.note)
+        if JEDNOSTRONNE_RE.search(self.name_pl):           # „Suwnica jednonóż”, „Wiosłowanie hantlem jednorącz”
+            self.per_side = True
+
+    def strona(self):
+        """jak nazwać stronę w krokach: noga / ręka / strona"""
+        t = normalizuj(f"{self.name_pl} {self.note}")
+        if re.search(r"jednon|na\s+(kazd\w+\s+)?nog|nogi|nog[ea]\b", t):
+            return "noga"
+        if re.search(r"jednor|na\s+(kazd\w+\s+)?rek|reka|reke|hantl\w*\s+jedn", t):
+            return "ręka"
+        return "strona"
+
+
+JEDNOSTRONNE_RE = re.compile(r"jednon[oó]ż|jednor[aą]cz|jednostronn|na\s+jedn[aą]\s+(nog|r[eę]k|stron)", re.I)
 
 
 KG_RE = re.compile(r"(\d+(?:[.,]\d+)?)(?:\s*[-–]\s*(\d+(?:[.,]\d+)?))?\s*kg\b", re.I)
@@ -60,7 +74,14 @@ def ciezar(tekst):
         return None
     a = float(m.group(1).replace(",", "."))
     b = float(m.group(2).replace(",", ".")) if m.group(2) else a
-    return round((a + b) / 2, 2)
+    kg = (a + b) / 2
+    # „25 kg na stronę plus sztanga” = talerze po obu stronach + gryf: 2 × 25 + 20 = 70 kg
+    if re.match(r"\s*na\s+(każd\w+\s+)?stron", tekst[m.end():], re.I) and re.search(r"sztang|gryf", tekst, re.I):
+        kg = 2 * kg + GRYF_KG
+    return round(kg, 2)
+
+
+GRYF_KG = 20                                # standardowy gryf olimpijski
 
 
 @dataclass
@@ -118,7 +139,7 @@ WSTEPNE_RE = re.compile(r"^(?:(\d+)(?:\s*[-–]\s*(\d+))?\s+)?(?:(?:lekk|wstępn
                         r"(?:\s+(?:wstępn|wstepn|rozgrzewkow|lekk)\w*)*\s*(.*)$", re.I)
 CWICZENIE_RE = re.compile(
     r"^(?P<name>.+?)\s+(?P<sets>\d+)\s*[x×X]\s*(?P<a>\d+)(?:\s*[-–]\s*(?P<b>\d+))?\s*(?P<unit>s|sek|min|m)?(?![\w])\s*(?P<rest>.*)$")
-NA_STRONE_RE = re.compile(r"\bna\s+(nog[eę]|stron[eę]|r[eę]k[eę]|ka[zż]d[aą]\s+(nog[eę]|stron[eę]|r[eę]k[eę]))\b", re.I)
+NA_STRONE_RE = re.compile(r"(?<!kg )(?<!kg)\bna\s+(nog[eę]|stron[eę]|r[eę]k[eę]|ka[zż]d[aą]\s+(nog[eę]|stron[eę]|r[eę]k[eę]))\b", re.I)
 
 
 # przerwa po rundzie / parze: „90s odpoczynku po obu ćwiczeniach”, „Po każdej parze odpocznij 90-120s”

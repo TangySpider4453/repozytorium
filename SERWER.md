@@ -555,7 +555,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ciężaru. Serie wstępne: nazwa ćwiczenia ucinana przed dopiskiem („, 12,5 kg …”), żeby trafiała w ćwiczenie.
 - **Wskazówki** (2026-11-05): komentarz kroku i krok „Przygotuj” zawierają dopiski z planu (ciężar, „ławka 30°” także
   z nazwy ćwiczenia, zapas powtórzeń itd.); przy rundach wskazówki każdego ćwiczenia; przygotowanie serii rozgrzewkowych
-  dostaje kąt ławki ćwiczenia, którego dotyczą. Testy: 36.
+  dostaje kąt ławki ćwiczenia, którego dotyczą.
+- **Jednostronne** (2026-11-06): „na nogę / na rękę / na stronę”, „jednonóż”, „jednorącz” → w każdej serii dwa kroki
+  ćwiczenia „Lewa noga: …” i „Prawa noga: …” (ręka / strona), przerwa po obu; także w rundach (ustawienie `strony`,
+  domyślnie włączone). „25 kg na stronę plus sztanga” to talerze, nie jednostronne: ciężar = 2 × 25 + gryf 20 = 70 kg
+  (`GRYF_KG`). Testy: 37.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

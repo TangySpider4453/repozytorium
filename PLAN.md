@@ -551,3 +551,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-05 (Garmin: wskazówki)**: kąt ławki i dopiski RestOrTrain w komentarzu ćwiczenia i w kroku „Przygotuj”.
 - **2026-11-06 (Garmin: nogi z obciążeniem)**: prostowanie nóg → „Weighted Leg Extensions” (czworogłowe), uginanie →
   „Weighted Leg Curl”; treningi 6, 8, 10.11 przebudowane i sprawdzone.
+- **2026-11-06 (Garmin: lewa i prawa)**: ćwiczenia jednostronne mają w serii osobny krok na lewą i prawą stronę;
+  „kg na stronę plus sztanga” liczone jako ciężar całkowity (talerze × 2 + gryf 20 kg).

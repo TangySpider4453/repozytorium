@@ -16,7 +16,7 @@ KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (1
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 KG = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "7"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "9"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -119,11 +119,18 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
         o = opis_kroku(i)
         if d.sposob in ("nieznane", "brak"):       # bez ćwiczenia Garmin: polska nazwa w opisie kroku
             o = f"{i.name_pl}: {o}" if o else i.name_pl
-        if i.duration_s:
-            cw = lambda: k.krok("interval", "time", i.duration_s, opis=o, category=d.category, exercise=d.exerciseName, kg=i.weight_kg)
-        else:
-            ile = i.reps_max if cfg.get("rep_target", "max") == "max" else i.reps_min
-            cw = lambda: k.krok("interval", "reps", ile, opis=o, category=d.category, exercise=d.exerciseName, kg=i.weight_kg)
+        koniec, ile = ("time", i.duration_s) if i.duration_s else \
+            ("reps", i.reps_max if cfg.get("rep_target", "max") == "max" else i.reps_min)
+
+        def cw():
+            """lista kroków jednej serii: ćwiczenie jednostronne = osobno lewa i prawa (bez przerwy między nimi)"""
+            if not (i.per_side and cfg.get("strony", True)):
+                return [k.krok("interval", koniec, ile, opis=o, category=d.category, exercise=d.exerciseName, kg=i.weight_kg)]
+            st = i.strona()
+            o2 = re.sub(r",?\s*na\s+(każd\w+\s+)?(nog[eęi]|stron[eęy]|r[eę]k[eęi])\b", "", o).strip(" ,")
+            o2 = re.sub(r"\s+[—–]\s+", ", ", o2)          # „8–10 powt. — 80 kg” po wycięciu „na nogę” -> „…, 80 kg”
+            return [k.krok("interval", koniec, ile, opis=f"{'Lewa' if b == 0 else 'Prawa'} {st}: {o2}".rstrip(": "),
+                           category=d.category, exercise=d.exerciseName, kg=i.weight_kg) for b in (0, 1)]
         ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
         return cw, d, ile_txt
 
@@ -149,13 +156,13 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
             elif isinstance(i, Exercise):
                 cw, d, ile_txt = cwiczenie(i)
                 przejscie(i.name_pl, f"{i.sets}×{ile_txt}" + (f", {w}" if (w := wskazowki(i)) else ""))
-                kroki.append(k.serie(i.sets, lambda cw=cw, d=d, rc=sek.rest_class: [cw(), przerwa(rc, d.rest_s)]))
+                kroki.append(k.serie(i.sets, lambda cw=cw, d=d, rc=sek.rest_class: [*cw(), przerwa(rc, d.rest_s)]))
             elif isinstance(i, Circuit):              # rundy: A, B (, C…) jedno po drugim, przerwa dopiero po rundzie
                 cz = [cwiczenie(c) for c in i.exercises]
                 rady = "; ".join(f"{c.name_pl}: {w}" for c in i.exercises if (w := wskazowki(c)))
                 przejscie(" + ".join(c.name_pl for c in i.exercises), f"{i.rounds} rundy: " +
                           ", ".join(t for _, _, t in cz) + (f" · {rady}" if rady else ""))
-                kroki.append(k.serie(i.rounds, lambda cz=cz, i=i, rc=sek.rest_class: [cw() for cw, _, _ in cz] +
+                kroki.append(k.serie(i.rounds, lambda cz=cz, i=i, rc=sek.rest_class: [x for cw, _, _ in cz for x in cw()] +
                                      [przerwa(rc, i.rest_s)]))
             elif isinstance(i, RoundRest):
                 pass                                    # przerwa bez pary ćwiczeń: przerwy między seriami już są
