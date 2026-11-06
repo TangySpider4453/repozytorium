@@ -553,3 +553,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   „Weighted Leg Curl”; treningi 6, 8, 10.11 przebudowane i sprawdzone.
 - **2026-11-06 (Garmin: lewa i prawa)**: ćwiczenia jednostronne mają w serii osobny krok na lewą i prawą stronę;
   „kg na stronę plus sztanga” liczone jako ciężar całkowity (talerze × 2 + gryf 20 kg).
+- **2026-11-06 (Garmin: analiza AI)**: opis RestOrTrain czyta Sonnet przez lokalny Claude Code (raz na zmianę opisu,
+  pamięć podręczna), regułowy parser jako zapas; 3 treningi przebudowane z analizy AI i sprawdzone.

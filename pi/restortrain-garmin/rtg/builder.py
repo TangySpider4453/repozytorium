@@ -7,7 +7,7 @@ import hashlib
 import re
 
 from .mapping import Mapa
-from .parser import ciezar, wszystkie_cwiczenia, Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
+from .parser import analizuj, ciezar, wszystkie_cwiczenia, Circuit, Exercise, RoundRest, TimedBlock, Unparsed, WarmupSets, parsuj
 
 SPORT = {"sportTypeId": 5, "sportTypeKey": "strength_training", "displayOrder": 3}
 TYP = {"warmup": (1, "warmup", 1), "cooldown": (2, "cooldown", 2), "interval": (3, "interval", 3), "rest": (5, "rest", 5),
@@ -16,7 +16,7 @@ KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (1
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 KG = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "9"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "10"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -68,10 +68,12 @@ def wskazowki(c):
     kat = re.search(r"\d+\s*°", c.name_pl)
     if kat and kat.group(0).replace(" ", "") not in (c.note or "").replace(" ", ""):
         czesci.append(f"ławka {kat.group(0).replace(' ', '')}")
+    if c.weight_kg and "kg" not in (c.note or ""):
+        czesci.append(f"{c.weight_kg:g} kg".replace(".", ","))
     if c.note:
         czesci.append(c.note)
     if c.per_side and not re.search(r"na\s+(nog|stron|rek|ręk)", c.note or "", re.I):
-        czesci.append("na stronę")
+        czesci.append({"noga": "na nogę", "ręka": "na rękę"}.get(c.strona(), "na stronę"))
     return ", ".join(czesci)
 
 
@@ -134,7 +136,7 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
         ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
         return cw, d, ile_txt
 
-    sekcje = parsuj(opis)
+    sekcje = analizuj(opis)
     po_nazwie = {c.name_pl: c for c in wszystkie_cwiczenia(sekcje)}
 
     for sek in sekcje:

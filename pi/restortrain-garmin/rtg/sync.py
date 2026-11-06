@@ -19,6 +19,7 @@ import yaml
 from .builder import WERSJA, buduj, hash_opisu, nasz
 from .garmin import BrakLogowania, api, polacz
 from .mapping import Mapa, dopisz_nieznane
+from . import parser
 from .parser import wyglada_na_silowy
 from .powiadom import powiadom
 from .stan import baza
@@ -125,6 +126,7 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
         do = date.fromisoformat(do_dnia) if do_dnia else od + timedelta(days=int(cfg.get("okno_dni", 14)))
         pozycje, zrobione = kalendarz(g, od, do)
         mapa = Mapa()
+        parser.AI["wlaczone"] = bool(cfg.get("ai_analiza", True))      # opis czyta Claude (Sonnet), reguły jako zapas
         aktualne = set()
         for p in pozycje:
             if p["date"] in zrobione:                       # trening siłowy tego dnia już zrobiony: nie ruszamy
@@ -142,7 +144,7 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
             if nasz(w) or w.get("consumerName") != ZRODLO or not wyglada_na_silowy(w.get("description") or ""):
                 continue
             # hash: opis + wersja budowy + ustawienia (zmiana przerw / trybu na stronie też przebudowuje treningi)
-            ust = json.dumps({k: cfg.get(k) for k in ("rep_target", "rest_mode", "przerwy_s", "przejscie")}, sort_keys=True) + hash_opisu((KAT / "exercises.yaml").read_text(encoding="utf-8"))[:12]   # zmiana mapowania -> przebudowa
+            ust = json.dumps({k: cfg.get(k) for k in ("rep_target", "rest_mode", "przerwy_s", "przejscie", "ai_analiza")}, sort_keys=True) + hash_opisu((KAT / "exercises.yaml").read_text(encoding="utf-8"))[:12]   # zmiana mapowania -> przebudowa
             src, d, h = str(w["workoutId"]), p["date"], hash_opisu((w.get("description") or "") + WERSJA + ust)
             aktualne.add((src, d))
             if cfg.get("llm_fallback") and dopisz_nieznane(w.get("description") or "", mapa):

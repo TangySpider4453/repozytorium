@@ -10,3 +10,5 @@ __pycache__/
 data/sync.lock
 data/teraz
 data/llm_nieudane.json
+data/ai_cache.json
+data/llm_nieudane.json

@@ -44,6 +44,7 @@ class Exercise:
     per_side: bool = False
     note: str = ""
     weight_kg: float | None = None          # „17,5 kg”, „20-22,5 kg” (zakres -> średnia)
+    side_word: str | None = None            # noga / ręka / strona (z analizy AI)
 
     def __post_init__(self):
         if self.weight_kg is None:
@@ -53,6 +54,8 @@ class Exercise:
 
     def strona(self):
         """jak nazwać stronę w krokach: noga / ręka / strona"""
+        if self.side_word:
+            return self.side_word
         t = normalizuj(f"{self.name_pl} {self.note}")
         if re.search(r"jednon|na\s+(kazd\w+\s+)?nog|nogi|nog[ea]\b", t):
             return "noga"
@@ -281,6 +284,18 @@ def wszystkie_cwiczenia(sekcje):
                 yield i
             elif isinstance(i, Circuit):
                 yield from i.exercises
+
+
+AI = {"wlaczone": False}                    # sync włącza (config.yaml ai_analiza); testy i CLI parse: reguły
+
+
+def analizuj(opis):
+    """sekcje treningu: najpierw Claude (rtg.ai, z pamięcią), gdy wyłączone albo nieudane — parser regułowy"""
+    if AI["wlaczone"]:
+        from .ai import analizuj as przez_ai
+        if (sekcje := przez_ai(opis)) is not None:
+            return sekcje
+    return parsuj(opis)
 
 
 def wyglada_na_silowy(opis):

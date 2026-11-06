@@ -559,7 +559,13 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **Jednostronne** (2026-11-06): „na nogę / na rękę / na stronę”, „jednonóż”, „jednorącz” → w każdej serii dwa kroki
   ćwiczenia „Lewa noga: …” i „Prawa noga: …” (ręka / strona), przerwa po obu; także w rundach (ustawienie `strony`,
   domyślnie włączone). „25 kg na stronę plus sztanga” to talerze, nie jednostronne: ciężar = 2 × 25 + gryf 20 = 70 kg
-  (`GRYF_KG`). Testy: 37.
+  (`GRYF_KG`).
+- **Analiza AI** (2026-11-06, `rtg/ai.py`, `ai_analiza: true`): opis treningu czyta Claude Sonnet (`claude -p --tools ""`,
+  model `claude-sonnet-5-5`, logowanie z `claude.env` usługi — z sesji SSH bez niego „Not logged in”). Zwraca JSON
+  (sekcje: czas / serie_rozgrzewkowe / cwiczenie / rundy, kg całkowite, jednostronne + strona), walidowany i zamieniany
+  na obiekty parsera. Jedno zapytanie na nowy lub zmieniony opis (~15–30 s), wynik w `data/ai_cache.json` (klucz: hash
+  opisu + wersja promptu + model); przebudowy z pamięci. Nieudana odpowiedź → parser regułowy. Garmin ucina opis
+  RestOrTrain do ~1000 znaków („…”), więc końcówki dłuższych treningów (np. brzuch w Full upper) nie ma w źródle. Testy: 41.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

@@ -112,10 +112,11 @@ def dopisz_nieznane(opis, mapa, sciezka=KAT / "exercises.yaml"):
     """nieznane ćwiczenia z opisu -> propozycja Claude (zwalidowana) dopisana do exercises.yaml z „auto: true”;
     zwraca True, gdy coś dopisano. Bez dopasowania: powiadomienie z prośbą o alias."""
     import time
-    from .parser import WarmupSets, parsuj, wszystkie_cwiczenia
+    from .parser import WarmupSets, analizuj, wszystkie_cwiczenia
     from .powiadom import powiadom
-    nazwy = {i.name_pl for i in wszystkie_cwiczenia(parsuj(opis))} | \
-            {i.exercise_ref for x in parsuj(opis) for i in x.items if isinstance(i, WarmupSets)}
+    sekcje = analizuj(opis)
+    nazwy = {i.name_pl for i in wszystkie_cwiczenia(sekcje)} | \
+            {i.exercise_ref for x in sekcje for i in x.items if isinstance(i, WarmupSets)}
     nieznane = [n for n in sorted(nazwy) if mapa.znajdz(n).sposob == "nieznane"]
     if not nieznane:
         return False
