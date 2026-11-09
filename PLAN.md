@@ -559,3 +559,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   powtórzenia, ciężary, niezrobione) do skopiowania w RestOrTrain i planami do zrobienia; po treningu raport na Linphone.
 - **2026-11-06 (Garmin: jednostronne jako jeden krok)**: na życzenie Antka lewa i prawa znów w jednym kroku (cel ×2,
   bo zegarek liczy obie strony); raport po treningu dzieli wynik na jedną stronę.
+- **2026-11-09 (raport: bez dzielenia)**: raport po treningu nie dzieli powtórzeń ćwiczeń jednostronnych przez 2
+  (Antek wpisuje w Garminie wynik na jedną stronę).

@@ -126,14 +126,6 @@ def _seria(s):
     return f"{t}×{_kg(kg)}" if kg else t
 
 
-def _seria_pol(s):
-    """seria jednostronna liczona razem: 20 powtórzeń obu nóg -> „10×20 kg” na nogę (nieparzyste: 10,5)"""
-    r = s.get("repetitionCount")
-    kg = (s.get("weight") or 0) / 1000
-    t = (f"{r / 2:g}".replace(".", ",")) if r else "?"
-    return f"{t}×{_kg(kg)}" if kg else t
-
-
 def _seria_obu(lewa, prawa, strona):
     """lewa/prawa w jednej serii: brak ciężaru po jednej stronie = ten sam co po drugiej"""
     kg = (prawa or {}).get("weight") or (lewa or {}).get("weight") or 0
@@ -159,10 +151,7 @@ def raport(akt, sety, trening=None, nazwy_pl=None):
                 lewe, prawe = (po_indeksie.get(p["indeksy"][0], []), po_indeksie.get(p["indeksy"][1], []) if len(p["indeksy"]) > 1 else [])
                 n = max(len(lewe), len(prawe))
                 opis = [_seria_obu(lewe[i] if i < len(lewe) else None, prawe[i] if i < len(prawe) else None, p["strony"]) for i in range(n)]
-            elif p.get("razem"):                # jeden krok na obie strony: wynik na jedną stronę = połowa
-                ss = [s for i in p["indeksy"] for s in po_indeksie.get(i, [])]
-                n, opis = len(ss), [_seria_pol(s) for s in ss]
-            else:
+            else:                               # jednostronne w jednym kroku: Antek wpisuje wynik na jedną stronę
                 ss = [s for i in p["indeksy"] for s in po_indeksie.get(i, [])]
                 n, opis = len(ss), [_seria(s) for s in ss]
             uzyte |= set(p["indeksy"])

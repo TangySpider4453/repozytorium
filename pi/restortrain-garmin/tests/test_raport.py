@@ -28,7 +28,7 @@ def test_bez_planu_po_nazwach():
     assert "- Martwy ciąg: 10×50 kg, 15×50 kg, 9×60 kg, 6×80 kg" in t and "Niezrobione" not in t
 
 
-def test_jednostronne_razem_dzielone_na_dwa():
+def test_jednostronne_bez_dzielenia():
     from rtg.builder import buduj
     w = buduj({"workoutId": 1, "title": "Dół — x", "description": "Nogi\n- Bułgary 3x8-10 na nogę — 12,5 kg na hantel"}, {})
     w["workoutName"] = "Siłka Dół"
@@ -36,4 +36,4 @@ def test_jednostronne_razem_dzielone_na_dwa():
     sety = [{"setType": "ACTIVE", "wktStepIndex": 1, "repetitionCount": r, "weight": 12500.0,
              "exercises": [{"name": "DUMBBELL_BULGARIAN_SPLIT_SQUAT"}]} for r in (20, 19)]
     t, _, _ = raport(akt, sety, w, {})
-    assert "- Bułgary (na nogę): 10×12,5 kg, 9,5×12,5 kg (plan: 3×8–10, 12,5 kg) — 2 z 3 serii" in t
+    assert "- Bułgary (na nogę): 20×12,5 kg, 19×12,5 kg (plan: 3×8–10, 12,5 kg) — 2 z 3 serii" in t
