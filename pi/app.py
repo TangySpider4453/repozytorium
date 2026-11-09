@@ -1614,6 +1614,7 @@ AUTOMATY_SCHEMAT = {
         ("przerwa_core", "liczba", 60, "Przerwa: brzuch (s)", (15, 600)),
         ("przerwa_warmup", "liczba", 90, "Przerwa: serie rozgrzewkowe (s)", (15, 600)),
         ("przejscie", "bool", True, "Przed każdym ćwiczeniem przerwa do LAP z nazwą ćwiczenia („Przygotuj: …”)", None),
+        ("przejscie_rundy_s", "liczba", 10, "W rundach (superserie): przerwa na przejście między ćwiczeniami (s, 0 = bez)", (0, 60)),
         ("replace_original", "bool", False, "Zdejmuj z kalendarza oryginał RestOrTrain (blok czasowy)", None),
         ("raport_linphone", "bool", True, "Po treningu raport (co zrobione, ciężary, czego nie) na Linphone do wklejenia w RestOrTrain", None)]},
     "komunikacja": {"nazwa": "Komunikacja miejska", "pola": [

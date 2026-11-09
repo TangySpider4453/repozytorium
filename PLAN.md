@@ -563,3 +563,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   (Antek wpisuje w Garminie wynik na jedną stronę).
 - **2026-11-09 (Garmin: ręce/nogi vs całe ciało)**: ćwiczenia na rękę / nogę mają cel na jedną stronę i raport bez
   dzielenia; całe ciało z obrotem (woodchop) cel obu stron razem (24) i raport dzieli przez 2 (12 na stronę).
+- **2026-11-09 (Garmin: przejście w rundach)**: w seriach z kilkoma ćwiczeniami 10 s przerwy na przejście między nimi
+  (ustawienie na stronie).

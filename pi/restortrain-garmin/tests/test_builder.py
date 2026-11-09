@@ -109,7 +109,11 @@ def test_rundy_jedna_grupa_przerwa_po_rundzie():
     g = k[1]
     assert g["type"] == "RepeatGroupDTO" and g["numberOfIterations"] == 3 and len(k) == 2
     typy = [(x["stepType"]["stepTypeKey"], x["endConditionValue"]) for x in g["workoutSteps"]]
-    assert typy == [("interval", 10), ("interval", 15), ("rest", 90)]
+    assert typy == [("interval", 10), ("rest", 10), ("interval", 15), ("rest", 90)]   # 10 s przejścia między ćwiczeniami
+    assert g["workoutSteps"][1]["description"] == "Przejście: Unoszenie bokiem"
+    bez = buduj({"workoutId": 5, "title": "X", "description": "Barki — 3 rundy naprzemiennie\n- Wyciskanie hantli nad głowę 1x8\n"
+                 "- Unoszenie bokiem 1x12\n"}, {**CFG, "przejscie_rundy_s": 0})["workoutSegments"][0]["workoutSteps"][1]
+    assert len(bez["workoutSteps"]) == 3
 
 
 def test_ciezar_z_planu():

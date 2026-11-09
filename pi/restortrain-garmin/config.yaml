@@ -4,6 +4,7 @@ co_min: 10                   # co ile minut sprawdzać zmiany (timer budzi co 10
 zapis_dozwolony: true        # zgoda Antka 2026-11-05: zapis w Garmin Connect włączony
 rep_target: max              # liczba powtórzeń w kroku: max (górna granica zakresu) albo min
 przejscie: true               # przed każdym ćwiczeniem przerwa do LAP z opisem „Przygotuj: …”
+przejscie_rundy_s: 10         # w rundach (superserie) przerwa między ćwiczeniami na przejście (0 = bez)
 rest_mode: timed             # przerwa: timed (odliczanie) albo lap_button (do przycisku okrążenia)
 przerwy_s:                   # przerwy między seriami
   main: 180

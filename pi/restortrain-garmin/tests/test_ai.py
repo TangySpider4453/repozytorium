@@ -56,6 +56,7 @@ def test_budowa_z_ai(tmp_path, monkeypatch):
     opisy = [x.get("description") for x in k]
     assert "Przygotuj: Wyciskanie hantli na skosie dodatnim 30° (2 serie rozgrzewkowe, 12,5 kg)" in opisy
     runda = [x for x in k if x["type"] == "RepeatGroupDTO"][1]["workoutSteps"]
-    assert [x.get("description") for x in runda][:3] == ["8–10 powt., ławka 30°, 17,5 kg na hantel",
+    assert [x.get("description") for x in runda if x["stepType"]["stepTypeKey"] == "interval"][:2] + [None] == ["8–10 powt., ławka 30°, 17,5 kg na hantel",
                                                          "Na rękę: 8–10 powt., dobierz ciężar", None]
+    assert runda[1]["description"] == "Przejście: Wiosłowanie hantlem" and runda[1]["endConditionValue"] == 10.0
     assert [x for x in k if x["type"] == "RepeatGroupDTO"][2]["workoutSteps"][0]["weightValue"] == 70000.0

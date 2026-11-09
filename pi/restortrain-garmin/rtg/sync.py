@@ -36,7 +36,7 @@ def konfiguracja():
     try:                                    # ustawienia ze strony (portal na tym samym Pi)
         with urllib.request.urlopen("http://127.0.0.1/api/automaty", timeout=5) as r:
             g = json.loads(r.read())["wartosci"]["garmin"]
-        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original", "przejscie", "raport_linphone") if k in g})
+        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original", "przejscie", "raport_linphone", "przejscie_rundy_s") if k in g})
         cfg["przerwy_s"] = {k: g.get(f"przerwa_{k}", cfg["przerwy_s"].get(k)) for k in ("main", "accessory", "core", "warmup")}
     except (OSError, ValueError, KeyError):
         pass
@@ -144,7 +144,7 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
             if nasz(w) or w.get("consumerName") != ZRODLO or not wyglada_na_silowy(w.get("description") or ""):
                 continue
             # hash: opis + wersja budowy + ustawienia (zmiana przerw / trybu na stronie też przebudowuje treningi)
-            ust = json.dumps({k: cfg.get(k) for k in ("rep_target", "rest_mode", "przerwy_s", "przejscie", "ai_analiza")}, sort_keys=True) + hash_opisu((KAT / "exercises.yaml").read_text(encoding="utf-8"))[:12]   # zmiana mapowania -> przebudowa
+            ust = json.dumps({k: cfg.get(k) for k in ("rep_target", "rest_mode", "przerwy_s", "przejscie", "ai_analiza", "przejscie_rundy_s")}, sort_keys=True) + hash_opisu((KAT / "exercises.yaml").read_text(encoding="utf-8"))[:12]   # zmiana mapowania -> przebudowa
             src, d, h = str(w["workoutId"]), p["date"], hash_opisu((w.get("description") or "") + WERSJA + ust)
             aktualne.add((src, d))
             if cfg.get("llm_fallback") and dopisz_nieznane(w.get("description") or "", mapa):

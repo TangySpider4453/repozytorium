@@ -564,6 +564,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ćwiczeniu kończyn (np. wiosłowanie) jest poprawiana na ręka. Stare kroki „razem obie” przy rękach: plan /2, wynik bez; stare
   aktywności z krokami L/P nadal raportowane jako „L 10 / P 10”. Ustawienie `strony: false` = zwykły krok bez ×2. „25 kg na stronę plus sztanga” to talerze, nie jednostronne: ciężar = 2 × 25 + gryf 20 = 70 kg
   (`GRYF_KG`).
+- **Przejście w rundach** (2026-11-09): między ćwiczeniami jednej rundy krok `rest` na czas „Przejście: <następne>”,
+  domyślnie 10 s (`przejscie_rundy_s`, strona Automatyczne / Siłownia, 0 = bez).
 - **Analiza AI** (2026-11-06, `rtg/ai.py`, `ai_analiza: true`): opis treningu czyta Claude Sonnet (`claude -p --tools ""`,
   model `claude-sonnet-5-5`, logowanie z `claude.env` usługi — z sesji SSH bez niego „Not logged in”). Zwraca JSON
   (sekcje: czas / serie_rozgrzewkowe / cwiczenie / rundy, kg całkowite, jednostronne + strona), walidowany i zamieniany

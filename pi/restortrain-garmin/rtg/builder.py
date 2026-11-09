@@ -16,7 +16,7 @@ KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (1
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 KG = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "13"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "14"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -170,8 +170,15 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
                 rady = "; ".join(f"{c.name_pl}: {w}" for c in i.exercises if (w := wskazowki(c)))
                 przejscie(" + ".join(c.name_pl for c in i.exercises), f"{i.rounds} rundy: " +
                           ", ".join(t for _, _, t in cz) + (f" · {rady}" if rady else ""))
-                kroki.append(k.serie(i.rounds, lambda cz=cz, i=i, rc=sek.rest_class: [x for cw, _, _ in cz for x in cw()] +
-                                     [przerwa(rc, i.rest_s)]))
+                def runda(cz=cz, i=i, rc=sek.rest_class):
+                    """A, przejście 10 s (do B), B, …, przerwa po rundzie"""
+                    kr, s_prz = [], int(cfg.get("przejscie_rundy_s", 10) or 0)
+                    for j, (cw, _, _) in enumerate(cz):
+                        if j and s_prz:
+                            kr.append(k.krok("rest", "time", s_prz, opis=f"Przejście: {i.exercises[j].name_pl}"))
+                        kr += cw()
+                    return kr + [przerwa(rc, i.rest_s)]
+                kroki.append(k.serie(i.rounds, runda))
             elif isinstance(i, RoundRest):
                 pass                                    # przerwa bez pary ćwiczeń: przerwy między seriami już są
             elif isinstance(i, Unparsed):
