@@ -53,15 +53,21 @@ class Exercise:
             self.per_side = True
 
     def strona(self):
-        """jak nazwać stronę w krokach: noga / ręka / strona"""
-        if self.side_word:
-            return self.side_word
+        """jak liczyć stronę: noga / ręka (cel i wynik na jedną stronę) albo strona (ćwiczenie całym ciałem z obrotem,
+        np. woodchop: cel obie strony razem, raport dzieli na 2). Podpowiedź AI „strona” dla ćwiczeń kończyn
+        (np. wiosłowanie hantlem) jest poprawiana na ręka / noga."""
         t = normalizuj(f"{self.name_pl} {self.note}")
-        if re.search(r"jednon|na\s+(kazd\w+\s+)?nog|nogi|nog[ea]\b", t):
+        if re.search(ROTACJA, t):
+            return "strona"
+        if self.side_word in ("noga", "ręka"):
+            return self.side_word
+        if re.search(r"jednon|na\s+(kazd\w+\s+)?nog|nogi|nog[ea]\b|suwnic|bulgar|wykrok|przysiad|wspiec|lydk|odwodz|przywodz", t):
             return "noga"
-        if re.search(r"jednor|na\s+(kazd\w+\s+)?rek|reka|reke|hantl\w*\s+jedn", t):
-            return "ręka"
-        return "strona"
+        return "ręka"
+
+
+# ćwiczenia „na stronę” całym ciałem (tułów, obrót): woodchop / rąbanie, Pallof, skręty, rotacje, deska bokiem, chop
+ROTACJA = r"woodchop|wood chop|rabanie|chop\b|pallof|skret|skrot|russian|rotac|deska\s+bok|bocz\w*\s+desk|side\s+plank|windmill|wiatrak"
 
 
 JEDNOSTRONNE_RE = re.compile(r"jednon[oó]ż|jednor[aą]cz|jednostronn|na\s+jedn[aą]\s+(nog|r[eę]k|stron)", re.I)

@@ -38,7 +38,7 @@ def test_dol_b_kryteria_akceptacji():
     assert len(grupy) == 8
     assert [g["numberOfIterations"] for g in grupy] == [4, 4, 3, 3, 3, 3, 3, 3]
     cw = [g["workoutSteps"][0] for g in grupy]
-    assert [c["endConditionValue"] for c in cw] == [6, 20, 20, 12, 12, 15, 12, 12]   # suwnica, bułgary: obie nogi razem
+    assert [c["endConditionValue"] for c in cw] == [6, 10, 10, 12, 12, 15, 12, 12]   # suwnica, bułgary: cel na nogę
     assert all(c["endCondition"]["conditionTypeKey"] == "reps" and (c["category"] or c["description"].startswith("Prostowanie nóg")) for c in cw)
     assert [g["workoutSteps"][-1]["endConditionValue"] for g in grupy] == [180, 180, 180, 90, 90, 90, 60, 60]
     assert cw[0]["description"] == "4–6 powt., 1-2 powtórzenia w zapasie"
@@ -133,15 +133,16 @@ def test_wskazowki_w_komentarzach_i_przygotowaniu():
     assert k[3]["workoutSteps"][0]["description"] == "8–10 powt., ławka 30°, 17,5 kg na hantel"
 
 
-def test_jednostronne_jeden_krok_razy_dwa():
+def test_jednostronne_konczyny_na_strone_cale_cialo_razem():
     w = buduj({"workoutId": 1, "title": "X", "description": "Nogi\n- Suwnica jednonóż 4x8-10 na nogę — 80 kg\n"
-               "- Wiosłowanie hantlem jednorącz 3x10\n- Woodchop 3x12 na stronę\n- Martwy ciąg 3x5"}, {"przejscie": False})
+               "- Wiosłowanie hantlem 3x10 na stronę\n- Woodchop 3x12 na stronę\n- Martwy ciąg 3x5"}, {"przejscie": False})
     g = w["workoutSegments"][0]["workoutSteps"]
     s = [[x.get("description") for x in grp["workoutSteps"]] for grp in g]
-    assert s[0] == ["Na nogę: 8–10 powt., 80 kg (razem obie: 16–20)", None]
-    assert g[0]["workoutSteps"][0]["endConditionValue"] == 20.0          # zegarek liczy obie nogi
-    assert s[1][0] == "Na rękę: 10 powt. (razem obie: 20)" and s[2][0] == "Na stronę: 12 powt. (razem obie: 24)"
-    assert len(s[3]) == 2 and g[3]["workoutSteps"][0]["endConditionValue"] == 5.0   # obustronne bez zmian
+    c = [grp["workoutSteps"][0]["endConditionValue"] for grp in g]
+    assert s[0] == ["Na nogę: 8–10 powt., 80 kg", None] and c[0] == 10.0      # nogi: cel na jedną nogę
+    assert s[1][0] == "Na rękę: 10 powt." and c[1] == 10.0                     # wiosłowanie: na rękę
+    assert s[2][0] == "Na stronę: 12 powt. (razem obie: 24)" and c[2] == 24.0  # woodchop: całe ciało, obie razem
+    assert len(s[3]) == 2 and c[3] == 5.0                                      # obustronne bez zmian
     p = buduj({"workoutId": 1, "title": "X", "description": "N\n- Przysiad ze sztangą 4x6-8 — 25 kg na stronę plus sztanga"},
               {"przejscie": False})["workoutSegments"][0]["workoutSteps"][0]["workoutSteps"]
     assert len(p) == 2 and p[0]["weightValue"] == 70000.0              # talerze „na stronę” to nie jednostronne

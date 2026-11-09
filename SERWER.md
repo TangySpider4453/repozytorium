@@ -558,7 +558,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   dostaje kąt ławki ćwiczenia, którego dotyczą.
 - **Jednostronne** (2026-11-06, zmienione tego samego dnia): „na nogę / na rękę / na stronę”, „jednonóż”, „jednorącz”
   → JEDEN krok na serię „Na nogę: 8–10 powt. … (razem obie: 16–20)”, cel = powtórzenia × 2 (zegarek liczy obie strony;
-  osobne kroki lewa/prawa źle się liczyły). Raport NIE dzieli wyniku (od 2026-11-09: Antek wpisuje w Garminie wynik na jedną stronę); stare
+  osobne kroki lewa/prawa źle się liczyły). Od 2026-11-09: ręce / nogi (`strona()` = ręka / noga) → krok „Na nogę: 8–10 powt.”, cel na JEDNĄ stronę,
+  raport bez dzielenia (Antek wpisuje wynik na stronę); całe ciało z obrotem (`ROTACJA` w parser.py: woodchop, Pallof,
+  skręty, deska bokiem…) → „Na stronę: … (razem obie: 24)”, cel ×2, raport dzieli przez 2. Podpowiedź AI „strona” przy
+  ćwiczeniu kończyn (np. wiosłowanie) jest poprawiana na ręka. Stare kroki „razem obie” przy rękach: plan /2, wynik bez; stare
   aktywności z krokami L/P nadal raportowane jako „L 10 / P 10”. Ustawienie `strony: false` = zwykły krok bez ×2. „25 kg na stronę plus sztanga” to talerze, nie jednostronne: ciężar = 2 × 25 + gryf 20 = 70 kg
   (`GRYF_KG`).
 - **Analiza AI** (2026-11-06, `rtg/ai.py`, `ai_analiza: true`): opis treningu czyta Claude Sonnet (`claude -p --tools ""`,

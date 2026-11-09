@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from .mapping import wczytaj
+from .parser import ROTACJA, normalizuj
 from .powiadom import powiadom
 
 log = logging.getLogger("rtg.raport")
@@ -83,15 +84,19 @@ def plan_z_treningu(w):
                 grupy[-1]["indeksy"].append(po_kroku[id(x)])
                 grupy[-1]["strony"] = strona.group(2)
                 continue
-            razem = re.match(r"Na (nogę|rękę|stronę): ", x.get("description") or "")
-            grupy.append({"krok": x, "indeksy": [po_kroku[id(x)]], "strony": None,
-                          "razem": {"nogę": "noga", "rękę": "ręka", "stronę": "strona"}[razem.group(1)] if razem else None})
+            na = re.match(r"Na (nogę|rękę|stronę): ", x.get("description") or "")
+            gr_na = {"nogę": "noga", "rękę": "ręka", "stronę": "strona"}[na.group(1)] if na else None
+            obie = bool(na) and "(razem obie:" in (x.get("description") or "")   # cel = obie strony razem (całe ciało)
+            grupy.append({"krok": x, "indeksy": [po_kroku[id(x)]], "strony": None, "razem": gr_na, "obie": obie})
         for j, gr in enumerate(grupy):
             x = gr["krok"]
             n = nazwy[j] if j < len(nazwy) else (x.get("exerciseName") or "ćwiczenie").replace("_", " ").lower()
             ile = x.get("endConditionValue")
-            if gr.get("razem") and ile:
-                ile = ile / 2                       # cel kroku = obie strony razem
+            if gr.get("obie") and ile:
+                ile = ile / 2                       # cel kroku = obie strony razem -> plan na stronę
+            # wynik dzielimy tylko w ćwiczeniach całym ciałem (woodchop itd.); stare treningi miały „razem obie” też
+            # przy rękach i nogach, a tam Antek wpisuje wynik na jedną stronę
+            gr["obie"] = gr.get("obie") and bool(re.search(ROTACJA, normalizuj(f"{n} {x.get('exerciseName') or ''}".replace("_", " "))))
             kg = (x.get("weightValue") or 0) / 1000
             if len(grupy) > 1:
                 plan = f"{k['numberOfIterations']} rundy" + (f", {int(ile)} powt." if ile and x["endCondition"]["conditionTypeKey"] == "reps" else "")
@@ -100,7 +105,7 @@ def plan_z_treningu(w):
             if kg and "kg" not in plan:
                 plan += f", {_kg(kg)}"
             pozycje.append({"nazwa": n + (" – rozgrzewka" if rozgrzewka else ""), "plan": plan, "serie": k["numberOfIterations"],
-                            "strony": gr["strony"], "razem": gr.get("razem"), "indeksy": gr["indeksy"], "rozgrzewka": rozgrzewka})
+                            "strony": gr["strony"], "razem": gr.get("razem"), "obie": gr.get("obie"), "indeksy": gr["indeksy"], "rozgrzewka": rozgrzewka})
     return pozycje
 
 
@@ -123,6 +128,14 @@ def _seria(s):
     r = s.get("repetitionCount")
     kg = (s.get("weight") or 0) / 1000
     t = str(r) if r else "?"
+    return f"{t}×{_kg(kg)}" if kg else t
+
+
+def _seria_pol(s):
+    """całe ciało liczone razem: 24 powtórzenia obu stron -> „12” na stronę (nieparzyste: 12,5)"""
+    r = s.get("repetitionCount")
+    kg = (s.get("weight") or 0) / 1000
+    t = (f"{r / 2:g}".replace(".", ",")) if r else "?"
     return f"{t}×{_kg(kg)}" if kg else t
 
 
@@ -151,7 +164,10 @@ def raport(akt, sety, trening=None, nazwy_pl=None):
                 lewe, prawe = (po_indeksie.get(p["indeksy"][0], []), po_indeksie.get(p["indeksy"][1], []) if len(p["indeksy"]) > 1 else [])
                 n = max(len(lewe), len(prawe))
                 opis = [_seria_obu(lewe[i] if i < len(lewe) else None, prawe[i] if i < len(prawe) else None, p["strony"]) for i in range(n)]
-            else:                               # jednostronne w jednym kroku: Antek wpisuje wynik na jedną stronę
+            elif p.get("obie"):                 # całe ciało (woodchop): zegarek liczy obie strony -> na stronę = połowa
+                ss = [s for i in p["indeksy"] for s in po_indeksie.get(i, [])]
+                n, opis = len(ss), [_seria_pol(s) for s in ss]
+            else:                               # ręce / nogi: Antek wpisuje wynik na jedną stronę
                 ss = [s for i in p["indeksy"] for s in po_indeksie.get(i, [])]
                 n, opis = len(ss), [_seria(s) for s in ss]
             uzyte |= set(p["indeksy"])
