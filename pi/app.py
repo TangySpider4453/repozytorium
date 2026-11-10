@@ -1616,6 +1616,7 @@ AUTOMATY_SCHEMAT = {
         ("przejscie", "bool", True, "Przed każdym ćwiczeniem przerwa do LAP z nazwą ćwiczenia („Przygotuj: …”)", None),
         ("przejscie_rundy_s", "liczba", 10, "W rundach (superserie): przerwa na przejście między ćwiczeniami (s, 0 = bez)", (0, 60)),
         ("replace_original", "bool", False, "Zdejmuj z kalendarza oryginał RestOrTrain (blok czasowy)", None),
+        ("sprzataj_po_treningu", "bool", True, "Po zrobionym treningu siłowym zdejmuj z kalendarza wpis RestOrTrain z tego dnia", None),
         ("raport_linphone", "bool", True, "Po treningu raport (co zrobione, ciężary, czego nie) na Linphone do wklejenia w RestOrTrain", None)]},
     "komunikacja": {"nazwa": "Komunikacja miejska", "pola": [
         ("wlaczona", "bool", True, "Odpowiedzi o odjazdach i trasach (czat, telefon)", None),

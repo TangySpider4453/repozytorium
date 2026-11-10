@@ -38,7 +38,7 @@ def test_dol_b_kryteria_akceptacji():
     assert len(grupy) == 8
     assert [g["numberOfIterations"] for g in grupy] == [4, 4, 3, 3, 3, 3, 3, 3]
     cw = [g["workoutSteps"][0] for g in grupy]
-    assert [c["endConditionValue"] for c in cw] == [6, 10, 10, 12, 12, 15, 12, 12]   # suwnica, bułgary: cel na nogę
+    assert [c["endConditionValue"] for c in cw] == [6, 20, 20, 12, 12, 15, 12, 12]   # suwnica, bułgary: x2 z listy (obie nogi ciągiem)
     assert all(c["endCondition"]["conditionTypeKey"] == "reps" and (c["category"] or c["description"].startswith("Prostowanie nóg")) for c in cw)
     assert [g["workoutSteps"][-1]["endConditionValue"] for g in grupy] == [180, 180, 180, 90, 90, 90, 60, 60]
     assert cw[0]["description"] == "4–6 powt., 1-2 powtórzenia w zapasie"
@@ -143,9 +143,9 @@ def test_jednostronne_konczyny_na_strone_cale_cialo_razem():
     g = w["workoutSegments"][0]["workoutSteps"]
     s = [[x.get("description") for x in grp["workoutSteps"]] for grp in g]
     c = [grp["workoutSteps"][0]["endConditionValue"] for grp in g]
-    assert s[0] == ["Na nogę: 8–10 powt., 80 kg", None] and c[0] == 10.0      # nogi: cel na jedną nogę
+    assert s[0] == ["Na nogę: 8–10 powt., 80 kg (obie strony razem: 16–20)", None] and c[0] == 20.0   # lista x2
     assert s[1][0] == "Na rękę: 10 powt." and c[1] == 10.0                     # wiosłowanie: na rękę
-    assert s[2][0] == "Na stronę: 12 powt. (razem obie: 24)" and c[2] == 24.0  # woodchop: całe ciało, obie razem
+    assert s[2][0] == "Na stronę: 12 powt. (obie strony razem: 24)" and c[2] == 24.0  # woodchop: całe ciało, obie razem
     assert len(s[3]) == 2 and c[3] == 5.0                                      # obustronne bez zmian
     p = buduj({"workoutId": 1, "title": "X", "description": "N\n- Przysiad ze sztangą 4x6-8 — 25 kg na stronę plus sztanga"},
               {"przejscie": False})["workoutSegments"][0]["workoutSteps"][0]["workoutSteps"]

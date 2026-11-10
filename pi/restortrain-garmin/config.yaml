@@ -11,6 +11,7 @@ przerwy_s:                   # przerwy między seriami
   accessory: 90
   core: 60
   warmup: 90
+sprzataj_po_treningu: true   # po zrobionym treningu siłowym zdejmij z kalendarza oryginał RestOrTrain z tego dnia (zgoda Antka 2026-11-10)
 replace_original: false      # true = zdejmij z kalendarza oryginał RestOrTrain (definicji nie usuwa); WYMAGA zgody
 ai_analiza: true             # opis treningu czyta Claude Sonnet (claude -p, bez narzędzi; raz na zmianę opisu, pamięć data/ai_cache.json)
 llm_fallback: true           # nieznane ćwiczenia dopasowuje `claude -p` (Haiku, bez narzędzi; wysyła nazwy ćwiczeń do Anthropic)

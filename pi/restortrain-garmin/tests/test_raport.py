@@ -28,7 +28,7 @@ def test_bez_planu_po_nazwach():
     assert "- Martwy ciąg: 10×50 kg, 15×50 kg, 9×60 kg, 6×80 kg" in t and "Niezrobione" not in t
 
 
-def test_jednostronne_bez_dzielenia():
+def test_jednostronne_x2_dzielone():
     from rtg.builder import buduj
     w = buduj({"workoutId": 1, "title": "Dół — x", "description": "Nogi\n- Bułgary 3x8-10 na nogę — 12,5 kg na hantel"}, {})
     w["workoutName"] = "Siłka Dół"
@@ -36,15 +36,15 @@ def test_jednostronne_bez_dzielenia():
     sety = [{"setType": "ACTIVE", "wktStepIndex": 1, "repetitionCount": r, "weight": 12500.0,
              "exercises": [{"name": "DUMBBELL_BULGARIAN_SPLIT_SQUAT"}]} for r in (20, 19)]
     t, _, _ = raport(akt, sety, w, {})
-    assert "- Bułgary (na nogę): 20×12,5 kg, 19×12,5 kg (plan: 3×8–10, 12,5 kg) — 2 z 3 serii" in t
+    assert "- Bułgary (na nogę): 10×12,5 kg, 9,5×12,5 kg (plan: 3×8–10, 12,5 kg) — 2 z 3 serii" in t
 
 
-def test_cale_cialo_dzielone_konczyny_nie():
+def test_lista_x2_dzielona_reka_nie():
     from rtg.builder import buduj
-    w = buduj({"workoutId": 1, "title": "X", "description": "Brzuch\n- Woodchop 3x12 na stronę\nNogi\n- Bułgary 3x8 na nogę"}, {})
+    w = buduj({"workoutId": 1, "title": "X", "description": "Brzuch\n- Woodchop 3x12 na stronę\nPlecy\n- Wiosłowanie hantlem 3x8 na stronę"}, {})
     akt = {"activityName": "X", "startTimeLocal": "2026-11-10 15:00:00", "duration": 600}
     sety = [{"setType": "ACTIVE", "wktStepIndex": 1, "repetitionCount": 24, "weight": 10000.0, "exercises": [{"name": "CABLE_WOODCHOP"}]},
             {"setType": "ACTIVE", "wktStepIndex": 5, "repetitionCount": 8, "weight": 12500.0, "exercises": [{"name": "X"}]}]
     t, _, _ = raport(akt, sety, w, {})
     assert "- Woodchop (na stronę): 12×10 kg (plan: 3×12" in t
-    assert "- Bułgary (na nogę): 8×12,5 kg (plan: 3×8" in t
+    assert "- Wiosłowanie hantlem (na rękę): 8×12,5 kg (plan: 3×8" in t       # x2: false -> bez dzielenia

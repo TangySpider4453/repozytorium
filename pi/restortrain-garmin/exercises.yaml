@@ -14,10 +14,12 @@ cwiczenia:
     aliasy: [suwnica, wypychanie na suwnicy, suwnica jedną nogą, leg press]
     category: SQUAT
     exerciseName: LEG_PRESS
+    x2: true               # jednostronne: do Garmina ×2 (obie strony ciągiem), raport /2
   - nazwa: bułgary
     aliasy: [przysiad bułgarski, bułgarski przysiad, bułgarskie przysiady]
     category: LUNGE
     exerciseName: DUMBBELL_BULGARIAN_SPLIT_SQUAT
+    x2: true               # jednostronne: do Garmina ×2 (obie strony ciągiem), raport /2
   - nazwa: prostowanie nóg
     aliasy: [wyprosty nóg, wyprosty nóg na maszynie, prostowanie nóg na maszynie]
     category: CRUNCH                  # „Weighted Leg Extensions” (u Garmina w kategorii CRUNCH, mięśnie: QUADS)
@@ -70,6 +72,7 @@ cwiczenia:
     aliasy: [wiosłowanie hantlą, wiosłowanie jednorącz, wiosłowanie hantlem jednorącz, wiosłowanie hantlą jednorącz]
     category: ROW
     exerciseName: DUMBBELL_ROW
+    x2: false               # jednostronne: cel na jedną stronę, raport bez dzielenia
   - nazwa: wiosłowanie siedząc na maszynie
     aliasy: [wiosłowanie na wyciągu siedząc, wiosłowanie siedząc]
     category: ROW
@@ -134,6 +137,7 @@ cwiczenia:
     aliasy: [drwal na wyciągu, woodchop]
     category: CHOP
     exerciseName: CABLE_WOODCHOP
+    x2: true               # jednostronne: do Garmina ×2 (obie strony ciągiem), raport /2
   - nazwa: reverse crunch
     aliasy: [odwrotne brzuszki, spięcia odwrotne]
     category: CRUNCH

@@ -16,7 +16,7 @@ KONIEC = {"lap.button": (1, 1), "time": (2, 2), "iterations": (7, 7), "reps": (1
 BEZ_CELU = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
 KG = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 ZNACZNIK = "auto: restortrain-garmin"
-WERSJA = "14"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
+WERSJA = "15"            # zmiana budowy treningu (np. przejścia) -> istniejące treningi są przebudowywane
 
 
 def hash_opisu(opis):
@@ -125,19 +125,21 @@ def buduj(zrodlo, cfg, mapa=None, nieznane=None):
             ("reps", i.reps_max if cfg.get("rep_target", "max") == "max" else i.reps_min)
 
         def cw():
-            """lista kroków jednej serii (jeden krok). Ćwiczenie jednostronne: JEDEN krok na obie strony (osobne kroki
-            lewa/prawa źle się liczyły), cel = powtórzenia × 2, bo zegarek liczy wszystkie; raport dzieli wynik na 2"""
+            """lista kroków jednej serii (jeden krok). Jednostronne: pole `x2` w exercises.yaml (lista Antka) mówi, czy
+            do Garmina idzie ×2 (obie strony jednym ciągiem, bez klikania w trakcie; raport dzieli na 2) czy cel na
+            jedną stronę (np. wiosłowanie jednorącz; raport bez dzielenia). Bez wpisu: nogi i całe ciało ×2, ręce ×1."""
             if not (i.per_side and cfg.get("strony", True)):
                 return [k.krok("interval", koniec, ile, opis=o, category=d.category, exercise=d.exerciseName, kg=i.weight_kg)]
             st = i.strona()
+            slowo = {"noga": "nogę", "ręka": "rękę"}.get(st, "stronę")
             o2 = re.sub(r",?\s*na\s+(każd\w+\s+)?(nog[eęi]|stron[eęy]|r[eę]k[eęi])\b", "", o).strip(" ,")
             o2 = re.sub(r"\s+[—–]\s+", ", ", o2)          # „8–10 powt. — 80 kg” po wycięciu „na nogę” -> „…, 80 kg”
-            if st in ("noga", "ręka"):                    # kończyny: cel na jedną stronę (Antek wpisuje wynik na stronę)
-                return [k.krok("interval", koniec, ile, opis=f"Na {'nogę' if st == 'noga' else 'rękę'}: {o2}".rstrip(": "),
+            if not (d.x2 if d.x2 is not None else st in ("noga", "strona")):
+                return [k.krok("interval", koniec, ile, opis=f"Na {slowo}: {o2}".rstrip(": "),
                                category=d.category, exercise=d.exerciseName, kg=i.weight_kg)]
             razem = f"{i.duration_s * 2} s" if i.duration_s else \
                 (f"{i.reps_min * 2}–{i.reps_max * 2}" if i.reps_min != i.reps_max else f"{i.reps_max * 2}")
-            return [k.krok("interval", koniec, ile * 2, opis=f"Na stronę: {o2} (razem obie: {razem})",   # całe ciało
+            return [k.krok("interval", koniec, ile * 2, opis=f"Na {slowo}: {o2} (obie strony razem: {razem})",
                            category=d.category, exercise=d.exerciseName, kg=i.weight_kg)]
         ile_txt = f"{i.duration_s} s" if i.duration_s else (f"{i.reps_min}–{i.reps_max}" if i.reps_min != i.reps_max else f"{i.reps_max}")
         return cw, d, ile_txt

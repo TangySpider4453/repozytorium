@@ -36,7 +36,7 @@ def konfiguracja():
     try:                                    # ustawienia ze strony (portal na tym samym Pi)
         with urllib.request.urlopen("http://127.0.0.1/api/automaty", timeout=5) as r:
             g = json.loads(r.read())["wartosci"]["garmin"]
-        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original", "przejscie", "raport_linphone", "przejscie_rundy_s") if k in g})
+        cfg.update({k: g[k] for k in ("wlaczony", "co_min", "okno_dni", "rep_target", "rest_mode", "replace_original", "przejscie", "raport_linphone", "przejscie_rundy_s", "sprzataj_po_treningu") if k in g})
         cfg["przerwy_s"] = {k: g.get(f"przerwa_{k}", cfg["przerwy_s"].get(k)) for k in ("main", "accessory", "core", "warmup")}
     except (OSError, ValueError, KeyError):
         pass
@@ -52,6 +52,24 @@ def kalendarz(g, od, do):
     zrobione = {p["date"] for p in w_oknie if p.get("itemType") == "activity" and p.get("activityTypeId") == AKTYWNOSC_SILOWA}
     # tylko siła: szczegóły pobieramy wyłącznie dla treningów siłowych (bieg, rower itd. odpadają już tutaj)
     return [p for p in w_oknie if p.get("itemType") == "workout" and p.get("sportTypeKey") == SILOWY], zrobione
+
+
+def sprzataj_oryginaly(g, db, cfg, zmiany, dni=3):
+    """dzień ze zrobionym treningiem siłowym (ostatnie 3 dni): odplanuj z kalendarza oryginał RestOrTrain z tego dnia
+    (tylko wpis w kalendarzu; definicja treningu zostaje). Tylko oryginały znane z bazy (source_workout_id)."""
+    if not cfg.get("sprzataj_po_treningu", True):
+        return
+    dzis = date.today()
+    pozycje, zrobione = kalendarz(g, dzis - timedelta(days=dni), dzis)
+    zrodla = {r[0] for r in db.execute("SELECT source_workout_id FROM treningi")}
+    for p in pozycje:
+        if p["date"] in zrobione and str(p.get("workoutId")) in zrodla and p.get("id"):
+            try:
+                g.unschedule_workout(p["id"])
+                zmiany.append(f"zrobiony trening {p['date']}: zdjęty z kalendarza oryginał „{p.get('title')}”")
+            except Exception as ex:
+                log.info("odplanowanie oryginału %s: %s", p["id"], type(ex).__name__)
+            time.sleep(0.3)
 
 
 def usun_nasz(g, workout_id, pozycje, dry_run, zmiany):
@@ -184,6 +202,10 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
             log.warning("kalendarz bez treningów siłowych, a w bazie są przyszłe: pomijam usuwanie (chwilowa odpowiedź?)")
         if not dry_run:
             db.commit()
+            try:                                # po zrobionym treningu siłowym: zdejmij oryginał RestOrTrain z kalendarza
+                sprzataj_oryginaly(g, db, cfg, zmiany)
+            except Exception as ex:
+                log.warning("sprzątanie oryginałów: %s: %s", type(ex).__name__, ex)
             try:                                # zrobione treningi -> raporty (strona + Linphone), plany do zrobienia
                 from .raport import sprawdz_zrobione, zapisz_plany
                 if (n := sprawdz_zrobione(g, cfg)):

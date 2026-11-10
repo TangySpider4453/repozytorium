@@ -24,6 +24,7 @@ class Dopasowanie:
     sposob: str                    # dokladne | rdzen | rozmyte | nieznane | brak (Garmin nie ma odpowiednika)
     wynik: float = 100.0
     rest_s: int | None = None
+    x2: bool | None = None         # jednostronne: True = do Garmina powtórzenia ×2 (obie strony jednym ciągiem)
 
 
 def oficjalne(sciezka=KAT / "data" / "garmin_exercises.json"):
@@ -57,7 +58,7 @@ class Mapa:
     def _wynik(self, w, sposob, wynik=100.0):
         if w["category"] is None:                            # świadomie bez odpowiednika (np. maszyna do prostowania nóg)
             sposob = "brak"
-        return Dopasowanie(w["category"], w["exerciseName"], w["nazwa"], sposob, wynik, w.get("rest_s"))
+        return Dopasowanie(w["category"], w["exerciseName"], w["nazwa"], sposob, wynik, w.get("rest_s"), w.get("x2"))
 
     def znajdz(self, nazwa_pl):
         n = normalizuj(nazwa_pl)

@@ -86,8 +86,10 @@ def plan_z_treningu(w):
                 continue
             na = re.match(r"Na (nogę|rękę|stronę): ", x.get("description") or "")
             gr_na = {"nogę": "noga", "rękę": "ręka", "stronę": "strona"}[na.group(1)] if na else None
-            obie = bool(na) and "(razem obie:" in (x.get("description") or "")   # cel = obie strony razem (całe ciało)
-            grupy.append({"krok": x, "indeksy": [po_kroku[id(x)]], "strony": None, "razem": gr_na, "obie": obie})
+            opis_x = x.get("description") or ""
+            obie = bool(na) and ("(razem obie:" in opis_x or "(obie strony razem:" in opis_x)   # cel = obie strony razem
+            nowy_x2 = "(obie strony razem:" in opis_x       # od WERSJA 15: lista x2, wynik zawsze dzielony
+            grupy.append({"krok": x, "indeksy": [po_kroku[id(x)]], "strony": None, "razem": gr_na, "obie": obie, "x2": nowy_x2})
         for j, gr in enumerate(grupy):
             x = gr["krok"]
             n = nazwy[j] if j < len(nazwy) else (x.get("exerciseName") or "ćwiczenie").replace("_", " ").lower()
@@ -96,7 +98,8 @@ def plan_z_treningu(w):
                 ile = ile / 2                       # cel kroku = obie strony razem -> plan na stronę
             # wynik dzielimy tylko w ćwiczeniach całym ciałem (woodchop itd.); stare treningi miały „razem obie” też
             # przy rękach i nogach, a tam Antek wpisuje wynik na jedną stronę
-            gr["obie"] = gr.get("obie") and bool(re.search(ROTACJA, normalizuj(f"{n} {x.get('exerciseName') or ''}".replace("_", " "))))
+            gr["obie"] = gr.get("obie") and (gr.get("x2") or
+                                             bool(re.search(ROTACJA, normalizuj(f"{n} {x.get('exerciseName') or ''}".replace("_", " ")))))
             kg = (x.get("weightValue") or 0) / 1000
             if len(grupy) > 1:
                 plan = f"{k['numberOfIterations']} rundy" + (f", {int(ile)} powt." if ile and x["endCondition"]["conditionTypeKey"] == "reps" else "")
