@@ -1,0 +1,9 @@
+[Unit]
+Description=Pilnowanie polaczenia z NAS co 2 minuty
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

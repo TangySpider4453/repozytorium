@@ -1,0 +1,20 @@
+[Unit]
+Description=Telefon serwerka (rozmowy przez Linphone/SIP: mowa na Pi, odpowiedzi Claude)
+After=network-online.target serwerek-bot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tonyg
+WorkingDirectory=/home/tonyg/glos
+EnvironmentFile=/etc/serwerek-bot/token.env
+EnvironmentFile=/etc/serwerek-bot/claude.env
+EnvironmentFile=-/etc/serwerek-bot/sip.env
+Environment=PYTHONUNBUFFERED=1
+Nice=5
+ExecStart=/usr/bin/python3 /home/tonyg/glos/telefon.py
+Restart=always
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target

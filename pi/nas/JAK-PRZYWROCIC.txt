@@ -1,0 +1,38 @@
+JAK PRZYWROCIC RASPBERRY PI Z KOPII
+===================================
+
+Co jest w tym folderze
+  raspberry-system.img    caly system z karty SD (system plikow ext4 w jednym pliku). Aktualizowany co noc o 02:00:
+                          kopiowane jest tylko to, co sie zmienilo; pliki usuniete z Pi znikaja tez z kopii.
+  ostatnia-kopia.json     kiedy byla ostatnia kopia i czy sie udala (szczegoly: ../Logi/kopia-systemu.log)
+  przywroc.sh             skrypt, ktory zapisuje kopie na nowa karte SD
+
+Gdy karta SD padla (cale Pi do odtworzenia)
+  1. Kup karte SD, najlepiej 64 GB (minimum: tyle, ile zajmuje kopia, ok. 25 GB).
+  2. Potrzebny jest komputer z Linuksem i czytnikiem kart. Moze to byc samo Pi uruchomione z pendrive'a
+     z czystym Raspberry Pi OS (Raspberry Pi Imager -> zapisz system na pendrive, uruchom z niego Pi).
+  3. Wloz NOWA karte do czytnika i sprawdz jej nazwe:   lsblk     (np. /dev/sda; NIE dysk z dzialajacym systemem)
+  4. Podlacz folder z NAS (albo skopiuj ten folder na dysk), np.:
+       sudo apt install cifs-utils rsync dosfstools
+       sudo mkdir -p /mnt/nas
+       sudo mount -t cifs //172.23.0.28/Tony-Folder /mnt/nas -o username=tony,vers=3.0
+  5. Uruchom:
+       cd /mnt/nas/Raspberry/Kopia-systemu
+       sudo bash przywroc.sh /dev/sda
+     i wpisz TAK. Skrypt odtworzy partycje (te same identyfikatory co na starej karcie), skopiuje system i /boot.
+  6. Wloz karte do Raspberry Pi i wlacz. Wszystko (portal, Minecraft, Tailscale, strony, ustawienia) jest jak
+     w chwili ostatniej kopii.
+
+Gdy trzeba odzyskac tylko jeden plik albo folder
+  Na Pi (albo innym Linuksie):
+       sudo mkdir -p /mnt/kopia
+       sudo mount -o ro,loop /mnt/nas/Raspberry/Kopia-systemu/raspberry-system.img /mnt/kopia
+       ls /mnt/kopia/home/tonyg/portal        (dowolny plik z dnia ostatniej kopii)
+       sudo umount /mnt/kopia
+  Nie montuj kopii, gdy trwa nocna kopia (ok. 02:00-02:30).
+
+Uwagi
+  - Zdjecia i filmy z "Progres" oraz logi nie czekaja na nocna kopie: sa zapisywane od razu w folderach
+    ../Progres-zdjecia, ../Progres-filmy i ../Logi.
+  - Swiat Minecrafta jest kopiowany w czasie dzialania serwera. Zwykle to nie przeszkadza, ale gdyby swiat
+    po przywroceniu byl uszkodzony, serwer ma tez wlasne kopie swiata (jesli sa wlaczone).

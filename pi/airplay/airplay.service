@@ -1,0 +1,15 @@
+# Głośnik AirPlay 2 (shairport-sync, multiroom z nqptp): usługa użytkownika tonyg (PipeWire), sterowana z /strony/glosnik/.
+# Instalacja: ~/.config/systemd/user/airplay.service, systemctl --user enable --now airplay (+ loginctl enable-linger tonyg).
+[Unit]
+Description=Głośnik AirPlay 2 (shairport-sync)
+After=pipewire-pulse.service wireplumber.service
+Wants=pipewire-pulse.service
+
+[Service]
+ExecStartPre=/usr/bin/python3 /home/tonyg/airplay/airplay.py konfiguracja
+ExecStart=/usr/local/bin/shairport-sync -c /home/tonyg/airplay/shairport-sync.conf
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

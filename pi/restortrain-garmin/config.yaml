@@ -1,0 +1,20 @@
+# restortrain-garmin: konfiguracja (bez sekretów; token logowania jest w tokens/, uprawnienia 600/700, poza gitem)
+okno_dni: 14                 # ile dni do przodu sprawdzać w kalendarzu Garmin Connect
+co_min: 10                   # co ile minut sprawdzać zmiany (timer budzi co 10 min)
+zapis_dozwolony: true        # zgoda Antka 2026-11-05: zapis w Garmin Connect włączony
+rep_target: max              # liczba powtórzeń w kroku: max (górna granica zakresu) albo min
+przejscie: true               # przed każdym ćwiczeniem przerwa do LAP z opisem „Przygotuj: …”
+przejscie_rundy_s: 10         # w rundach (superserie) przerwa między ćwiczeniami na przejście (0 = bez)
+rest_mode: timed             # przerwa: timed (odliczanie) albo lap_button (do przycisku okrążenia)
+przerwy_s:                   # przerwy między seriami
+  main: 180
+  accessory: 90
+  core: 60
+  warmup: 90
+sprzataj_po_treningu: true   # po zrobionym treningu siłowym zdejmij z kalendarza oryginał RestOrTrain z tego dnia (zgoda Antka 2026-11-10)
+replace_original: false      # true = zdejmij z kalendarza oryginał RestOrTrain (definicji nie usuwa); WYMAGA zgody
+ai_analiza: true             # opis treningu czyta Claude Sonnet (claude -p, bez narzędzi; raz na zmianę opisu, pamięć data/ai_cache.json)
+llm_fallback: true           # nieznane ćwiczenia dopasowuje `claude -p` (Haiku, bez narzędzi; wysyła nazwy ćwiczeń do Anthropic)
+raport_linphone: true         # po treningu raport (zrobione / niezrobione, ciężary) na Linphone
+autofix: false               # true = po 3 nieudanych synchronizacjach Claude Code proponuje poprawkę na gałęzi autofix/<data>
+powiadomienia: serwerek      # serwerek (bot: Linphone/Telegram) | brak

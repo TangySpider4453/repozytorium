@@ -1,0 +1,156 @@
+# Mapowanie polskich nazw ćwiczeń -> natywne ćwiczenie Garmin (category / exerciseName z oficjalnej listy
+# data/garmin_exercises.json; test sprawdza, czy każda para istnieje). Dopisanie ćwiczenia: dodaj wpis albo alias,
+# potem `./rtg.sh parse plik.txt`. rest_s = własna przerwa w sekundach (opcjonalnie). auto: true = propozycja LLM do przejrzenia.
+cwiczenia:
+  - nazwa: martwy ciąg
+    aliasy: [martwego ciągu, martwy ciąg klasyczny, deadlift]
+    category: DEADLIFT
+    exerciseName: BARBELL_DEADLIFT
+  - nazwa: rumuński martwy ciąg
+    aliasy: [martwy ciąg rumuński, rdl]
+    category: DEADLIFT
+    exerciseName: ROMANIAN_DEADLIFT
+  - nazwa: suwnica jednonóż
+    aliasy: [suwnica, wypychanie na suwnicy, suwnica jedną nogą, leg press]
+    category: SQUAT
+    exerciseName: LEG_PRESS
+    x2: true               # jednostronne: do Garmina ×2 (obie strony ciągiem), raport /2
+  - nazwa: bułgary
+    aliasy: [przysiad bułgarski, bułgarski przysiad, bułgarskie przysiady]
+    category: LUNGE
+    exerciseName: DUMBBELL_BULGARIAN_SPLIT_SQUAT
+    x2: true               # jednostronne: do Garmina ×2 (obie strony ciągiem), raport /2
+  - nazwa: prostowanie nóg
+    aliasy: [wyprosty nóg, wyprosty nóg na maszynie, prostowanie nóg na maszynie]
+    category: CRUNCH                  # „Weighted Leg Extensions” (u Garmina w kategorii CRUNCH, mięśnie: QUADS)
+    exerciseName: WEIGHTED_LEG_EXTENSIONS
+  - nazwa: uginanie nóg
+    aliasy: [uginanie nóg na maszynie, uginanie nóg leżąc, leg curl]
+    category: LEG_CURL
+    exerciseName: WEIGHTED_LEG_CURL
+  - nazwa: wspięcia na palce
+    aliasy: [łydki, wspięcia na łydki, wspięcia stojąc]
+    category: CALF_RAISE
+    exerciseName: STANDING_CALF_RAISE
+  - nazwa: spięcia brzucha na wyciągu
+    aliasy: [allahy, allahy na wyciągu, brzuszki na wyciągu]
+    category: CRUNCH
+    exerciseName: KNEELING_CABLE_CRUNCH
+  - nazwa: unoszenie nóg w zwisie
+    aliasy: [unoszenie nóg na drążku, wznosy nóg w zwisie]
+    category: LEG_RAISE
+    exerciseName: HANGING_LEG_RAISE
+  - nazwa: przysiad ze sztangą
+    aliasy: [przysiad, przysiady, przysiad tylny, przysiady ze sztangą]
+    category: SQUAT
+    exerciseName: BARBELL_BACK_SQUAT
+  - nazwa: przysiad na smithie
+    aliasy: [przysiad na suwnicy smitha, smith przysiad]
+    category: SQUAT
+    exerciseName: BARBELL_BACK_SQUAT
+  - nazwa: wyciskanie leżąc
+    aliasy: [wyciskanie sztangi leżąc, wyciskanie na ławce płaskiej, bench press]
+    category: BENCH_PRESS
+    exerciseName: BARBELL_BENCH_PRESS
+  - nazwa: wyciskanie hantli na skosie dodatnim
+    aliasy: [wyciskanie hantli na skosie, wyciskanie na skosie dodatnim, skos dodatni hantle]
+    category: BENCH_PRESS
+    exerciseName: INCLINE_DUMBBELL_BENCH_PRESS
+  - nazwa: wyciskanie żołnierskie
+    aliasy: [wyciskanie nad głowę, ohp, wyciskanie sztangi nad głowę]
+    category: SHOULDER_PRESS
+    exerciseName: BARBELL_SHOULDER_PRESS
+  - nazwa: wyciskanie hantli nad głowę
+    aliasy: [wyciskanie hantli siedząc nad głowę]
+    category: SHOULDER_PRESS
+    exerciseName: DUMBBELL_SHOULDER_PRESS
+  - nazwa: wiosłowanie sztangą
+    aliasy: [wiosłowanie sztangą w opadzie, wiosłowanie w opadzie]
+    category: ROW
+    exerciseName: BENT_OVER_ROW_WITH_BARBELL
+  - nazwa: wiosłowanie hantlem
+    aliasy: [wiosłowanie hantlą, wiosłowanie jednorącz, wiosłowanie hantlem jednorącz, wiosłowanie hantlą jednorącz]
+    category: ROW
+    exerciseName: DUMBBELL_ROW
+    x2: false               # jednostronne: cel na jedną stronę, raport bez dzielenia
+  - nazwa: wiosłowanie siedząc na maszynie
+    aliasy: [wiosłowanie na wyciągu siedząc, wiosłowanie siedząc]
+    category: ROW
+    exerciseName: SEATED_CABLE_ROW
+  - nazwa: podciąganie
+    aliasy: [podciąganie na drążku, podciąganie nachwytem]
+    category: PULL_UP
+    exerciseName: PULL_UP
+  - nazwa: ściąganie drążka
+    aliasy: [ściąganie drążka z góry, przyciąganie drążka z góry, ściąganie drążka wyciągu]
+    category: PULL_UP
+    exerciseName: LAT_PULLDOWN
+  - nazwa: pompki na poręczach
+    aliasy: [dipy, dipy na maszynie, pompki na poręczach z obciążeniem]
+    category: TRICEPS_EXTENSION
+    exerciseName: BODY_WEIGHT_DIP
+  - nazwa: hip thrust
+    aliasy: [wypychanie bioder, hip thrust ze sztangą]
+    category: HIP_RAISE
+    exerciseName: BARBELL_HIP_THRUST_WITH_BENCH
+  - nazwa: deska
+    aliasy: [plank, deska przodem]
+    category: PLANK
+    exerciseName: PLANK
+  - nazwa: uginanie ramion
+    aliasy: [uginanie ramion na biceps, biceps, uginanie ramion ze sztangą]
+    category: CURL
+    exerciseName: BARBELL_BICEPS_CURL
+  - nazwa: uginanie ramion z hantlami
+    aliasy: [biceps hantle, uginanie z hantlami, uginanie bicepsa, uginanie bicepsa z hantlami]
+    category: CURL
+    exerciseName: DUMBBELL_BICEPS_CURL
+  - nazwa: wyciskanie francuskie
+    aliasy: [francuz, wyciskanie francuskie leżąc]
+    category: TRICEPS_EXTENSION
+    exerciseName: DUMBBELL_LYING_TRICEPS_EXTENSION
+  - nazwa: prostowanie ramion na wyciągu
+    aliasy: [prostowanie przedramion na wyciągu, triceps na wyciągu, prostowanie tricepsa na wyciągu]
+    category: TRICEPS_EXTENSION
+    exerciseName: TRICEPS_PRESSDOWN
+  - nazwa: prostowanie ramion nad głową
+    aliasy: [wyciskanie francuskie nad głową]
+    category: TRICEPS_EXTENSION
+    exerciseName: CABLE_OVERHEAD_TRICEPS_EXTENSION
+  - nazwa: unoszenie bokiem
+    aliasy: [wznosy bokiem, unoszenie ramion bokiem]
+    category: LATERAL_RAISE
+    exerciseName: DUMBBELL_LATERAL_RAISE
+  - nazwa: szrugsy
+    aliasy: [szrugsy z hantlami stojąc, szrugsy z hantlami, szrugi, kaptury]
+    category: SHRUG
+    exerciseName: DUMBBELL_SHRUG
+  - nazwa: odwodzenie ramion w opadzie
+    aliasy: [odwrotne rozpiętki, tył barków]
+    category: LATERAL_RAISE
+    exerciseName: BENT_OVER_LATERAL_RAISE
+  - nazwa: rozpiętki na wyciągu
+    aliasy: [rozpiętki na wyciągu z dołu do góry, krzyżowanie linek, rozpiętki na maszynie, butterfly, pec deck]
+    category: FLYE
+    exerciseName: CABLE_CROSSOVER
+  - nazwa: woodchop na wyciągu
+    aliasy: [drwal na wyciągu, woodchop]
+    category: CHOP
+    exerciseName: CABLE_WOODCHOP
+    x2: true               # jednostronne: do Garmina ×2 (obie strony ciągiem), raport /2
+  - nazwa: reverse crunch
+    aliasy: [odwrotne brzuszki, spięcia odwrotne]
+    category: CRUNCH
+    exerciseName: REVERSE_CRUNCH
+  - nazwa: rollout z kolan
+    aliasy: [kółko do brzucha, ab wheel]
+    category: CORE
+    exerciseName: KNEELING_AB_WHEEL
+  - nazwa: ściąganie prostych ramion na wyciągu
+    aliasy: [pullover na wyciągu]
+    category: PULL_UP
+    exerciseName: STANDING_CABLE_PULLOVER
+  - nazwa: face pull
+    aliasy: [face pulle, przyciąganie liny do twarzy]
+    category: ROW
+    exerciseName: FACE_PULL

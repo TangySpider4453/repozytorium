@@ -1,0 +1,16 @@
+# RestOrTrain -> Garmin: jeden przebieg synchronizacji (uruchamiany przez rtg-garmin.timer co 10 min).
+# Jako tonyg (nie root); claude.env = dostęp Claude Code do dopisywania nieznanych ćwiczeń (llm_fallback).
+[Unit]
+Description=RestOrTrain -> treningi siłowe Garmin (synchronizacja)
+After=network-online.target home-portal.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=tonyg
+WorkingDirectory=/home/tonyg/restortrain-garmin
+EnvironmentFile=-/etc/serwerek-bot/claude.env
+Environment=PYTHONUNBUFFERED=1 HOME=/home/tonyg
+Nice=10
+ExecStart=/home/tonyg/restortrain-garmin/rtg.sh sync
+TimeoutStartSec=600

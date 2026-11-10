@@ -1,0 +1,44 @@
+#!/bin/bash
+# Ręczne włączanie i wyłączanie serwera Minecraft (PowerNukkitX). Serwer nie startuje sam po włączeniu Pi.
+#   minecraft start     włącz i poczekaj, aż będzie gotowy (do 3 min)
+#   minecraft stop      zapisz świat i wyłącz (komenda „stop” w konsoli serwera)
+#   minecraft status    czy działa, od kiedy, ile RAM
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+MC=/home/tonyg/powernukkitx
+case "${1:-status}" in
+  start)
+    if systemctl is-active -q powernukkitx; then echo "Minecraft już działa."; exit 0; fi
+    echo "Włączam serwer Minecraft…"
+    : > "$MC/logs/.start" 2>/dev/null
+    START=$(date '+%Y-%m-%d %H:%M:%S')
+    systemctl start powernukkitx playit
+    for _ in $(seq 1 90); do
+      if journalctl -u powernukkitx --since "$START" -o cat 2>/dev/null | grep -q "Done (" || \
+         { [ -f "$MC/logs/server.log" ] && [ "$MC/logs/server.log" -nt "$MC/logs/.start" ] && tail -50 "$MC/logs/server.log" | grep -q "Done ("; }; then
+        echo "Minecraft gotowy. Można grać."; exit 0
+      fi
+      systemctl is-active -q powernukkitx || { echo "Serwer się wyłączył przy starcie. Sprawdź: journalctl -u powernukkitx -n 50"; exit 1; }
+      sleep 2
+    done
+    echo "Serwer działa, ale jeszcze się ładuje (sprawdź za minutę: minecraft status)." ;;
+  stop)
+    if ! systemctl is-active -q powernukkitx; then echo "Minecraft już jest wyłączony."; exit 0; fi
+    echo "Zapisuję świat i wyłączam serwer Minecraft…"
+    if [ -p "$MC/console.fifo" ]; then
+      echo "save-all" > "$MC/console.fifo"; sleep 5
+      echo "stop" > "$MC/console.fifo"
+      for _ in $(seq 1 60); do systemctl is-active -q powernukkitx || break; sleep 1; done
+    fi
+    systemctl is-active -q powernukkitx && systemctl stop powernukkitx
+    echo "Minecraft wyłączony (świat zapisany). RAM i procesor wolne." ;;
+  status)
+    if systemctl is-active -q powernukkitx; then
+      od=$(systemctl show -p ActiveEnterTimestamp --value powernukkitx)
+      pid=$(systemctl show -p MainPID --value powernukkitx)
+      ram=$(( $(awk '/VmRSS/{print $2}' /proc/$pid/status 2>/dev/null || echo 0) / 1024 ))
+      echo "Minecraft DZIAŁA od $od, RAM ok. ${ram} MB."
+    else
+      echo "Minecraft jest WYŁĄCZONY. Włączysz go: minecraft start"
+    fi ;;
+  *) echo "Użycie: minecraft start | stop | status"; exit 2 ;;
+esac

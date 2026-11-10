@@ -1,0 +1,10 @@
+[Unit]
+Description=Strażnik AirPlay co 20 s
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=20
+AccuracySec=2
+
+[Install]
+WantedBy=timers.target
