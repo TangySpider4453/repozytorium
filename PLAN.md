@@ -565,3 +565,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   dzielenia; całe ciało z obrotem (woodchop) cel obu stron razem (24) i raport dzieli przez 2 (12 na stronę).
 - **2026-11-09 (Garmin: przejście w rundach)**: w seriach z kilkoma ćwiczeniami 10 s przerwy na przejście między nimi
   (ustawienie na stronie).
+- **2026-11-10 (Garmin: lista ×2, sprzątanie)**: lista ćwiczeń jednostronnych mnożonych ×2 (nogi, woodchop) i nie
+  (wiosłowanie jednorącz); po zrobionym treningu znika z kalendarza wpis RestOrTrain; odwodzenie / przywodzenie na
+  maszynie poprawione (wersje z obciążeniem, bez mnożenia).

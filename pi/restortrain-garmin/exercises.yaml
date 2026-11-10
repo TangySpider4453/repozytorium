@@ -154,3 +154,13 @@ cwiczenia:
     aliasy: [face pulle, przyciąganie liny do twarzy]
     category: ROW
     exerciseName: FACE_PULL
+  - nazwa: odwodzenie bioder
+    aliasy: [odwodzenie nóg na maszynie, odwodzenie bioder na maszynie, odwodzenie ud, abdukcja bioder, maszyna do odwodzenia]
+    category: HIP_STABILITY           # Garmin nie ma maszyny (obie nogi, kolana od siebie); najbliższe z obciążeniem
+    exerciseName: WEIGHTED_STANDING_HIP_ABDUCTION
+    x2: false               # maszyna obiema nogami naraz: bez mnożenia
+  - nazwa: przywodzenie bioder
+    aliasy: [przywodzenie nóg na maszynie, przywodzenie bioder na maszynie, przywodzenie ud, addukcja bioder, maszyna do przywodzenia]
+    category: HIP_STABILITY           # Garmin nie ma maszyny (obie nogi, kolana do siebie); najbliższe z obciążeniem
+    exerciseName: WEIGHTED_STANDING_ADDUCTION
+    x2: false               # maszyna obiema nogami naraz: bez mnożenia
