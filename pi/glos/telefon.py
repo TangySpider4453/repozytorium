@@ -298,7 +298,32 @@ class Rozmowa:
                 if self.koniec.is_set():
                     return
             czat = self.zlecenie.pop("czat", None)
+            pytanie = self.zlecenie.pop("pytanie", None)    # „zadzwoń asap i powiedz …”: Claude liczy w trakcie powitania
+            gotowe = {}
+            if pytanie:
+                def licz():
+                    try:
+                        pj.Endpoint.instance().libRegisterThread("pytanie")
+                    except pj.Error:
+                        pass
+                    try:
+                        gotowe["odp"] = bot.claude_odpowiedz(pytanie, "telefon", pisze=False)
+                    except Exception as ex:
+                        gotowe["odp"] = (f"Nie udało mi się tego sprawdzić: {ex}.", [])
+                watek = threading.Thread(target=licz, daemon=True)
+                watek.start()
             self.mow(self.powitanie, czat=czat)
+            if pytanie:
+                self.zapis.append(f"Ty (czat): {pytanie}")
+                watek.join(90)
+                odp, akcje = gotowe.get("odp") or ("Jeszcze tego nie mam, powiedz proszę jeszcze raz.", [])
+                odp = re.sub(r"\s*\[\[CZAT:\s*(.+?)\s*\]\]", "", odp, flags=re.S).replace("[[ROZLACZ]]", "").strip()
+                if akcje:
+                    self.czeka = akcje
+                    if "?" not in odp[-60:]:
+                        odp += " Mam to zrobić? Powiedz tak albo nie."
+                pamiec.zapisz("claude", "telefon", odp)
+                self.mow(odp)
             s.pomin_do_konca()
             while not self.koniec.is_set() and time.time() - self.start < MAX_ROZMOWA:
                 pcm = s.wypowiedz(self.koniec, CISZA_KONIEC)
@@ -741,9 +766,11 @@ def odpowiedz_czat(tekst, wejscie="tekst"):
             akcja = "mc_wylacz"
         elif t.lower() in ("restart portalu", "restart portal"):
             akcja = "restart_portalu"
-        elif t.lower() == "/zadzwon" or bot.chce_telefon(t):
+        elif t.lower() == "/zadzwon":
             bot.zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś na czacie. W czym mogę pomóc?", "prośba z czatu Linphone")
             odp = "📞 Dzwonię…"
+        elif bot.chce_telefon(t):              # „zadzwoń asap (i powiedz …)”: od razu, bez Claude
+            odp = bot.zadzwon_teraz(t, "Linphone")
         elif t.lower() in ("nowa rozmowa", "nowa", "/nowa"):
             with bot.LOCK:
                 bot.nowa_sesja(bot.stan())

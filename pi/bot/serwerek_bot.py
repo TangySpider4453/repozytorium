@@ -2292,13 +2292,43 @@ def glosowka(m):
 
 # „dzwoń”, „zadzwoń do mnie”, „dzwoń asap”, „możesz zadzwonić?” = połączenie od razu, bez Claude (z czasem albo
 # komu: „zadzwoń za 10 min”, „zadzwoń do mamy” idzie zwykłą drogą: przypomnienie / zadanie)
-DZWON_TERAZ_RE = re.compile(r"^(?:(?:możesz|mozesz|proszę|prosze|pls|hej|ej)[\s,]+)*(?:za)?dzwo[nń](?:i[ćc]|cie)?"
-                            r"(?:[\s,]+(?:do mnie|mi|teraz|asap|szybko|już|juz|natychmiast|zaraz|proszę|prosze|pls|"
-                            r"pilnie|od razu))*[\s.!?]*$", re.I)
+PILNE = r"teraz|asap|szybko|już|juz|natychmiast|zaraz|proszę|prosze|pls|pilnie|od razu|jak\s+najszybciej|najszybciej|na\s+szybko"
+# „zadzwoń (do mnie) (teraz/asap…)” + opcjonalnie dalsza prośba („, powiedz która godzina”, „i sprawdź pogodę”)
+DZWON_TERAZ_RE = re.compile(r"^(?:(?:możesz|mozesz|proszę|prosze|pls|hej|ej|antek)[\s,]+)*(?:za)?dzw(?!\w*ł)(?:o[nń](?:i[ćc]|cie)?|\w{1,5})"
+                            r"(?:[\s,]+(?:do\s+mnie|mi|" + PILNE + r"))*"
+                            r"(?:\s*[,.!?:;—–-]+\s*|\s+(?:i|oraz|bo|żeby|zeby|że|ze|to)\s+|\s*$)(?P<reszta>.*)$", re.I | re.S)
+# późniejsza pora = zwykłe przypomnienie (Claude / zadania), nie telefon od razu
+POZNIEJ_RE = re.compile(r"\b(o\s+\d|o\s+(godz|pół|wpół)|za\s+\d|za\s+(godzin|minut|pół|kwadrans|tydzie|dzie)|jutro|pojutrze|"
+                        r"wieczorem|rano|w\s+nocy|po\s+południu|w\s+(poniedział|wtor|środ|czwart|piąt|sobot|niedziel)|\d{1,2}[:.]\d{2})", re.I)
+
+
+def telefon_teraz(tekst):
+    """„zadzwoń do mnie asap i powiedz, która godzina” -> (True, "powiedz, która godzina"): dzwonimy od razu, bez Claude
+    (reszta trafia do rozmowy jako pierwsze pytanie). Z późniejszą porą („zadzwoń jutro o 7”) -> (False, ""): to
+    przypomnienie. „Zadzwoń do mamy” (ktoś inny) -> False."""
+    t = (tekst or "").strip()
+    m = DZWON_TERAZ_RE.match(t)
+    if not m or POZNIEJ_RE.search(t):
+        return False, ""
+    reszta = re.sub(r"(?:[\s,]+(?:" + PILNE + r"))+[\s.!?]*$", "", " " + m.group("reszta")).strip(" ,.;:-")
+    reszta = re.sub(r"^(?:" + PILNE + r")\b[\s,]*", "", reszta, flags=re.I).strip(" ,.;:-")
+    if reszta and re.match(r"(?i)do\s+(?!mnie\b)\w", reszta):      # „zadzwoń, do mamy” itp.
+        return False, ""
+    return True, reszta
 
 
 def chce_telefon(tekst):
-    return bool(DZWON_TERAZ_RE.match((tekst or "").strip()))
+    return telefon_teraz(tekst)[0]
+
+
+def zadzwon_teraz(tekst, kanal):
+    """telefon od razu na prośbę z czatu; dalsza prośba z wiadomości = pierwsze pytanie w rozmowie"""
+    _, pytanie = telefon_teraz(tekst)
+    if pytanie:
+        zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś.", f"prośba z czatu ({kanal})", pytanie=pytanie)
+        return f"📞 Dzwonię… (w rozmowie: {pytanie})"
+    zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś. W czym mogę pomóc?", f"prośba z czatu ({kanal})")
+    return "📞 Dzwonię…"
 
 
 def zadzwon(tekst, powod="prośba", **dodatki):
@@ -2627,9 +2657,11 @@ def obsluz(u):
     pamiec.zapisz("antek", "telegram", tekst, m.get("message_id"))
     ustaw_kanal("telegram")                 # pisze z Telegrama: powiadomienia też tutaj, aż znów napisze na Linphone
     odp_na = pamiec.po_tg_id(m["reply_to_message"]["message_id"]) if m.get("reply_to_message") else None
-    if tekst in ("📞 Zadzwoń", "/zadzwon") or chce_telefon(tekst):
+    if tekst in ("📞 Zadzwoń", "/zadzwon"):
         zadzwon("Cześć, tu serwerek. Dzwonię, bo prosiłeś. W czym mogę pomóc?", "na Twoją prośbę")
         wyslij("📞 Dzwonię przez Linphone…")
+    elif chce_telefon(tekst):
+        wyslij(zadzwon_teraz(tekst, "Telegram").replace("Dzwonię…", "Dzwonię przez Linphone…"))
     elif tekst in ("🎮 Minecraft", "/minecraft") or tekst.lower() in ("minecraft", "mc"):
         m = portal("/api/minecraft")
         auto = s["ustawienia"].get("mc_auto_min", USTAWIENIA["mc_auto_min"])

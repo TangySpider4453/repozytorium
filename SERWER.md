@@ -374,6 +374,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - **„Dzwoń” = telefon od razu**: „dzwoń”, „zadzwoń (do mnie)”, „dzwoń asap / szybko / teraz”, „możesz zadzwonić?” w Linphone
   i Telegramie idą bez Claude (`chce_telefon`, `DZWON_TERAZ_RE`) prosto do kolejki telefonu (połączenie w ~1 s). Z czasem
   albo z adresatem („zadzwoń za 10 min”, „zadzwoń do mamy”) dalej przypomnienie/zadanie.
+  Od 2026-11-11 (`telefon_teraz`): po „zadzwoń (do mnie) (teraz/asap/jak najszybciej…)” może być dalsza prośba
+  („…i powiedz, która godzina”): telefon od razu, a prośba idzie w zleceniu jako `pytanie`; telefon.py liczy odpowiedź
+  Claude w osobnym wątku już w trakcie powitania i mówi ją zaraz po nim. Późniejsza pora (`POZNIEJ_RE`: „o 7”, „jutro”,
+  „za 10 min”) = przypomnienie. Przekręcenia z głosówki („zadzwędź”) też łapane; formy przeszłe („dzwoniłeś”) nie.
 - **Zatrzymanie telefonu = rozłączenie**: przy SIGTERM telefon.py rozłącza trwające rozmowy (BYE) i dopiero kończy.
   2026-10-23 restart w trakcie rozmowy zostawił w Linphone na iPhonie „wiszące” połączenie: potem w każdej rozmowie
   iPhone dostawał dźwięk Pi, ale go nie grał i nie wysyłał mikrofonu (Pi: RX 0 pakietów). Naprawa: zamknąć Linphone.
