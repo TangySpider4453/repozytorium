@@ -570,3 +570,4 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   maszynie poprawione (wersje z obciążeniem, bez mnożenia).
 - **2026-11-11 (telefon od razu)**: „zadzwoń asap i powiedz …” dzwoni od razu bez Claude (wcześniej szło do Claude, który
   robił przypomnienie), dalsza prośba jest pierwszym pytaniem w rozmowie; głosówki z przekręconym „zadzwoń” też.
+- **2026-11-11 (telefon po restarcie)**: zlecenia czekają na zalogowanie do SIP zamiast od razu zgłaszać błąd.

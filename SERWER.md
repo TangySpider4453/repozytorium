@@ -378,6 +378,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   („…i powiedz, która godzina”): telefon od razu, a prośba idzie w zleceniu jako `pytanie`; telefon.py liczy odpowiedź
   Claude w osobnym wątku już w trakcie powitania i mówi ją zaraz po nim. Późniejsza pora (`POZNIEJ_RE`: „o 7”, „jutro”,
   „za 10 min”) = przypomnienie. Przekręcenia z głosówki („zadzwędź”) też łapane; formy przeszłe („dzwoniłeś”) nie.
+  Po starcie telefonu zlecenia z kolejki czekają do 60 s na zalogowanie do SIP (`CZEKAJ_NA_REJESTRACJE`); wcześniej
+  zlecenie tuż po restarcie kończyło się błędem „Pi nie jest zalogowane do serwera SIP”.
 - **Zatrzymanie telefonu = rozłączenie**: przy SIGTERM telefon.py rozłącza trwające rozmowy (BYE) i dopiero kończy.
   2026-10-23 restart w trakcie rozmowy zostawił w Linphone na iPhonie „wiszące” połączenie: potem w każdej rozmowie
   iPhone dostawał dźwięk Pi, ale go nie grał i nie wysyłał mikrofonu (Pi: RX 0 pakietów). Naprawa: zamknąć Linphone.

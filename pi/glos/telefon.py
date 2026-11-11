@@ -40,6 +40,8 @@ WLASCICIEL = os.environ.get("SIP_WLASCICIEL", "")       # np. sip:antek@sip.linp
 HZ = 16000
 RAMKA = HZ * 2 // 50                                    # 20 ms, 16 bit mono
 CZEKAJ_PO_ODEBRANIU = 2.5                               # s: Pi dzwoni -> Antek odbiera -> 2,5 s ciszy -> powitanie
+START = time.time()                                     # start usługi (czekanie na logowanie do SIP)
+CZEKAJ_NA_REJESTRACJE = 60                              # s po starcie: zlecenia czekają, aż konto się zaloguje
 CZAS_DZWONIENIA = 60                                    # s: tyle Pi próbuje dzwonić, potem „nie odebrał”
 PONOW = []          # [(kiedy, zlecenie)]: iPhone czasem od razu odrzuca (603), np. gdy Linphone jest otwarty; dzwonimy znowu
 MAX_ROZMOWA = 20 * 60
@@ -1038,6 +1040,8 @@ def main():
                     if time.time() - p.stat().st_mtime > 10:      # zepsuty plik: usuń; świeży: może jeszcze się zapisuje
                         p.unlink()
                     continue
+                if not konto.zarejestrowane and time.time() - START < CZEKAJ_NA_REJESTRACJE:
+                    break                   # zaraz po starcie: logowanie do SIP trwa kilka sekund, zlecenie czeka w kolejce
                 p.unlink()
                 if konto.zarejestrowane:
                     zadzwon_do_wlasciciela(konto, zl)
