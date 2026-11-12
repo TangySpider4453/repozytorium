@@ -570,6 +570,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ćwiczeniu kończyn (np. wiosłowanie) jest poprawiana na ręka. Stare kroki „razem obie” przy rękach: plan /2, wynik bez; stare
   aktywności z krokami L/P nadal raportowane jako „L 10 / P 10”. Ustawienie `strony: false` = zwykły krok bez ×2. „25 kg na stronę plus sztanga” to talerze, nie jednostronne: ciężar = 2 × 25 + gryf 20 = 70 kg
   (`GRYF_KG`).
+- **Nowy format RestOrTrain** (2026-11-12): opisy jako lista numerowana „1. Wiosłowanie sztangą — 3×8 @45 kg, …”.
+  Wstępny filtr regułami (`wyglada_na_silowy`) odrzucał je, więc od 16.11 nic się nie tworzyło. Teraz każdy trening
+  siłowy RestOrTrain (sport z kalendarza + consumerName) idzie do analizy: najpierw Claude Sonnet, przy awarii (np. brak
+  tokenów) parser regułowy, który też zna listę numerowaną i „— 3×8 @45 kg”. Dopasowanie nowych ćwiczeń: Sonnet zamiast
+  Haiku (Haiku dał „uginanie nóg siedząc” → LEG_PRESS; teraz alias do WEIGHTED_LEG_CURL).
 - **Lista ×2 i sprzątanie** (2026-11-10): pole `x2` w exercises.yaml (lista Antka) decyduje przy ćwiczeniach
   jednostronnych: `true` (suwnica jednonóż, bułgary, wykroki, woodchop) → krok „Na nogę: … (obie strony razem: 16–20)”,
   cel ×2 (obie strony ciągiem, bez klikania), raport /2; `false` (wiosłowanie hantlem) → cel na stronę, raport bez

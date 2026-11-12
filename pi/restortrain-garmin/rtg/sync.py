@@ -159,7 +159,9 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
                     continue
                 raise
             time.sleep(0.3)
-            if nasz(w) or w.get("consumerName") != ZRODLO or not wyglada_na_silowy(w.get("description") or ""):
+            # trening siłowy RestOrTrain (sport sprawdzony w kalendarzu): zawsze do analizy (Claude, zapasowo reguły);
+            # reguły nie decydują już, czy to trening (RestOrTrain zmienia format opisu, np. lista „1. … — 3×8 @45 kg”)
+            if nasz(w) or w.get("consumerName") != ZRODLO or not (w.get("description") or "").strip():
                 continue
             # hash: opis + wersja budowy + ustawienia (zmiana przerw / trybu na stronie też przebudowuje treningi)
             ust = json.dumps({k: cfg.get(k) for k in ("rep_target", "rest_mode", "przerwy_s", "przejscie", "ai_analiza", "przejscie_rundy_s")}, sort_keys=True) + hash_opisu((KAT / "exercises.yaml").read_text(encoding="utf-8"))[:12]   # zmiana mapowania -> przebudowa

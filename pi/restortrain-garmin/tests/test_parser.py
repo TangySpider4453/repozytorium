@@ -98,3 +98,13 @@ def test_format_akapitowy_i_powtorzenia():
     assert isinstance(s[0].items[0], Exercise) and s[0].items[0].name_pl == "Face pull"
     c = s[1].items[0]
     assert isinstance(c, Circuit) and c.rounds == 3 and c.exercises[0].reps_max == 15
+
+
+def test_lista_numerowana_restortrain_2026_11():
+    s = parsuj("Kolejność ćwiczeń:\n1. Wiosłowanie sztangą — 3×8 @45 kg, zostaw 1–2 powtórzenia w zapasie.\n"
+               "2. Wiosłowanie hantlem — 3×10 na stronę, ciężar z ostatniego stabilnego wykonania.\n"
+               "3. Ściąganie drążka wyciągu górnego — 3×10–12, kontrolowany powrót.")
+    cw = [i for x in s for i in x.items if isinstance(i, Exercise)]
+    assert [(c.name_pl, c.sets, c.reps_max) for c in cw] == [("Wiosłowanie sztangą", 3, 8), ("Wiosłowanie hantlem", 3, 10),
+                                                            ("Ściąganie drążka wyciągu górnego", 3, 12)]
+    assert cw[0].weight_kg == 45 and cw[1].per_side and wyglada_na_silowy("1. Przysiad — 3×8 @70 kg")

@@ -25,7 +25,7 @@ cwiczenia:
     category: CRUNCH                  # „Weighted Leg Extensions” (u Garmina w kategorii CRUNCH, mięśnie: QUADS)
     exerciseName: WEIGHTED_LEG_EXTENSIONS
   - nazwa: uginanie nóg
-    aliasy: [uginanie nóg na maszynie, uginanie nóg leżąc, leg curl]
+    aliasy: [uginanie nóg na maszynie, uginanie nóg leżąc, uginanie nóg siedząc, uginanie nóg na siedząco, leg curl]
     category: LEG_CURL
     exerciseName: WEIGHTED_LEG_CURL
   - nazwa: wspięcia na palce
@@ -164,3 +164,13 @@ cwiczenia:
     category: HIP_STABILITY           # Garmin nie ma maszyny (obie nogi, kolana do siebie); najbliższe z obciążeniem
     exerciseName: WEIGHTED_STANDING_ADDUCTION
     x2: false               # maszyna obiema nogami naraz: bez mnożenia
+  - nazwa: ściąganie drążka wyciągu górnego
+    aliasy: []
+    category: PULL_UP
+    exerciseName: LAT_PULLDOWN
+    auto: true                      # propozycja Claude (2026-11-12), do przejrzenia
+  - nazwa: rozpiętki
+    aliasy: []
+    category: FLYE
+    exerciseName: DUMBBELL_FLYE
+    auto: true                      # propozycja Claude (2026-11-12), do przejrzenia

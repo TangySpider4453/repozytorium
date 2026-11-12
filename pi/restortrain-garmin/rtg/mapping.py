@@ -76,7 +76,7 @@ class Mapa:
 
 # ---------------------------------------------------------------- nieznane ćwiczenia: Claude Code (llm_fallback)
 CLAUDE = Path("/home/tonyg/.local/bin/claude")
-MODEL = "claude-haiku-5-5"
+MODEL = "claude-sonnet-5-5"            # dopasowanie nowych ćwiczeń (Haiku mylił, np. uginanie nóg siedząc -> suwnica)
 NIEUDANE = KAT / "data" / "llm_nieudane.json"          # nazwa -> czas ostatniej nieudanej próby (ponów po 24 h)
 
 
