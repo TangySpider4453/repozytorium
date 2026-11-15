@@ -272,7 +272,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   w dzienniku przy rozłączeniu jest kod i powód (np. `603 Decline`).
   **Dzwonienie do właściciela trwa do 60 s** (`CZAS_DZWONIENIA`): iPhone czasem od razu odsyła `603 Decline` (zwykle
   gdy Linphone jest otwarty, mimo „110 Push sent”), więc po 603/486/480/408 Pi dzwoni znowu po 5 s (`PONOW`), aż minie
-  minuta; dopiero wtedy bot pisze „nie odebrałeś”.
+  minuta; dopiero wtedy bot pisze „nie odebrałeś”. Od 2026-11-15: drugie 603 z rzędu = Antek odrzuca sam, więc koniec
+  ponowień; przypomnienie odhaczone w międzyczasie (np. „zrobione” na czacie) = Pi już nie dzwoni (`zadanie_zrobione`).
+  **Diagnostyka nasłuchu (2026-11-15)**: po każdej rozmowie w dzienniku jest linia „nasłuch: X s dźwięku z telefonu, maks.
+  poziom Y, wypowiedzi N”, a pusta odpowiedź whispera daje „whisper nic nie rozpoznał”. 0 s dźwięku = nie dochodzi RTP od
+  iPhone'a; poziom < 500 = mikrofon wyciszony albo za cichy.
   **Cisza w słuchawce (naprawione 2026-10-22)**: po ICE Linphone odnawia media (UPDATE), pjsua tworzy nowy port mostka;
   `onCallMediaState` podpina się teraz za każdym razem do aktualnego portu (nagrywanie i odtwarzanie).
   **Przypomnienia z telefonem**: ok. 4 min przed terminem bot (`przygotuj_rozmowe`, osobne `claude -p` z pamięcią

@@ -154,6 +154,7 @@ class Sluchacz:
 
     def __init__(self, plik):
         self.plik, self.poz, self.tlo = Path(plik), 44, 300.0
+        self.bajty, self.maks, self.wypowiedzi = 0, 0.0, 0     # diagnostyka: ile dźwięku od Antka doszło i jak głośno
 
     def pomin_do_konca(self):
         try:
@@ -170,7 +171,11 @@ class Sluchacz:
             return b""
         d = d[:len(d) // RAMKA * RAMKA]
         self.poz += len(d)
+        self.bajty += len(d)
         return d
+
+    def podsumowanie(self):
+        return f"nasłuch: {self.bajty / (HZ * 2):.0f} s dźwięku z telefonu, maks. poziom {self.maks:.0f} (próg ≥500), wypowiedzi {self.wypowiedzi}"
 
     def wypowiedz(self, koniec_rozmowy, limit_ciszy):
         """czeka na wypowiedź: start po 3 głośnych ramkach, koniec po PAUZA_KONIEC s ciszy; None = cisza za długo / koniec"""
@@ -185,6 +190,7 @@ class Sluchacz:
             for i in range(0, len(d), RAMKA):
                 r = np.frombuffer(d[i:i + RAMKA], dtype=np.int16).astype(np.float32)
                 rms = float(np.sqrt(np.mean(r * r))) if len(r) else 0.0
+                self.maks = max(self.maks, rms)
                 prog = max(500.0, self.tlo * 3)
                 if not mowa:
                     self.tlo = 0.97 * self.tlo + 0.03 * rms if rms < prog else self.tlo
@@ -196,7 +202,10 @@ class Sluchacz:
                 cisza = cisza + 1 if rms < prog * 0.7 else 0
                 if cisza >= PAUZA_KONIEC * 50 or len(mowa) > HZ * 2 * 60:   # pauza dłuższa niż PAUZA_KONIEC albo 60 s mówienia
                     mowa = mowa[:max(len(mowa) - max(0, cisza - 15) * RAMKA, 0)]   # bez końcowej ciszy (szybsze rozpoznanie)
-                    return bytes(mowa) if len(mowa) > HZ * 2 * 0.4 else self.wypowiedz(koniec_rozmowy, limit_ciszy)
+                    if len(mowa) > HZ * 2 * 0.4:
+                        self.wypowiedzi += 1
+                        return bytes(mowa)
+                    return self.wypowiedz(koniec_rozmowy, limit_ciszy)
         return None
 
 
@@ -210,6 +219,7 @@ class Rozmowa:
         self.tmp = Path(tempfile.mkdtemp(prefix="rozmowa-", dir="/tmp"))
         self.nagranie = self.tmp / "rozmowa.wav"
         self.przygotowanie = None
+        self.sluchacz = None
         self.czeka = []                     # akcje czekające na „tak” w rozmowie
         if kierunek == "od Pi" and powitanie:
             self.przygotowanie = threading.Thread(target=self.przygotuj, args=(powitanie,), daemon=True)
@@ -294,7 +304,7 @@ class Rozmowa:
         try:
             pj.Endpoint.instance().libRegisterThread("rozmowa")     # wymagane przez pjlib w każdym wątku, który go dotyka
             import serwerek_bot as bot
-            s = Sluchacz(self.nagranie)
+            s = self.sluchacz = Sluchacz(self.nagranie)
             if self.kierunek == "od Pi":        # czas na przełączenie na głośnomówiący, zanim Pi zacznie mówić
                 self.koniec.wait(CZEKAJ_PO_ODEBRANIU)
                 if self.koniec.is_set():
@@ -342,6 +352,7 @@ class Rozmowa:
                     w.writeframes(pcm)
                 tekst = glos.rozpoznaj(wav, dokladnie=False, limit=60)
                 if not tekst:
+                    log(f"wypowiedź {len(pcm) / (HZ * 2):.1f} s: whisper nic nie rozpoznał")
                     s.pomin_do_konca()
                     continue
                 self.zapis.append(f"Ty: {tekst}")
@@ -458,6 +469,8 @@ class Rozmowa:
     def zakonczona(self):
         self.koniec.set()
         trwala = int(time.time() - self.start)
+        if self.sluchacz:
+            log(self.sluchacz.podsumowanie())
         tid = self.zlecenie.get("todo_id")
         if tid and self.kierunek == "od Pi" and self.p is not None and getattr(self.p, "odebrane", False):
             minuty = self.ponowienie()
@@ -503,7 +516,12 @@ class Polaczenie(pj.Call):
         if ci.state == pj.PJSIP_INV_STATE_DISCONNECTED:
             if not self.odebrane and self.rozmowa.kierunek == "od Pi":
                 z = self.rozmowa.zlecenie
-                if ci.lastStatusCode in (408, 480, 486, 487, 503, 603) and time.time() + 8 - z.get("start", 0) < CZAS_DZWONIENIA:
+                if ci.lastStatusCode == 603:
+                    z["odrzucone"] = z.get("odrzucone", 0) + 1
+                if zadanie_zrobione(z):
+                    log("zadanie już odhaczone: nie dzwonię więcej")
+                elif ci.lastStatusCode in (408, 480, 486, 487, 503, 603) and time.time() + 8 - z.get("start", 0) < CZAS_DZWONIENIA \
+                        and z.get("odrzucone", 0) < 2:  # 603 dwa razy = Antek odrzuca sam, nie błąd iPhone'a
                     PONOW.append((time.time() + 5, z))
                     log(f"odrzucone od razu ({ci.lastStatusCode}), dzwonię jeszcze raz za 5 s")
                 else:
@@ -885,6 +903,20 @@ def zapisz_stan(zarejestrowane):
         pass
 
 
+def zadanie_zrobione(zl):
+    """przypomnienie (todo_id), które Antek już odhaczył (np. „zrobione” na czacie) albo usunął: nie dzwonić"""
+    tid = zl.get("todo_id")
+    if not tid:
+        return False
+    try:
+        import serwerek_bot as bot
+        z = next((x for x in bot.portal("/api/todo")["zadania"] if x["id"] == tid), None)
+        return z is None or bool(z.get("zrobione"))
+    except Exception as ex:
+        log(f"stan zadania {tid}: {ex}")
+        return False
+
+
 def zadzwon_do_wlasciciela(konto, zl):
     if not WLASCICIEL:
         wynik(stan="blad", opis="nie znam jeszcze Twojego adresu Linphone (SIP_WLASCICIEL). Zadzwoń raz do Pi z Linphone, to go podam.", **zl)
@@ -1031,7 +1063,11 @@ def main():
                 if zl.get("todo_id"):      # przypomnienie: „zrobione” / „+15” w odpowiedzi dotyczy tego zadania
                     OSTATNIE_ZADANIE["id"] = zl["todo_id"]
         if not AKTYWNE and PONOW and PONOW[0][0] <= teraz:
-            zadzwon_do_wlasciciela(konto, PONOW.pop(0)[1])
+            zl = PONOW.pop(0)[1]
+            if zadanie_zrobione(zl):                # „zrobione” na czacie w trakcie ponawiania
+                log("zadanie już odhaczone: nie dzwonię ponownie")
+            else:
+                zadzwon_do_wlasciciela(konto, zl)
         elif not AKTYWNE and not PONOW:
             for p in sorted(KOLEJKA.glob("*.json")):
                 try:

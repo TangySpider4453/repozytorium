@@ -44,7 +44,7 @@ Zasady od użytkownika:
 | Budziki z porannym przeglądem, Mobidziennik (odczyt co 10 min), poczta (czeka na hasła) | ✅ od 2026-10-22 (`SERWER.md`) |
 | Claude w bocie: pełny terminal, sudo tylko po „Tak” Antka | ✅ od 2026-10-22 (`SERWER.md`, sekcja bota) |
 | Strona „⚙️ Automatyczne” (zadania, sprawdziany, budziki, Mobidziennik, poczta, komunikacja ZTM) | ✅ od 2026-10-22, `/strony/automatyczne/` |
-| Zadania (todo) w bocie Telegram i w czacie Linphone | ✅ od 2026-10-22 (przypomnienia z terminem domyślnie dzwonią, „napisz” = tylko wiadomość; numer/szczegóły wysyłane w chwili, gdy Pi o nich mówi): dodawanie, lista, przypomnienia w obu, archiwum po 24 h, „📞 Bardzo ważne” = telefon, „zrobione / +15 / +1h / +jutro” w Linphone (szczegóły w `SERWER.md`) |
+| Zadania (todo) w bocie Telegram i w czacie Linphone | ✅ od 2026-10-22 (przypomnienia z terminem domyślnie dzwonią, „napisz” = tylko wiadomość; numer/szczegóły wysyłane w chwili, gdy Pi o nich mówi): dodawanie, lista, przypomnienia w obu, archiwum po 24 h, „📞 Bardzo ważne” = telefon, „zrobione / +15 / +1h / +jutro” w Linphone, godziny słowami („o ósmej”) od 2026-11-15 (szczegóły w `SERWER.md`) |
 | Kopie zapasowe na NAS (172.23.0.28, `Tony-Folder/Raspberry/`) | ✅ od 2026-10-22: logi i zdjęcia Progres od razu na NAS, cały system co noc o 02:00 (szczegóły w `SERWER.md`). Postępy nauki (`dane/nauka/`) i strony są w nocnej kopii |
 
 Kalendarz sprawdzianów użytkownik wkleja jako zrzut z dziennika (Librus: „najbliższe sprawdziany”). Klasa 3 KL, technikum, zawód technik robotyk.
@@ -573,3 +573,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-11 (telefon po restarcie)**: zlecenia czekają na zalogowanie do SIP zamiast od razu zgłaszać błąd.
 - **2026-11-12 (Garmin: nowy format)**: RestOrTrain pisze listą numerowaną; treningi 16–20.11 utworzone (analiza Claude,
   zapasowo reguły), uginanie nóg siedząc poprawione, dopasowania ćwiczeń przez Sonnet; usługi zrestartowane.
+- **2026-11-15 (telefon i godziny)**: „przypomnij jutro o ósmej” dawało zadanie „O ósmej…” na 9:00; teraz godziny słowami
+  („o ósmej”, „o wpół do dziewiątej”, „o dwudziestej pierwszej”, „o 8 wieczorem”) są rozumiane (`godziny_slowami`).
+  Po „zrobione” na czacie Pi nie dzwoni dalej, dwa odrzucenia (603) kończą ponawianie. W rozmowie Pi nic nie słyszało
+  (whisper działa, do nagrania nie dochodził głos): dodana diagnostyka nasłuchu w dzienniku, czeka na rozmowę testową.

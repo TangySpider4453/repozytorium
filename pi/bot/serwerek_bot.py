@@ -1246,6 +1246,59 @@ DNI_TYG = {"poniedziałek": 0, "poniedzialek": 0, "wtorek": 1, "środa": 2, "śr
            "piątek": 4, "piatek": 4, "sobota": 5, "sobotę": 5, "sobote": 5, "niedziela": 6, "niedzielę": 6, "niedziele": 6}
 
 
+GODZ_SLOWA = {"pierwszej": 1, "drugiej": 2, "trzeciej": 3, "czwartej": 4, "piątej": 5, "szóstej": 6, "siódmej": 7, "ósmej": 8,
+              "dziewiątej": 9, "dziesiątej": 10, "jedenastej": 11, "dwunastej": 12, "trzynastej": 13, "czternastej": 14,
+              "piętnastej": 15, "szesnastej": 16, "siedemnastej": 17, "osiemnastej": 18, "dziewiętnastej": 19, "dwudziestej": 20,
+              "północy": 0, "południa": 12}
+MIN_SLOWA = {"pięć": 5, "dziesięć": 10, "piętnaście": 15, "dwadzieścia": 20, "trzydzieści": 30, "czterdzieści": 40,
+             "czterdzieści pięć": 45, "pięćdziesiąt": 50}
+
+
+def _bez_ogonkow(s):
+    return s.translate(str.maketrans("ąćęłńóśźż", "acelnoszz"))
+
+
+def godziny_slowami(t):
+    """godzina słowami (Linphone, głos) -> cyfry, żeby parsuj_zadanie ją złapał: „o ósmej” -> „o 8:00”,
+    „o ósmej trzydzieści” -> „o 8:30”, „o wpół do dziewiątej” -> „o 8:30”, „o dwudziestej pierwszej” -> „o 21:00”;
+    pora dnia po godzinie: „o 8 wieczorem” / „o ósmej po południu” -> 20:00, „o 12 w nocy” -> 0:00"""
+    import re as r_
+    godz = {_bez_ogonkow(k): v for k, v in GODZ_SLOWA.items()}
+    minuty = {_bez_ogonkow(k): v for k, v in MIN_SLOWA.items()}
+    g_re = "|".join(sorted(godz, key=len, reverse=True))
+    m_re = "|".join(sorted(minuty, key=len, reverse=True))
+    w = _bez_ogonkow(t.lower())                 # ta sama długość co t: pozycje się zgadzają
+
+    def zamien(t, w, m, tekst):
+        return t[:m.start()] + tekst + t[m.end():], w[:m.start()] + tekst + w[m.end():]
+
+    # „o wpół do dziewiątej” = 8:30
+    if m := r_.search(r"\s(?:o\s+)?wp[oó]l\s+do\s+(" + g_re + r")(?:\s+(pierwszej|drugiej|trzeciej))?(?=\s)", w):
+        g = godz[m.group(1)] + ({"pierwszej": 1, "drugiej": 2, "trzeciej": 3}.get(m.group(2), 0) if godz[m.group(1)] == 20 else 0)
+        t, w = zamien(t, w, m, f" o {(g - 1) % 24}:30")
+    elif m := r_.search(r"\s(o|na|około|okolo|przed|po)\s+(" + g_re + r")(?:\s+(pierwszej|drugiej|trzeciej))?"
+                        r"(?:\s+(" + m_re + r"))?(?=\s)", w):
+        g = godz[m.group(2)]
+        if m.group(3):
+            if g == 20:
+                g += {"pierwszej": 1, "drugiej": 2, "trzeciej": 3}[m.group(3)]
+            else:                               # „o ósmej drugiej”? nie godzina: zostaw
+                m = None
+        if m:
+            przyim = "o" if m.group(1) in ("około", "okolo", "przed", "po") else m.group(1)
+            t, w = zamien(t, w, m, f" {przyim} {g}:{minuty.get(m.group(4) or '', 0):02d}")
+    # pora dnia po godzinie w cyfrach: „o 8 wieczorem”, „o 8:30 wieczorem”, „o 3 po południu”, „o 7 rano”
+    if m := r_.search(r"\s(o|na)\s+(\d{1,2})(?::(\d{2}))?\s+(wieczorem|wieczór|wieczor|po\s+południu|po\s+poludniu|"
+                      r"popołudniu|popoludniu|w\s+nocy|rano|z\s+rana)(?=\s)", w):
+        g, mi, pora = int(m.group(2)), int(m.group(3) or 0), m.group(4)
+        if pora.startswith(("wiecz", "po", "popo")) and g < 12:
+            g += 12
+        elif pora == "w nocy" and g == 12:
+            g = 0
+        t, w = zamien(t, w, m, f" {m.group(1)} {g}:{mi:02d}")
+    return t
+
+
 def parsuj_zadanie(tekst):
     """„jutro o 17 trening”, „za 20 min wyjąć pranie”, „w piątek 8:30 dentysta”, „25.10 18:00 urodziny”,
     „codziennie 21:00 leki” -> (tekst, termin "RRRR-MM-DDTHH:MM" albo None, powtarzaj)"""
@@ -1282,8 +1335,9 @@ def parsuj_zadanie(tekst):
             t = t[:m.start()] + " " + t[m.end():]
         except ValueError:
             dzien = None
+    t = godziny_slowami(t)          # „o ósmej”, „o wpół do dziewiątej”, „o 8 wieczorem” -> „o 8:00” / „o 20:00”
     # godzina: „17:30” zawsze, „17.30” i „17” tylko po „o”/„na”/„godz.” (żeby „3.14 rozdziału” nie było godziną)
-    if m := r_.search(r"\s(?:o\s+|na\s+)?(?:godz\.?\s+)?(\d{1,2}):(\d{2})\s", t, r_.I) or \
+    if m :=r_.search(r"\s(?:o\s+|na\s+)?(?:godz\.?\s+)?(\d{1,2}):(\d{2})\s", t, r_.I) or \
             r_.search(r"\s(?:o|na|godz\.?)\s+(?:godz\.?\s+)?(\d{1,2})(?:\.(\d{2}))?\s", t, r_.I):
         g, mi = int(m.group(1)), int(m.group(2) or 0)
         if g < 24 and mi < 60:
