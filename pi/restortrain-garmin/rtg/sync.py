@@ -19,7 +19,7 @@ import yaml
 from .builder import WERSJA, buduj, hash_opisu, nasz
 from .garmin import BrakLogowania, api, polacz
 from .mapping import Mapa, dopisz_nieznane
-from . import parser
+from . import ai, parser
 from .parser import wyglada_na_silowy
 from .powiadom import powiadom
 from .stan import baza
@@ -144,7 +144,9 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
         do = date.fromisoformat(do_dnia) if do_dnia else od + timedelta(days=int(cfg.get("okno_dni", 14)))
         pozycje, zrobione = kalendarz(g, od, do)
         mapa = Mapa()
-        parser.AI["wlaczone"] = bool(cfg.get("ai_analiza", True))      # opis czyta Claude (Sonnet), reguły jako zapas
+        parser.AI["wlaczone"] = bool(cfg.get("ai_analiza", True))      # opis czyta lokalny model (Ollama), reguły jako zapas
+        if cfg.get("ai_model"):
+            ai.MODEL = cfg["ai_model"]
         aktualne = set()
         for p in pozycje:
             if p["date"] in zrobione:                       # trening siłowy tego dnia już zrobiony: nie ruszamy
@@ -159,7 +161,7 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
                     continue
                 raise
             time.sleep(0.3)
-            # trening siłowy RestOrTrain (sport sprawdzony w kalendarzu): zawsze do analizy (Claude, zapasowo reguły);
+            # trening siłowy RestOrTrain (sport sprawdzony w kalendarzu): zawsze do analizy (model lokalny, zapasowo reguły);
             # reguły nie decydują już, czy to trening (RestOrTrain zmienia format opisu, np. lista „1. … — 3×8 @45 kg”)
             if nasz(w) or w.get("consumerName") != ZRODLO or not (w.get("description") or "").strip():
                 continue
@@ -168,7 +170,7 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
             src, d, h = str(w["workoutId"]), p["date"], hash_opisu((w.get("description") or "") + WERSJA + ust)
             aktualne.add((src, d))
             if cfg.get("llm_fallback") and dopisz_nieznane(w.get("description") or "", mapa):
-                mapa = Mapa()                               # Claude Code dopisał ćwiczenia do exercises.yaml
+                mapa = Mapa()                               # model lokalny dopisał ćwiczenia do exercises.yaml
             row = db.execute("SELECT description_hash, generated_workout_id FROM treningi WHERE source_workout_id=? AND date=?", (src, d)).fetchone()
             if row and row[0] == h and row[1]:
                 continue                                        # bez zmian

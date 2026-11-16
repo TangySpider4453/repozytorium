@@ -1,17 +1,18 @@
 """
-Analiza opisu treningu przez Claude (Sonnet, lokalny Claude Code na Pi, bez narzędzi).
-RestOrTrain pisze każdy trening trochę inaczej (pisze go AI), więc opis czyta AI i zwraca uporządkowany plan
-w JSON. Wynik jest walidowany i zamieniany na te same obiekty, co z parsera regułowego (parser.py), który zostaje
-zapasem: gdy Claude nie odpowie albo zwróci coś niepoprawnego.
+Analiza opisu treningu przez LOKALNY model (Ollama na Pi, bez Claude: Claude nie dotyka Garmina, decyzja Antka z 2026-11-16).
+RestOrTrain pisze każdy trening trochę inaczej (pisze go AI), więc opis czyta model i zwraca uporządkowany plan
+w JSON (Ollama wymusza kształt odpowiedzi schematem JSON). Wynik jest walidowany i zamieniany na te same obiekty, co z
+parsera regułowego (parser.py), który zostaje zapasem: gdy model nie odpowie albo zwróci coś niepoprawnego.
 
-Koszt: jedno zapytanie na nowy albo zmieniony opis. Wynik leży w data/ai_cache.json (klucz: hash opisu + wersja
-promptu), więc przebiegi co 10 minut i przebudowy po zmianie kodu nie pytają drugi raz.
+Koszt: jedno zapytanie na nowy albo zmieniony opis (na Pi kilka minut). Wynik leży w data/ai_cache.json (klucz: hash
+opisu + wersja promptu + model), więc przebiegi co 10 minut i przebudowy po zmianie kodu nie pytają drugi raz.
+Starsze wpisy od Claude (do 2026-11-16) zostają w pamięci i są dalej używane (bez nowego zapytania).
 """
 import hashlib
 import json
 import logging
 import re
-import subprocess
+import urllib.request
 from pathlib import Path
 
 from .parser import Circuit, Exercise, Section, TimedBlock, WarmupSets
@@ -19,9 +20,11 @@ from .parser import Circuit, Exercise, Section, TimedBlock, WarmupSets
 log = logging.getLogger("rtg.ai")
 KAT = Path(__file__).resolve().parent.parent
 CACHE = KAT / "data" / "ai_cache.json"
-CLAUDE = Path("/home/tonyg/.local/bin/claude")
-MODEL = "claude-sonnet-5-5"
+OLLAMA = "http://127.0.0.1:11434"
+MODEL = "qwen2.5:3b"                    # lokalny (Ollama); config.yaml: ai_model
+STARE_MODELE = ("claude-sonnet-5-5",)   # wcześniejsze analizy z pamięci (bez nowych zapytań do Claude)
 WERSJA_PROMPTU = "1"
+LIMIT_S = 1500                          # Pi 4: prompt + kilkaset tokenów JSON to kilka minut
 
 PROMPT = """Jesteś parserem planu treningu siłowego (z aplikacji RestOrTrain) dla zegarka Garmin.
 Przeczytaj opis i zwróć WYŁĄCZNIE JSON (bez komentarzy, bez ```), dokładnie w tym kształcie:
@@ -60,8 +63,24 @@ Opis treningu:
 """
 
 
-def _klucz(opis):
-    return hashlib.sha256((WERSJA_PROMPTU + MODEL + (opis or "")).encode("utf-8")).hexdigest()
+def _klucz(opis, model=None):
+    return hashlib.sha256((WERSJA_PROMPTU + (model or MODEL) + (opis or "")).encode("utf-8")).hexdigest()
+
+
+_CW = {"type": "object", "properties": {
+    "nazwa": {"type": "string"}, "serie": {"type": "integer"}, "powt_min": {"type": ["integer", "null"]},
+    "powt_max": {"type": ["integer", "null"]}, "czas_s": {"type": ["integer", "null"]}, "jednostronne": {"type": "boolean"},
+    "strona": {"type": ["string", "null"], "enum": ["noga", "ręka", "strona", None]}, "kg": {"type": ["number", "null"]},
+    "uwagi": {"type": "string"}}, "required": ["nazwa", "serie", "powt_min", "powt_max", "czas_s", "jednostronne", "kg"]}
+SCHEMAT = {"type": "object", "required": ["sekcje"], "properties": {"sekcje": {"type": "array", "items": {
+    "type": "object", "required": ["nazwa", "rodzaj", "przerwy", "elementy"], "properties": {
+        "nazwa": {"type": "string"}, "rodzaj": {"enum": ["warmup", "main", "cooldown"]},
+        "przerwy": {"enum": ["warmup", "main", "accessory", "core", "cooldown"]},
+        "elementy": {"type": "array", "items": {"type": "object", "required": ["typ"], "properties": {
+            "typ": {"enum": ["czas", "serie_rozgrzewkowe", "cwiczenie", "rundy"]},
+            "sekundy": {"type": "integer"}, "tekst": {"type": "string"}, "cwiczenie": {"type": "string"},
+            "rundy": {"type": "integer"}, "przerwa_s": {"type": ["integer", "null"]}, "cwiczenia": {"type": "array", "items": _CW},
+            **_CW["properties"]}}}}}}}}
 
 
 def _cache():
@@ -71,14 +90,21 @@ def _cache():
         return {}
 
 
+def ollama(prompt, model, schemat=None, limit=LIMIT_S, num_predict=2500):
+    """jedno zapytanie do lokalnego Ollama (temperatura 0) -> tekst odpowiedzi"""
+    dane = {"model": model, "prompt": prompt, "stream": False, "keep_alive": "2m",
+            "options": {"temperature": 0, "num_ctx": 6144, "num_predict": num_predict}}
+    if schemat:
+        dane["format"] = schemat
+    req = urllib.request.Request(OLLAMA + "/api/generate", data=json.dumps(dane).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=limit) as r:
+        d = json.loads(r.read())
+    log.info("ollama %s: %.0f s, %s tokenów", model, d.get("total_duration", 0) / 1e9, d.get("eval_count"))
+    return d.get("response") or ""
+
+
 def _zapytaj(opis):
-    r = subprocess.run([str(CLAUDE), "-p", PROMPT + opis, "--output-format", "json", "--tools", "", "--strict-mcp-config",
-                        "--model", MODEL, "--effort", "low"], capture_output=True, text=True, timeout=240,
-                       stdin=subprocess.DEVNULL, cwd=str(KAT))
-    d = json.loads(r.stdout or "{}")
-    if d.get("is_error"):
-        raise RuntimeError(d.get("result") or "błąd claude")
-    t = (d.get("result") or "").strip()
+    t = ollama(PROMPT + opis, MODEL, SCHEMAT)
     m = re.search(r"\{.*\}", t, re.S)
     return json.loads(m.group(0))
 
@@ -159,6 +185,9 @@ def analizuj(opis, pytaj=_zapytaj):
     try:
         if k in pamiec:
             return na_sekcje(pamiec[k])
+        for stary in STARE_MODELE:              # analiza sprzed zmiany modelu: dalej ważna, bez pytania
+            if (ks := _klucz(opis, stary)) in pamiec:
+                return na_sekcje(pamiec[ks])
         dane = pytaj(opis)
         sekcje = na_sekcje(dane)
     except Exception as ex:

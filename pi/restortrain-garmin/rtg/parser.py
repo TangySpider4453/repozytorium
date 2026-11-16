@@ -296,7 +296,7 @@ AI = {"wlaczone": False}                    # sync włącza (config.yaml ai_anal
 
 
 def analizuj(opis):
-    """sekcje treningu: najpierw Claude (rtg.ai, z pamięcią), gdy wyłączone albo nieudane — parser regułowy"""
+    """sekcje treningu: najpierw lokalny model (rtg.ai, Ollama, z pamięcią), gdy wyłączone albo nieudane — parser regułowy"""
     if AI["wlaczone"]:
         from .ai import analizuj as przez_ai
         if (sekcje := przez_ai(opis)) is not None:

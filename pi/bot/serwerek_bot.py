@@ -696,17 +696,22 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     if pisze:
         threading.Thread(target=pisze_, daemon=True).start()
     try:
-        d = zapytaj_model(nazwa, tekst, kanal, odpowiedz_na, glosem)
-        if nazwa == "szybki" and "[[TRUDNE]]" in (d.get("result") or ""):     # Haiku: „to dla Sonneta”
-            print(f"klaud: Haiku przekazał do Sonneta: {tekst[:60]}", flush=True)
-            nazwa = "madry"
+        try:
             d = zapytaj_model(nazwa, tekst, kanal, odpowiedz_na, glosem)
+            if nazwa == "szybki" and "[[TRUDNE]]" in (d.get("result") or ""):     # Haiku: „to dla Sonneta”
+                print(f"klaud: Haiku przekazał do Sonneta: {tekst[:60]}", flush=True)
+                nazwa = "madry"
+                d = zapytaj_model(nazwa, tekst, kanal, odpowiedz_na, glosem)
+        except Exception as ex:
+            d = {"is_error": True, "result": f"{type(ex).__name__}: {ex}"}
+        if d.get("is_error"):
+            PROCESY[nazwa].nowa_rozmowa()       # np. sesja wygasła po stronie Claude: następna wiadomość od nowa
+            if (zap := odpowiedz_lokalnie(tekst, kanal, d.get("result") or "błąd")) is not None:
+                return zap, []
+            raise RuntimeError(d.get("result") or "błąd")
     finally:
         stop.set()
     odp = d.get("result") or ""
-    if d.get("is_error"):
-        PROCESY[nazwa].nowa_rozmowa()           # np. sesja wygasła po stronie Claude: następna wiadomość od nowa
-        raise RuntimeError(odp or "błąd")
     odp = odp.replace("[[TRUDNE]]", "").strip()
     if m := re.search(r"\[\[INTENCJA:\s*(\w+)\s*\]\]", odp):       # Claude rozpoznał znaną intencję: zapamiętaj sformułowanie
         szybkie.naucz(tekst, m.group(1))
@@ -725,6 +730,29 @@ def claude_odpowiedz(tekst, kanal="telegram", odpowiedz_na=None, pisze=True, glo
     if kanal != "telefon":              # w rozmowie telefonicznej szczegóły wysyła telefon.py w chwili mówienia
         odp = szczegoly_na_czat(odp, mowione=glosem)
     return odp.strip(), akcje
+
+
+LOKALNY = {"ogloszone": 0.0}
+
+
+def odpowiedz_lokalnie(tekst, kanal, blad):
+    """Claude się wysypał: odpowiedź z lokalnego modelu (Ollama, lokalny.py), bez akcji; None = lokalny też nie działa"""
+    print(f"klaud: błąd ({str(blad)[:150]}), odpowiada model lokalny", flush=True)
+    try:
+        import lokalny
+        t0 = time.time()
+        odp = lokalny.odpowiedz(tekst, pamiec.kontekst(nowa_sesja=True), telefon=kanal == "telefon")
+        print(f"lokalny {lokalny.MODEL}: {time.time() - t0:.1f} s ({kanal}): {tekst[:50]}", flush=True)
+    except Exception as ex:
+        print(f"lokalny: {type(ex).__name__}: {ex}", flush=True)
+        return None
+    if not odp:
+        return None
+    if time.time() - LOKALNY["ogloszone"] > 600:     # informacja raz na 10 min, nie przy każdej odpowiedzi
+        LOKALNY["ogloszone"] = time.time()
+        odp = ("Claude teraz nie działa, odpowiada model zapasowy. " if kanal == "telefon"
+               else "🤖 Claude nie odpowiada, odpowiada lokalny model zapasowy (bez dostępu do serwera):\n\n") + odp
+    return odp
 
 
 def zadanie_w_tle(opis, kanal="telefon"):

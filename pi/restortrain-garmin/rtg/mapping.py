@@ -74,43 +74,31 @@ class Mapa:
         return Dopasowanie(None, None, None, "nieznane", m[1] if m else 0.0)
 
 
-# ---------------------------------------------------------------- nieznane ćwiczenia: Claude Code (llm_fallback)
-CLAUDE = Path("/home/tonyg/.local/bin/claude")
-MODEL = "claude-sonnet-5-5"            # dopasowanie nowych ćwiczeń (Haiku mylił, np. uginanie nóg siedząc -> suwnica)
+# ---------------------------------------------------------------- nieznane ćwiczenia: lokalny model (llm_fallback)
+# Ollama na Pi (bez Claude: Claude nie dotyka Garmina). Odpowiedź ograniczona schematem do nazw z oficjalnej listy.
 NIEUDANE = KAT / "data" / "llm_nieudane.json"          # nazwa -> czas ostatniej nieudanej próby (ponów po 24 h)
 
 
-def _claude(prompt):
-    import subprocess
-    r = subprocess.run([str(CLAUDE), "-p", prompt, "--output-format", "json", "--tools", "", "--strict-mcp-config",
-                        "--model", MODEL, "--effort", "low"], capture_output=True, text=True, timeout=90,
-                       stdin=subprocess.DEVNULL, cwd=str(KAT))
-    d = json.loads(r.stdout or "{}")
-    return None if d.get("is_error") else (d.get("result") or "").strip()
-
-
-def _json_z(tekst):
-    import re
-    m = re.search(r"\{.*\}", tekst or "", re.S)
-    return json.loads(m.group(0)) if m else {}
+def _wybierz(prompt, pole, opcje):
+    from .ai import MODEL, ollama
+    schemat = {"type": "object", "properties": {pole: {"enum": sorted(opcje)}}, "required": [pole]}
+    return json.loads(ollama(prompt, MODEL, schemat, limit=600, num_predict=60)).get(pole)
 
 
 def dopasuj_llm(nazwa_pl, lista):
-    """2 krótkie pytania do Claude (bez narzędzi): kategoria spośród 47, potem ćwiczenie z tej kategorii.
+    """2 krótkie pytania do lokalnego modelu: kategoria spośród 47, potem ćwiczenie z tej kategorii.
     Wynik zawsze walidowany z oficjalną listą -> (category, exerciseName) albo None"""
-    kat = _json_z(_claude(
-        f"Ćwiczenie siłowe po polsku: „{nazwa_pl}”. Wybierz JEDNĄ kategorię Garmin, do której najlepiej pasuje, z listy: "
-        f"{', '.join(sorted(lista))}. Odpowiedz tylko JSON: {{\"category\": \"...\"}}")).get("category")
+    kat = _wybierz(f"Ćwiczenie siłowe po polsku: „{nazwa_pl}”. Wybierz JEDNĄ kategorię ćwiczeń Garmin (nazwy angielskie), "
+                   "do której najlepiej pasuje. Odpowiedz JSON.", "category", lista)
     if kat not in lista:
         return None
-    cw = _json_z(_claude(
-        f"Ćwiczenie siłowe po polsku: „{nazwa_pl}”, kategoria Garmin {kat}. Wybierz JEDNO najbliższe ćwiczenie z listy: "
-        f"{', '.join(sorted(lista[kat]))}. Odpowiedz tylko JSON: {{\"exerciseName\": \"...\"}}")).get("exerciseName")
+    cw = _wybierz(f"Ćwiczenie siłowe po polsku: „{nazwa_pl}”, kategoria Garmin {kat}. Wybierz JEDNO najbliższe ćwiczenie "
+                  "z listy Garmin (nazwy angielskie). Odpowiedz JSON.", "exerciseName", lista[kat])
     return (kat, cw) if cw in lista[kat] else None
 
 
 def dopisz_nieznane(opis, mapa, sciezka=KAT / "exercises.yaml"):
-    """nieznane ćwiczenia z opisu -> propozycja Claude (zwalidowana) dopisana do exercises.yaml z „auto: true”;
+    """nieznane ćwiczenia z opisu -> propozycja lokalnego modelu (zwalidowana) dopisana do exercises.yaml z „auto: true”;
     zwraca True, gdy coś dopisano. Bez dopasowania: powiadomienie z prośbą o alias."""
     import time
     from .parser import WarmupSets, analizuj, wszystkie_cwiczenia
@@ -139,10 +127,10 @@ def dopisz_nieznane(opis, mapa, sciezka=KAT / "exercises.yaml"):
             continue
         with open(sciezka, "a", encoding="utf-8") as f:
             f.write(f"  - nazwa: {n.lower()}\n    aliasy: []\n    category: {wynik[0]}\n    exerciseName: {wynik[1]}\n"
-                    f"    auto: true                      # propozycja Claude ({time.strftime('%Y-%m-%d')}), do przejrzenia\n")
+                    f"    auto: true                      # propozycja modelu lokalnego ({time.strftime('%Y-%m-%d')}), do przejrzenia\n")
         dopisane.append(f"{n} → {wynik[0]}/{wynik[1]}")
     NIEUDANE.parent.mkdir(exist_ok=True)
     NIEUDANE.write_text(json.dumps(nieudane, ensure_ascii=False), encoding="utf-8")
     if dopisane:
-        powiadom("🏋 Garmin: Claude dopisał ćwiczenia (sprawdź, czy pasują): " + "; ".join(dopisane))
+        powiadom("🏋 Garmin: model lokalny dopisał ćwiczenia (sprawdź, czy pasują): " + "; ".join(dopisane))
     return bool(dopisane)
