@@ -9,7 +9,8 @@ import urllib.request
 from datetime import datetime
 
 OLLAMA = "http://127.0.0.1:11434"
-MODEL = os.environ.get("LOKALNY_MODEL", "qwen2.5:1.5b")
+MODEL = os.environ.get("LOKALNY_MODEL", "qwen2.5:1.5b")   # test 16.11 na Pi 4: ok. 10–25 s na odpowiedź, poprawne fakty
+# (qwen3:1.7b szybszy, ale mylił fakty; 3–4B to 30–60 s). Kontekst krótki: każdy token promptu to czas na Pi.
 DNI = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
 
 SYSTEM = ("Jesteś zapasowym asystentem serwera domowego Antka (Raspberry Pi). Główny asystent (Claude) teraz nie działa. "
@@ -26,10 +27,10 @@ def odpowiedz(tekst, kontekst="", telefon=False, limit=120):
     wiad = [{"role": "system", "content": SYSTEM.format(teraz=teraz) + (" Mówisz przez telefon: odpowiedź będzie czytana na głos."
                                                                          if telefon else "")}]
     if kontekst.strip():
-        wiad.append({"role": "user", "content": "Ostatnie wiadomości (dla kontekstu):\n" + kontekst.strip()[-3000:]})
+        wiad.append({"role": "user", "content": "Ostatnie wiadomości (dla kontekstu):\n" + kontekst.strip()[-(600 if telefon else 1500):]})
         wiad.append({"role": "assistant", "content": "Rozumiem."})
     wiad.append({"role": "user", "content": tekst})
-    dane = {"model": MODEL, "messages": wiad, "stream": False, "keep_alive": "10m",
+    dane = {"model": MODEL, "messages": wiad, "stream": False, "keep_alive": "10m", "think": False,
             "options": {"temperature": 0.3, "num_ctx": 2048, "num_predict": 120 if telefon else 300}}
     req = urllib.request.Request(OLLAMA + "/api/chat", data=json.dumps(dane).encode(), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=limit) as r:
