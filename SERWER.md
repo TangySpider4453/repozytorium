@@ -597,10 +597,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   domyślnie 10 s (`przejscie_rundy_s`, strona Automatyczne / Siłownia, 0 = bez).
 - **Lokalny model zamiast Claude** (2026-11-16, decyzja Antka: „Claude ma nie dotykać garmina”): analiza opisu i
   dopasowanie nowych ćwiczeń robi Ollama na Pi (`ai_model: qwen2.5:3b`, `http://127.0.0.1:11434`, kształt odpowiedzi
-  wymuszony schematem JSON, przy dopasowaniu lista dozwolonych nazw jako `enum`). Pi się grzało (alerty temperatury),
-  więc model liczy na 2 rdzeniach (`ai_watki`), jest zwalniany z pamięci zaraz po odpowiedzi (`keep_alive: 0`), nie
-  startuje powyżej 65 °C (`ai_max_temp`) i najwyżej 1 nowa analiza na przebieg (`NOWYCH_NA_PRZEBIEG`). Gdy model czeka
-  (`ai.Odloz`): trening za ≥ 2 dni czeka na następny przebieg, na dziś/jutro → parser regułowy. Analizy Claude sprzed
+  wymuszony schematem JSON, przy dopasowaniu lista dozwolonych nazw jako `enum`). Model liczy na 3 rdzeniach
+  (`ai_watki`), jest zwalniany z pamięci zaraz po odpowiedzi (`keep_alive: 0`), najwyżej 1 nowa analiza na przebieg
+  (`NOWYCH_NA_PRZEBIEG`). Gdy model czeka (`ai.Odloz`): trening za ≥ 2 dni czeka na następny przebieg, na dziś/jutro →
+  parser regułowy. Temperatury nie pilnuje (Antek: niech liczy); zamiast tego bot nie wysyła alertów temperatury,
+  taktowania, CPU, RAM i swap, gdy Ollama ma wczytany model albo miała w ostatnich 10 min (`ollama_grzeje`,
+  `/api/ps`); incydent zostaje na stronie Zdrowie, czerwona temperatura (≥ 80 °C) dalej alarmuje. Analizy Claude sprzed
   16.11 zostają w `data/ai_cache.json` i są używane (`STARE_MODELE`), więc istniejące treningi nie są liczone od nowa.
   `TimeoutStartSec=2400`. Ollama 0.15.2 (Gemma 3 wymaga nowszej; aktualizacja zablokowana bez zgody).
 - **Analiza AI** (2026-11-06–16, historycznie; od 16.11 lokalny model, wyżej): opis treningu czytał Claude Sonnet (`claude -p --tools ""`,

@@ -12,14 +12,11 @@ def bez_limitu():
     ai.LICZNIK["nowe"] = 0              # limit nowych analiz na przebieg: każdy test od zera
 
 
-def test_limit_i_temperatura(monkeypatch, tmp_path):
+def test_limit_na_przebieg(monkeypatch, tmp_path):
     monkeypatch.setattr(ai, "CACHE", tmp_path / "c.json")
     ai.LICZNIK["nowe"] = ai.NOWYCH_NA_PRZEBIEG
     with pytest.raises(ai.Odloz):
         ai.analizuj("inny opis", pytaj=lambda o: ODP)
-    monkeypatch.setattr(ai, "temperatura", lambda: 80.0)
-    with pytest.raises(ai.Odloz):
-        ai.ollama("x", "m")
 
 ODP = {"sekcje": [
     {"nazwa": "Rozgrzewka", "rodzaj": "warmup", "przerwy": "warmup", "elementy": [

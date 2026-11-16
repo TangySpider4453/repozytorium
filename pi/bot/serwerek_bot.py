@@ -803,6 +803,22 @@ def czas_minal(hhmm):
     return datetime.now() >= datetime.now().replace(hour=g, minute=m, second=0, microsecond=0)
 
 
+OLLAMA = {"aktywna": 0.0}
+OD_OLLAMY = {"temp", "taktowanie", "throttling", "cpu", "ram", "swap"}     # skutki liczenia modelu lokalnego
+
+
+def ollama_grzeje():
+    """lokalny model (Ollama) liczy teraz albo liczył w ostatnich 10 min (Pi stygnie): alerty temperatury / CPU / RAM
+    wtedy bez powiadomień (incydent i tak zostaje na stronie Zdrowie); temperatura ≥ 80 °C (czerwona) dalej alarmuje"""
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:11434/api/ps", timeout=3) as r:
+            if json.loads(r.read()).get("models"):
+                OLLAMA["aktywna"] = time.time()
+    except (OSError, ValueError):
+        pass
+    return time.time() - OLLAMA["aktywna"] < 600
+
+
 def powiadomienia():
     s = stan()
     if not s["wlasciciel"]:
@@ -815,8 +831,12 @@ def powiadomienia():
     if z:
         wszystkie = z["aktywne"] + z["do_przejrzenia"]
         zolte = []
+        grzeje = ollama_grzeje()
         for i in wszystkie:
             k, poziom = "inc:" + i["id"], i.get("teraz", i["poziom"]) if not i.get("do") else i["poziom"]
+            if grzeje and w.get(k) in (None, "ollama") and i.get("klucz") in OD_OLLAMY and not (i["klucz"] == "temp" and poziom == "crit"):
+                w[k] = "ollama"                 # od modelu lokalnego: bez powiadomienia (też później, po ostygnięciu)
+                continue
             if not i.get("do") and poziom == "crit" and w.get(k) != "crit":
                 powiadom(f"🔴 <b>{e(i['tytul'])}</b>\n{e(i['opis'])}\n\n{LINK_DOM}/strony/zdrowie/", html_=True,
                          przyciski={"inline_keyboard": [[{"text": "👀 Widzę (nie dzwoń)", "callback_data": f"widze:{i['id']}"}]]},

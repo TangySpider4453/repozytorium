@@ -149,7 +149,6 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
             ai.MODEL = cfg["ai_model"]
         ai.LICZNIK["nowe"] = 0
         ai.WATKI = int(cfg.get("ai_watki", ai.WATKI))
-        ai.MAX_TEMP = float(cfg.get("ai_max_temp", ai.MAX_TEMP))
         aktualne = set()
         for p in pozycje:
             if p["date"] in zrobione:                       # trening siłowy tego dnia już zrobiony: nie ruszamy
@@ -182,7 +181,7 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
             except ai.Odloz as ex:
                 if d > (date.today() + timedelta(days=1)).isoformat():
                     log.info("%s: analiza później (%s)", d, ex)
-                    continue                                # trening za kilka dni: poczeka, aż Pi ostygnie
+                    continue                                # trening za kilka dni: następny przebieg
                 log.info("%s: trening na dziś/jutro, a model czeka (%s): parser regułowy", d, ex)
                 parser.AI["wlaczone"] = False
             try:

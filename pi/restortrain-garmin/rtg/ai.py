@@ -24,24 +24,18 @@ OLLAMA = "http://127.0.0.1:11434"
 MODEL = "qwen2.5:3b"                    # lokalny (Ollama); config.yaml: ai_model
 STARE_MODELE = ("claude-sonnet-5-5",)   # wcześniejsze analizy z pamięci (bez nowych zapytań do Claude)
 WERSJA_PROMPTU = "1"
-LIMIT_S = 2400                          # Pi 4 na 2 wątkach: prompt + kilkaset tokenów JSON to kilkanaście minut
-# Pi się grzeje (alerty temperatury): model liczy na 2 z 4 rdzeni, zaraz potem jest zwalniany z pamięci, nie startuje
-# powyżej MAX_TEMP i najwyżej NOWYCH_NA_PRZEBIEG nowych analiz na przebieg (co 10 min), reszta czeka (Odloz).
-WATKI = 2
-MAX_TEMP = 65.0
+LIMIT_S = 2400                          # Pi 4 na 3 wątkach: prompt + kilkaset tokenów JSON to kilkanaście minut
+# Pi się grzeje: model liczy na 3 z 4 rdzeni, zaraz potem jest zwalniany z pamięci i najwyżej NOWYCH_NA_PRZEBIEG nowych
+# analiz na przebieg (co 10 min), reszta czeka (Odloz). Temperatury nie pilnujemy (Antek 16.11: niech liczy); alerty
+# temperatury w czasie liczenia bot wycisza (serwerek_bot.ollama_grzeje).
+WATKI = 3
 NOWYCH_NA_PRZEBIEG = 1
 LICZNIK = {"nowe": 0}                   # sync zeruje na początku przebiegu
 
 
 class Odloz(Exception):
-    """lokalny model teraz nie liczy (za gorąco albo limit na przebieg): spróbuj w następnym przebiegu"""
+    """lokalny model teraz nie liczy (limit nowych analiz na przebieg): spróbuj w następnym przebiegu"""
 
-
-def temperatura():
-    try:
-        return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
-    except (OSError, ValueError):
-        return 0.0
 
 PROMPT = """Jesteś parserem planu treningu siłowego (z aplikacji RestOrTrain) dla zegarka Garmin.
 Przeczytaj opis i zwróć WYŁĄCZNIE JSON (bez komentarzy, bez ```), dokładnie w tym kształcie:
@@ -108,9 +102,7 @@ def _cache():
 
 
 def ollama(prompt, model, schemat=None, limit=LIMIT_S, num_predict=2500):
-    """jedno zapytanie do lokalnego Ollama (temperatura 0) -> tekst odpowiedzi; Odloz, gdy Pi za gorące"""
-    if (t := temperatura()) > MAX_TEMP:
-        raise Odloz(f"Pi ma {t:.0f}°C (limit {MAX_TEMP:.0f}°C)")
+    """jedno zapytanie do lokalnego Ollama (temperatura 0) -> tekst odpowiedzi"""
     dane = {"model": model, "prompt": prompt, "stream": False, "keep_alive": 0, "think": False,
             "options": {"temperature": 0, "num_ctx": 6144, "num_predict": num_predict, "num_thread": WATKI}}
     if schemat:

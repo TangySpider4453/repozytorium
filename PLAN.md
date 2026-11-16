@@ -579,5 +579,7 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   Po „zrobione” na czacie Pi nie dzwoni dalej, dwa odrzucenia (603) kończą ponawianie. W rozmowie Pi nic nie słyszało
   (whisper działa, do nagrania nie dochodził głos): dodana diagnostyka nasłuchu w dzienniku, czeka na rozmowę testową.
 - **2026-11-16 (lokalne modele zamiast Claude w Garminie)**: Claude nie dotyka Garmina: analiza treningów i dopasowanie
-  ćwiczeń przez Ollamę na Pi (`qwen2.5:3b`, 2 rdzenie, nie powyżej 65 °C, 1 nowa analiza na przebieg, bo alerty
+  ćwiczeń przez Ollamę na Pi (`qwen2.5:3b`, 1 nowa analiza na przebieg; pierwotnie 2 rdzenie i limit 65 °C, bo alerty
   temperatury), usługa bez `claude.env`. Bot: gdy Claude się wysypie, odpowiada lokalny `qwen2.5:1.5b` (bez akcji).
+- **2026-11-16 (Ollama bez blokady temperatury)**: model Garmina liczy na 3 rdzeniach bez limitu temperatury, a bot nie
+  wysyła alertów temperatury / CPU / RAM, gdy grzeje je Ollama (do 10 min po liczeniu; ≥ 80 °C dalej alarm).
