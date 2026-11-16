@@ -147,6 +147,9 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
         parser.AI["wlaczone"] = bool(cfg.get("ai_analiza", True))      # opis czyta lokalny model (Ollama), reguły jako zapas
         if cfg.get("ai_model"):
             ai.MODEL = cfg["ai_model"]
+        ai.LICZNIK["nowe"] = 0
+        ai.WATKI = int(cfg.get("ai_watki", ai.WATKI))
+        ai.MAX_TEMP = float(cfg.get("ai_max_temp", ai.MAX_TEMP))
         aktualne = set()
         for p in pozycje:
             if p["date"] in zrobione:                       # trening siłowy tego dnia już zrobiony: nie ruszamy
@@ -169,14 +172,25 @@ def synchronizuj(dry_run=False, wymus=False, do_dnia=None):
             ust = json.dumps({k: cfg.get(k) for k in ("rep_target", "rest_mode", "przerwy_s", "przejscie", "ai_analiza", "przejscie_rundy_s")}, sort_keys=True) + hash_opisu((KAT / "exercises.yaml").read_text(encoding="utf-8"))[:12]   # zmiana mapowania -> przebudowa
             src, d, h = str(w["workoutId"]), p["date"], hash_opisu((w.get("description") or "") + WERSJA + ust)
             aktualne.add((src, d))
-            if cfg.get("llm_fallback") and dopisz_nieznane(w.get("description") or "", mapa):
-                mapa = Mapa()                               # model lokalny dopisał ćwiczenia do exercises.yaml
             row = db.execute("SELECT description_hash, generated_workout_id FROM treningi WHERE source_workout_id=? AND date=?", (src, d)).fetchone()
             if row and row[0] == h and row[1]:
                 continue                                        # bez zmian
-            if row and row[1]:
-                usun_nasz(g, row[1], pozycje, dry_run, zmiany)  # opis się zmienił
-            wid, sid = utworz(g, {**w, "title": p.get("title")}, d, cfg, mapa, dry_run, zmiany, nieznane, pokaz_json)
+            try:
+                if cfg.get("llm_fallback") and dopisz_nieznane(w.get("description") or "", mapa):
+                    mapa = Mapa()                           # model lokalny dopisał ćwiczenia do exercises.yaml
+                parser.analizuj(w.get("description") or "")  # nowa analiza modelem tu, żeby Odloz padł przed usuwaniem
+            except ai.Odloz as ex:
+                if d > (date.today() + timedelta(days=1)).isoformat():
+                    log.info("%s: analiza później (%s)", d, ex)
+                    continue                                # trening za kilka dni: poczeka, aż Pi ostygnie
+                log.info("%s: trening na dziś/jutro, a model czeka (%s): parser regułowy", d, ex)
+                parser.AI["wlaczone"] = False
+            try:
+                if row and row[1]:
+                    usun_nasz(g, row[1], pozycje, dry_run, zmiany)  # opis się zmienił
+                wid, sid = utworz(g, {**w, "title": p.get("title")}, d, cfg, mapa, dry_run, zmiany, nieznane, pokaz_json)
+            finally:
+                parser.AI["wlaczone"] = bool(cfg.get("ai_analiza", True))
             if cfg.get("replace_original") and not dry_run and p.get("id"):
                 g.unschedule_workout(p["id"])                   # oryginał z kalendarza (definicja zostaje)
                 zmiany.append(f"zdejmij oryginał „{w.get('workoutName')}” z {d}")

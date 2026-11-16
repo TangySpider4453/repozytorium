@@ -6,6 +6,21 @@ from rtg import ai, parser
 from rtg.builder import buduj
 from rtg.parser import Circuit, Exercise, WarmupSets
 
+
+@pytest.fixture(autouse=True)
+def bez_limitu():
+    ai.LICZNIK["nowe"] = 0              # limit nowych analiz na przebieg: każdy test od zera
+
+
+def test_limit_i_temperatura(monkeypatch, tmp_path):
+    monkeypatch.setattr(ai, "CACHE", tmp_path / "c.json")
+    ai.LICZNIK["nowe"] = ai.NOWYCH_NA_PRZEBIEG
+    with pytest.raises(ai.Odloz):
+        ai.analizuj("inny opis", pytaj=lambda o: ODP)
+    monkeypatch.setattr(ai, "temperatura", lambda: 80.0)
+    with pytest.raises(ai.Odloz):
+        ai.ollama("x", "m")
+
 ODP = {"sekcje": [
     {"nazwa": "Rozgrzewka", "rodzaj": "warmup", "przerwy": "warmup", "elementy": [
         {"typ": "czas", "sekundy": 480, "tekst": "mobilizacja barków"},
@@ -44,6 +59,7 @@ def test_pamiec_i_zapas(tmp_path, monkeypatch):
     assert ai.analizuj("opis", pytaj=lambda o: wywolania.append(o) or ODP) is not None
     assert ai.analizuj("opis", pytaj=lambda o: wywolania.append(o) or ODP) is not None
     assert len(wywolania) == 1                                   # drugi raz z pamięci
+    ai.LICZNIK["nowe"] = 0                                       # następny przebieg
     assert ai.analizuj("inny", pytaj=lambda o: {"bzdura": 1}) is None
 
 

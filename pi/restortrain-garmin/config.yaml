@@ -15,6 +15,8 @@ sprzataj_po_treningu: true   # po zrobionym treningu siłowym zdejmij z kalendar
 replace_original: false      # true = zdejmij z kalendarza oryginał RestOrTrain (definicji nie usuwa); WYMAGA zgody
 ai_analiza: true             # opis treningu czyta lokalny model (Ollama na Pi, bez Claude; raz na zmianę opisu, pamięć data/ai_cache.json)
 ai_model: qwen2.5:3b         # model Ollama do analizy i dopasowań
+ai_watki: 2                  # rdzenie dla modelu (z 4): mniej = chłodniej, wolniej
+ai_max_temp: 65              # °C: powyżej model nie startuje (trening czeka; na dziś/jutro: parser regułowy)
 llm_fallback: true           # nieznane ćwiczenia dopasowuje lokalny model (Ollama, nic nie wychodzi z Pi)
 raport_linphone: true         # po treningu raport (zrobione / niezrobione, ciężary) na Linphone
 autofix: false               # true = po 3 nieudanych synchronizacjach Claude Code proponuje poprawkę na gałęzi autofix/<data>

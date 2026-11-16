@@ -30,8 +30,8 @@ def odpowiedz(tekst, kontekst="", telefon=False, limit=120):
         wiad.append({"role": "user", "content": "Ostatnie wiadomości (dla kontekstu):\n" + kontekst.strip()[-(600 if telefon else 1500):]})
         wiad.append({"role": "assistant", "content": "Rozumiem."})
     wiad.append({"role": "user", "content": tekst})
-    dane = {"model": MODEL, "messages": wiad, "stream": False, "keep_alive": "10m", "think": False,
-            "options": {"temperature": 0.3, "num_ctx": 2048, "num_predict": 120 if telefon else 300}}
+    dane = {"model": MODEL, "messages": wiad, "stream": False, "keep_alive": "2m", "think": False,
+            "options": {"temperature": 0.3, "num_ctx": 2048, "num_predict": 120 if telefon else 300, "num_thread": 3}}
     req = urllib.request.Request(OLLAMA + "/api/chat", data=json.dumps(dane).encode(), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=limit) as r:
         d = json.loads(r.read())
@@ -40,7 +40,7 @@ def odpowiedz(tekst, kontekst="", telefon=False, limit=120):
 
 def rozgrzej():
     """wczytuje model do pamięci (pierwsza odpowiedź bez czekania na ładowanie)"""
-    dane = {"model": MODEL, "prompt": "", "keep_alive": "10m"}
+    dane = {"model": MODEL, "prompt": "", "keep_alive": "2m"}
     req = urllib.request.Request(OLLAMA + "/api/generate", data=json.dumps(dane).encode(), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=120) as r:
         r.read()

@@ -196,6 +196,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ze znacznikami SUDO/AKCJA, przekręcona mowa). W rozmowie telefonicznej akcje potwierdza się głosem („tak” / „nie”).
 - Rozpoznawanie mowy przy telefonie: whisper base zachłannie (`-bs 1 -bo 1 -nf`, ok. 30% szybciej), głosówki: small.
   `claude_jednorazowo` (budzik, przypomnienia, nowe sprawdziany) zostaje jako osobne wywołanie.
+- **Zapas, gdy Claude się wysypie** (2026-11-16, `pi/bot/lokalny.py`): błąd albo wyjątek Claude w `claude_odpowiedz` →
+  `odpowiedz_lokalnie`: Ollama `qwen2.5:1.5b` (inny, mniejszy niż do Garmina, bo liczy się czas; 3 wątki, zwalniany po
+  2 min), bez narzędzi i akcji, z datą i godziną w prompcie i krótkim kontekstem z pamięci (600 znaków w telefonie,
+  1500 w czacie). Raz na 10 min dopisek „Claude teraz nie działa, odpowiada model zapasowy”. Pomiar 16.11 na Pi 4:
+  10–25 s na odpowiedź (pierwsza z wczytaniem modelu ok. 50 s); qwen3:1.7b był szybszy, ale mylił fakty (Sydney),
+  modele 3–4B 30–60 s. `LOKALNY_MODEL` w środowisku zmienia model.
 
 ## Zdalne: terminal i pulpit VNC w przeglądarce (od 2026-10-23)
 - Strona `/zdalne` (menu „🖥️ Zdalne”, zamiast „Terminal”; `/terminal` przekierowuje), tylko przez Tailscale, zakładki
@@ -537,7 +543,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   garminconnect: warmup/cooldown na czas, serie = RepeatGroupDTO [ćwiczenie reps + przerwa], serie rozgrzewkowe do
   przycisku), znacznik „auto: restortrain-garmin, src=…, hash=…” w opisie; usuwane są tylko treningi z tym znacznikiem.
   `sync --dry-run` działa (4 treningi: 5, 6, 8, 10.11). Powiadomienia: `~/bot/powiadomienia/*.json` → bot (Linphone).
-- Timer `rtg-garmin.timer` co 10 min (system, `User=tonyg`, `EnvironmentFile=-/etc/serwerek-bot/claude.env` dla Claude),
+- Timer `rtg-garmin.timer` co 10 min (system, `User=tonyg`, od 2026-11-16 bez `claude.env`: Claude nie dotyka Garmina),
   przycisk „🔄 Synchronizuj teraz” (portal `POST /api/garmin {teraz}` → `data/teraz` → `rtg-garmin-teraz.path`), karta
   „🏋 Treningi siłowe na zegarek” na Automatycznych (`GET /api/garmin`: przebiegi i treningi z SQLite, tylko odczyt).
   Tylko siła (filtr `sportTypeKey` z kalendarza przed pobraniem szczegółów), bez dni minionych i dni ze zrobionym treningiem
@@ -589,7 +595,15 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (tylko wpis w kalendarzu, definicja zostaje; tylko oryginały z bazy).
 - **Przejście w rundach** (2026-11-09): między ćwiczeniami jednej rundy krok `rest` na czas „Przejście: <następne>”,
   domyślnie 10 s (`przejscie_rundy_s`, strona Automatyczne / Siłownia, 0 = bez).
-- **Analiza AI** (2026-11-06, `rtg/ai.py`, `ai_analiza: true`): opis treningu czyta Claude Sonnet (`claude -p --tools ""`,
+- **Lokalny model zamiast Claude** (2026-11-16, decyzja Antka: „Claude ma nie dotykać garmina”): analiza opisu i
+  dopasowanie nowych ćwiczeń robi Ollama na Pi (`ai_model: qwen2.5:3b`, `http://127.0.0.1:11434`, kształt odpowiedzi
+  wymuszony schematem JSON, przy dopasowaniu lista dozwolonych nazw jako `enum`). Pi się grzało (alerty temperatury),
+  więc model liczy na 2 rdzeniach (`ai_watki`), jest zwalniany z pamięci zaraz po odpowiedzi (`keep_alive: 0`), nie
+  startuje powyżej 65 °C (`ai_max_temp`) i najwyżej 1 nowa analiza na przebieg (`NOWYCH_NA_PRZEBIEG`). Gdy model czeka
+  (`ai.Odloz`): trening za ≥ 2 dni czeka na następny przebieg, na dziś/jutro → parser regułowy. Analizy Claude sprzed
+  16.11 zostają w `data/ai_cache.json` i są używane (`STARE_MODELE`), więc istniejące treningi nie są liczone od nowa.
+  `TimeoutStartSec=2400`. Ollama 0.15.2 (Gemma 3 wymaga nowszej; aktualizacja zablokowana bez zgody).
+- **Analiza AI** (2026-11-06–16, historycznie; od 16.11 lokalny model, wyżej): opis treningu czytał Claude Sonnet (`claude -p --tools ""`,
   model `claude-sonnet-5-5`, logowanie z `claude.env` usługi — z sesji SSH bez niego „Not logged in”). Zwraca JSON
   (sekcje: czas / serie_rozgrzewkowe / cwiczenie / rundy, kg całkowite, jednostronne + strona), walidowany i zamieniany
   na obiekty parsera. Jedno zapytanie na nowy lub zmieniony opis (~15–30 s), wynik w `data/ai_cache.json` (klucz: hash

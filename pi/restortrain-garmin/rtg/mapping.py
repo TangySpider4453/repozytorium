@@ -119,7 +119,9 @@ def dopisz_nieznane(opis, mapa, sciezka=KAT / "exercises.yaml"):
             continue
         try:
             wynik = dopasuj_llm(n, lista)
-        except Exception:
+        except Exception as ex:
+            if type(ex).__name__ == "Odloz":    # za gorąco: spróbuj w następnym przebiegu (bez „nie umiem”)
+                raise
             wynik = None
         if not wynik:
             nieudane[n] = time.time()

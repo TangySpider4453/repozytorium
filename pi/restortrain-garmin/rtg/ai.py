@@ -24,7 +24,24 @@ OLLAMA = "http://127.0.0.1:11434"
 MODEL = "qwen2.5:3b"                    # lokalny (Ollama); config.yaml: ai_model
 STARE_MODELE = ("claude-sonnet-5-5",)   # wcześniejsze analizy z pamięci (bez nowych zapytań do Claude)
 WERSJA_PROMPTU = "1"
-LIMIT_S = 1500                          # Pi 4: prompt + kilkaset tokenów JSON to kilka minut
+LIMIT_S = 2400                          # Pi 4 na 2 wątkach: prompt + kilkaset tokenów JSON to kilkanaście minut
+# Pi się grzeje (alerty temperatury): model liczy na 2 z 4 rdzeni, zaraz potem jest zwalniany z pamięci, nie startuje
+# powyżej MAX_TEMP i najwyżej NOWYCH_NA_PRZEBIEG nowych analiz na przebieg (co 10 min), reszta czeka (Odloz).
+WATKI = 2
+MAX_TEMP = 65.0
+NOWYCH_NA_PRZEBIEG = 1
+LICZNIK = {"nowe": 0}                   # sync zeruje na początku przebiegu
+
+
+class Odloz(Exception):
+    """lokalny model teraz nie liczy (za gorąco albo limit na przebieg): spróbuj w następnym przebiegu"""
+
+
+def temperatura():
+    try:
+        return int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
+    except (OSError, ValueError):
+        return 0.0
 
 PROMPT = """Jesteś parserem planu treningu siłowego (z aplikacji RestOrTrain) dla zegarka Garmin.
 Przeczytaj opis i zwróć WYŁĄCZNIE JSON (bez komentarzy, bez ```), dokładnie w tym kształcie:
@@ -91,9 +108,11 @@ def _cache():
 
 
 def ollama(prompt, model, schemat=None, limit=LIMIT_S, num_predict=2500):
-    """jedno zapytanie do lokalnego Ollama (temperatura 0) -> tekst odpowiedzi"""
-    dane = {"model": model, "prompt": prompt, "stream": False, "keep_alive": "2m",
-            "options": {"temperature": 0, "num_ctx": 6144, "num_predict": num_predict}}
+    """jedno zapytanie do lokalnego Ollama (temperatura 0) -> tekst odpowiedzi; Odloz, gdy Pi za gorące"""
+    if (t := temperatura()) > MAX_TEMP:
+        raise Odloz(f"Pi ma {t:.0f}°C (limit {MAX_TEMP:.0f}°C)")
+    dane = {"model": model, "prompt": prompt, "stream": False, "keep_alive": 0, "think": False,
+            "options": {"temperature": 0, "num_ctx": 6144, "num_predict": num_predict, "num_thread": WATKI}}
     if schemat:
         dane["format"] = schemat
     req = urllib.request.Request(OLLAMA + "/api/generate", data=json.dumps(dane).encode(), headers={"Content-Type": "application/json"})
@@ -179,7 +198,7 @@ def na_sekcje(dane):
 
 
 def analizuj(opis, pytaj=_zapytaj):
-    """[Section] od Claude (z pamięci albo nowe zapytanie) albo None, gdy się nie udało"""
+    """[Section] od lokalnego modelu (z pamięci albo nowe zapytanie) albo None, gdy się nie udało; Odloz = później"""
     k = _klucz(opis)
     pamiec = _cache()
     try:
@@ -188,8 +207,13 @@ def analizuj(opis, pytaj=_zapytaj):
         for stary in STARE_MODELE:              # analiza sprzed zmiany modelu: dalej ważna, bez pytania
             if (ks := _klucz(opis, stary)) in pamiec:
                 return na_sekcje(pamiec[ks])
+        if LICZNIK["nowe"] >= NOWYCH_NA_PRZEBIEG:
+            raise Odloz("limit nowych analiz w tym przebiegu")
+        LICZNIK["nowe"] += 1
         dane = pytaj(opis)
         sekcje = na_sekcje(dane)
+    except Odloz:
+        raise
     except Exception as ex:
         log.warning("analiza AI nieudana (%s), parser regułowy", str(ex)[:200])
         return None
