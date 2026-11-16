@@ -202,6 +202,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   1500 w czacie). Raz na 10 min dopisek „Claude teraz nie działa, odpowiada model zapasowy”. Pomiar 16.11 na Pi 4:
   10–25 s na odpowiedź (pierwsza z wczytaniem modelu ok. 50 s); qwen3:1.7b był szybszy, ale mylił fakty (Sydney),
   modele 3–4B 30–60 s. `LOKALNY_MODEL` w środowisku zmienia model.
+  Pomiar 16.11 wieczorem (Pi bez innego obciążenia): czytanie promptu ok. 9 tokenów/s (1.5b) i 4 tokeny/s (3b),
+  więc zapas z dłuższym kontekstem (dane z Pi, internet) odpowiada 1,5–3 min: zrezygnowane, zapas zostaje prosty.
+- **Zmiana konta Claude (17.11)**: nowy token: `claude setup-token` (nowe konto) → `/etc/serwerek-bot/claude.env`
+  (`CLAUDE_CODE_OAUTH_TOKEN`, root 600) → `bash ~/bot/bez_rozmowy.sh`. Do tego czasu Claude w bocie i telefonie nie
+  odpowiada (szybkie odpowiedzi, przypomnienia, budziki, Garmin i portal działają).
 
 ## Zdalne: terminal i pulpit VNC w przeglądarce (od 2026-10-23)
 - Strona `/zdalne` (menu „🖥️ Zdalne”, zamiast „Terminal”; `/terminal` przekierowuje), tylko przez Tailscale, zakładki

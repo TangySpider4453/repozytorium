@@ -586,3 +586,8 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
 - **2026-11-16 (Garmin: reguły zamiast modelu)**: test `qwen2.5:3b` na Pi: 21 min i błędny plan, parser regułowy od razu
   prawie jak Claude. Teraz reguły najpierw (dopisane „następnie 3×6 @70 kg” i serie przygotowawcze zdaniem), model
   lokalny tylko, gdy reguły nie znajdą żadnego ćwiczenia; stare analizy Claude z pamięci zostają.
+- **2026-11-16 (bez lokalnego modelu do rozmów i planowania)**: próba lokalnego zapasu z danymi z Pi i internetem oraz
+  planowania nauki przez model lokalny: na Pi 4 wczytanie ok. 700 tokenów kontekstu to 79 s (qwen2.5:1.5b) i 164 s
+  (qwen2.5:3b), więc Antek zrezygnował; nic nie wdrożone (kod w kopii zapasowej rozmowy na Pi,
+  `Desktop/dla claude kopie zapasowe/Serwerek/niewdrozone_planer_i_lokalny_zapas.patch`). 17.11 zmiana konta Claude:
+  token w `/etc/serwerek-bot/claude.env` do podmiany (`claude setup-token` nowym kontem, potem `bez_rozmowy.sh`).
