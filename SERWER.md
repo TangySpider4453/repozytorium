@@ -595,6 +595,13 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (tylko wpis w kalendarzu, definicja zostaje; tylko oryginały z bazy).
 - **Przejście w rundach** (2026-11-09): między ćwiczeniami jednej rundy krok `rest` na czas „Przejście: <następne>”,
   domyślnie 10 s (`przejscie_rundy_s`, strona Automatyczne / Siłownia, 0 = bez).
+- **Reguły najpierw** (2026-11-16, po teście): `qwen2.5:3b` na Pi liczył opis Dół B 21 min (2 rdzenie, do 68 °C) i
+  zwrócił błędny plan („rundy bez ćwiczeń”), a parser regułowy dał od razu prawie to samo co Claude. Kolejność w
+  `parser.analizuj`: analiza Claude z pamięci (sprzed 16.11) → parser regułowy → lokalny model tylko, gdy reguły nie
+  znalazły żadnego ćwiczenia. Reguły znają teraz też „1×6 @80 kg, następnie 3×6 @70 kg” (dwa bloki serii),
+  „Martwy ciąg: 2–3 serie przygotowawcze …” i „Po jednej lekkiej serii wyciskania hantli i wiosłowania” (testy na
+  prawdziwych opisach `tests/fixtures/opis_*.txt`). Nowe ćwiczenia spoza exercises.yaml dalej dopasowuje model lokalny
+  (krótkie pytanie z listą dozwolonych nazw).
 - **Lokalny model zamiast Claude** (2026-11-16, decyzja Antka: „Claude ma nie dotykać garmina”): analiza opisu i
   dopasowanie nowych ćwiczeń robi Ollama na Pi (`ai_model: qwen2.5:3b`, `http://127.0.0.1:11434`, kształt odpowiedzi
   wymuszony schematem JSON, przy dopasowaniu lista dozwolonych nazw jako `enum`). Model liczy na 3 rdzeniach

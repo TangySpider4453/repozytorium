@@ -178,7 +178,26 @@ def sekundy(liczba, jednostka):
     return liczba * 60 if j.startswith("m") else liczba
 
 
+SLOWNE = {"jednej": 1, "jedną": 1, "jedna": 1, "dwie": 2, "dwóch": 2, "dwoch": 2, "trzy": 3, "trzech": 3}
+# „Martwy ciąg: 2–3 serie przygotowawcze z lekkim ciężarem”
+WSTEPNE_PO_NAZWIE_RE = re.compile(r"^(?P<ref>[^:]+?)\s*:\s*(?P<a>\d+)(?:\s*[-–]\s*(?P<b>\d+))?\s+seri\w*\s+"
+                                  r"(?:przygotowawcz|wstępn|wstepn|rozgrzewkow|lekk)\w*\s*(?P<rest>.*)$", re.I)
+# „Po jednej lekkiej serii wyciskania hantli i wiosłowania.”
+WSTEPNE_PO_RE = re.compile(r"^po\s+(?P<n>\d+|jednej|jedną|jedna|dwie|dwóch|dwoch|trzy|trzech)\s+(?:(?:lekk|wstępn|wstepn|"
+                           r"rozgrzewkow|przygotowawcz)\w*\s+)+seri\w*\s+(?P<refy>.+?)\.?$", re.I)
+
+
 def parsuj_linie(tekst, kind):
+    """linia opisu -> element (albo lista elementów, np. serie rozgrzewkowe kilku ćwiczeń w jednym zdaniu)"""
+    if m := WSTEPNE_PO_NAZWIE_RE.match(tekst):
+        a = int(m.group("a"))
+        b = int(m.group("b") or a)
+        return WarmupSets(raw=tekst, sets_min=min(a, b), sets_max=max(a, b), exercise_ref=m.group("ref").strip(),
+                          note=m.group("rest").strip(" ,;.-–—"))
+    if m := WSTEPNE_PO_RE.match(tekst):
+        n = int(m.group("n")) if m.group("n").isdigit() else SLOWNE[m.group("n").lower()]
+        return [WarmupSets(raw=tekst, sets_min=n, sets_max=n, exercise_ref=r.strip())
+                for r in re.split(r"\s*,\s*|\s+i\s+|\s+oraz\s+", m.group("refy")) if r.strip()]
     if PRZERWA_RUNDY_RE.search(tekst) and (m := PRZERWA_CZAS_RE.search(tekst)) and not CWICZENIE_RE.match(tekst):
         return RoundRest(raw=tekst, seconds=sekundy(int(m.group(2) or m.group(1)), m.group(3)))
     if (m := WSTEPNE_RE.match(tekst)) or (m := re.match(r"^(\d+)(?:\s*[-–]\s*(\d+))?\s+seri\w*\s+(?:wstępn|wstepn|rozgrzewkow)\w*\s*(.*)$", tekst, re.I)):
@@ -229,7 +248,15 @@ def parsuj(opis):
         if not sekcje:
             sekcje.append(Section(name="Trening", kind="main", rest_class="main"))
         s = sekcje[-1]
-        s.items.append(parsuj_linie(m.group(1), s.kind))
+        # „Martwy ciąg — 1×6 @80 kg, następnie 3×6 @70 kg, …” = dwa bloki serii tego samego ćwiczenia
+        czesci = re.split(r",?\s+(?:następnie|nastepnie|potem|a\s+potem)\s+(?=\d+\s*[x×X]\s*\d)", m.group(1), maxsplit=1)
+        if len(czesci) == 2 and (c := CWICZENIE_RE.match(czesci[0])):
+            czesci[1] = c.group("name").strip(" ,:—–-") + " — " + czesci[1]
+        else:
+            czesci = [m.group(1)]
+        for linia_cz in czesci:
+            el = parsuj_linie(linia_cz, s.kind)
+            s.items.extend(el if isinstance(el, list) else [el])
     for x in sekcje:
         x.items = grupuj_rundy(x)
     cwiczenia = [i.name_pl for i in wszystkie_cwiczenia(sekcje)]
@@ -296,12 +323,19 @@ AI = {"wlaczone": False}                    # sync włącza (config.yaml ai_anal
 
 
 def analizuj(opis):
-    """sekcje treningu: najpierw lokalny model (rtg.ai, Ollama, z pamięcią), gdy wyłączone albo nieudane — parser regułowy"""
+    """sekcje treningu. Analizy Claude sprzed 16.11 z pamięci (bez nowych zapytań), poza tym parser regułowy (od razu,
+    bez grzania Pi); lokalny model (rtg.ai, Ollama) tylko wtedy, gdy reguły nie znalazły żadnego ćwiczenia
+    (test 16.11: qwen2.5:3b liczył 21 min i zwrócił błędny plan, reguły dały to samo co Claude)."""
     if AI["wlaczone"]:
-        from .ai import analizuj as przez_ai
-        if (sekcje := przez_ai(opis)) is not None:
+        from .ai import z_pamieci
+        if (sekcje := z_pamieci(opis)) is not None:
             return sekcje
-    return parsuj(opis)
+    sekcje = parsuj(opis)
+    if AI["wlaczone"] and not any(True for _ in wszystkie_cwiczenia(sekcje)):
+        from .ai import analizuj as przez_ai
+        if (z_ai := przez_ai(opis)) is not None:
+            return z_ai
+    return sekcje
 
 
 def wyglada_na_silowy(opis):

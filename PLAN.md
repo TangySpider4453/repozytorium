@@ -583,3 +583,6 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   temperatury), usługa bez `claude.env`. Bot: gdy Claude się wysypie, odpowiada lokalny `qwen2.5:1.5b` (bez akcji).
 - **2026-11-16 (Ollama bez blokady temperatury)**: model Garmina liczy na 3 rdzeniach bez limitu temperatury, a bot nie
   wysyła alertów temperatury / CPU / RAM, gdy grzeje je Ollama (do 10 min po liczeniu; ≥ 80 °C dalej alarm).
+- **2026-11-16 (Garmin: reguły zamiast modelu)**: test `qwen2.5:3b` na Pi: 21 min i błędny plan, parser regułowy od razu
+  prawie jak Claude. Teraz reguły najpierw (dopisane „następnie 3×6 @70 kg” i serie przygotowawcze zdaniem), model
+  lokalny tylko, gdy reguły nie znajdą żadnego ćwiczenia; stare analizy Claude z pamięci zostają.

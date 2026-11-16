@@ -189,6 +189,18 @@ def na_sekcje(dane):
     return sekcje
 
 
+def z_pamieci(opis):
+    """[Section] z pamięci (obecny model albo stara analiza Claude) albo None; bez zapytań"""
+    pamiec = _cache()
+    for model in (MODEL,) + STARE_MODELE:
+        if (k := _klucz(opis, model)) in pamiec:
+            try:
+                return na_sekcje(pamiec[k])
+            except Exception:
+                return None
+    return None
+
+
 def analizuj(opis, pytaj=_zapytaj):
     """[Section] od lokalnego modelu (z pamięci albo nowe zapytanie) albo None, gdy się nie udało; Odloz = później"""
     k = _klucz(opis)

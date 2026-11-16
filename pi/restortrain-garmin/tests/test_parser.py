@@ -108,3 +108,18 @@ def test_lista_numerowana_restortrain_2026_11():
     assert [(c.name_pl, c.sets, c.reps_max) for c in cw] == [("Wiosłowanie sztangą", 3, 8), ("Wiosłowanie hantlem", 3, 10),
                                                             ("Ściąganie drążka wyciągu górnego", 3, 12)]
     assert cw[0].weight_kg == 45 and cw[1].per_side and wyglada_na_silowy("1. Przysiad — 3×8 @70 kg")
+
+
+def test_nastepnie_i_serie_przygotowawcze_zdaniem():
+    from pathlib import Path
+    from rtg.parser import WarmupSets, parsuj, wszystkie_cwiczenia
+    fx = Path(__file__).parent / "fixtures"
+    sek = parsuj((fx / "opis_dol_b_2026-11-19.txt").read_text(encoding="utf-8"))
+    cw = list(wszystkie_cwiczenia(sek))
+    assert [(c.name_pl, c.sets, c.reps_min) for c in cw[:2]] == [("Martwy ciąg", 1, 6), ("Martwy ciąg", 3, 6)]
+    assert "70 kg" in cw[1].note
+    w = [i for s in sek for i in s.items if isinstance(i, WarmupSets)]
+    assert [(x.exercise_ref, x.sets_min, x.sets_max) for x in w] == [("Martwy ciąg", 2, 3)]
+    sek = parsuj((fx / "opis_full_upper_2026-11-20.txt").read_text(encoding="utf-8"))
+    w = [i for s in sek for i in s.items if isinstance(i, WarmupSets)]
+    assert [(x.exercise_ref, x.sets_min) for x in w] == [("Wyciskanie hantli na skosie", 1), ("Wiosłowanie hantlem", 1)]
