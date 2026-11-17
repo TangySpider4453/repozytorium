@@ -72,7 +72,8 @@ def api_zadanie(zid):
     r = db().execute("SELECT * FROM zadania WHERE id=?", (zid,)).fetchone()
     if not r:
         abort(404)
-    return jsonify({"stan": r["stan"], "wynik": json.loads(r["wynik"]) if r["wynik"] else None})
+    return jsonify({"stan": r["stan"], "wynik": json.loads(r["wynik"]) if r["wynik"] else None,
+                    "postep": (baza.kv(db(), "postep") or {}).get("tekst", "")})
 
 
 @app.route("/api/akcja", methods=["POST"])
@@ -89,6 +90,12 @@ def api_akcja():
         from .cel import zbuduj
         from .cykl import przeplanuj
         return jsonify(zadanie("makrocykl", lambda: (zbuduj(b.get("prosba", "")), przeplanuj("nowy makrocykl"))[0]))
+    if r == "badania":
+        from .badania import zbadaj
+        from .cel import zbuduj
+        from .cykl import przeplanuj
+        return jsonify(zadanie("badania", lambda: (zbadaj(prosba=b.get("prosba", "")), zbuduj(b.get("prosba", "")),
+                                                   przeplanuj("nowe źródła"))[0]))
     if r == "analiza":
         from .analiza import analizuj
         return jsonify(zadanie("analiza", analizuj, b.get("typ", "rano"), True))
@@ -203,6 +210,14 @@ def api_makrocykl():
     f = cel.faza_teraz(m) if m else None
     return jsonify({"makrocykl": m, "faza": f, "plan_uzasadnienie": baza.kv(d, "plan_uzasadnienie"),
                     "progi": cel.progi(d)})
+
+
+@app.route("/api/wiedza")
+def api_wiedza():
+    from . import badania, cel
+    pliki = [{"plik": p.name, "rodzaj": "ogólna", "tresc": p.read_text(encoding="utf-8")} for p in sorted(cel.WIEDZA.glob("*.md"))]
+    pliki += [{"plik": p.name, "rodzaj": "pod cel", "tresc": p.read_text(encoding="utf-8")} for p in badania.pliki_celu()]
+    return jsonify({"pliki": pliki, "badania": baza.kv(db(), "badania")})
 
 
 @app.route("/api/analizy")

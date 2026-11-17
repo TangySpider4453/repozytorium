@@ -23,10 +23,12 @@ class BladAI(Exception):
     pass
 
 
-def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300):
-    """-> str albo dict (gdy schemat)"""
+def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None):
+    """-> str albo dict (gdy schemat). narzedzia: np. ["WebSearch", "WebFetch"] (tylko odczyt internetu)"""
     model = model or config.ustawienia()["model"]
-    cmd = [str(config.CLAUDE), "-p", "--output-format", "json", "--model", model, "--tools", "",
+    nz = ",".join(narzedzia or [])
+    cmd = [str(config.CLAUDE), "-p", "--output-format", "json", "--model", model, "--tools", nz,
+           *(["--allowedTools", nz] if nz else []),
            "--strict-mcp-config", "--no-session-persistence", "--permission-mode", "dontAsk",
            "--setting-sources", "", "--system-prompt", SYSTEM, "--effort", effort]
     if schemat:

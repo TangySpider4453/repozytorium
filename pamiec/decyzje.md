@@ -12,6 +12,7 @@
 | 2026-11-16 | Bez lokalnego modelu do rozmów i planowania (za wolny: 79–164 s) | pomiar na Pi |
 | 2026-11-17 | Zmiana konta Claude; kopie starych rozmów na Pi w `~/Desktop/dla claude kopie zapasowe/` | Antek |
 | 2026-11-17 | `pamiec/MAPA.md` = punkt startowy mózgu; węzły tematyczne zamiast jednego wielkiego pliku | prośba Antka |
+| 2026-11-17 | Po podaniu/zmianie celu Trener sprawdza, czy baza wiedzy pasuje, i **zawsze** szuka źródeł w internecie pod cel (pliki `dane/wiedza_cel/`, linki weryfikowane) — dopiero potem periodyzacja | Antek: „niech sprawdzi, czy źródła pasują… i niech poszuka tak czy siak” |
 | 2026-11-17 | Trener nie planuje, dopóki Antek nie przejdzie ankiety startowej (cele + jak ma wyglądać plan) i dopytania | Antek: „musi być pytanie o cele i jak chcę, żeby to wyglądało” |
 | 2026-11-17 | Trener planuje wg **bazy wiedzy ze źródeł** (`trener/trener/wiedza/`) + makrocyklu do celu + kontroli reguł kodem; nowe zasady dopisuj do plików wiedzy (z linkiem) | Antek: „treningi zrobione tak jak powinny” |
 | 2026-11-17 | **Trener** (własny RestOrTrain, webapka): Claude analizuje i planuje (zasada z 16.11 zniesiona dla tej apki); powiadomienia push w apce + Linphone; apka **zastępuje** RestOrTrain (stary most do czasu przełączenia); treningi idą na zegarek **automatycznie** z powiadomieniem o zmianach | Antek |

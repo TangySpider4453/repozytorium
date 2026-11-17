@@ -36,7 +36,11 @@ def wiedza(sporty=None):
             pomin.add("04_bieg.md")
         if "silka" not in sporty:
             pomin.add("03_silka.md")
-    return "\n\n".join(p.read_text(encoding="utf-8") for p in sorted(WIEDZA.glob("*.md")) if p.name not in pomin)
+    ogolna = "\n\n".join(p.read_text(encoding="utf-8") for p in sorted(WIEDZA.glob("*.md")) if p.name not in pomin)
+    from .badania import wiedza_celu
+    cel = wiedza_celu()
+    return ogolna + ("\n\n=== WIEDZA POD CEL ANTKA (wyszukana w źródłach dla jego celu — ma pierwszeństwo przy "
+                     "specyfice dyscypliny) ===\n\n" + cel if cel else "")
 
 
 def progi(db):
@@ -93,10 +97,18 @@ def potrzebny(db):
 
 def zbuduj(prosba="", db=None):
     db = db or baza.polacz()
+    from . import badania
+    if badania.potrzebne(db):                 # nowy cel → najpierw ocena bazy i wyszukanie źródeł
+        badania.zbadaj(db, prosba)
+    badania.postep(db, "Układam periodyzację do celu")
     u = config.ustawienia()
+    b = baza.kv(db, "badania") or {}
+    oc = b.get("ocena") or {}
     prompt = "\n\n".join([
         "BAZA WIEDZY (zasady treningu ze źródeł — trzymaj się ich, odstępstwa uzasadnij):\n" + wiedza(u["sporty"]),
         "PROGI:\n" + progi(db),
+        "OCENA BAZY WIEDZY POD CEL: " + oc.get("dopasowanie", "") + "\nBraki: " + "; ".join(oc.get("braki", []))
+        + "\nWątpliwości: " + "; ".join(oc.get("watpliwosci", [])),
         kontekst.pelny(db, tygodnie=26),
         "ZADANIE: Ułóż makrocykl (periodyzację) do celu Antka: fazy z datami od dziś do celu (albo na ~12–16 tygodni, "
         "gdy brak daty), w każdej: cel fazy, widełki godzin tygodniowo (realne względem jego obecnej objętości "
@@ -108,6 +120,7 @@ def zbuduj(prosba="", db=None):
     w["_odcisk"] = odcisk_celow()
     w["_utworzono"] = baza.teraz()
     baza.ustaw_kv(db, "makrocykl", w)
+    badania.postep(db, "Układam plan tygodnia i sprawdzam go z zasadami")
     log.info("makrocykl: %s, %d faz", w.get("cel_glowny"), len(w.get("fazy", [])))
     return w
 

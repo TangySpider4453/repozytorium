@@ -647,6 +647,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   źródeł (Seiler, Rønnestad, Coggan, Bosquet/Wang taper, Nielsen bieg, Plews HRV, NSCA/Lloyd młodzież), makrocykl
   (`cel.py`) z celów Antka, plan tygodniowy trzyma się fazy, kontrola reguł kodem + poprawka. Test na celu próbnym
   (XCO maj 2027): makrocykl 7 faz w 4,5 min, plan 2 min, kontrola bez uwag; usunięte po teście.
+- Badania pod cel (17.11): `badania.py` — Claude CLI na Pi z `--tools WebSearch,WebFetch` (działa na tokenie subskrypcji),
+  ocena bazy vs cel + 2–5 tematów → `~/trener/dane/wiedza_cel/`, sprawdzanie linków; ankieta → badania → makrocykl → plan
+  trwa ok. 10–15 min.
 - Historia od 24.06.2021 (pierwsza aktywność): ~1900 aktywności + każdy dzień (sen, HRV, podsumowanie, gotowość,
   status). Stary most `restortrain-garmin` działa do przełączenia (potem wyłączyć `rtg-garmin.timer`).
 

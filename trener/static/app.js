@@ -17,6 +17,7 @@ async function czekaj(zid, co) {
     await new Promise(r => setTimeout(r, i < 10 ? 1500 : 3000));
     const z = await api("zadanie/" + zid);
     if (z.stan !== "trwa") { if (z.stan === "blad") throw new Error(z.wynik); return z.wynik; }
+    const pe = document.getElementById("postep"); if (pe) pe.textContent = z.postep || "";
     if (co) co(i);
   }
   throw new Error("za długo");
@@ -131,8 +132,9 @@ async function pokazDzis() {
 
 async function akcja(rodzaj, dod = {}) {
   const info = document.createElement("div");
-  info.className = "karta szary mysli";
-  info.textContent = { sync: "Synchronizuję z Garminem", plan: "Trener układa plan i sprawdza go z zasadami", analiza: "Trener analizuje", makrocykl: "Trener układa periodyzację i plan (do 3 min)" }[rodzaj] || "Pracuję";
+  info.className = "karta szary";
+  info.innerHTML = `<span class="mysli"></span> <span id="postep"></span>`;
+  info.firstChild.textContent = { sync: "Synchronizuję z Garminem", plan: "Trener układa plan i sprawdza go z zasadami", analiza: "Trener analizuje", makrocykl: "Trener układa periodyzację i plan (kilka minut)", badania: "Trener szuka źródeł i przebudowuje plan (8–15 min)" }[rodzaj] || "Pracuję";
   widok.prepend(info);
   try { await czekaj(await api("akcja", { rodzaj, ...dod })); } catch (e) { alert("Błąd: " + e.message); }
   info.remove();
@@ -170,7 +172,7 @@ async function kartaMakro() {
     <div style="margin-top:8px">${fazy}</div>
     <details><summary>dlaczego tak (zasady, ocena formy)</summary><div class="tresc szary">${esc(mk.ocena_wyjsciowa)}\n\n${esc(mk.uzasadnienie)}\n\n${(mk.zasady_indywidualne || []).map(x => "• " + esc(x)).join("\n")}</div></details>
     ${u ? `<details><summary>uzasadnienie bieżącego planu</summary><div class="tresc szary">${esc(u.tekst)}${(u.uwagi || []).length ? "\n\n⚠️ Kontrola: " + u.uwagi.map(esc).join("; ") : ""}</div></details>` : ""}
-    <div class="wiersz" style="margin-top:8px"><button class="drugi" onclick="if(confirm('Ułożyć periodyzację od nowa i przeplanować?'))akcja('makrocykl')">🔁 Przebuduj periodyzację</button></div></div>`;
+    <div class="wiersz" style="margin-top:8px"><a class="btn drugi" href="#wiedza">📚 Źródła trenera</a><button class="drugi" onclick="if(confirm('Ułożyć periodyzację od nowa i przeplanować?'))akcja('makrocykl')">🔁 Przebuduj periodyzację</button></div></div>`;
 }
 
 async function pokazPlan() {
@@ -309,10 +311,10 @@ async function wlaczPush() {
 async function route() {
   const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
   document.querySelectorAll("nav a").forEach(a => a.classList.toggle("akt", a.dataset.t === t || (t === "analiza" && a.dataset.t === "dzis")));
-  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się" }[t] || "Trener";
+  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera" }[t] || "Trener";
   widok.innerHTML = `<div class="ladowanie">Ładuję…</div>`;
   try {
-    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart }[t] || pokazDzis)();
+    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze }[t] || pokazDzis)();
   } catch (e) { widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
 }
 window.addEventListener("hashchange", route);
@@ -398,7 +400,7 @@ function pokazPytania(w) {
       ${(p.opcje || []).length ? `<div class="wiersz chipy" data-typ="${p.wielokrotny ? "multi" : "jeden"}" style="margin-top:8px">${p.opcje.map(o => `<button class="chip" data-v="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : ""}
       <textarea rows="2" placeholder="${(p.opcje || []).length ? "albo napisz po swojemu" : "odpowiedź"}" style="margin-top:8px"></textarea></div>`).join("")}
     <button style="width:100%" id="uloz">🗺️ Ułóż periodyzację i plan</button>
-    <div class="szary" style="margin-top:8px">To potrwa kilka minut. Możesz zamknąć apkę — dostaniesz powiadomienie, a treningi same trafią na zegarek.</div>`;
+    <div class="szary" style="margin-top:8px">Trener najpierw sprawdzi bazę wiedzy pod Twój cel i poszuka źródeł, potem ułoży periodyzację i plan (8–15 min). Możesz zamknąć apkę — dostaniesz powiadomienie, a treningi same trafią na zegarek.</div>`;
   widok.querySelectorAll(".chipy").forEach(g => g.addEventListener("click", e => {
     const b = e.target.closest(".chip"); if (!b) return;
     if (g.dataset.typ === "jeden") g.querySelectorAll(".chip").forEach(x => x !== b && x.classList.remove("akt"));
@@ -411,10 +413,53 @@ function pokazPytania(w) {
       return { pytanie: p.pytanie, odpowiedz: [...wyb, t].filter(Boolean).join("; ") };
     });
     widok.innerHTML = `<div class="karta mysli">Trener układa periodyzację do Twojego celu, plan tygodnia i sprawdza go z zasadami treningu</div>
-      <div class="szary">Zwykle 4–7 minut.</div>`;
+      <div class="szary" id="postep"></div><div class="szary">Najpierw trener sprawdza, czy baza wiedzy pasuje do celu, i szuka źródeł w internecie (badania, federacje, przepisy). Zwykle 8–15 minut — możesz zamknąć apkę, dostaniesz powiadomienie.</div>`;
     try {
       await czekaj(await api("start/koniec", { odpowiedzi: odp }));
       location.hash = "#plan";
     } catch (e) { widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
   };
+}
+
+// ------------------------------------------------------------------ Źródła (baza wiedzy)
+const linki = t => esc(t).replace(/https?:\/\/[^\s)<]+/g, u => `<a href="${u}" target="_blank" rel="noopener" style="color:var(--akcent);word-break:break-all">${u}</a>`);
+function md(t) {   // prosty Markdown: nagłówki, listy, **pogrubienia**, tabele jako tekst, linki
+  const linie = [];
+  t.replace(/^# .*\n?/, "").split("\n").forEach(l => {
+    if (/^\s{2,}\S/.test(l) && linie.length && !/^\s*[-*]\s|^\s*\d+\.\s/.test(l)) linie[linie.length - 1] += " " + l.trim();
+    else linie.push(l);
+  });
+  let h = "", lista = false;
+  for (let l of linie) {
+    let x = linki(l).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    const m = l.match(/^\s*(?:[-*]|\d+\.)\s+/);
+    if (m && !lista) { h += "<ul style='padding-left:18px;margin:4px 0'>"; lista = true; }
+    if (!m && lista) { h += "</ul>"; lista = false; }
+    if (/^#{2,4} /.test(l)) h += `<div style="color:var(--tekst);font-weight:700;margin:10px 0 4px">${x.replace(/^#+ /, "")}</div>`;
+    else if (m) h += `<li>${x.replace(/^\s*(?:[-*]|\d+\.)\s+/, "")}</li>`;
+    else if (l.trim()) h += `<div style="margin:3px 0">${x}</div>`;
+  }
+  return h + (lista ? "</ul>" : "");
+}
+async function pokazWiedze() {
+  const w = await api("wiedza"), b = w.badania;
+  let h = "";
+  if (b) {
+    const o = b.ocena;
+    h += `<div class="karta"><h3>🔎 Ocena bazy pod Twój cel</h3><div class="szary">${esc(b.kiedy.replace("T", " ").slice(0, 16))}</div>
+      <div class="tresc" style="margin-top:6px">${esc(o.dopasowanie)}</div>
+      ${o.braki.length ? `<div style="margin-top:8px"><b>Braki:</b><div class="szary">${o.braki.map(x => "• " + esc(x)).join("<br>")}</div></div>` : ""}
+      ${o.watpliwosci.length ? `<div style="margin-top:8px"><b>Wątpliwości:</b><div class="szary">${o.watpliwosci.map(x => "• " + esc(x)).join("<br>")}</div></div>` : ""}
+      <div style="margin-top:8px"><b>Zbadane tematy:</b><div class="szary">${b.pliki.map(p => p.odrzucony ? `✗ ${esc(p.tytul)} (odrzucony: brak działających źródeł)` :
+        `✓ ${esc(p.tytul)} — źródła: ${p.dzialajace}/${p.zrodla} działa`).join("<br>")}</div></div></div>`;
+  } else h += `<div class="karta szary">Badania pod cel pojawią się po ankiecie startowej.</div>`;
+  h += `<button class="drugi" style="width:100%;margin-bottom:12px" onclick="if(confirm('Poszukać źródeł od nowa i przebudować periodyzację?'))akcja('badania')">🔎 Poszukaj źródeł od nowa</button>`;
+  for (const rodz of ["pod cel", "ogólna"]) {
+    const pl = w.pliki.filter(p => p.rodzaj === rodz);
+    if (!pl.length) continue;
+    h += `<h2>${rodz === "pod cel" ? "Wiedza pod Twój cel" : "Baza ogólna"}</h2>` + pl.map(p =>
+      `<details class="karta"><summary style="font-size:15px;color:var(--tekst)"><b>${esc((p.tresc.match(/^# (.+)$/m) || [, p.plik])[1])}</b></summary>
+       <div class="szary" style="margin-top:8px;font-size:13px">${md(p.tresc)}</div></details>`).join("");
+  }
+  widok.innerHTML = h;
 }
