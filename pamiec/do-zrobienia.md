@@ -13,6 +13,7 @@
 - [ ] Po pierwszym planie i jego sprawdzeniu na zegarku: wyłączyć stary most (`sudo systemctl disable --now rtg-garmin.timer`)
   i zdecydować, czy RestOrTrain w ogóle zostaje.
 - [ ] Sprawdzić, czy `trener-historia` (pobieranie od 2021) skończył: `kv.historia_postep == "gotowe"`.
+- [ ] Antek: podać terminy ferii/egzaminów i ewentualnych zawodów (trener wstawi je do periodyzacji).
 - [ ] Pomysły: porównanie plan vs wykonanie w analizach, rekordy mocy (power curve), FTP z testu, pływanie/inne sporty.
 
 ## Problemy

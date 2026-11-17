@@ -111,6 +111,9 @@ def pelny(db, dni=14, akt_dni=28, tygodnie=16, cel=None):
           f"CELE ANTKA: {u['cele'] or '(nie podał jeszcze — zapytaj / załóż ogólny rozwój formy kolarskiej)'}",
           f"DOSTĘPNOŚĆ: {u['dostepnosc'] or '(brak)'}", f"SPRZĘT: {u['sprzet'] or '(brak)'}",
           f"SPORTY DO PLANU: {', '.join(u['sporty'])}"]
+    from . import cel
+    cz.append("MAKROCYKL (periodyzacja do celu, ▶ = bieżąca faza):\n" + cel.tekst(cel.makrocykl(db)))
+    cz.append("PROGI:\n" + cel.progi(db))
     pamiec = baza.kv(db, "pamiec_trenera", [])
     if pamiec:
         cz.append("ZAPAMIĘTANE USTALENIA Z ROZMÓW:\n" + "\n".join("- " + p for p in pamiec[-30:]))

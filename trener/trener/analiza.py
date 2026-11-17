@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import date, timedelta
 
-from . import ai, baza, kontekst, powiadom
+from . import ai, baza, cel, kontekst, powiadom
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +38,9 @@ def analizuj(rodzaj="rano", wymus=False, aktywnosci=None, db=None):
     dzis = date.today().isoformat()
     if not wymus and rodzaj != "trening" and zrobiona(db, rodzaj, dzis):
         return None
-    prompt = kontekst.pelny(db) + "\n\nZADANIE: " + ZADANIA[rodzaj]
+    zasady = "\n\n".join((cel.WIEDZA / f).read_text(encoding="utf-8") for f in ("01_zasady_ogolne.md", "05_regeneracja.md"))
+    prompt = ("BAZA WIEDZY (oceniaj wg tych zasad):\n" + zasady + "\n\n" + kontekst.pelny(db) + "\n\nZADANIE: " + ZADANIA[rodzaj]
+              + " Oceń też, czy realizacja zgadza się z bieżącą fazą makrocyklu.")
     if aktywnosci:
         prompt += "\n\nTRENING(I) DO ANALIZY:\n" + "\n".join(json.dumps(a, ensure_ascii=False) for a in aktywnosci)
     w = ai.zapytaj(prompt, SCHEMAT, effort="medium")

@@ -643,6 +643,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - Decyzje Antka 17.11: Claude analizuje i planuje (zniesione „Claude nie dotyka Garmina” dla tej apki), push + Linphone,
   apka zastępuje RestOrTrain, zapis na zegarek automatyczny z powiadomieniem. Usuwa tylko treningi ze znacznikiem
   `auto: trener`.
+- Metodyka (17.11, prośba Antka „żeby treningi były zrobione jak powinny”): baza wiedzy `trener/trener/wiedza/` ze
+  źródeł (Seiler, Rønnestad, Coggan, Bosquet/Wang taper, Nielsen bieg, Plews HRV, NSCA/Lloyd młodzież), makrocykl
+  (`cel.py`) z celów Antka, plan tygodniowy trzyma się fazy, kontrola reguł kodem + poprawka. Test na celu próbnym
+  (XCO maj 2027): makrocykl 7 faz w 4,5 min, plan 2 min, kontrola bez uwag; usunięte po teście.
 - Historia od 24.06.2021 (pierwsza aktywność): ~1900 aktywności + każdy dzień (sen, HRV, podsumowanie, gotowość,
   status). Stary most `restortrain-garmin` działa do przełączenia (potem wyłączyć `rtg-garmin.timer`).
 

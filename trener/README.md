@@ -9,8 +9,11 @@ Dane z Garmin Connect (nieoficjalne API, `garminconnect`) → SQLite → analizy
 | synchronizacja (dni: sen, HRV, podsumowanie, gotowość, status; aktywności + serie siłowe) | `trener/sync.py`, wartości dnia `trener/dane.py` |
 | kontekst dla Claude (14 dni, aktywności 28 dni, tygodnie, miesiące z całej historii, plan, pamięć) | `trener/kontekst.py` |
 | Claude CLI (`--json-schema`, bez narzędzi, pusty katalog) | `trener/ai.py` |
+| **baza wiedzy** (metodyka ze źródeł: periodyzacja, rozkład intensywności, strefy Coggana, biblioteka jednostek,
+siłownia dla kolarza, bieg, HRV/sen, młody sportowiec — z linkami do badań) | `trener/wiedza/*.md` |
+| **makrocykl** (fazy do celu: godziny, intensywność, sesje kluczowe, testy FTP; przebudowa przy zmianie celów) | `trener/cel.py` |
 | analizy: rano (po śnie), po treningu, tydzień (pon.) | `trener/analiza.py` |
-| plan na 7 dni (`zostaw_id` = bez zmian), walidacja, diff | `trener/plan.py` |
+| plan na 7 dni wg fazy makrocyklu i bazy wiedzy + **kontrola kodem** (skok objętości > 30%, > 3 akcenty, akcenty dzień po dniu, < 48 h po ciężkich nogach, widełki fazy) → jedna poprawka przez Claude | `trener/plan.py` |
 | plan → JSON treningu Garmin (strefy tętna, moc, tempo, kadencja; siłka z listą ćwiczeń) | `trener/budowa.py`, `trener/zasoby/` |
 | wysyłanie / usuwanie (TYLKO ze znacznikiem `auto: trener` w opisie) | `trener/zegarek.py` |
 | czat (akcje: przeplanuj, zapamiętaj, ustawienia, dane z dowolnego okresu) | `trener/czat.py` |

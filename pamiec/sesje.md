@@ -6,6 +6,7 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   od 2021 w tle), analizy/plan/czat przez Claude (`--json-schema`), generator treningów rower/bieg/siłka (test: Garmin
   przyjął i usunął 3 treningi próbne), push VAPID + Linphone, PWA przez `tailscale serve` HTTPS. Testy: plan 44 s,
   analiza 22 s, czat 13 s. Timer działa, pierwsza poranna analiza wysłana. Czeka na cele Antka.
+  Potem: baza wiedzy z badań (6 plików), makrocykl (`cel.py`), kontrola planu kodem; test na celu próbnym OK, usunięty.
 - **2026-11-17 (chmura, 4)**: Start z mózgu. Hook połączył Tailscale sam (`TS_AUTHKEY`), `ssh pi` wymagał linku
   „check” (podany, zatwierdzony). Przegląd Pi 4 09:23: wszystko zgodne z `uslugi.md` (45 °C, 0x0, RAM 1,8 GB, dysk 61%,
   kopia 02:00 OK). Na prośbę Antka oznaczono incydent `rtg-garmin-teraz` (05.11) jako przejrzany przez

@@ -85,6 +85,10 @@ def api_akcja():
     if r == "plan":
         from .cykl import przeplanuj
         return jsonify(zadanie("plan", przeplanuj, "ręcznie z apki", b.get("prosba", "")))
+    if r == "makrocykl":
+        from .cel import zbuduj
+        from .cykl import przeplanuj
+        return jsonify(zadanie("makrocykl", lambda: (zbuduj(b.get("prosba", "")), przeplanuj("nowy makrocykl"))[0]))
     if r == "analiza":
         from .analiza import analizuj
         return jsonify(zadanie("analiza", analizuj, b.get("typ", "rano"), True))
@@ -189,6 +193,16 @@ def api_plan():
     for r in d.execute("SELECT dzien, typ, nazwa, dane FROM aktywnosci WHERE dzien BETWEEN ? AND ?", (od, do)):
         zrobione.setdefault(r[0], []).append(kontekst.dane.streszczenie_aktywnosci(baza.rozpakuj(r[3]) or {}))
     return jsonify({"plan": _plan(d, od, do), "zrobione": zrobione, "dzis": dzis.isoformat()})
+
+
+@app.route("/api/makrocykl")
+def api_makrocykl():
+    from . import cel
+    d = db()
+    m = cel.makrocykl(d)
+    f = cel.faza_teraz(m) if m else None
+    return jsonify({"makrocykl": m, "faza": f, "plan_uzasadnienie": baza.kv(d, "plan_uzasadnienie"),
+                    "progi": cel.progi(d)})
 
 
 @app.route("/api/analizy")

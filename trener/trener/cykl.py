@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import date, datetime
 
-from . import analiza, baza, config, plan, powiadom, zegarek
+from . import analiza, baza, cel, config, plan, powiadom, zegarek
 from .garmin import BrakLogowania, polacz, wywolaj
 from .sync import sync
 
@@ -76,13 +76,21 @@ def cykl():
                 analiza.analizuj("tydzien", db=db)
         except Exception:
             log.exception("analiza poranna")
-    # 3) plan: brakujące dni
+    # 3) periodyzacja (nowe cele / koniec makrocyklu) → pełne przeplanowanie
+    if cel.potrzebny(db):
+        try:
+            m = cel.zbuduj(db=db)
+            powiadom.powiadom("🗺️ Nowa periodyzacja", f"{m['cel_glowny']}: " + " → ".join(f["nazwa"] for f in m["fazy"]), "/#plan", db)
+            przeplanuj("nowy makrocykl")
+        except Exception:
+            log.exception("makrocykl")
+    # 4) plan: brakujące dni
     braki = plan.braki(db)
     if braki and (u["cele"] or baza.kv(db, "plan_bez_celow_ok")):
         try:
             przeplanuj(f"uzupełnienie planu ({len(braki)} dni bez treningu)")
         except Exception:
             log.exception("plan")
-    # 4) zaległe zmiany planu (np. błąd sieci)
+    # 5) zaległe zmiany planu (np. błąd sieci)
     if u["auto_zegarek"] and db.execute("SELECT 1 FROM plan WHERE stan IN ('nowy','do_usuniecia')").fetchone():
         zegarek.synchronizuj_plan(g, db)

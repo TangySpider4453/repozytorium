@@ -75,7 +75,7 @@ function trening(t, zrobiony) {
   const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
   return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}">
     <b>${SPORT_IKONA[t.sport] || ""} ${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
-    ${t.opis ? `<div class="szary">${esc(t.opis)}</div>` : ""}
+    ${t.opis ? `<div class="szary tresc">${esc(t.opis)}</div>` : ""}
     ${kroki ? `<details><summary>kroki</summary><ul class="kroki">${kroki}</ul></details>` : ""}
     ${t.stan === "blad" ? `<div class="szary zle">${esc(t.zrodlo)}</div>` : ""}</div>`;
 }
@@ -132,7 +132,7 @@ async function pokazDzis() {
 async function akcja(rodzaj, dod = {}) {
   const info = document.createElement("div");
   info.className = "karta szary mysli";
-  info.textContent = { sync: "Synchronizuję z Garminem", plan: "Trener układa plan", analiza: "Trener analizuje" }[rodzaj] || "Pracuję";
+  info.textContent = { sync: "Synchronizuję z Garminem", plan: "Trener układa plan i sprawdza go z zasadami", analiza: "Trener analizuje", makrocykl: "Trener układa periodyzację i plan (do 3 min)" }[rodzaj] || "Pracuję";
   widok.prepend(info);
   try { await czekaj(await api("akcja", { rodzaj, ...dod })); } catch (e) { alert("Błąd: " + e.message); }
   info.remove();
@@ -155,11 +155,29 @@ async function pokazAnalize(id) {
 }
 
 // ------------------------------------------------------------------ Plan
+async function kartaMakro() {
+  const m = await api("makrocykl");
+  if (!m.makrocykl) return `<div class="karta"><h3>🗺️ Periodyzacja</h3><div class="szary">Brak — podaj cele (czat albo ⚙️), a trener ułoży fazy do celu wg zasad treningu (baza wiedzy ze źródeł).</div></div>`;
+  const mk = m.makrocykl, dz = new Date().toISOString().slice(0, 10);
+  const fazy = mk.fazy.map(f => {
+    const teraz = f.od <= dz && dz <= f.do;
+    return `<div class="trening" style="${teraz ? "border-color:var(--akcent)" : "opacity:.8"}"><b>${teraz ? "▶ " : ""}${esc(f.nazwa)}</b> <span class="szary">${esc(f.od.slice(5))}–${esc(f.do.slice(5))} · ${f.godziny_tyg_od}–${f.godziny_tyg_do} h/tydz.</span>
+      <div class="szary">${esc(f.cel)}</div>
+      ${teraz ? `<details><summary>szczegóły fazy</summary><div class="szary">Intensywność: ${esc(f.intensywnosc)}<br>Kluczowe: ${(f.sesje_kluczowe || []).map(esc).join("; ")}<br>Siłka ${f.silka_tyg ?? "–"}/tydz., bieg ${f.bieg_tyg ?? "–"}/tydz. · ${esc(f.rytm || "")}${(f.testy || []).length ? "<br>Testy: " + f.testy.map(esc).join(", ") : ""}</div></details>` : ""}</div>`;
+  }).join("");
+  const u = m.plan_uzasadnienie;
+  return `<div class="karta"><h3>🗺️ ${esc(mk.cel_glowny)}</h3><div class="szary">${mk.data_docelowa ? "do " + esc(mk.data_docelowa) + " · " : ""}${esc(m.progi.split("\n")[0] || "")}</div>
+    <div style="margin-top:8px">${fazy}</div>
+    <details><summary>dlaczego tak (zasady, ocena formy)</summary><div class="tresc szary">${esc(mk.ocena_wyjsciowa)}\n\n${esc(mk.uzasadnienie)}\n\n${(mk.zasady_indywidualne || []).map(x => "• " + esc(x)).join("\n")}</div></details>
+    ${u ? `<details><summary>uzasadnienie bieżącego planu</summary><div class="tresc szary">${esc(u.tekst)}${(u.uwagi || []).length ? "\n\n⚠️ Kontrola: " + u.uwagi.map(esc).join("; ") : ""}</div></details>` : ""}
+    <div class="wiersz" style="margin-top:8px"><button class="drugi" onclick="if(confirm('Ułożyć periodyzację od nowa i przeplanować?'))akcja('makrocykl')">🔁 Przebuduj periodyzację</button></div></div>`;
+}
+
 async function pokazPlan() {
-  const d = await api("plan");
+  const [d, makro] = await Promise.all([api("plan"), kartaMakro()]);
   const dni = [];
   for (let i = -7; i <= 14; i++) { const x = new Date(d.dzis + "T12:00"); x.setDate(x.getDate() + i); dni.push(x.toISOString().slice(0, 10)); }
-  let h = `<div class="karta"><label>Poproś o zmianę (opcjonalnie)</label><textarea id="prosba" rows="2" placeholder="np. w czwartek nie mogę, w weekend dłuższy rower"></textarea>
+  let h = makro + `<div class="karta"><label>Poproś o zmianę (opcjonalnie)</label><textarea id="prosba" rows="2" placeholder="np. w czwartek nie mogę, w weekend dłuższy rower"></textarea>
     <div class="wiersz" style="margin-top:8px"><button onclick="akcja('plan',{prosba:$('#prosba').value})">📅 Przeplanuj</button></div></div>`;
   for (const k of dni) {
     const pl = d.plan.filter(t => t.dzien === k), zr = d.zrobione[k] || [];
