@@ -116,7 +116,7 @@ def zbuduj(prosba="", db=None):
         " ile siłowni i biegu tygodniowo, rytm tygodni lżejszych, testy (np. FTP). Zasady indywidualne = wnioski z jego "
         "danych (np. słabszy sen w tygodniu szkolnym, reakcja HRV na ciężkie bloki)."
         + (f"\nDODATKOWO: {prosba}" if prosba else "")])
-    w = ai.zapytaj(prompt, SCHEMAT, effort="high", limit_s=600)
+    w = ai.zapytaj(prompt, SCHEMAT, effort="high", limit_s=600, ciezki=True)
     w["_odcisk"] = odcisk_celow()
     w["_utworzono"] = baza.teraz()
     baza.ustaw_kv(db, "makrocykl", w)

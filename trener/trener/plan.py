@@ -99,13 +99,13 @@ def zaplanuj(powod="", prosba="", dni=None):
         f"ZADANIE: ułóż plan na dni {od} .. {do} (sporty: {', '.join(u['sporty'])}). Powód: {powod or 'aktualizacja'}."
         + (f"\nPROŚBA ANTKA: {prosba}" if prosba else "")
         + ("\nDziś już był trening — dzisiejszego dnia nie planuj." if od != dzis.isoformat() else "")] if x)
-    w = ai.zapytaj(prompt, SCHEMAT, effort="high", limit_s=600)
+    w = ai.zapytaj(prompt, SCHEMAT, effort="high", limit_s=600, ciezki=True)
     problemy = kontrola(db, w.get("treningi") or [], ist, cel.faza_teraz(m), cel.ftp(db))
     if problemy:                              # jedna poprawka: Claude dostaje konkretne zarzuty
         log.info("kontrola planu: %s", problemy)
         w = ai.zapytaj(prompt + "\n\nTWÓJ PIERWSZY PLAN:\n" + json.dumps(w, ensure_ascii=False) +
                        "\n\nKONTROLA WYKRYŁA PROBLEMY:\n- " + "\n- ".join(problemy) +
-                       "\nPopraw plan (albo uzasadnij w 'uzasadnienie', dlaczego to celowe).", SCHEMAT, effort="high", limit_s=600)
+                       "\nPopraw plan (albo uzasadnij w 'uzasadnienie', dlaczego to celowe).", SCHEMAT, effort="high", limit_s=600, ciezki=True)
         problemy = kontrola(db, w.get("treningi") or [], ist, cel.faza_teraz(m), cel.ftp(db))
     zmiany = zastosuj(db, w.get("treningi") or [], od, do, ist, powod)
     baza.ustaw_kv(db, "plan_uzasadnienie", {"tekst": w.get("uzasadnienie", ""), "uwagi": problemy, "kiedy": baza.teraz()})

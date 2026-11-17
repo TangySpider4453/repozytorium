@@ -109,7 +109,7 @@ def zbadaj_temat(temat, cel, nr):
     dane = "\n".join(kontekst.ostatnie_dni(db, 7)) + "\n" + "\n".join(kontekst.agregaty(db, "tydzien", (date.today() - timedelta(weeks=8)).isoformat()))
     prompt = ZADANIE_BADANIA.format(tytul=temat["tytul"], po_co=temat["po_co"], pytania="; ".join(temat["pytania"]),
                                     cel=cel, spis=spis_ogolnej(), dane=dane)
-    tresc = ai.zapytaj(prompt, narzedzia=["WebSearch", "WebFetch"], effort="medium", limit_s=900).strip()
+    tresc = ai.zapytaj(prompt, narzedzia=["WebSearch", "WebFetch"], effort="medium", limit_s=900, ciezki=True).strip()
     tresc = re.sub(r"^```(?:markdown|md)?\s*|\s*```$", "", tresc)
     if not tresc.startswith("# ") and "\n# " in tresc:    # zdanie-wstęp przed nagłówkiem
         tresc = tresc[tresc.index("\n# ") + 1:]

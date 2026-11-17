@@ -22,3 +22,4 @@
 - Odnawianie z chmury: `tmux new -d -x 400 claude setup-token` na Pi → link Antkowi → jego jednorazowy kod przez
   `tmux send-keys` → token wyciągnięty z `capture-pane` do pliku 600 i **nigdy nie wypisany** (sed maskuje `sk-ant-…`)
   → test `claude -p` → zapis do env → `bez_rozmowy.sh`. Albo Antek sam: `bash ~/bot/nowy_token.sh` w terminalu portalu.
+| 2026-11-17 | Trener (i każdy Claude na Pi): domyślnie Haiku; Sonnet tylko do cięższych rzeczy (plan, cel, badania); **Opus nigdy** — za drogi | Antek |

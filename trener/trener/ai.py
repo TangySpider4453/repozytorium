@@ -23,9 +23,13 @@ class BladAI(Exception):
     pass
 
 
-def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None):
-    """-> str albo dict (gdy schemat). narzedzia: np. ["WebSearch", "WebFetch"] (tylko odczyt internetu)"""
-    model = model or config.ustawienia()["model"]
+def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None, ciezki=False):
+    """-> str albo dict (gdy schemat). narzedzia: np. ["WebSearch", "WebFetch"] (tylko odczyt internetu).
+    ciezki=True -> Sonnet (plan, cel, badania); domyślnie Haiku. Opus nigdy (za drogi)."""
+    u = config.ustawienia()
+    model = model or (u.get("model_ciezki") if ciezki else u.get("model")) or "claude-haiku-5-5"
+    if "opus" in model.lower():
+        model = "claude-sonnet-5-5"
     nz = ",".join(narzedzia or [])
     cmd = [str(config.CLAUDE), "-p", "--output-format", "json", "--model", model, "--tools", nz,
            *(["--allowedTools", nz] if nz else []),

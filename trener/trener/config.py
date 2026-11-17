@@ -25,7 +25,8 @@ DOMYSLNE = {
     "analiza_godzina_min": "06:30", # nie wcześniej niż
     "push": True,
     "linphone": True,
-    "model": "claude-sonnet-5-5",
+    "model": "claude-haiku-5-5",         # lekkie: czat, analiza, ankieta (decyzja Antka 17.11)
+    "model_ciezki": "claude-sonnet-5-5", # ciężkie: plan, cel, badania; Opus NIE (za drogi)
     "ankieta": {},                  # odpowiedzi z ankiety startowej (cele, terminy, dni, sprzęt, styl planu…)
     "start_gotowy": False,          # ankieta + dopytanie zakończone → wolno planować
 }

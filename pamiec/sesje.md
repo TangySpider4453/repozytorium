@@ -42,3 +42,4 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - **2026-10-19 – 2026-11-16 (stare konto)**: serwer, nauka, bot, telefon, Garmin — `Serwerek/PRZEKAZANIE.md`;
   łazik — `Łazik…/PRZEKAZANIE.md` (kopie na Pi).
 - **2026-10-19 – 2026-10-22**: historia wcześniejszych prac w dziennikach `PLAN.md` (sekcja 9), `PROGRES.md`, `SERWER.md`.
+- Modele Trenera: `model`=Haiku (czat, analiza, ankieta, ocena bazy), `model_ciezki`=Sonnet (`ciezki=True`: plan, cel, badania); `ai.zapytaj` zamienia Opus na Sonnet. `dane/ustawienia.json` na Pi poprawiony.
