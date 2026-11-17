@@ -290,3 +290,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   przy każdym rysowaniu, więc zmiana daty od razu przestawia kartę. Archiwum: najświeższy termin na górze.
 - **2026-10-21 (3)**: Gwiazdka „ważne” na kartach i przełącznik „Najpierw ważne” (nowe API w `app.py`, restart tylko
   `home-portal`, wszystko `active`). Backup `app.py.bak_2026-10-21_wazne`, poprzednia wersja w repo `pi/app.py.przed_waznymi`.
+- **2026-11-17 (chmura)**: Dodano `pamiec/` — wspólną pamięć sesji (preferencje, dostęp, decyzje, do zrobienia,
+  dziennik sesji); `CLAUDE.md` każe ją czytać na starcie. Strona nauki bez zmian.
