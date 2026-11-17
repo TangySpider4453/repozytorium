@@ -28,8 +28,14 @@ DOMYSLNE = {
     "model": "claude-haiku-5-5",         # lekkie: czat, analiza, ankieta (decyzja Antka 17.11)
     "model_ciezki": "claude-sonnet-5-5", # ciężkie: plan, cel, badania; Opus NIE (za drogi)
     "gora_tyg": 3,                  # siłka góra: tyle razy w tygodniu ZAWSZE (decyzja Antka 17.11, sprawdza kontrola planu)
-    "wymagania": "Góra (plecy, barki, klatka, ręce) na siłowni 3× w tygodniu, niezmiennie, w każdej fazie i każdym "
-                 "tygodniu (także lżejszym: wtedy lżej, ale 3×). Nogi na siłowni prowadź wg bazy wiedzy (sekcja nóg).",
+    "wymagania": "Góra na siłowni 3× w tygodniu, niezmiennie, w każdej fazie i każdym tygodniu (w lżejszym tygodniu "
+                 "lżej, ale 3×), zawsze jako trzy różne sesje: PUSH (klatka, barki przód/bok, triceps), PULL (plecy "
+                 "szerokość i grubość, tylne barki, biceps) i FULL UPPER (cała góra). Tytuły: „Siłka Push”, „Siłka "
+                 "Pull”, „Siłka Full Upper”. Pod V-taper priorytet: szerokie plecy (ściąganie/podciąganie) i barki "
+                 "boczne/tylne. Na KAŻDYM treningu siłowym (także nóg) na końcu brzuch 2–3 ćwiczenia (spięcia na "
+                 "wyciągu, unoszenie nóg w zwisie, reverse crunch, rollout, deska) — ale mało ćwiczeń na mięśnie "
+                 "skośne/boczne (woodchop, deska bokiem, skłony boczne): max 1 krótkie w tygodniu, bez obciążenia, "
+                 "bo poszerzają talię i nie pomagają w V-taperze. Nogi na siłowni prowadź wg bazy wiedzy (sekcja nóg).",
     "ankieta": {},                  # odpowiedzi z ankiety startowej (cele, terminy, dni, sprzęt, styl planu…)
     "start_gotowy": False,          # ankieta + dopytanie zakończone → wolno planować
 }

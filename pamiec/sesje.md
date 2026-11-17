@@ -46,3 +46,4 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - Limit Claude w czacie Trenera: `ai.BrakTokenow` (z godziną resetu) → pytanie czeka w kv `czat_czeka`, w czacie notka ⏳; po resecie odpowiada timer w trener-web, a zapasowo cykl co 20 min; potem push „💬 Trener odpowiedział”. Analizy i plan i tak ponawia cykl.
 - Plan: treningi opcjonalne jako osobne wpisy (`opcjonalny: true`) — idą na zegarek z nazwą „Opcjonalny: …” (decyzja Antka).
 - Stałe wymagania Trenera: `wymagania` w kontekście jako nadrzędne, `plan.partia()` liczy górę po kategoriach Garmina, zmiana wymagań przebudowuje makrocykl (`odcisk_makro`, bez nowych badań). Wiedza: sekcja „Nogi” w `wiedza/03_silka.md`. Stara notka 2+2 usunięta z `pamiec_trenera`.
+- Kontrola planu sprawdza też: Push/Pull/Full Upper w tytułach, brzuch (kategorie CRUNCH/LEG_RAISE/CORE/PLANK) na każdej siłce, max 1 ćwiczenie skośne/tydz. Uwaga: „prostowanie nóg” Antka jest w Garminie pod CRUNCH.

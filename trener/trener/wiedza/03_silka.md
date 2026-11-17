@@ -10,7 +10,8 @@
 
 ## Ćwiczenia (priorytet)
 - Nogi/biodra: przysiad (lub suwnica), martwy ciąg / RDL, przysiad bułgarski, wykroki, hip thrust, łydki.
-- Tułów (stabilizacja na rowerze): deska, deska bokiem, Pallof, dead bug, wyprosty.
+- Tułów (stabilizacja na rowerze): deska, dead bug, rollout, spięcia na wyciągu, unoszenie nóg, wyprosty; antyrotacja
+  Pallof bez ciężkich skrętów. U Antka (V-taper) mięśnie skośne/boczne minimalnie: max 1 krótkie ćwiczenie w tygodniu.
 - Góra (równowaga, postawa): wiosłowanie, podciąganie, wyciskanie, face pull.
 
 ## Łączenie z rowerem (concurrent training)
@@ -35,7 +36,7 @@ masa dla masy: nogi to sesja jakościowa, mało serii, ciężko i czysto.
 - Łydki i Achilles (u Antka była historia z lewym ścięgnem): wspięcia na palce ciężko i wolno (3 s w górę / 3 s
   w dół), stojąc i siedząc, 3–4 × 8–15, osobno lewa/prawa; protokół „heavy slow resistance” (Beyer 2015) — także
   profilaktycznie. Ból ścięgna > 3/10 dzień po → mniej ciężaru, nie przerwa w ruchu.
-- Biodra/stabilizacja: odwodzenie bioder, deska bokiem, Copenhagen (przywodziciele) 2 × 20–30 s.
+- Biodra/stabilizacja: odwodzenie bioder, Copenhagen (przywodziciele) 2 × 20–30 s.
 - Moc/bieg: po fazie adaptacji 1×/tydz. krótko plyometria (skoki na skrzynię, skip, wieloskoki 3–5 × 5–8, pełna
   przerwa) — poprawia ekonomię biegu (metaanaliza Balsalobre-Fernández 2016); tylko przy zdrowym Achillesie.
 - Kolejność dnia: rower łatwy rano / rozruch → nogi po południu; nogi nie przed interwałami tego samego dnia.
@@ -43,7 +44,7 @@ masa dla masy: nogi to sesja jakościowa, mało serii, ciężko i czysto.
 - Progresja: gdy wszystkie serie czyste z zapasem 2 RIR → +2,5–5 kg w głównym, +1–2 kg na hantel w jednonóż.
   Tydzień lżejszy makrocyklu: −30–40% serii, ten sam ciężar.
 - Szablon sesji nóg (~50–60 min): rozgrzewka 8′ (rower + mobilizacja skokowych/bioder) → przysiad 4×5–6 →
-  bułgarski 3×8/n → RDL 3×6–8 → Nordic/uginanie 3×6 → łydki wolno 3×10/n → deska bokiem.
+  bułgarski 3×8/n → RDL 3×6–8 → Nordic/uginanie 3×6 → łydki wolno 3×10/n → brzuch 2–3 ćwiczenia (np. unoszenie nóg w zwisie, rollout).
 
 ## Młody zawodnik (nastolatek)
 - Trening siłowy jest bezpieczny i korzystny przy dobrej technice i nadzorze (NSCA 2009; konsensus międzynarodowy

@@ -51,7 +51,8 @@ ZASADY = """ZASADY FORMATU PLANU:
 - Ciężary dobieraj z historii siłowni (serie z ostatnich treningów). Gdy brak historii — bez kg.
 - Rower z mocą: znasz FTP → cele "moc" w W liczone z % FTP wg stref Coggana z bazy wiedzy (Z2 = 56–75% FTP itd.).
 - STAŁE WYMAGANIA ANTKA są ważniejsze niż faza makrocyklu: siłka GÓRA tyle razy w tygodniu, ile podał — zawsze
-  (tytuł zawiera „Góra”, np. "Siłka Góra A – plecy/barki"); nogi dokładasz wg bazy wiedzy, nie kosztem góry.
+  jako Push / Pull / Full Upper (tytuły „Siłka Push…”, „Siłka Pull…”, „Siłka Full Upper…”); brzuch na końcu KAŻDEJ
+  siłki (także nóg), skośne/boczne max 1 w tygodniu; nogi dokładasz wg bazy wiedzy, nie kosztem góry.
 - Trzymaj się BIEŻĄCEJ FAZY makrocyklu (godziny, akcenty, siłka/bieg w tygodniu, rytm tygodni lżejszych) i zasad
   z bazy wiedzy (rozkład intensywności, progresja bez skoków, 48 h po ciężkich nogach, sen/HRV). "cel" każdej jednostki
   = jaką adaptację buduje. Brak wiarygodnego FTP/progów → zaplanuj test zgodnie z protokołem z bazy.
@@ -193,6 +194,15 @@ NOGI = {"SQUAT", "DEADLIFT", "LUNGE", "LEG_CURL", "CALF_RAISE", "HIP_RAISE", "LE
         "OLYMPIC_LIFT", "PLYO"}
 
 
+BRZUCH = {"CRUNCH", "LEG_RAISE", "CORE", "PLANK", "SIT_UP", "CHOP"}
+
+
+def _kroki(ks):
+    for k in ks or []:
+        yield k
+        yield from _kroki(k.get("kroki"))
+
+
 def partia(t):
     """'gora' / 'nogi' / None dla siłki — po kategoriach Garmina ćwiczeń (i tytule)"""
     if t.get("sport") != "silka":
@@ -255,4 +265,19 @@ def kontrola(db, treningi, ist, faza, ftp):
         if len(gora) < chce:
             p.append(f"siłka GÓRA {len(gora)}× na {len(dni)} dni, a Antek wymaga {gora_tyg}× w tygodniu (tu min. {chce}×) "
                      "— to stałe wymaganie, dodaj sesje góry")
+        if gora_tyg >= 3 and len(dni) >= 6:
+            tyt = " ".join((t.get("tytul") or "").lower() for t in gora)
+            brak = [n for n, x in (("Push", "push"), ("Pull", "pull"), ("Full Upper", "full")) if x not in tyt]
+            if brak:
+                p.append("góra ma być jako Push, Pull i Full Upper — brakuje: " + ", ".join(brak))
+    silki = [t for t in tren if t["sport"] == "silka"]
+    bez_brzucha = [f"{t['dzien']} {t['tytul']}" for t in silki if not any(
+        (k.get("garmin") or "").split("/")[0].upper() in BRZUCH and "prostowanie nóg" not in (k.get("nazwa") or "").lower()
+        for k in _kroki(t.get("kroki")))]   # „prostowanie nóg” Antka siedzi w Garminie pod CRUNCH
+    if bez_brzucha:
+        p.append("brak brzucha na końcu siłki (wymaganie Antka: na każdej): " + "; ".join(bez_brzucha))
+    skosne = sum(1 for t in silki for k in _kroki(t.get("kroki")) if (k.get("garmin") or "").split("/")[0].upper() == "CHOP"
+                 or any(x in (k.get("nazwa") or "").lower() for x in ("bokiem", "skośn", "skosn", "woodchop", "boczn", "side")))
+    if skosne > 1:
+        p.append(f"{skosne} ćwiczeń na skośne/boczne brzucha — Antek chce max 1 w tygodniu (poszerzają talię)")
     return p
