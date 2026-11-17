@@ -38,14 +38,15 @@ def adres(db=None):
 
 def push(tytul, tresc, url="/", db=None):
     db = db or baza.polacz()
+    from py_vapid import Vapid
     from pywebpush import WebPushException, webpush
-    v = _vapid()
+    v = Vapid.from_pem(_vapid()["prywatny_pem"].encode())   # pywebpush nie czyta PEM z tekstu
     sub = adres(db) or "https://raspberrypi.local"
     n = 0
     for r in db.execute("SELECT endpoint, dane FROM push").fetchall():
         try:
             webpush(json.loads(r[1]), json.dumps({"tytul": tytul, "tresc": tresc[:300], "url": url}, ensure_ascii=False),
-                    vapid_private_key=v["prywatny_pem"], vapid_claims={"sub": sub}, ttl=86400)
+                    vapid_private_key=v, vapid_claims={"sub": sub}, ttl=86400)
             n += 1
         except WebPushException as ex:
             kod = getattr(ex.response, "status_code", 0)
