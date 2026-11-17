@@ -591,3 +591,5 @@ albo wgraj skrypt przez `scp` i uruchom go na Pi. Nie przesyłaj plików przez p
   (qwen2.5:3b), więc Antek zrezygnował; nic nie wdrożone (kod w kopii zapasowej rozmowy na Pi,
   `Desktop/dla claude kopie zapasowe/Serwerek/niewdrozone_planer_i_lokalny_zapas.patch`). 17.11 zmiana konta Claude:
   token w `/etc/serwerek-bot/claude.env` do podmiany (`claude setup-token` nowym kontem, potem `bez_rozmowy.sh`).
+- **2026-11-17 (chmura)**: Dodano `pamiec/` — wspólną pamięć sesji (preferencje, dostęp, decyzje, do zrobienia,
+  dziennik sesji); `CLAUDE.md` każe ją czytać na starcie. Strona nauki bez zmian.

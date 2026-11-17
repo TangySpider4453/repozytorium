@@ -42,18 +42,28 @@ Host pi
   ServerAliveInterval 30
 CFG
 
-# 4. Demon i logowanie do tailnetu (stan w pamięci = węzeł efemeryczny, znika po sesji)
+# 4. Demon i logowanie do tailnetu
 command -v tailscaled >/dev/null 2>&1 || exit 0
-if [ -z "${TS_AUTHKEY:-}" ]; then
-  log "Brak sekretu TS_AUTHKEY: Tailscale zainstalowany, ale niepołączony."
-  exit 0
-fi
 mkdir -p /var/run/tailscale
 if ! tailscale status >/dev/null 2>&1; then
-  nohup tailscaled --tun=userspace-networking --state=mem: \
+  nohup tailscaled --tun=userspace-networking --state=/var/lib/tailscale-claude.state \
     --socket=/var/run/tailscale/tailscaled.sock >/tmp/tailscaled.log 2>&1 &
   for _ in $(seq 1 20); do [ -S /var/run/tailscale/tailscaled.sock ] && break; sleep 0.5; done
-  timeout 60 tailscale up --authkey="$TS_AUTHKEY" --hostname=claude-cloud --accept-dns=false >/dev/null 2>&1 \
-    || log "tailscale up nie powiodło się (zły lub wygasły klucz?)."
+fi
+
+# 5. Wiadomość dla Claude (stdout trafia do kontekstu sesji)
+echo "=== Mózg: zacznij od pamiec/MAPA.md (potem pamiec/zasady.md) ==="
+if tailscale status >/dev/null 2>&1; then
+  echo "Tailscale: połączony. Test: ssh pi hostname"
+elif [ -n "${TS_AUTHKEY:-}" ]; then
+  if timeout 60 tailscale up --authkey="$TS_AUTHKEY" --hostname=claude-cloud --accept-dns=false >/dev/null 2>&1; then
+    echo "Tailscale: połączony kluczem TS_AUTHKEY. Test: ssh pi hostname"
+  else
+    log "tailscale up z kluczem nie powiodło się (zły lub wygasły klucz?)."
+    echo "Tailscale: klucz TS_AUTHKEY nie zadziałał. Uruchom: timeout 20 tailscale up --hostname=claude-cloud --accept-dns=false i daj użytkownikowi link."
+  fi
+else
+  url=$(timeout 20 tailscale up --hostname=claude-cloud --accept-dns=false 2>&1 | grep -o 'https://login.tailscale.com/a/[a-z0-9]*' | head -1)
+  echo "Tailscale: brak TS_AUTHKEY. Daj użytkownikowi od razu link do zatwierdzenia: ${url:-(uruchom tailscale up ręcznie)}"
 fi
 exit 0

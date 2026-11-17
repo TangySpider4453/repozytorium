@@ -1,14 +1,22 @@
-# Nauka z Claude
+# Instrukcje dla Claude (repozytorium Antka)
 
-Zanim cokolwiek zrobisz, przeczytaj cały `PLAN.md`: cel projektu, stan, ścieżki na Raspberry Pi, format
-`strona/sprawdziany.json` i procedurę dodawania kartkówki. Pisz z użytkownikiem po polsku.
-Po każdej zmianie zaktualizuj sekcje 2 i 9 w `PLAN.md`, a kopia w `strona/` ma być taka sama jak na Pi.
+## 🧠 Start każdej sesji
+1. Przeczytaj **`pamiec/MAPA.md`**: mapa urządzeń i projektów, pętla pracy i tabela „gdzie szukać”.
+2. Przeczytaj **`pamiec/zasady.md`**: czego nie wolno. Repo jest publiczne, a na Pi grają znajomi.
+3. Połącz się z Pi: hook startowy wypisuje stan Tailscale. Jeśli poda link `login.tailscale.com/a/...`, od razu daj
+   go użytkownikowi. Potem `ssh pi hostname`.
+4. Pisz z użytkownikiem **po polsku**, krótko. Aplikację ma po angielsku, więc nazwy przycisków podawaj po angielsku.
 
-Drugi projekt na tym samym Pi: **Progres sylwetki** (`/strony/progres/`, pomiary z wagi, zdjęcia, film z postępu).
-Przy pracy nad nim przeczytaj `PROGRES.md`. Zdjęcia są prywatne: tylko na Pi, nigdy w repozytorium.
+## Koniec pracy
+Uzupełnij `pamiec/`: wpis w `sesje.md`, popraw `do-zrobienia.md`, nowe ustalenia zapisz w `decyzje.md` lub
+`uzytkownik.md`, a zmienione fakty popraw w odpowiednim pliku. Potem commit i push. **Żadnych sekretów w repo.**
 
-Trzeci projekt: **Łazik** (autonomiczny łazik z LoRa, strony `/strony/lazik/`: koncepcja, lista zakupów, mapa
-projektu). Przy pracy nad nim przeczytaj `lazik/LAZIK.md`, a na start nowej rozmowy `lazik/PRZEKAZANIE.md` (skrót wszystkiego).
+## Dokumentacja projektów (czytaj, gdy dotyczy)
+| Projekt | Plik | Zasada |
+|---|---|---|
+| Nauka (kartkówki, quizy) | `PLAN.md` | po zmianie zaktualizuj sekcje 2 i 9; kopia `strona/` = Pi; `sprawdziany.json` najpierw pobierz z Pi |
+| Serwer: portal, bot, telefon, Garmin, NAS, zdrowie | `SERWER.md` | przeczytaj przed zmianami w `pi/app.py` albo w usługach |
+| Progres sylwetki | `PROGRES.md` | zdjęcia prywatne: tylko Pi i NAS, nigdy repo |
+| Łazik (Pi 5, LoRa) | `lazik/LAZIK.md`, `lazik/PRZEKAZANIE.md` | przed ruszaniem silnikami zapytaj |
 
-Całym serwerem (portal, monitor zdrowia z diodą, usługi, NAS i kopie zapasowe) zajmuje się `SERWER.md`: przeczytaj go
-przed zmianami w portalu (`pi/app.py`) albo w usługach na Pi.
+Przed wgraniem pliku na Pi porównaj md5 kopii z Pi i z gita, żeby nie nadpisać zmian zrobionych na Pi.
