@@ -1,0 +1,10 @@
+[Unit]
+Description=Sprawdzanie co godzinę, czy należy się kopia zapasowa (co 7 dni; zaległa od razu)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

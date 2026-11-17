@@ -1,0 +1,15 @@
+[Unit]
+Description=Lazik: stan malinek i kopii zapasowych dla strony /strony/lazik/kopie.html
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=tonyg
+ExecStart=/usr/bin/python3 /usr/local/sbin/lazik-stan
+Nice=19
+IOSchedulingClass=idle
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

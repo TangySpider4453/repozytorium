@@ -1,0 +1,48 @@
+#!/bin/bash
+# Most kopii zapasowych łazika na Pi 4 (serwer domowy): przyjmuje kopię z jednego Pi i zapisuje ją na NAS.
+# Uruchamiany WYŁĄCZNIE przez wymuszone polecenie w ~tonyg/.ssh/authorized_keys:
+#   command="/usr/local/sbin/lazik-kopia-odbierz <nazwa-pi>",restrict ssh-ed25519 ...
+# Nazwę Pi daje klucz, nie klient, więc każdy Pi pisze tylko do swojego folderu.
+# Polecenia klienta: stan | zapisz (strumień tar.zst na stdin) | zatwierdz <sha256>
+set -uo pipefail
+
+PI="${1:-}"
+case "$PI" in rpi-5-1|rpi-zero2w-a1|rpi-zero2w-a2) ;; *) echo "BLAD: nieznany Pi"; exit 2 ;; esac
+NAS=/mnt/nas
+R=$NAS/Raspberry
+K=$R/Kopie-lazika/$PI
+LOG=$R/Logi/kopie-lazika.log
+ZOSTAW=3
+read -r POLECENIE ARG <<< "${SSH_ORIGINAL_COMMAND:-}"
+
+nas_ok() { mountpoint -q "$NAS" && [ -f "$R/.nas" ]; }   # znacznik: to naprawdę NAS, a nie pusty katalog na karcie
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $PI $*" >> "$LOG" 2>/dev/null; }
+
+case "$POLECENIE" in
+  stan)
+    nas_ok || { echo "BLAD: NAS niedostepny"; exit 3; }
+    echo "NAS ok, wolne $(df -BG --output=avail "$NAS" | tail -1 | tr -d ' ')"
+    ls -1t "$K"/*.tar.zst 2>/dev/null | head -"$ZOSTAW" | xargs -r -n1 basename || true
+    ;;
+  zapisz)
+    nas_ok || { echo "BLAD: NAS niedostepny"; exit 3; }
+    mkdir -p "$K" "$R/Logi"
+    rm -f "$K"/*.czesc
+    cat > "$K/nowa.tar.zst.czesc" || { echo "BLAD: przerwany zapis"; log "przerwany zapis"; exit 4; }
+    echo "OK odebrano $(du -h "$K/nowa.tar.zst.czesc" | cut -f1)"
+    ;;
+  zatwierdz)
+    T="$K/nowa.tar.zst.czesc"
+    [ -s "$T" ] || { echo "BLAD: brak odebranej kopii"; exit 5; }
+    SUMA=$(sha256sum "$T" | cut -d' ' -f1)
+    if [ "$SUMA" != "$ARG" ]; then
+      rm -f "$T"; log "BLAD sumy kontrolnej (kopia odrzucona)"; echo "BLAD: suma kontrolna sie nie zgadza"; exit 6
+    fi
+    PLIK="$K/$(date +%Y-%m-%d_%H%M)_$PI.tar.zst"
+    mv "$T" "$PLIK" && echo "$SUMA  $(basename "$PLIK")" > "$PLIK.sha256"
+    ls -1t "$K"/*.tar.zst | tail -n +$((ZOSTAW + 1)) | while read -r stary; do rm -f "$stary" "$stary.sha256"; done
+    log "ok $(du -h "$PLIK" | cut -f1) $(basename "$PLIK")"
+    echo "OK $(basename "$PLIK")"
+    ;;
+  *) echo "BLAD: dozwolone polecenia: stan, zapisz, zatwierdz"; exit 2 ;;
+esac

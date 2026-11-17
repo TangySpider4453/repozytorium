@@ -1,0 +1,11 @@
+[Unit]
+Description=Kopia zapasowa tego Pi na NAS (przez most na Pi 4), gdy minął tydzień
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Nice=15
+IOSchedulingClass=idle
+ExecStart=/usr/local/sbin/lazik-kopia
+TimeoutStartSec=6h

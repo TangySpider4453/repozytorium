@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Łazik: analiza wideo
+Comment=Filmy z telefonu lub kamery: osoby, przedmioty, opis AI, skan 3D
+Exec=/home/rpi/lazik/analiza/uruchom.sh
+Icon=video-x-generic
+Terminal=false
+Categories=Utility;

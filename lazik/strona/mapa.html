@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Mapa projektu Łazik. Źródło: repo lazik/strona/mapa.html; na Pi: ~/portal/sites/lazik/mapa.html -->
+<title>Łazik: mapa projektu</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Układ: arkusz planu misji — wąska kolumna tekstu, szerokie schematy, pasma radiowe mają własne kolory */
+:root{
+  --paper:#eef0ec; --sheet:#f8f9f6; --ink:#1c2833; --muted:#5b6670; --rule:#cfd5d0;
+  --b433:#16767d; --b433-soft:#d6ebea; --a868:#b8650f; --a868-soft:#f5e3cc;
+  --ok:#2f7d3b; --warn:#a86a00; --bad:#b03a2e; --old:#8a8f94;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#141a1f; --sheet:#1b232a; --ink:#e3e8ea; --muted:#9aa6ae; --rule:#2e3a43;
+  --b433:#4fbcc3; --b433-soft:#163638; --a868:#eda24d; --a868-soft:#3a2a15;
+  --ok:#6cc27a; --warn:#e0a640; --bad:#ec7a6d; --old:#7c858c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#141a1f; --sheet:#1b232a; --ink:#e3e8ea; --muted:#9aa6ae; --rule:#2e3a43;
+  --b433:#4fbcc3; --b433-soft:#163638; --a868:#eda24d; --a868-soft:#3a2a15;
+  --ok:#6cc27a; --warn:#e0a640; --bad:#ec7a6d; --old:#7c858c; color-scheme:dark}
+
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--f-body)}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 64px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:44px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.1;margin:0}
+h1{font-size:clamp(2.4rem,6vw,3.6rem);font-weight:700;letter-spacing:.01em}
+h2{font-size:1.9rem;font-weight:700;display:flex;gap:12px;align-items:baseline}
+h2 .code{font-family:var(--f-mono);font-size:.85rem;color:var(--muted);font-weight:400}
+h3{font-size:1.3rem;font-weight:600}
+p{margin:0;max-width:68ch}
+section{display:flex;flex-direction:column;gap:16px}
+.lede{color:var(--muted);font-size:1.08rem}
+.mono{font-family:var(--f-mono);font-size:.86em}
+.label{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.08em;font-size:.82rem;font-weight:600;color:var(--muted)}
+a{color:var(--b433)}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--a868);outline-offset:2px}
+
+header{display:flex;flex-direction:column;gap:14px;border-bottom:2px solid var(--ink);padding-bottom:22px}
+.status{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--sheet);border-radius:999px;padding:3px 11px;font-size:.88rem}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.93rem}
+nav.toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule)}
+nav.toc a:hover{border-color:var(--ink)}
+
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:18px}
+svg text{font-family:var(--f-body);fill:var(--ink)}
+svg .t-title{font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.03em}
+svg .t-sm{font-size:12.5px;fill:var(--muted)}
+svg .t-mono{font-family:var(--f-mono);font-size:11.5px}
+svg .box{fill:var(--sheet);stroke:var(--ink);stroke-width:1.5}
+svg .box-user{fill:var(--paper);stroke:var(--muted);stroke-dasharray:4 3;stroke-width:1.2}
+svg .l433{stroke:var(--b433);stroke-width:5}
+svg .l868{stroke:var(--a868);stroke-width:5;stroke-dasharray:14 7}
+svg .lnet{stroke:var(--muted);stroke-width:2}
+svg .c433{fill:var(--b433);font-weight:700} svg .c868{fill:var(--a868);font-weight:700}
+svg .flow{stroke:var(--muted);stroke-width:1.2;fill:none}
+svg .arrowhead{fill:var(--muted)}
+
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h3{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.card h3 small{font-family:var(--f-mono);font-size:.78rem;font-weight:400;color:var(--muted)}
+.card.b433{border-top:4px solid var(--b433)} .card.a868{border-top:4px solid var(--a868)}
+.card.rover{border-top:4px solid var(--ink)}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:0;font-size:.95rem}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0}
+ul.tight{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:3px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-mono);font-size:.78rem;border:1px solid var(--rule);border-radius:4px;padding:2px 7px;background:var(--paper)}
+
+table{border-collapse:collapse;width:100%;font-size:.94rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.06em;font-size:.8rem;color:var(--muted);font-weight:600}
+td.num{text-align:right;white-space:nowrap}
+tr.hl td{background:var(--a868-soft)}
+
+.layers{display:flex;flex-direction:column;gap:4px}
+.layer{display:grid;grid-template-columns:170px 1fr;gap:12px;align-items:center;background:var(--sheet);border:1px solid var(--rule);padding:10px 14px;border-radius:4px}
+.layer b{font-family:var(--f-display);font-size:1.08rem;letter-spacing:.02em}
+.layer span{color:var(--muted);font-size:.93rem}
+@media (max-width:560px){.layer{grid-template-columns:1fr;gap:2px}}
+
+.prio{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.prio div{padding:10px 10px 12px;border-radius:4px;background:var(--sheet);border:1px solid var(--rule);display:flex;flex-direction:column;gap:2px;min-width:0}
+.prio b{font-family:var(--f-mono);font-size:1.05rem}
+.prio span{font-size:.88rem;color:var(--muted)}
+.prio .p0{border-color:var(--bad)} .prio .p0 b{color:var(--bad)}
+@media (max-width:760px){.prio{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.pipe{display:flex;flex-wrap:wrap;gap:0;align-items:stretch}
+.pipe span{padding:6px 14px 6px 18px;background:var(--b433-soft);font-size:.9rem;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);margin-right:-6px}
+.pipe span:first-child{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%);padding-left:12px}
+
+.flowrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.flowrow .node{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:6px 10px;font-size:.9rem}
+.flowrow .arr{color:var(--muted)}
+
+/* etapy */
+.stages{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--rule);margin-left:8px}
+.phase{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.1em;font-size:.85rem;color:var(--muted);padding:14px 0 6px 22px;position:relative}
+.stage{position:relative;padding:10px 0 14px 22px;display:grid;grid-template-columns:62px 1fr;gap:4px 14px}
+.stage::before{content:"";position:absolute;left:-7px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--paper);border:2px solid var(--muted)}
+.stage.now::before{background:var(--a868);border-color:var(--a868);box-shadow:0 0 0 4px var(--a868-soft)}
+.stage .no{font-family:var(--f-mono);font-weight:600;font-size:1.05rem;padding-top:6px}
+.stage .body{display:flex;flex-direction:column;gap:5px;min-width:0}
+.stage .body h3{font-size:1.2rem}
+.stage .meta{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;font-size:.92rem}
+.stage .meta dt{color:var(--muted)} .stage .meta dd{margin:0}
+.here{font-family:var(--f-display);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;background:var(--a868);color:var(--sheet);padding:1px 8px;border-radius:3px;margin-left:8px;vertical-align:middle}
+.gate{border:1px dashed var(--a868);background:var(--a868-soft);border-radius:4px;padding:8px 12px;font-size:.92rem}
+@media (max-width:560px){.stage{grid-template-columns:1fr}.stage .no{padding-top:0}}
+
+.evo{display:flex;flex-direction:column;gap:0}
+.evo .row{display:grid;grid-template-columns:110px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.evo .d{font-family:var(--f-mono);font-size:.86rem;color:var(--muted);padding-top:2px}
+.dead{color:var(--old);text-decoration:line-through;text-decoration-color:var(--old)}
+.tag{font-family:var(--f-display);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:3px;border:1px solid currentColor;margin-right:6px;white-space:nowrap}
+.tag.ok{color:var(--ok)} .tag.old{color:var(--old)} .tag.warn{color:var(--warn)}
+
+.q{display:grid;grid-template-columns:1fr;gap:6px}
+.rec{border-left:3px solid var(--ok);padding-left:10px;font-size:.95rem}
+details{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:10px 16px}
+summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1.15rem}
+details[open] summary{margin-bottom:10px}
+footer{color:var(--muted);font-size:.9rem;border-top:1px solid var(--rule);padding-top:14px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+<style>.crumbs{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.92rem}.crumbs a{color:var(--muted)}.crumbs b{color:var(--ink)}</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <nav class="crumbs" aria-label="Strony projektu"><a href="/">Portal</a><a href="/strony/lazik/">← Łazik: koncepcja</a><a href="/strony/lazik/zakupy.html">Lista zakupów</a><b>Mapa projektu</b></nav>
+  <span class="label">Projekt szkolny · LoRa · autonomia · stan na 26.10.2026</span>
+  <h1>Łazik: mapa projektu</h1>
+  <p class="lede">Autonomiczny łazik, który sam buduje mapę i wykonuje misje. Łączy się z domem przez przekaźnik (satelitę) po dwóch łączach LoRa, które często się zrywają. Tu jest całość w jednym miejscu: z czego się składa, jak rozmawia, w jakiej kolejności to budujemy i co jeszcze trzeba postanowić.</p>
+  <div class="status">
+    <span class="pill"><span class="dot warn"></span>Etap: przed E0 / E1</span>
+    <span class="pill"><span class="dot"></span>Nowego kodu: 0 linii</span>
+    <span class="pill"><span class="dot ok"></span>Działa: stary <span class="mono">lora_field_monitor.py</span> (v0) na a1 i a2</span>
+    <span class="pill"><span class="dot bad"></span>Do naprawy: zasilanie Zero 2W</span>
+  </div>
+  <nav class="toc" aria-label="Spis treści">
+    <a href="#architektura">Architektura</a><a href="#wezly">Węzły</a><a href="#radio">Radio</a>
+    <a href="#protokol">Protokół DTN</a><a href="#autonomia">Autonomia</a><a href="#oprogramowanie">Oprogramowanie</a>
+    <a href="#etapy">Etapy E0–E11</a><a href="#sprzet">Sprzęt</a><a href="#wiedza">Co już wiemy</a>
+    <a href="#historia">Historia koncepcji</a><a href="#ryzyka">Ryzyka</a><a href="#decyzje">Do decyzji</a><a href="#gdzie">Gdzie co jest</a>
+  </nav>
+</header>
+
+<!-- ARCHITEKTURA -->
+<section id="architektura">
+  <h2>Architektura <span class="code">3 węzły · 2 pasma</span></h2>
+  <p>Operator nie steruje łazikiem na żywo. Wydaje polecenia wysokiego poziomu, np. „jedź tu, zrób pomiar i zdjęcie”. Wiadomości czekają w buforach każdego węzła, aż łącze wróci (store-and-forward, DTN).</p>
+  <div class="sheet scroll">
+    <svg viewBox="0 0 1040 300" width="1040" height="300" role="img" aria-label="Schemat: przeglądarka, stacja a1, satelita a2, łazik Pi 5 i łącza między nimi">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+      <!-- węzły -->
+      <rect class="box-user" x="10" y="50" width="150" height="150" rx="6"/>
+      <text class="t-title" x="24" y="80">TY</text>
+      <text class="t-sm" x="24" y="102">telefon / PC / iPad</text>
+      <text class="t-sm" x="24" y="120">strona WWW</text>
+      <text class="t-sm" x="24" y="138">później pad Xbox</text>
+
+      <rect class="box" x="250" y="50" width="200" height="150" rx="6"/>
+      <text class="t-title" x="264" y="80">STACJA DOMOWA</text>
+      <text class="t-mono" x="264" y="100">a1 · Zero 2W</text>
+      <text class="t-sm" x="264" y="122">serwer WWW, OLED,</text>
+      <text class="t-sm" x="264" y="139">ekran dotykowy</text>
+      <text class="t-sm" x="264" y="156">kolejka poleceń</text>
+      <text class="t-mono" x="264" y="186">bufor: mały</text>
+
+      <rect class="box" x="540" y="50" width="200" height="150" rx="6"/>
+      <text class="t-title" x="554" y="80">SATELITA</text>
+      <text class="t-mono" x="554" y="100">a2 · Zero 2W · 2 radia</text>
+      <text class="t-sm" x="554" y="122">przekaźnik, antena</text>
+      <text class="t-sm" x="554" y="139">wysoko na maszcie,</text>
+      <text class="t-sm" x="554" y="156">trzyma wiadomości</text>
+      <text class="t-mono" x="554" y="186">bufor: DUŻY (SD)</text>
+
+      <rect class="box" x="830" y="50" width="200" height="150" rx="6" style="stroke-width:2.5"/>
+      <text class="t-title" x="844" y="80">ŁAZIK</text>
+      <text class="t-mono" x="844" y="100">Pi 5 8 GB + Hailo-8</text>
+      <text class="t-sm" x="844" y="122">mapa (SLAM), nawigacja,</text>
+      <text class="t-sm" x="844" y="139">rozpoznawanie, misje,</text>
+      <text class="t-sm" x="844" y="156">silniki, czujniki</text>
+      <text class="t-mono" x="844" y="186">bufor: DUŻY (SD/SSD)</text>
+
+      <!-- łącza -->
+      <line class="lnet" x1="160" y1="125" x2="250" y2="125"/>
+      <text class="t-sm" x="205" y="112" text-anchor="middle">HTTPS</text>
+      <text class="t-sm" x="205" y="148" text-anchor="middle">Tailscale</text>
+
+      <line class="l433" x1="450" y1="125" x2="540" y2="125"/>
+      <text class="c433" x="495" y="108" text-anchor="middle" font-size="15">B · 433</text>
+      <text class="t-sm" x="495" y="150" text-anchor="middle">ciągłe</text>
+      <text class="t-sm" x="495" y="166" text-anchor="middle">DX-LR03 UART</text>
+
+      <line class="l868" x1="740" y1="125" x2="830" y2="125"/>
+      <text class="c868" x="785" y="108" text-anchor="middle" font-size="15">A · 868</text>
+      <text class="t-sm" x="785" y="150" text-anchor="middle">przerywane</text>
+      <text class="t-sm" x="785" y="166" text-anchor="middle">SX1262 SPI</text>
+
+      <!-- przepływ -->
+      <path class="flow" d="M250 236 H1000" marker-end="url(#ah)"/>
+      <text class="t-sm" x="255" y="228">polecenia w dół: P0 STOP · P1 misje (podpisane HMAC)</text>
+      <path class="flow" d="M1000 270 H260" marker-end="url(#ah)"/>
+      <text class="t-sm" x="560" y="290">raporty w górę: P2 telemetria · P3 delty mapy · P4 miniatury · P5 pełne pliki</text>
+    </svg>
+  </div>
+</section>
+
+<!-- WĘZŁY -->
+<section id="wezly">
+  <h2>Węzły <span class="code">co robi każdy</span></h2>
+  <div class="grid3">
+    <article class="card b433">
+      <h3>Stacja domowa <small>a1 · rpi-zero2w-a1</small></h3>
+      <dl class="kv">
+        <dt>Sprzęt</dt><dd>Zero 2W, DX-LR03 433 MHz, OLED SSD1306, ekran dotykowy USB (D-WAV)</dd>
+        <dt>Radio</dt><dd>tylko B (433 MHz)</dd>
+        <dt>Zadania</dt><dd>strona WWW (misje, mapa, zdjęcia, konsola), kolejka poleceń, stan łączy na OLED</dd>
+        <dt>Dostęp</dt><dd>tylko przez Tailscale, HTTPS (<span class="mono">tailscale serve</span>), logowanie</dd>
+      </dl>
+      <div class="chips"><span class="chip">link-b</span><span class="chip">dtn</span><span class="chip">www</span><span class="chip">oled</span></div>
+    </article>
+    <article class="card a868">
+      <h3>Satelita <small>a2 · rpi-zero2w-a2</small></h3>
+      <dl class="kv">
+        <dt>Sprzęt</dt><dd>Zero 2W, DX-LR03 433 MHz (UART) + SX1262 868 MHz (SPI), karta high endurance, maszt</dd>
+        <dt>Radio</dt><dd>B do stacji i A do łazika; anteny odsunięte</dd>
+        <dt>Zadania</dt><dd>przejmuje wiadomość z potwierdzeniem (custody) i trzyma ją, aż dostarczy dalej</dd>
+        <dt>Zasilanie</dt><dd>akumulator, opcjonalnie panel słoneczny, obudowa odporna na pogodę</dd>
+      </dl>
+      <div class="chips"><span class="chip">link-b</span><span class="chip">link-a</span><span class="chip">dtn (SQLite)</span></div>
+    </article>
+    <article class="card rover">
+      <h3>Łazik <small>nowy · Pi 5</small></h3>
+      <dl class="kv">
+        <dt>Komputer</dt><dd>Pi 5 8 GB, Active Cooler, AI HAT+ 26 TOPS (Hailo-8) przez PCIe</dd>
+        <dt>Percepcja</dt><dd>OAK-D Lite (głębia), IMU BNO085, enkodery, ToF, BME280, kamera do zdjęć</dd>
+        <dt>Napęd</dt><dd>podwozie z silnikami 12 V z enkoderami, sterownik mocniejszy niż HW-094, Pico do pętli kół</dd>
+        <dt>Zasilanie</dt><dd>akumulator 2S/3S + BMS, przetwornica 5 V / 5 A tylko dla Pi, silniki osobną gałęzią, wspólna masa, STOP</dd>
+      </dl>
+      <div class="chips"><span class="chip">link-a</span><span class="chip">dtn</span><span class="chip">misje</span><span class="chip">ROS 2</span><span class="chip">napęd (Pico)</span><span class="chip">bezpieczeństwo</span></div>
+    </article>
+  </div>
+</section>
+
+<!-- RADIO -->
+<section id="radio">
+  <h2>Radio <span class="code">R = SF · BW / 2^SF · 4/5</span></h2>
+  <div class="grid2">
+    <article class="card b433">
+      <h3>Łącze B · satelita ↔ stacja <small>433 MHz</small></h3>
+      <dl class="kv">
+        <dt>Moduły</dt><dd>2 × DX-LR03, które już masz (UART 9600, AT przez <span class="mono">+++</span>)</dd>
+        <dt>Limity UE</dt><dd>10 mW ERP, 10% czasu nadawania</dd>
+        <dt>Charakter</dt><dd>ciągłe, stabilne, mniejszy bufor</dd>
+        <dt>Plus</dt><dd>~15–20% większy zasięg przy legalnej mocy</dd>
+        <dt>Minus</dt><dd>UART 9600 daje maks. ~7,7 kbps; reset przy wyjściu z AT; brak RSSI na pakiet</dd>
+      </dl>
+    </article>
+    <article class="card a868">
+      <h3>Łącze A · łazik ↔ satelita <small>868 MHz</small></h3>
+      <dl class="kv">
+        <dt>Moduły</dt><dd>2 × SX1262 po SPI (do kupienia), wersja 868, nie 915</dd>
+        <dt>Podpasmo</dt><dd><b>869,4–869,65 MHz</b>: 500 mW, 10% czasu, kanał 250 kHz</dd>
+        <dt>Charakter</dt><dd>przerywane, najtrudniejsze, „szybsze”</dd>
+        <dt>Plus</dt><dd>RSSI i SNR dla każdego pakietu, pełna kontrola SF/BW/CR, bez resetów</dd>
+        <dt>Uwaga</dt><dd>zwykłe 868,0–868,6 MHz ma tylko 1% czasu, czyli jest ~10× wolniejsze od 433</dd>
+      </dl>
+    </article>
+  </div>
+  <div class="sheet scroll">
+    <table>
+      <thead><tr><th>Pasmo / kanał</th><th>Czas nadawania</th><th>Moc ERP</th><th>BW</th><th class="num">SF9 średnio</th><th class="num">4 KB przy SF9</th><th class="num">4 KB przy SF7</th></tr></thead>
+      <tbody>
+        <tr><td>433 MHz (łącze B)</td><td>10%</td><td>10 mW</td><td>125 kHz</td><td class="num">176 bps</td><td class="num">~3,1 min</td><td class="num">~60 s</td></tr>
+        <tr><td>868,0–868,6 MHz</td><td>1%</td><td>25 mW</td><td>125 kHz</td><td class="num">17,6 bps</td><td class="num">~31 min</td><td class="num">~10 min</td></tr>
+        <tr class="hl"><td><b>869,4–869,65 MHz (łącze A)</b></td><td>10%</td><td>500 mW</td><td>250 kHz</td><td class="num">352 bps</td><td class="num">~1,5 min</td><td class="num">~30 s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="lede">Wartości teoretyczne, bez narzutu ramek i potwierdzeń. Prędkość zależy od SF i BW, a nie od pasma. Prawdziwe liczby zmierzymy w E1 i E10. SF12 / 125 kHz to ~0,23 kbps, czyli miniaturka 4 KB idzie ~140 s.</p>
+</section>
+
+<!-- PROTOKÓŁ -->
+<section id="protokol">
+  <h2>Protokół DTN <span class="code">store-and-forward</span></h2>
+  <p>Każda wiadomość (bundle) ma ID, typ, priorytet, nadawcę i odbiorcę, numer, czas ważności, treść i podpis. Każdy węzeł trzyma <b>trwałą kolejkę</b> (SQLite), więc restart nic nie gubi.</p>
+  <div class="prio">
+    <div class="p0"><b>P0</b><span>STOP, wróć do bazy</span></div>
+    <div><b>P1</b><span>misje i potwierdzenia</span></div>
+    <div><b>P2</b><span>status, telemetria, RSSI</span></div>
+    <div><b>P3</b><span>delty mapy</span></div>
+    <div><b>P4</b><span>miniatury zdjęć</span></div>
+    <div><b>P5</b><span>pełne pliki, wznawialne</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Niezawodność i bezpieczeństwo</h3>
+      <ul class="tight">
+        <li>CRC16 na ramkę, CRC32 lub hash całości, CRC modułu (<span class="mono">AT+CRC1</span>)</li>
+        <li>selektywne ACK/NACK brakujących kawałków i wznawianie od miejsca przerwania</li>
+        <li>Reed-Solomon opcjonalnie na długich dystansach</li>
+        <li><b>HMAC-SHA256 + licznik</b> przeciw podrabianiu i powtórkom; polecenie bez podpisu jest odrzucane</li>
+        <li>adaptacja SF/BW/CR dla każdego łącza, zmiana w uzgodnionym oknie i powrót do ustawień domyślnych, gdy druga strona zamilknie</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Mapa po radiu</h3>
+      <ul class="tight">
+        <li>siatka zajętości 2D, ok. 5 cm na komórkę, 2 bity na komórkę</li>
+        <li>kafelki 32×32; wysyłane tylko kafelki zmienione od ostatniej potwierdzonej wersji</li>
+        <li>RLE i kompresja (zstd/deflate); obiekty jako lista po kilka bajtów zamiast zdjęć</li>
+        <li>200×200 komórek to 10 KB surowo; po kompresji zakładamy kilka KB (do zmierzenia)</li>
+        <li>stacja składa mapę z delt i rysuje ją na stronie</li>
+      </ul>
+    </div>
+  </div>
+  <div class="flowrow" aria-label="Etapy dostarczenia polecenia">
+    <span class="label" style="margin-right:6px">Stan polecenia na stronie:</span>
+    <div class="pipe"><span>wysłane</span><span>w buforze satelity</span><span>dostarczone</span><span>wykonane</span><span>wynik</span></div>
+  </div>
+</section>
+
+<!-- AUTONOMIA -->
+<section id="autonomia">
+  <h2>Autonomia łazika <span class="code">wizja, bez LiDAR-u</span></h2>
+  <div class="card">
+    <span class="label">Tor mapy i nawigacji</span>
+    <div class="flowrow">
+      <span class="node">OAK-D Lite (głębia)</span><span class="arr">→</span>
+      <span class="node mono">depthimage_to_laserscan</span><span class="arr">→</span>
+      <span class="node mono">slam_toolbox</span><span class="arr">→</span>
+      <span class="node mono">Nav2</span><span class="arr">→</span>
+      <span class="node">Pico: pętla kół</span>
+    </div>
+    <div class="flowrow">
+      <span class="node">IMU BNO085 + enkodery</span><span class="arr">→</span><span class="node">odometria</span>
+      <span class="arr" style="margin-left:14px">·</span>
+      <span class="node">kamera + Hailo-8</span><span class="arr">→</span><span class="node">obiekty → warstwa obiektów mapy</span>
+    </div>
+    <p class="lede" style="font-size:.95rem">Głębia zamieniona na pseudo-skan 2D sprawia, że LiDAR można dołożyć później jako jeden węzeł bez przepisywania reszty. Hailo przyspiesza tylko rozpoznawanie obrazu, a SLAM i planowanie liczy procesor Pi 5.</p>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>Misje</h3>
+      <div class="chips"><span class="chip">GOTO(x,y)</span><span class="chip">POMIAR</span><span class="chip">ZDJĘCIE</span><span class="chip">EXPLORE(obszar)</span><span class="chip">RETURN_HOME</span><span class="chip">STOP</span></div>
+      <p style="font-size:.95rem">Kolejka misji siedzi w łaziku i wykonuje się także bez łączności. Raport: ID, status, BME280, miniatura, zmiany mapy, a pełne pliki idą w tle jako P5.</p></div>
+    <div class="card"><h3>Bezpieczeństwo</h3>
+      <ul class="tight"><li>watchdog i stop przy braku poleceń</li><li>geofence (dozwolony obszar)</li><li>wykrycie przewrócenia z IMU</li><li>niska bateria (INA219) → powrót do bazy</li><li>STOP awaryjny jako P0 i przycisk fizyczny</li></ul></div>
+    <div class="card"><h3>Słabe strony wizji</h3>
+      <ul class="tight"><li>zasięg głębi ok. 0,3–8 m, wąski kąt, więc łazik musi się obracać</li><li>ciemność, ostre słońce i cienie</li><li>jednolite podłoże: piasek, gładka ściana</li><li>martwa strefa blisko: czujniki ToF</li></ul></div>
+  </div>
+</section>
+
+<!-- OPROGRAMOWANIE -->
+<section id="oprogramowanie">
+  <h2>Oprogramowanie <span class="code">warstwy wspólne dla 3 węzłów</span></h2>
+  <div class="layers">
+    <div class="layer"><b>Aplikacja</b><span>stacja: WWW (FastAPI + WebSocket) i OLED · satelita: przekazywanie · łazik: misje, ROS 2, kamera, czujniki</span></div>
+    <div class="layer"><b>DTN</b><span>bundle, trwała kolejka SQLite, priorytety P0–P5, custody, ACK/NACK, wznawianie, HMAC + licznik</span></div>
+    <div class="layer"><b>Ramka</b><span>nagłówek, numer, długość, CRC16, fragmentacja dużych wiadomości</span></div>
+    <div class="layer"><b>Sterownik łącza</b><span>jeden interfejs, dwie implementacje: DX-LR03 (UART, AT) i SX1262 (SPI). Radio można wymienić bez ruszania protokołu</span></div>
+  </div>
+  <p class="lede">Usługi systemd na każdym węźle. Tylko usługa <span class="mono">link-*</span> dotyka radia. Do ustalenia: ROS 2 Jazzy na Ubuntu 24.04 czy w Dockerze na Raspberry Pi OS. Kod sprawdzony na sprzęcie trafia do dziennika kodu (data i godzina, zdjęcia <span class="mono">RRRR-MM-DD_GGMM_opis.jpg</span>).</p>
+</section>
+
+<!-- ETAPY -->
+<section id="etapy">
+  <h2>Etapy E0–E11 <span class="code">kolejność budowy</span></h2>
+  <div class="stages">
+    <div class="phase">Faza 1 · łączność na tym, co już jest</div>
+    <div class="stage now"><div class="no">E0</div><div class="body">
+      <h3>Zasilanie i okablowanie <span class="here">tu jesteśmy</span></h3>
+      <dl class="meta"><dt>Zakres</dt><dd>dobra przetwornica 5 V dla a1 i a2, grube krótkie przewody, kondensator przy Pi, stanowisko testowe</dd>
+      <dt>Gotowe gdy</dt><dd><span class="mono">get_throttled = 0x0</span> pod obciążeniem, obie malinki startują same, <span class="mono">i2cdetect</span> widzi OLED 0x3C bez zaników</dd></dl></div></div>
+    <div class="stage now"><div class="no">E1</div><div class="body">
+      <h3>Badanie radia na DX-LR03</h3>
+      <dl class="meta"><dt>Zakres</dt><dd><span class="mono">AT+HELP</span>, SF/BW/CR, <span class="mono">AT+CRC1</span>, dozwolone prędkości UART, zmierzony czas nadawania i RTT, test czy <span class="mono">AT+RSSI</span> to ostatni pakiet czy szum, zasięg w terenie</dd>
+      <dt>Gotowe gdy</dt><dd>tabela zmierzonych prędkości i zasięgu dla SF7–SF12; wiadomo, jaki SF dla łącza B</dd></dl>
+      <div class="gate"><b>Decyzja po E1:</b> czy łącze B zostaje na DX-LR03, czy też idzie na SX1262. Łącze A już jest postanowione: SX1262 868 MHz.</div></div></div>
+    <div class="stage"><div class="no">E2</div><div class="body">
+      <h3>Protokół DTN v1 (stacja ↔ satelita)</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>kolejki trwałe, priorytety, HMAC, ACK, wznawianie; testy na stole ze sztucznymi stratami</dd>
+      <dt>Gotowe gdy</dt><dd>plik 4 KB dochodzi w całości przy 30% sztucznych strat i po restarcie jednej strony</dd></dl></div></div>
+    <div class="stage"><div class="no">E3</div><div class="body">
+      <h3>Satelita z dwoma radiami</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>SX1262 po SPI + DX-LR03 po UART na a2, przekazywanie, bufor, test odcięcia łącza A lub B</dd>
+      <dt>Potrzeba</dt><dd>2 × SX1262 868 MHz, anteny 868 i 433 na SMA</dd></dl></div></div>
+    <div class="stage"><div class="no">E4</div><div class="body">
+      <h3>Strona WWW i OLED na stacji</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>polecenia i statusy na „atrapie łazika” (drugi program udający łazika), stan kolejek i łączy</dd></dl></div></div>
+
+    <div class="phase">Faza 2 · łazik sam, bez radia</div>
+    <div class="stage"><div class="no">E5</div><div class="body">
+      <h3>Sprzęt łazika</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>Pi 5, zasilanie, podwozie, silniki z enkoderami, Pico, IMU, OAK-D Lite, sterowanie lokalne, stop awaryjny</dd>
+      <dt>Gotowe gdy</dt><dd>jedzie zadany dystans po enkoderach, zatrzymuje się po zaniku poleceń, Pi nie restartuje się przy ruszaniu</dd></dl></div></div>
+    <div class="stage"><div class="no">E6</div><div class="body">
+      <h3>SLAM i nawigacja lokalnie</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>ROS 2, slam_toolbox, Nav2; misje GOTO / EXPLORE / RETURN_HOME bez radia</dd></dl></div></div>
+    <div class="stage"><div class="no">E7</div><div class="body">
+      <h3>Akcelerator SI</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>AI HAT+ 26 TOPS, rozpoznawanie obiektów, warstwa obiektów w mapie. Dopiero tu kupujemy Hailo</dd></dl></div></div>
+
+    <div class="phase">Faza 3 · łazik + radio</div>
+    <div class="stage"><div class="no">E8</div><div class="body"><h3>Mapa po radiu</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>kafelki, delty, kompresja, integracja z DTN, mapa na stronie</dd></dl></div></div>
+    <div class="stage"><div class="no">E9</div><div class="body"><h3>Zdjęcia</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>miniatura (P4) i pełne pliki lub cały bufor (P5), wznawiane</dd></dl></div></div>
+    <div class="stage"><div class="no">E10</div><div class="body"><h3>Adaptacja radia i testy w terenie</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>automatyczny dobór SF/BW/CR, testy zasięgu, celowe rozłączenia</dd></dl></div></div>
+
+    <div class="phase">Później</div>
+    <div class="stage"><div class="no">E11</div><div class="body"><h3>GPS, kompas, pad Xbox, stacja dokująca</h3>
+      <dl class="meta"><dt>Zakres</dt><dd>GPS na dodatkowym UART Pi 5 (overlay <span class="mono">uart2…5</span>), wspólne odniesienie map, przycisk „baza tutaj”, teleoperacja krótkimi impulsami</dd></dl></div></div>
+  </div>
+</section>
+
+<!-- SPRZĘT -->
+<section id="sprzet">
+  <h2>Sprzęt <span class="code">masz · kupić według etapu</span></h2>
+  <p>Wiodąca lista do odhaczania (57 pozycji) jest na serwerku: <a href="http://100.108.241.58/strony/lazik/zakupy.html">100.108.241.58/strony/lazik/zakupy.html</a> (działa tylko przez Tailscale). Tu jest skrót według kolejności potrzeb.</p>
+  <div class="sheet scroll">
+    <table>
+      <thead><tr><th>Kiedy</th><th>Co</th><th>Uwagi</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag ok">masz</span></td><td>2 × Zero 2W (a1, a2), 2 × DX-LR03 433, OLED-y, ekran dotykowy USB, kamera USB, BME280, HW-094, GPS UART, źródło 7,4 V</td><td>HW-094 tylko do prototypu</td></tr>
+        <tr><td class="mono">E0</td><td>przetwornice 5 V ≥ 3 A (5,1 V) dla Zero 2W, przewody 0,75–1 mm², kondensatory 470–1000 µF, multimetr</td><td>naprawia problem ze startem z pinów</td></tr>
+        <tr><td class="mono">E1</td><td>anteny 433 MHz na SMA, opcjonalnie RTL-SDR</td><td>SDR pokazuje widmo i zakłócenia</td></tr>
+        <tr><td class="mono">E3</td><td>2 × SX1262 868 MHz (SPI), anteny 868, przedłużki SMA, maszt, karta high endurance</td><td>musi stroić 869,525 MHz z BW 250 kHz</td></tr>
+        <tr><td class="mono">E5</td><td>Pi 5 8 GB + Active Cooler + zasilacz 27 W, podwozie z silnikami 12 V z enkoderami, sterownik silników, Pico, akumulator 2S/3S + BMS + XT60, przetwornica 5 V / 5 A (klasa Pololu D36V50F5), bezpiecznik, wyłącznik, INA219, IMU BNO085, <b>OAK-D Lite</b>, ToF VL53L1X, karta A2 128 GB lub SSD USB</td><td>NVMe odpada, bo PCIe zajmie AI HAT+</td></tr>
+        <tr><td class="mono">E7</td><td><b>AI HAT+ 26 TOPS (Hailo-8)</b></td><td>po OAK-D Lite; <span class="mono">sudo apt install hailo-all</span></td></tr>
+        <tr><td class="mono">E9</td><td>Camera Module 3 (z taśmą do Pi 5) albo dobra kamera USB</td><td>do zdjęć, osobno od kamery głębi</td></tr>
+        <tr><td class="mono">E11</td><td>magnetometr, stacja dokująca; opcjonalnie LiDAR 2D (RPLIDAR C1, LD19)</td><td>GPS już masz</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- WIEDZA -->
+<section id="wiedza">
+  <h2>Co już wiemy <span class="code">sprawdzone na sprzęcie</span></h2>
+  <div class="grid2">
+    <div class="card"><h3>DX-LR03 (firmware DX-LR01 V2.3.2, ASR6601)</h3>
+      <ul class="tight">
+        <li><span class="mono">+++</span> wchodzi w AT; drugie <span class="mono">+++</span> wychodzi i <b>resetuje moduł</b></li>
+        <li>ustawienia bez „=”: <span class="mono">AT+POWE5</span>, <span class="mono">AT+CRC1</span>; <span class="mono">AT+RSSI</span> działa, choć nie ma go w dokumentacji</li>
+        <li>CRC domyślnie wyłączone, więc szum trafia na UART</li>
+        <li>nie nadaje drugi raz zaraz po własnej transmisji, potrzebne ~2 s odstępu</li>
+        <li>sesja AT trwa ~8,7 s ślepoty modułu, cały cykl ping/pong ~15 s</li>
+        <li>podłączone tylko VCC 5 V, GND, RX, TX (bez M0/M1/AUX)</li>
+      </ul></div>
+    <div class="card"><h3>Raspberry Pi Zero 2W</h3>
+      <ul class="tight">
+        <li>UART: <span class="mono">enable_uart=1</span>, <span class="mono">dtoverlay=disable-bt</span>, <span class="mono">core_freq=250</span>, bez konsoli na serialu, GPIO14/15 = PL011</li>
+        <li>szum na UART był od zakłóceń (EMI) w ciasnej obudowie, a nie od konfiguracji</li>
+        <li>zasilane z pinów nie startuje lub gaśnie pod obciążeniem</li>
+        <li>zaniki I2C na obu malinkach wskazują na przewody lub pull-upy</li>
+        <li>415 MB RAM; pulpit wymusza swap, więc docelowo tryb bez pulpitu</li>
+        <li>brak RTC, zegar jest dobry dopiero po NTP; log ma znaki binarne, więc <span class="mono">grep -a</span></li>
+        <li>jeden UART na pinach, więc drugie radio musi iść po SPI</li>
+      </ul></div>
+  </div>
+  <details>
+    <summary>Stary program v0 i jego znane wady (narzędzie do E1)</summary>
+    <p style="margin-bottom:8px"><span class="mono">/home/rpi/Documents/lora_field/lora_field_monitor.py</span>, identyczny na a1 i a2 (SHA256 <span class="mono">B80DD518…E63BBC</span>), usługa <span class="mono">lora_field.service</span>. a1 jest masterem (ping), a2 receiverem (pong po 2 s). Po każdym cyklu obie strony robią sesję AT z mocą 5 dB i odczytem RSSI.</p>
+    <ul class="tight">
+      <li>sesja AT za wolna i za częsta; okna AT mastera i receivera się rozjeżdżają (stąd straty)</li>
+      <li>parser pingów na receiverze nie jest odporny na szum</li>
+      <li>Loss liczony od startu, bez ruchomego okna; brak rotacji logów i zapisu CSV</li>
+      <li>RSSI tylko lokalny, receiver go nie odsyła; docstring jest nieaktualny</li>
+      <li>stary projekt <span class="mono">lora_monitor</span> z panelem na porcie 5000 leży na a1 i nie jest uruchamiany</li>
+    </ul>
+  </details>
+  <details>
+    <summary>Okablowanie z 16.10 (Zero 2W): punkt wyjścia dla łazika</summary>
+    <div class="scroll"><table>
+      <thead><tr><th>Urządzenie</th><th>Sygnał</th><th>Pin</th><th>GPIO</th></tr></thead>
+      <tbody>
+        <tr><td>LoRa</td><td>VCC 5 V / GND</td><td>4 / 6</td><td>–</td></tr>
+        <tr><td>LoRa</td><td>RX modułu ← TXD Pi</td><td>8</td><td>14</td></tr>
+        <tr><td>LoRa</td><td>TX modułu → RXD Pi</td><td>10</td><td>15</td></tr>
+        <tr><td>OLED + BME280</td><td>3,3 V / SDA / SCL / GND</td><td>1 / 3 / 5 / 9</td><td>– / 2 / 3 / –</td></tr>
+        <tr><td>HW-094</td><td>IN1 / IN2</td><td>11 / 13</td><td>17 / 27</td></tr>
+        <tr><td>HW-094</td><td>IN3 / IN4</td><td>15 / 16</td><td>22 / 23</td></tr>
+        <tr><td>HW-094</td><td>ENA / ENB (PWM)</td><td>32 / 33</td><td>12 / 13</td></tr>
+        <tr><td>HW-094</td><td>GND</td><td>14</td><td>–</td></tr>
+      </tbody></table></div>
+    <p style="margin-top:8px">UART skrzyżowany, zworki ENA/ENB zdjęte, 5 V ze sterownika nie łączyć z Pi, wspólna masa. Na Pi 5 AI HAT+ bierze tylko 5 V, GND i GPIO 0/1, a listwa przelotowa zostawia resztę. Docelowo silnikami steruje Pico, więc ten układ pinów zmieni się w E5.</p>
+  </details>
+</section>
+
+<!-- HISTORIA -->
+<section id="historia">
+  <h2>Historia koncepcji <span class="code">co się zmieniło</span></h2>
+  <div class="evo">
+    <div class="row"><div class="d">26.07</div><div><span class="tag ok">działa</span>v0: dwa Zero 2W z DX-LR03, ping/pong, RSSI, OLED, rola z hostname.</div></div>
+    <div class="row"><div class="d">10.10</div><div><span class="tag ok">zrobione</span>Analiza kodu na żywych malinkach i założenie dwóch plików dokumentacji.</div></div>
+    <div class="row"><div class="d">16.10</div><div><span class="tag old">porzucone</span><span class="dead">a2 jako pojazd na Zero 2W z HW-094 i kamerą USB, sterowanie komendami „jedź 1 s w przód”, tryb „superwydajność” przez Tailscale.</span></div></div>
+    <div class="row"><div class="d">18.10</div><div><span class="tag ok">obowiązuje</span>Trzy węzły: autonomiczny łazik na Pi 5, satelita z buforem, stacja. Misje zamiast sterowania. DTN z HMAC. Mapa wizją zamiast LiDAR-u. Dwa pasma: A 868, B 433.</div></div>
+    <div class="row"><div class="d">22.10</div><div><span class="tag ok">obowiązuje</span>Pi 5 8 GB + AI HAT+ 26 TOPS (Hailo-8) kupowany po OAK-D Lite.</div></div>
+    <div class="row"><div class="d">26.10</div><div><span class="tag ok">zrobione</span>Lista zakupów na serwerku z zapisem stanu.</div></div>
+  </div>
+  <div class="sheet scroll">
+    <table>
+      <thead><tr><th>Stary pomysł</th><th>Zamiast tego</th></tr></thead>
+      <tbody>
+        <tr><td class="dead">Zero 2W jako pojazd</td><td>Pi 5 8 GB; Zero 2W zostają stacją i satelitą</td></tr>
+        <tr><td class="dead">sterowanie na żywo i komendy ruchu</td><td>misje wysokiego poziomu, kolejka w łaziku</td></tr>
+        <tr><td class="dead">jedno pasmo 433 MHz na wszystko</td><td>B = 433 MHz, A = 868 MHz w podpasmie 869,4–869,65</td></tr>
+        <tr><td class="dead">„850 MHz”</td><td>868 MHz (w UE 850 nie jest pasmem LoRa)</td></tr>
+        <tr><td class="dead">LiDAR do mapy</td><td>OAK-D Lite + IMU + enkodery; LiDAR jako opcja</td></tr>
+        <tr><td class="dead">Pi 4B 8 GB, Coral USB, Pi 5 16 GB</td><td>Pi 5 8 GB + Hailo-8 (Pi 4B bez PCIe, Coral nie działa z Pythonem 3.13)</td></tr>
+        <tr><td class="dead">GPS przez przejściówkę USB–UART</td><td>dodatkowy UART na Pi 5 (E11)</td></tr>
+        <tr><td class="dead">HW-094 docelowo</td><td>mocniejszy sterownik + Pico z enkoderami</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- RYZYKA -->
+<section id="ryzyka">
+  <h2>Ryzyka</h2>
+  <div class="sheet scroll">
+    <table>
+      <thead><tr><th>Ryzyko</th><th>Co z tym robimy</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag warn">duże</span>przepustowość i limit czasu nadawania LoRa</td><td>delty mapy, obiekty zamiast obrazów, priorytety, podpasmo 10%</td></tr>
+        <tr><td><span class="tag warn">duże</span>zasilanie (Zero 2W już padało, Pi 5 potrzebuje 5 A)</td><td>osobne przetwornice, grube przewody, wspólna masa, INA219</td></tr>
+        <tr><td><span class="tag warn">duże</span>SLAM wizyjny w terenie</td><td>oświetlenie lub IR, ToF, obroty w miejscu, LiDAR jako zapas</td></tr>
+        <tr><td>dwa radia w satelicie</td><td>różne pasma, odsunięte anteny</td></tr>
+        <tr><td>ograniczenia DX-LR03</td><td>decyzja po E1, wymienny sterownik łącza</td></tr>
+        <tr><td>zużycie karty SD przez bufor</td><td>karta high endurance, zapis blokowy</td></tr>
+        <tr><td>podrobione polecenia</td><td>HMAC obowiązkowy</td></tr>
+        <tr><td>wielkość projektu</td><td>trzymać się etapów, dokumentować po każdym</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- DECYZJE -->
+<section id="decyzje">
+  <h2>Do decyzji <span class="code">moje rekomendacje</span></h2>
+  <div class="grid2">
+    <div class="card q"><h3>Kto jest kim: a1 i a2?</h3>
+      <p>Propozycja z 18.10: a1 jako stacja, a2 jako satelita.</p>
+      <p class="rec">Tak. a1 ma już pulpit, ekran dotykowy i klawiaturę ekranową, a a2 i tak ma problem z zasilaniem, który rozwiąże akumulator na maszcie.</p></div>
+    <div class="card q"><h3>Jaki zasięg łączy A i B?</h3>
+      <p>Od tego zależy SF i czas przesyłu.</p>
+      <p class="rec">Podaj przybliżone odległości (dom → satelita, satelita → teren łazika). Resztę zmierzymy w E1.</p></div>
+    <div class="card q"><h3>ROS 2: Ubuntu 24.04 czy Docker?</h3>
+      <p>Jazzy oficjalnie wymaga Ubuntu 24.04.</p>
+      <p class="rec">Raspberry Pi OS + ROS 2 w Dockerze. Pakiety Hailo (<span class="mono">hailo-all</span>) i kamery są robione pod Raspberry Pi OS, a ROS w kontenerze łatwo odtworzyć.</p></div>
+    <div class="card q"><h3>Podwozie, akumulator, sterownik</h3>
+      <p>Silniki 12 V z enkoderami.</p>
+      <p class="rec">Akumulator 3S (11,1 V) pasuje do silników 12 V. Sterownik dobrać do prądu zatrzymanego silnika. TB6612 nadaje się tylko do małych silników, przy większych lepszy dwukanałowy moduł 10 A albo BTS7960.</p></div>
+  </div>
+</section>
+
+<!-- GDZIE -->
+<section id="gdzie">
+  <h2>Gdzie co jest</h2>
+  <div class="sheet scroll">
+    <table>
+      <tbody>
+        <tr><td>Koncepcja i lista zakupów</td><td><a href="http://100.108.241.58/strony/lazik/">100.108.241.58/strony/lazik/</a> · <a href="http://100.108.241.58/strony/lazik/zakupy.html">zakupy.html</a> (Tailscale)</td></tr>
+        <tr><td>Stacja a1</td><td class="mono">rpi@100.124.7.125 · LAN 172.23.0.27</td></tr>
+        <tr><td>Satelita a2</td><td class="mono">rpi@100.89.71.96 · LAN 172.23.0.21</td></tr>
+        <tr><td>Serwerek Pi 4B</td><td class="mono">tonyg@100.108.241.58 (raspberrypi)</td></tr>
+        <tr><td>Dokumentacja na PC</td><td class="mono">C:\Users\tonyg\Documents\claude kopia\</td></tr>
+        <tr><td>Plik główny</td><td>LoRa DX-LR03 Raspberry Pi Field Monitor - zapis projektu.md (części 1–3)</td></tr>
+        <tr><td>Dziennik kodu</td><td>LoRa DX-LR03 - dziennik kodu i dokumentacja.md (tylko kod sprawdzony na sprzęcie)</td></tr>
+        <tr><td>Kopia sprzed 18.10</td><td>…zapis projektu.md.bak_2026-10-18 (stara koncepcja v1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Złożone 26.10.2026 z pliku głównego projektu, dziennika kodu, kopii z 18.10 i historii czatu. Przy sprzeczności wygrywa nowsza decyzja. Nauczyciel nie jest wymieniony z nazwiska.</footer>
+</div>
+</body>
+</html>
