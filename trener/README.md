@@ -32,6 +32,15 @@ siłownia dla kolarza, bieg, HRV/sen, młody sportowiec — z linkami do badań)
   -E HOME=/home/tonyg --wait --pipe ...`.
 - Token Garmina wspólny z `~/restortrain-garmin/tokens` (logowanie z blokadą `dane/garmin.lock`).
 
+## Dostęp z internetu (bez Tailscale w telefonie)
+- Plan: `sudo tailscale funnel --bg 443` (Tailscale Funnel, darmowy, ten sam adres ts.net → PWA i push bez zmian).
+  Uruchamia Antek (klasyfikator nie pozwala Claude wystawiać usług do internetu). Wyłączenie: `sudo tailscale funnel --https=443 off`
+  (zostaje `serve` tylko w tailnecie). Jeśli Funnel wymaga zgody w tailnecie, komenda poda link do panelu.
+- Ochrona: żądania z Funnel (nagłówek `Tailscale-Funnel-Request`) do `/api/*` tylko z zapamiętanym urządzeniem
+  (ciasteczko `trener_klucz`, 400 dni, w bazie sha256 w tabeli `urzadzenia`). Urządzenie zapamiętuje się samo przy
+  otwarciu apki przez tailnet. ⚙️ → „Wyloguj inne urządzenia”.
+- Push działa bez Tailscale (idzie przez serwery Apple); Tailscale/Funnel potrzebny tylko do otwarcia apki.
+
 ## iPhone
 Safari → adres apki → Share → **Add to Home Screen** → otwórz z ekranu głównego → ⚙️ → **Włącz powiadomienia**.
 (Push w webapkach iOS działa tylko z ekranu głównego, iOS 16.4+.)

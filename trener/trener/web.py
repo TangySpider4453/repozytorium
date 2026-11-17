@@ -1,7 +1,9 @@
 """Webapka Trener: Flask na 127.0.0.1:8095, na zewnątrz tylko przez `tailscale serve` (HTTPS w tailnecie).
 Długie rzeczy (czat, plan, analiza, sync) idą w wątku jako zadanie; front odpytuje /api/zadanie/<id>."""
+import hashlib
 import json
 import logging
+import secrets
 import threading
 import traceback
 from datetime import date, timedelta
@@ -18,11 +20,68 @@ def db():
     return baza.polacz()
 
 
+# ---------------------------------------------------------------- dostęp
+# Z internetu (Tailscale Funnel: nagłówek Tailscale-Funnel-Request dokłada tailscaled, klient go nie usunie) — tylko
+# zapamiętane urządzenia (losowy klucz w ciasteczku, w bazie tylko jego sha256). Z tailnetu / lokalnie — wolno, a
+# urządzenie dostaje klucz automatycznie („zapamiętaj”), więc potem działa też bez Tailscale.
+CIASTKO = "trener_klucz"
+ROK = 400 * 86400
+
+
+def _z_internetu():
+    return bool(request.headers.get("Tailscale-Funnel-Request"))
+
+
+def _h(k):
+    return hashlib.sha256(k.encode()).hexdigest()
+
+
+def _sesja():
+    k = request.cookies.get(CIASTKO)
+    if not k or len(k) > 100:
+        return None
+    d = db()
+    r = d.execute("SELECT hash, ostatnio FROM urzadzenia WHERE hash=?", (_h(k),)).fetchone()
+    if r and (r["ostatnio"] or "")[:10] != baza.teraz()[:10]:
+        d.execute("UPDATE urzadzenia SET ostatnio=? WHERE hash=?", (baza.teraz(), r["hash"]))
+        d.commit()
+    return r
+
+
+@app.before_request
+def dostep():
+    if not request.path.startswith("/api/"):
+        return None                                   # strona/ikony/sw bez danych — publiczne
+    if _z_internetu() and not _sesja():
+        return jsonify({"blad": "niezapamietane"}), 401
+    return None
+
+
 @app.after_request
 def bez_cache(r):
     if request.path.startswith("/api/"):
         r.headers["Cache-Control"] = "no-store"
+        if not _z_internetu() and not _sesja():       # tailnet/lokalnie: zapamiętaj urządzenie
+            k = secrets.token_urlsafe(32)
+            d = db()
+            d.execute("INSERT INTO urzadzenia VALUES (?,?,?,?)", (_h(k), (request.headers.get("User-Agent") or "")[:120],
+                                                                  baza.teraz(), baza.teraz()))
+            d.commit()
+            r.set_cookie(CIASTKO, k, max_age=ROK, secure=True, httponly=True, samesite="Lax", path="/")
+        elif request.cookies.get(CIASTKO):            # przedłużenie ważności
+            r.set_cookie(CIASTKO, request.cookies[CIASTKO], max_age=ROK, secure=True, httponly=True, samesite="Lax", path="/")
     return r
+
+
+@app.route("/api/urzadzenia", methods=["GET", "POST"])
+def api_urzadzenia():
+    d = db()
+    if request.method == "POST":                      # odwołaj wszystkie poza bieżącym
+        k = request.cookies.get(CIASTKO) or ""
+        d.execute("DELETE FROM urzadzenia WHERE hash != ?", (_h(k),))
+        d.commit()
+    return jsonify([{"opis": r["opis"], "dodano": r["dodano"], "ostatnio": r["ostatnio"]}
+                    for r in d.execute("SELECT * FROM urzadzenia ORDER BY ostatnio DESC")])
 
 
 # ---------------------------------------------------------------- statyczne

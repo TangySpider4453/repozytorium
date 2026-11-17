@@ -8,6 +8,8 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   analiza 22 s, czat 13 s. Timer działa, pierwsza poranna analiza wysłana. Czeka na cele Antka.
   Potem: baza wiedzy z badań (6 plików), makrocykl (`cel.py`), kontrola planu kodem; test na celu próbnym OK, usunięty.
   Potem: ankieta startowa + dopytanie przez Claude (`start.py`); planowanie dopiero po niej. Test OK, wyczyszczony.
+  Potem: dostęp z internetu: klucz urządzenia (ciasteczko) dla żądań z Funnel — gotowe; włączenie Funnel zablokowane
+  przez klasyfikator → czeka na Antka.
   Potem: badania pod cel (`badania.py`, Claude z WebSearch na Pi): test XCO 5 tematów, 25 źródeł działających, 5,5 min; wyczyszczony.
 - **2026-11-17 (chmura, 4)**: Start z mózgu. Hook połączył Tailscale sam (`TS_AUTHKEY`), `ssh pi` wymagał linku
   „check” (podany, zatwierdzony). Przegląd Pi 4 09:23: wszystko zgodne z `uslugi.md` (45 °C, 0x0, RAM 1,8 GB, dysk 61%,

@@ -3,6 +3,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const api = async (p, opt) => {
   const r = await fetch("/api/" + p, opt && { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opt) });
+  if (r.status === 401) { niezapamietane(); throw new Error("To urządzenie nie jest zapamiętane"); }
   if (!r.ok) throw new Error(r.status + " " + p);
   return r.json();
 };
@@ -21,6 +22,13 @@ async function czekaj(zid, co) {
     if (co) co(i);
   }
   throw new Error("za długo");
+}
+
+function niezapamietane() {
+  widok.innerHTML = `<div class="karta"><h3>🔐 Zapamiętaj to urządzenie</h3>
+    <div>Apka jest dostępna z internetu, ale wpuszcza tylko Twoje urządzenia.</div>
+    <ol class="szary" style="padding-left:18px"><li>Włącz raz <b>Tailscale</b> na tym telefonie.</li><li>Otwórz apkę (z ekranu głównego) i odśwież.</li>
+    <li>Gotowe — przez rok działa bez Tailscale.</li></ol><button onclick="location.reload()">↻ Odśwież</button></div>`;
 }
 
 // ------------------------------------------------------------------ wykresy (SVG)
@@ -282,8 +290,16 @@ async function ekranUstawien() {
     <div class="karta"><h3>Automatyka</h3>${pr("auto_zegarek", "Treningi same idą na zegarek")}${pr("analiza_rano", "Analiza poranna po śnie")}${pr("push", "Powiadomienia push")}${pr("linphone", "Kopia na Linphone")}
     <div class="wiersz" style="margin-top:10px"><span class="szary">Push: ${pushStan}</span></div>
     <div class="wiersz" style="margin-top:8px"><button onclick="wlaczPush()">🔔 Włącz powiadomienia</button><button class="drugi" onclick="api('push/test',{}).then(n=>alert('Wysłano do '+n+' urządzeń'))">Test</button></div></div>
+    <div class="karta"><h3>🔐 Zapamiętane urządzenia</h3><div id="urz" class="szary">…</div>
+      <button class="drugi" style="margin-top:8px" onclick="if(confirm('Wylogować wszystkie inne urządzenia?'))api('urzadzenia',{}).then(ekranUstawien)">Wyloguj inne urządzenia</button></div>
     <div class="karta"><h3>Pamięć trenera</h3><div class="szary">Ustalenia z rozmów (jedno na linię)</div><textarea id="u-pamiec" rows="5">${esc((u.pamiec || []).join("\n"))}</textarea></div>
     <div class="wiersz"><button onclick="zapiszUst()">💾 Zapisz</button><button class="drugi" onclick="akcja('analiza')">📊 Analiza teraz</button><button class="drugi" onclick="akcja('sync')">🔄 Synchronizuj</button></div>`;
+  urzadzenia();
+}
+async function urzadzenia() {
+  const l = await api("urzadzenia");
+  const el = document.getElementById("urz");
+  if (el) el.innerHTML = l.map(u => `• ${esc(/iPhone/.test(u.opis) ? "iPhone" : /iPad/.test(u.opis) ? "iPad" : /Windows/.test(u.opis) ? "PC (Windows)" : /Mac/.test(u.opis) ? "Mac" : u.opis.slice(0, 40))} — ostatnio ${esc((u.ostatnio || "").slice(0, 10))}`).join("<br>") || "brak";
 }
 async function zapiszUst() {
   const u = { cele: $("#u-cele").value, dostepnosc: $("#u-dostepnosc").value, sprzet: $("#u-sprzet").value, plan_dni: +$("#u-plan_dni").value,
@@ -315,7 +331,7 @@ async function route() {
   widok.innerHTML = `<div class="ladowanie">Ładuję…</div>`;
   try {
     await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze }[t] || pokazDzis)();
-  } catch (e) { widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
+  } catch (e) { if (!/nie jest zapamiętane/.test(e.message)) widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
 }
 window.addEventListener("hashchange", route);
 $("#btn-ust").onclick = pokazUstawienia;
