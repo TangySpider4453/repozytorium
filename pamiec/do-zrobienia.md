@@ -12,7 +12,7 @@
 - [ ] 📞 Telefon nie słyszy Antka (od ~11.11): zadzwonić, mówić, odczytać `journalctl -u serwerek-telefon`
   („nasłuch: X s, poziom Y”). 0 s = brak RTP, poziom < 500 = wyciszony mikrofon.
 - [ ] 🚗 Łazik: I2C zawiesza się od silników (kondensatory 100 nF, przewody, ew. 50 kHz za zgodą).
-- [ ] Zdrowie: 1 incydent do „Przejrzane” (`rtg-garmin-teraz` z 05.11).
+- [x] Zdrowie: incydent `rtg-garmin-teraz` z 05.11 oznaczony jako przejrzany (17.11).
 
 ## Czeka na decyzję / dane od Antka
 - [ ] Poczta: 4 hasła aplikacji (3× Gmail, 1× iCloud).
