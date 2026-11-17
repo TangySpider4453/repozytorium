@@ -1,0 +1,66 @@
+:root {
+  --tlo: #0f1115; --karta: #181b22; --karta2: #20242d; --tekst: #e8eaf0; --szary: #8b92a3; --linia: #2a2f3a;
+  --akcent: #4f8cff; --ok: #3ecf8e; --uwaga: #f5b041; --zle: #ff5d5d;
+  --rower: #4f8cff; --bieg: #3ecf8e; --silka: #c77dff; --inne: #8b92a3;
+  --gora: env(safe-area-inset-top); --dol: env(safe-area-inset-bottom);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--tlo); color: var(--tekst); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+  padding: calc(var(--gora) + 10px) 16px 10px; background: rgba(15,17,21,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--linia); }
+h1 { font-size: 20px; margin: 0; }
+h2 { font-size: 16px; margin: 18px 0 8px; color: var(--szary); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+main { padding: 12px 14px calc(var(--dol) + 84px); max-width: 760px; margin: 0 auto; }
+nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: rgba(18,20,26,.96); backdrop-filter: blur(10px);
+  border-top: 1px solid var(--linia); padding-bottom: var(--dol); z-index: 5; }
+nav a { flex: 1; text-align: center; padding: 8px 0 6px; color: var(--szary); text-decoration: none; font-size: 11px; }
+nav a span { display: block; font-size: 21px; line-height: 1.2; }
+nav a.akt { color: var(--akcent); }
+button, .btn { background: var(--akcent); color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+button.drugi { background: var(--karta2); color: var(--tekst); }
+button.ikona { background: none; font-size: 20px; padding: 4px 8px; }
+button:disabled { opacity: .5; }
+.karta { background: var(--karta); border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--linia); }
+.karta h3 { margin: 0 0 6px; font-size: 16px; }
+.szary { color: var(--szary); font-size: 13px; }
+.kafle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.kafel { background: var(--karta); border: 1px solid var(--linia); border-radius: 12px; padding: 10px; min-height: 76px; }
+.kafel .n { font-size: 11px; color: var(--szary); text-transform: uppercase; }
+.kafel .w { font-size: 22px; font-weight: 700; margin-top: 2px; }
+.kafel .d { font-size: 11px; color: var(--szary); }
+.ok { color: var(--ok); } .uwaga { color: var(--uwaga); } .zle { color: var(--zle); }
+.znaczek { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 99px; background: var(--karta2); color: var(--szary); margin-left: 6px; vertical-align: 2px; }
+.dzien { border-left: 3px solid var(--linia); padding-left: 10px; margin-bottom: 14px; }
+.dzien.dzis { border-color: var(--akcent); }
+.dzien .data { font-weight: 700; margin-bottom: 4px; }
+.trening { background: var(--karta); border: 1px solid var(--linia); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; }
+.trening.zrobiony { border-color: rgba(62,207,142,.4); }
+.sport-rower { border-left: 4px solid var(--rower); } .sport-bieg { border-left: 4px solid var(--bieg); }
+.sport-silka { border-left: 4px solid var(--silka); } .sport-odpoczynek { opacity: .75; }
+.kroki { font-size: 13px; color: var(--szary); margin: 6px 0 0; padding-left: 18px; }
+.tresc { white-space: pre-wrap; }
+.czat { display: flex; flex-direction: column; gap: 8px; }
+.msg { max-width: 86%; padding: 9px 12px; border-radius: 14px; white-space: pre-wrap; }
+.msg.ja { align-self: flex-end; background: var(--akcent); color: #fff; border-bottom-right-radius: 4px; }
+.msg.trener { align-self: flex-start; background: var(--karta2); border-bottom-left-radius: 4px; }
+.msg .akcje { font-size: 11px; opacity: .7; margin-top: 4px; }
+.pisz { position: fixed; left: 0; right: 0; bottom: calc(var(--dol) + 56px); display: flex; gap: 8px; padding: 8px 12px;
+  background: var(--tlo); border-top: 1px solid var(--linia); max-width: 760px; margin: 0 auto; }
+.pisz textarea { flex: 1; resize: none; height: 42px; }
+textarea, input[type=text], input[type=number], select { width: 100%; background: var(--karta2); color: var(--tekst); border: 1px solid var(--linia);
+  border-radius: 10px; padding: 9px 10px; font: inherit; }
+label { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--szary); }
+.wiersz { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.przelacznik { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linia); }
+.zakladki { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; }
+.zakladki button { background: var(--karta2); color: var(--szary); padding: 6px 12px; font-size: 13px; white-space: nowrap; }
+.zakladki button.akt { background: var(--akcent); color: #fff; }
+svg.wykres { width: 100%; height: 150px; display: block; }
+svg.wykres text { fill: var(--szary); font-size: 10px; }
+.legenda { font-size: 12px; color: var(--szary); display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.lista-akt .trening { display: flex; justify-content: space-between; gap: 8px; }
+.ladowanie { text-align: center; color: var(--szary); padding: 30px 0; }
+.mysli::after { content: "…"; animation: kropki 1.2s infinite; }
+@keyframes kropki { 0% { content: "."; } 33% { content: ".."; } 66% { content: "..."; } }
+details summary { cursor: pointer; color: var(--akcent); font-size: 13px; margin-top: 6px; }

@@ -1,0 +1,16 @@
+[Unit]
+Description=Trener - webapka (Flask, tylko 127.0.0.1; na zewnatrz przez tailscale serve)
+After=network-online.target
+
+[Service]
+User=tonyg
+WorkingDirectory=/home/tonyg/trener
+EnvironmentFile=/etc/serwerek-bot/claude.env
+Environment=HOME=/home/tonyg PYTHONUNBUFFERED=1
+ExecStart=/home/tonyg/trener/.venv/bin/python -m trener serwer
+Restart=on-failure
+RestartSec=5
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

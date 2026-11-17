@@ -1,0 +1,13 @@
+[Unit]
+Description=Trener - cykl: sync Garmin, analizy Claude, plan, zegarek
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=tonyg
+WorkingDirectory=/home/tonyg/trener
+EnvironmentFile=/etc/serwerek-bot/claude.env
+Environment=HOME=/home/tonyg PYTHONUNBUFFERED=1
+ExecStart=/home/tonyg/trener/.venv/bin/python -m trener cykl
+TimeoutStartSec=1800
+Nice=10

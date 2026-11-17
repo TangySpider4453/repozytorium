@@ -1,0 +1,10 @@
+[Unit]
+Description=Trener - cykl co 20 min
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=20min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

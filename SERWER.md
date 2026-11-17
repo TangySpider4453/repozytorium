@@ -636,6 +636,16 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   Portal `GET /api/garmin/silownia` (czyta pliki usługi; dni ze zrobionym treningiem znikają z „do zrobienia”).
   Karta „📈 Siłownia: zrobione treningi” na Automatycznych. Testy: 44 (raport na prawdziwych danych Dół B 6.11).
 
+## Trener — własny RestOrTrain (od 2026-11-17)
+- Projekt `~/trener/` (kopia w repo `trener/`, opis w `trener/README.md`). Webapka PWA przez `tailscale serve` (HTTPS,
+  tylko tailnet) → Flask 127.0.0.1:8095 (`trener-web`); `trener-cykl.timer` co 20 min: sync Garmin → strefy → analiza
+  po treningu / poranna / tygodniowa (Claude) → uzupełnienie planu → treningi na zegarek automatycznie.
+- Decyzje Antka 17.11: Claude analizuje i planuje (zniesione „Claude nie dotyka Garmina” dla tej apki), push + Linphone,
+  apka zastępuje RestOrTrain, zapis na zegarek automatyczny z powiadomieniem. Usuwa tylko treningi ze znacznikiem
+  `auto: trener`.
+- Historia od 24.06.2021 (pierwsza aktywność): ~1900 aktywności + każdy dzień (sen, HRV, podsumowanie, gotowość,
+  status). Stary most `restortrain-garmin` działa do przełączenia (potem wyłączyć `rtg-garmin.timer`).
+
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
   przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem

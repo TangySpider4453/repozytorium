@@ -8,6 +8,13 @@
 - [x] Scalić gałęzie z domyślną (2026-11-17). Ewentualnie usunąć stare gałęzie na GitHubie.
 - [x] Hook łączy się sam kluczem `TS_AUTHKEY` (potwierdzone 17.11); `ssh pi` nadal pyta o link „check”.
 
+## Trener (nowa apka, 17.11)
+- [ ] Antek: otworzyć apkę na iPhonie, Add to Home Screen, włączyć push, wpisać cele/dostępność/sprzęt (czat albo ⚙️).
+- [ ] Po pierwszym planie i jego sprawdzeniu na zegarku: wyłączyć stary most (`sudo systemctl disable --now rtg-garmin.timer`)
+  i zdecydować, czy RestOrTrain w ogóle zostaje.
+- [ ] Sprawdzić, czy `trener-historia` (pobieranie od 2021) skończył: `kv.historia_postep == "gotowe"`.
+- [ ] Pomysły: porównanie plan vs wykonanie w analizach, rekordy mocy (power curve), FTP z testu, pływanie/inne sporty.
+
 ## Problemy
 - [ ] 📞 Telefon nie słyszy Antka (od ~11.11): zadzwonić, mówić, odczytać `journalctl -u serwerek-telefon`
   („nasłuch: X s, poziom Y”). 0 s = brak RTP, poziom < 500 = wyciszony mikrofon.
