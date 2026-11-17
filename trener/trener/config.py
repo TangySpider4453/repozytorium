@@ -27,6 +27,9 @@ DOMYSLNE = {
     "linphone": True,
     "model": "claude-haiku-5-5",         # lekkie: czat, analiza, ankieta (decyzja Antka 17.11)
     "model_ciezki": "claude-sonnet-5-5", # ciężkie: plan, cel, badania; Opus NIE (za drogi)
+    "gora_tyg": 3,                  # siłka góra: tyle razy w tygodniu ZAWSZE (decyzja Antka 17.11, sprawdza kontrola planu)
+    "wymagania": "Góra (plecy, barki, klatka, ręce) na siłowni 3× w tygodniu, niezmiennie, w każdej fazie i każdym "
+                 "tygodniu (także lżejszym: wtedy lżej, ale 3×). Nogi na siłowni prowadź wg bazy wiedzy (sekcja nóg).",
     "ankieta": {},                  # odpowiedzi z ankiety startowej (cele, terminy, dni, sprzęt, styl planu…)
     "start_gotowy": False,          # ankieta + dopytanie zakończone → wolno planować
 }

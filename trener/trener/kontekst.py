@@ -111,6 +111,9 @@ def pelny(db, dni=14, akt_dni=28, tygodnie=16, cel=None):
           f"CELE ANTKA: {u['cele'] or '(nie podał jeszcze — zapytaj / załóż ogólny rozwój formy kolarskiej)'}",
           f"DOSTĘPNOŚĆ: {u['dostepnosc'] or '(brak)'}", f"SPRZĘT: {u['sprzet'] or '(brak)'}",
           f"SPORTY DO PLANU: {', '.join(u['sporty'])}"]
+    if u.get("wymagania"):
+        cz.append("STAŁE WYMAGANIA ANTKA (niezmienne, mają pierwszeństwo przed makrocyklem, ankietą i wcześniejszymi "
+                  "ustaleniami):\n" + u["wymagania"])
     if u.get("ankieta"):
         from .start import tekst_ankiety
         cz.append("ANKIETA ANTKA (jego odpowiedzi — szanuj preferencje co do wyglądu planu, długości, analiz):\n"

@@ -50,6 +50,8 @@ ZASADY = """ZASADY FORMATU PLANU:
   "przerwa_s"}. Superserie/obwody: "powtorz" z ćwiczeniami w środku (bez "serie" w środku). Na koniec schlodzenie.
 - Ciężary dobieraj z historii siłowni (serie z ostatnich treningów). Gdy brak historii — bez kg.
 - Rower z mocą: znasz FTP → cele "moc" w W liczone z % FTP wg stref Coggana z bazy wiedzy (Z2 = 56–75% FTP itd.).
+- STAŁE WYMAGANIA ANTKA są ważniejsze niż faza makrocyklu: siłka GÓRA tyle razy w tygodniu, ile podał — zawsze
+  (tytuł zawiera „Góra”, np. "Siłka Góra A – plecy/barki"); nogi dokładasz wg bazy wiedzy, nie kosztem góry.
 - Trzymaj się BIEŻĄCEJ FAZY makrocyklu (godziny, akcenty, siłka/bieg w tygodniu, rytm tygodni lżejszych) i zasad
   z bazy wiedzy (rozkład intensywności, progresja bez skoków, 48 h po ciężkich nogach, sen/HRV). "cel" każdej jednostki
   = jaką adaptację buduje. Brak wiarygodnego FTP/progów → zaplanuj test zgodnie z protokołem z bazy.
@@ -185,6 +187,32 @@ def _godz_tyg_ostatnie(db, tygodnie=4):
     return s / 3600 / tygodnie
 
 
+GORA = {"BENCH_PRESS", "SHOULDER_PRESS", "ROW", "PULL_UP", "TRICEPS_EXTENSION", "CURL", "LATERAL_RAISE", "SHRUG",
+        "FLYE", "PUSH_UP", "CHEST_PRESS", "REVERSE_FLY", "SHOULDER_STABILITY"}
+NOGI = {"SQUAT", "DEADLIFT", "LUNGE", "LEG_CURL", "CALF_RAISE", "HIP_RAISE", "LEG_PRESS", "HIP_STABILITY", "HIP_SWING",
+        "OLYMPIC_LIFT", "PLYO"}
+
+
+def partia(t):
+    """'gora' / 'nogi' / None dla siłki — po kategoriach Garmina ćwiczeń (i tytule)"""
+    if t.get("sport") != "silka":
+        return None
+    g = n = 0
+    def kroki(ks):
+        for k in ks or []:
+            yield k
+            yield from kroki(k.get("kroki"))
+    for k in kroki(t.get("kroki")):
+        kat = (k.get("garmin") or "").split("/")[0].upper()
+        g += kat in GORA
+        n += kat in NOGI
+    tyt = (t.get("tytul") or "").lower()
+    if g == n:
+        return "gora" if any(x in tyt for x in ("góra", "gora", "upper", "push", "pull", "plecy", "barki", "klat")) \
+            else "nogi" if any(x in tyt for x in ("nogi", "dół", "dol", "lower", "legs")) else None
+    return "gora" if g > n else "nogi"
+
+
 def kontrola(db, treningi, ist, faza, ftp):
     """twarde reguły z bazy wiedzy sprawdzane kodem -> lista problemów (pusta = OK)"""
     po_id = {r["id"]: r for r in ist}
@@ -218,4 +246,13 @@ def kontrola(db, treningi, ist, faza, ftp):
         nast = (date.fromisoformat(d) + timedelta(days=1)).isoformat()
         if nast in dni_ciezkie:
             p.append(f"ciężkie nogi na siłowni {d}, a następnego dnia ({nast}) intensywny trening — potrzebne ~48 h")
+    gora_tyg = int(config.ustawienia().get("gora_tyg") or 0)
+    dni = {t.get("dzien") for t in pelne if t.get("dzien")}
+    if gora_tyg and len(dni) >= 5:            # STAŁE WYMAGANIE Antka: góra N× w tygodniu (opcjonalne się nie liczą)
+        chce = round(gora_tyg * len(dni) / 7)
+        gora = [t for t in tren if partia(t) == "gora" and not t.get("opcjonalny")
+                and not (t.get("tytul") or "").lower().startswith("opcjonal")]
+        if len(gora) < chce:
+            p.append(f"siłka GÓRA {len(gora)}× na {len(dni)} dni, a Antek wymaga {gora_tyg}× w tygodniu (tu min. {chce}×) "
+                     "— to stałe wymaganie, dodaj sesje góry")
     return p

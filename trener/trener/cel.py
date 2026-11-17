@@ -71,6 +71,13 @@ def odcisk_celow():
                                    ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:12]
 
 
+def odcisk_makro():
+    """odcisk celów + stałych wymagań: zmiana wymagań przebudowuje makrocykl (bez nowych badań źródeł)"""
+    u = config.ustawienia()
+    return odcisk_celow() + hashlib.sha1(json.dumps([u.get("gora_tyg"), u.get("wymagania")], ensure_ascii=False)
+                                         .encode()).hexdigest()[:6]
+
+
 def makrocykl(db=None):
     db = db or baza.polacz()
     return baza.kv(db, "makrocykl")
@@ -90,7 +97,7 @@ def potrzebny(db):
     if not u["cele"] or not u.get("start_gotowy"):
         return False
     m = makrocykl(db)
-    if not m or m.get("_odcisk") != odcisk_celow():
+    if not m or m.get("_odcisk") != odcisk_makro():
         return True
     return not m.get("fazy") or m["fazy"][-1]["do"] < date.today().isoformat()
 
@@ -113,11 +120,11 @@ def zbuduj(prosba="", db=None):
         "ZADANIE: Ułóż makrocykl (periodyzację) do celu Antka: fazy z datami od dziś do celu (albo na ~12–16 tygodni, "
         "gdy brak daty), w każdej: cel fazy, widełki godzin tygodniowo (realne względem jego obecnej objętości "
         "z ostatnich tygodni i dostępności — bez skoków), rozkład intensywności, sesje kluczowe (konkretne, z biblioteki),"
-        " ile siłowni i biegu tygodniowo, rytm tygodni lżejszych, testy (np. FTP). Zasady indywidualne = wnioski z jego "
+        " ile siłowni i biegu tygodniowo (siłka góra = STAŁE WYMAGANIA ANTKA, w każdej fazie), rytm tygodni lżejszych, testy (np. FTP). Zasady indywidualne = wnioski z jego "
         "danych (np. słabszy sen w tygodniu szkolnym, reakcja HRV na ciężkie bloki)."
         + (f"\nDODATKOWO: {prosba}" if prosba else "")])
     w = ai.zapytaj(prompt, SCHEMAT, effort="high", limit_s=600, ciezki=True)
-    w["_odcisk"] = odcisk_celow()
+    w["_odcisk"] = odcisk_makro()
     w["_utworzono"] = baza.teraz()
     baza.ustaw_kv(db, "makrocykl", w)
     badania.postep(db, "Układam plan tygodnia i sprawdzam go z zasadami")
