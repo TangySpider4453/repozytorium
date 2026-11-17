@@ -665,6 +665,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (`/api/dieta/posilek`, zdjęcie i/lub opis, Sonnet) zwraca składniki z gramami i makro, a w komentarzu pisze, co z opisu
   nie zgadza się ze zdjęciem; lista jest do poprawienia przed „Dodaj wszystko”. „Popraw” (`POST /api/produkt/<kod>`)
   zmienia wartości produktu na 100 g i przelicza jego wpisy. Zdjęcia nie są zapisywane (tylko w katalogu tymczasowym).
+- Cel jedzenia a Garmin (17.11): cykl co 20 min woła `dieta.aktualizuj`. Gdy dziś przyjdzie nowy trening, trener liczy
+  cel od nowa. Co godzinę porównuje aktywne kcal z Garmina z założonym ruchem (RMR × 0,45 + zrobione treningi). Nadwyżkę
+  ≥ 100 kcal dolicza do celu (do węgli, kv `ruch_ekstra`), tylko w górę. Model jest hojny, więc dolicza rzadko.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

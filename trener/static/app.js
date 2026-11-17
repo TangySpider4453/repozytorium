@@ -719,7 +719,7 @@ async function pokazJedzenie(dzien) {
   h += `<div class="karta" id="cel-trenera"><div class="kt">Cel na dziś ${c.zrodlo === "trener" ? `<span class="znaczek">od trenera</span>` : `<span class="znaczek">ze wzoru</span>`}</div>
     ${c.liczy ? `<div class="szary"><span class="mysli">Trener liczy cel pod dzisiejszy trening</span></div>` : ""}
     ${c.komentarz ? `<div>${esc(c.komentarz)}</div>` : ""}${c.pory ? `<div class="szary" style="margin-top:6px">${esc(c.pory)}</div>` : ""}
-    <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.trening_kcal ? `trening ~${lb(c.trening_kcal)} kcal` : "dzień bez treningu"].filter(Boolean).join(" · ")}</div>
+    <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.trening_kcal ? `trening ~${lb(c.trening_kcal)} kcal` : "dzień bez treningu", c.ruch_ekstra && `dodatkowy ruch z Garmina +${lb(c.ruch_ekstra)} kcal`].filter(Boolean).join(" · ")}</div>
     <div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div></div>`;
   d.posilki.forEach(p => {
     const w = d.wpisy.filter(x => x.posilek === p), sk = w.reduce((a, x) => a + x.kcal, 0);

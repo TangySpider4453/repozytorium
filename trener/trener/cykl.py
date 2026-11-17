@@ -74,6 +74,12 @@ def cykl():
                 przeplanuj("analiza treningu", a.get("prosba_do_planu", ""), pytaj=True)
         except Exception:
             log.exception("analiza treningu")
+    # 1b) cel jedzenia: nowy trening → przelicz; co godzinę nowe aktywne kcal z Garmina
+    try:
+        from . import dieta
+        dieta.aktualizuj(dieta.polacz(), w["nowe_aktywnosci"])
+    except Exception:
+        log.exception("cel jedzenia")
     # 2) rano, gdy jest dzisiejszy sen
     dzis = baza.dzien(db, date.today().isoformat()) or {}
     if u["analiza_rano"] and dzis.get("sen_h") and teraz.strftime("%H:%M") >= u["analiza_godzina_min"] \

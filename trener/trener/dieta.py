@@ -11,7 +11,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from . import baza, config
 
@@ -356,7 +356,17 @@ def _trening_kcal(d, dzien_, masa):
             plan += mn * masa * 0.16
         else:
             plan += mn * KCAL_MIN.get(t["sport"], 7)
-    return round(zrobione + plan), opis
+    return round(zrobione + plan), opis, round(zrobione)
+
+
+NEAT = 0.45          # ruch poza treningiem w modelu: RMR × 1,45
+
+
+def ruch_garmin(d, dzien_, rmr, zrobione):
+    """aktywne kcal z Garmina ponad to, co model już zakłada (ruch poza treningiem + zrobione treningi); tylko w górę"""
+    kcal_akt = (baza.dzien(d, dzien_) or {}).get("kcal_akt") or 0
+    nad = kcal_akt - NEAT * rmr - zrobione
+    return round(nad) if nad >= 100 else 0, round(kcal_akt)
 
 
 def wzor(d, dzien_):
@@ -366,24 +376,25 @@ def wzor(d, dzien_):
     fat = s["fat"] if s["fat"] and 5 <= s["fat"] <= 50 else None
     ffm = masa * (1 - (fat if fat else 18) / 100)
     rmr = 500 + 22 * ffm
-    trening, opis = _trening_kcal(d, dzien_, masa)
-    tdee = rmr * 1.45 + trening
+    trening, opis, zrobione = _trening_kcal(d, dzien_, masa)
+    ekstra, kcal_akt = ruch_garmin(d, dzien_, rmr, zrobione)
+    tdee = rmr * (1 + NEAT) + trening + ekstra
     deficyt = min(500, 0.2 * tdee)
     kcal = tdee - deficyt
-    kcal = max(kcal, 35 * ffm + trening)                       # dostępność energii — RED-S
+    kcal = max(kcal, 35 * ffm + trening + ekstra)              # dostępność energii — RED-S
     b = min(2.0 * masa, 2.6 * ffm)
     t = max(0.9 * masa, 0.25 * kcal / 9)
     w = max((kcal - 4 * b - 9 * t) / 4, 3 * masa if trening > 300 else 2.5 * masa)
     kcal = 4 * b + 4 * w + 9 * t
     return {"kcal": round(kcal, -1), "b": round(b), "w": round(w), "t": round(t), "tdee": round(tdee, -1),
-            "trening_kcal": trening, "trening": opis, "masa": s["masa"], "fat": s["fat"], "ffm": round(ffm, 1),
+            "trening_kcal": trening, "trening": opis, "ruch_ekstra": ekstra, "kcal_akt_garmin": kcal_akt, "masa": s["masa"], "fat": s["fat"], "ffm": round(ffm, 1),
             "trend_kg_tydz": s["trend_kg_tydz"], "zrodlo": "wzor"}
 
 
 def _przytnij(x, w):
     """korekta Claude w granicach bezpieczeństwa wokół wzoru"""
     masa, ffm = w["masa"] or 70.0, w["ffm"]
-    kcal = max(min(x["kcal"], w["tdee"] - 150), w["kcal"] * 0.88, 35 * ffm + w["trening_kcal"])
+    kcal = max(min(x["kcal"], w["tdee"] - 150), w["kcal"] * 0.88, 35 * ffm + w["trening_kcal"] + w.get("ruch_ekstra", 0))
     b = min(max(x["b"], 1.6 * masa), 2.4 * masa)
     t = max(x["t"], 0.8 * masa)
     wg = max((kcal - 4 * b - 9 * t) / 4, 2.5 * masa)
@@ -422,6 +433,8 @@ def przelicz(dzien_=None):
             f"MAKROCYKL:\n{celm.tekst(celm.makrocykl(d))}",
             "SKŁAD CIAŁA: " + json.dumps({k: w[k] for k in ("masa", "fat", "ffm", "trend_kg_tydz")}, ensure_ascii=False),
             "TRENING TEGO DNIA: " + ("; ".join(w["trening"]) or "wolne") + f" (szac. wydatek {w['trening_kcal']} kcal)",
+            f"GARMIN DZIŚ: aktywne kcal {w['kcal_akt_garmin']}, ponad założony ruch i treningi: {w['ruch_ekstra']} kcal "
+            "(już doliczone do wydatku i wzoru)",
             "JEDZENIE OSTATNICH DNI (suma z dziennika / cel): " + json.dumps(ost, ensure_ascii=False),
             "PROPOZYCJA ZE WZORU (bezpieczna baza; możesz korygować pod trening i trend masy, ale nie schodź poniżej "
             "progów z zasad): " + json.dumps({k: w[k] for k in ("kcal", "b", "w", "t", "tdee")}, ensure_ascii=False)])
@@ -433,6 +446,33 @@ def przelicz(dzien_=None):
     finally:
         with _lock:
             _liczy.discard(dzien_)
+
+
+def aktualizuj(d, nowe_aktywnosci=()):
+    """z cyklu (co 20 min): nowy trening dziś → trener liczy cel od nowa; co godzinę dolicza nowe aktywne kcal z Garmina"""
+    dzis = date.today().isoformat()
+    c = baza.kv(d, "makro_cel_" + dzis)
+    if not c or dzis in _liczy:
+        return None                      # celu jeszcze nie ma — policzy się przy otwarciu
+    if any((a.get("startTimeLocal") or "")[:10] == dzis for a in nowe_aktywnosci):
+        log.info("dieta: nowy trening — przeliczam cel")
+        return przelicz(dzis)
+    ost = baza.kv(d, "makro_garmin_spr") or ""
+    if ost > (datetime.now() - timedelta(minutes=55)).isoformat(timespec="seconds"):
+        return None
+    baza.ustaw_kv(d, "makro_garmin_spr", baza.teraz())
+    w = wzor(d, dzis)
+    roznica = w["ruch_ekstra"] - (c.get("ruch_ekstra") or 0)
+    if roznica < 50:
+        return None
+    # dodatkowy ruch → głównie węgle (paliwo), białko i tłuszcz bez zmian
+    nowy = {**c, "kcal": round(c["kcal"] + roznica, -1), "w": round(c["w"] + roznica / 4),
+            "tdee": round(c.get("tdee", 0) + roznica, -1), "ruch_ekstra": w["ruch_ekstra"],
+            "kcal_akt_garmin": w["kcal_akt_garmin"], "garmin_dodano": (c.get("garmin_dodano") or 0) + roznica,
+            "garmin_czas": baza.teraz()}
+    baza.ustaw_kv(d, "makro_cel_" + dzis, nowy)
+    log.info("dieta: +%d kcal z Garmina", roznica)
+    return nowy
 
 
 def cel(d, dzien_):

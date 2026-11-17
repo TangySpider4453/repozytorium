@@ -57,3 +57,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   „spalić jak najwięcej tłuszczu” w bezpiecznym tempie (0,5–0,7%/tydz.). Wiedza: `07_odzywianie.md`, poprawiona `06`.
 - 2026-11-17: Jedzenie: zdjęcie tabelki (AI czyta wartości na 100 g), poprawianie produktu z bazy/OFF (przelicza wpisy),
   zdjęcie posiłku + opis (Sonnet szacuje składniki i gramy, sprawdza opis ze zdjęciem; lista do edycji).
+- 2026-11-17: cel kalorii sam się przelicza po nowym treningu z Garmina i co godzinę dolicza nadwyżkę aktywnych kcal;
+  poprawione pole daty w Wadze na iOS.
