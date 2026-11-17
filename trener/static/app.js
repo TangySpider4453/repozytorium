@@ -9,6 +9,10 @@ const api = async (p, opt) => {
 };
 const DNI = ["ndz", "pon", "wt", "śr", "czw", "pt", "sob"];
 const SPORT_IKONA = { rower: "🚴", bieg: "🏃", silka: "🏋️", odpoczynek: "😴", inne: "⚡" };
+const SPORT_SVG = { rower: '<circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M6 16l4-8h5l3 8M10 8l3 8M9 5h3"/>',
+  bieg: '<circle cx="14" cy="4" r="2"/><path d="M7 21l3-6 3 2 1 4M10 15l1-5 4 2 3-1M11 10l-3 1-2 3"/>',
+  silka: '<path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12"/>', odpoczynek: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10z"/>', inne: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>' };
+const ikSport = s => `<svg class="sport-ik" viewBox="0 0 24 24">${SPORT_SVG[s] || SPORT_SVG.inne}</svg>`;
 const kat = t => !t ? "inne" : /cycl|bik|ride/.test(t) ? "rower" : /run/.test(t) ? "bieg" : t === "strength_training" ? "silka" : "inne";
 const dataPL = d => { const x = new Date(d + "T12:00"); return `${DNI[x.getDay()]} ${x.getDate()}.${String(x.getMonth() + 1).padStart(2, "0")}`; };
 const widok = $("#widok");
@@ -39,47 +43,158 @@ function niezapamietane() {
   };
 }
 
-// ------------------------------------------------------------------ wykresy (SVG)
-function linia(punkty, { kolor = "var(--akcent)", pasmo = null, min = null, max = null, jedn = "" } = {}) {
-  const p = punkty.filter(x => x.y != null);
-  if (p.length < 2) return `<div class="szary">za mało danych</div>`;
-  const W = 340, H = 150, L = 30, B = 18;
-  const ys = p.map(x => x.y).concat(pasmo ? pasmo.flat().filter(v => v != null) : []);
-  const lo = min ?? Math.floor(Math.min(...ys) * 0.95), hi = max ?? Math.ceil(Math.max(...ys) * 1.05);
-  const X = i => L + (W - L - 4) * i / (punkty.length - 1), Y = v => 4 + (H - B - 8) * (1 - (v - lo) / ((hi - lo) || 1));
-  const idx = new Map(punkty.map((x, i) => [x, i]));
-  let d = "";
-  p.forEach((x, k) => { d += (k ? "L" : "M") + X(idx.get(x)).toFixed(1) + "," + Y(x.y).toFixed(1); });
-  let pas = "";
-  if (pasmo) {
-    const g = punkty.map((x, i) => [i, pasmo[i]]).filter(([, b]) => b && b[0] != null && b[1] != null);
-    if (g.length > 1) pas = `<path d="M${g.map(([i, b]) => X(i) + "," + Y(b[1])).join("L")}L${g.reverse().map(([i, b]) => X(i) + "," + Y(b[0])).join("L")}Z" fill="rgba(62,207,142,.12)"/>`;
-  }
-  const et = [0, Math.floor(punkty.length / 2), punkty.length - 1].map((i, n) => `<text x="${X(i)}" y="${H - 4}" text-anchor="${["start", "middle", "end"][n]}">${esc(punkty[i].e)}</text>`).join("");
-  return `<svg class="wykres" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${pas}
-    <text x="0" y="12">${hi}${jedn}</text><text x="0" y="${H - B}">${lo}${jedn}</text>
-    <path d="${d}" fill="none" stroke="${kolor}" stroke-width="2" vector-effect="non-scaling-stroke"/>${et}</svg>`;
+// ------------------------------------------------------------------ wykresy (SVG, mierzone do szerokości, z dotykiem)
+// Każdy wykres to <div class="wyk" data-id> + specyfikacja w WYK; rysuj() buduje SVG po wstawieniu HTML.
+const KOLOR = { niebieski: "#3987e5", morski: "#199e70", fiolet: "#9085e9", zolty: "#c98500" };
+const SPORT_KOLOR = { rower: KOLOR.niebieski, bieg: KOLOR.morski, silka: KOLOR.fiolet, inne: KOLOR.zolty };
+const MIES = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
+const WYK = new Map();
+let wykNr = 0;
+const wyk = spec => { const id = "w" + (++wykNr); WYK.set(id, spec); return `<div class="wyk${spec.typ === "spark" ? " spark" : ""}" data-id="${id}" style="height:${spec.h || (spec.typ === "spark" ? 30 : 180)}px"></div>`; };
+const lb = (v, dz = 0) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: dz, maximumFractionDigits: dz });
+const dataKr = d => { const x = new Date(d + "T12:00"); return `${x.getDate()} ${MIES[x.getMonth()]}`; };
+
+function zaokr(lo, hi, n = 4, stalyKrok = null) {     // ładne podziałki osi Y
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const krok0 = (hi - lo) / n, p = Math.pow(10, Math.floor(Math.log10(krok0)));
+  const krok = stalyKrok ? [1, 2, 3, 4, 6].map(m => m * stalyKrok).find(k => k >= krok0) || 6 * stalyKrok : [1, 2, 2.5, 5, 10].map(m => m * p).find(k => k >= krok0) || 10 * p;
+  const a = Math.floor(lo / krok) * krok, b = Math.ceil(hi / krok) * krok, t = [];
+  for (let v = a; v <= b + krok / 2; v += krok) t.push(+v.toFixed(6));
+  return t;
 }
-function slupki(dane, serie) {   // dane: [{e, wart:{seria: v}}], serie: [[klucz, kolor]]
-  if (!dane.length) return `<div class="szary">brak danych</div>`;
-  const W = 340, H = 150, L = 26, B = 18;
-  const max = Math.max(1, ...dane.map(d => serie.reduce((s, [k]) => s + (d.wart[k] || 0), 0)));
-  const bw = (W - L) / dane.length;
-  let r = "";
-  dane.forEach((d, i) => {
-    let y = H - B;
-    serie.forEach(([k, kol]) => {
-      const h = (d.wart[k] || 0) / max * (H - B - 6);
-      if (h > 0) { y -= h; r += `<rect x="${L + i * bw + 1}" y="${y}" width="${Math.max(1, bw - 2)}" height="${h}" fill="${kol}" rx="1"/>`; }
-    });
+const zaokrRect = (x, y, w, h, r) => {   // słupek: zaokrąglona góra 4px, płaska podstawa
+  r = Math.max(0, Math.min(r, h, w / 2));
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+};
+
+function rysuj(root = document) {
+  root.querySelectorAll(".wyk[data-id]").forEach(el => {
+    const s = WYK.get(el.dataset.id); if (!s) return;
+    const W = el.clientWidth; if (!W) return;
+    el._w = W;
+    ({ linia: rysujLinie, slupki: rysujSlupki, spark: rysujSpark }[s.typ])(el, s, W, el.clientHeight);
   });
-  const et = [0, Math.floor(dane.length / 2), dane.length - 1].map((i, n) => `<text x="${L + (i + .5) * bw}" y="${H - 4}" text-anchor="${["start", "middle", "end"][n]}">${esc(dane[i].e)}</text>`).join("");
-  return `<svg class="wykres" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><text x="0" y="12">${Math.round(max)}</text>${r}${et}</svg>
-    <div class="legenda">${serie.map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("")}</div>`;
+}
+let rozm;
+window.addEventListener("resize", () => { clearTimeout(rozm); rozm = setTimeout(() => document.querySelectorAll(".wyk[data-id]").forEach(el => { if (el._w !== el.clientWidth) rysuj(el.parentNode); }), 150); });
+
+function rysujSpark(el, s, W, H) {
+  const y = s.y, ok = y.map((v, i) => [i, v]).filter(([, v]) => v != null);
+  if (ok.length < 2) { el.innerHTML = ""; return; }
+  const v = ok.map(p => p[1]), lo = Math.min(...v), hi = Math.max(...v);
+  const X = i => 3 + (W - 8) * i / (y.length - 1), Y = q => 4 + (H - 8) * (1 - (q - lo) / ((hi - lo) || 1));
+  const d = ok.map(([i, q], k) => (k ? "L" : "M") + X(i).toFixed(1) + "," + Y(q).toFixed(1)).join("");
+  const [li, lv] = ok[ok.length - 1];
+  el.innerHTML = `<svg width="${W}" height="${H}"><path d="${d}" fill="none" stroke="${s.kolor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${X(li)}" cy="${Y(lv)}" r="3.5" fill="${s.kolor}" stroke="var(--karta)" stroke-width="2"/></svg>`;
 }
 
+function rysujLinie(el, s, W, H) {
+  const n = s.x.length, serie = s.serie;
+  const wart = serie.flatMap(q => q.y).concat(s.pasmo ? s.pasmo.flat() : []).concat(s.ref != null ? [s.ref] : []).filter(v => v != null);
+  if (wart.length < 2) { el.innerHTML = `<div class="pusto">za mało danych</div>`; return; }
+  const fmt = s.fmt || (v => lb(v, s.dz || 0));
+  const t = zaokr(s.min ?? Math.min(...wart), s.max ?? Math.max(...wart), 4, s.krokY);
+  const lo = t[0], hi = t[t.length - 1];
+  const L = 6, R = 6, T = 10, B = 22, osL = Math.max(...t.map(v => fmt(v).length)) * 6.5 + 8;
+  const x0 = L + osL, x1 = W - R - (s.etykietaKonca === false ? 0 : 30);
+  const X = i => n === 1 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / (n - 1), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  let g = t.map(v => `<line x1="${x0}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" class="siatka"/><text x="${x0 - 6}" y="${Y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`).join("");
+  // podpisy osi X: ~4 równo rozłożone
+  const ileX = Math.min(n, W < 380 ? 3 : 5);
+  for (let k = 0; k < ileX; k++) { const i = ileX === 1 ? 0 : Math.round((n - 1) * k / (ileX - 1)); g += `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === ileX - 1 ? "end" : "middle"}">${esc(s.etX ? s.etX(s.x[i]) : s.x[i])}</text>`; }
+  if (s.pasmo) {   // np. norma HRV
+    const p = s.pasmo.map((b, i) => [i, b]).filter(([, b]) => b && b[0] != null && b[1] != null);
+    if (p.length > 1) g += `<path d="M${p.map(([i, b]) => X(i).toFixed(1) + "," + Y(b[1]).toFixed(1)).join("L")}L${p.slice().reverse().map(([i, b]) => X(i).toFixed(1) + "," + Y(b[0]).toFixed(1)).join("L")}Z" fill="${serie[0].kolor}" opacity=".13"/>`;
+  }
+  if (s.ref != null) g += `<line x1="${x0}" x2="${x1}" y1="${Y(s.ref)}" y2="${Y(s.ref)}" class="ref"/><text x="${x0 + 4}" y="${Y(s.ref) - 5}" class="ref-t">${esc(s.refNazwa || "średnia")} ${fmt(s.ref)}</text>`;
+  const konce = [];
+  serie.forEach((q, si) => {
+    let d = "", a = "", seg = [];
+    const zamknij = () => { if (seg.length > 1 && serie.length === 1) a += `M${seg[0][0]},${Y(lo)}L${seg.map(p => p.join(",")).join("L")}L${seg[seg.length - 1][0]},${Y(lo)}Z`; seg = []; };
+    q.y.forEach((v, i) => {
+      if (v == null) { zamknij(); return; }
+      const p = [X(i).toFixed(1), Y(v).toFixed(1)];
+      d += (seg.length ? "L" : "M") + p.join(","); seg.push(p);
+    });
+    zamknij();
+    if (a) g += `<path d="${a}" fill="${q.kolor}" opacity=".10"/>`;
+    g += `<path d="${d}" fill="none" stroke="${q.kolor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${q.przerywana ? ' stroke-dasharray="1 5"' : ""}/>`;
+    // pojedyncze punkty (otoczone przerwami) jako kropki
+    q.y.forEach((v, i) => { if (v != null && q.y[i - 1] == null && q.y[i + 1] == null) g += `<circle cx="${X(i)}" cy="${Y(v)}" r="2" fill="${q.kolor}"/>`; });
+    const ost = q.y.map((v, i) => [i, v]).filter(([, v]) => v != null).pop();
+    if (ost) {
+      g += `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4.5" fill="${q.kolor}" stroke="var(--karta)" stroke-width="2"/>`;
+      if (s.etykietaKonca !== false) konce.push([X(ost[0]) + 8, Y(ost[1]) + 4, fmt(ost[1])]);
+    }
+  });
+  konce.sort((p, q) => p[1] - q[1]).forEach((k, i, t) => { if (i && k[1] - t[i - 1][1] < 13) k[1] = t[i - 1][1] + 13; });
+  g += konce.map(([x, y, v]) => `<text x="${x}" y="${y}" class="koniec">${v}</text>`).join("");
+  el.innerHTML = `<svg width="${W}" height="${H}">${g}<g class="celownik" style="display:none"><line y1="${T}" y2="${H - B}"/>${serie.map(q => `<circle r="4.5" fill="${q.kolor}" stroke="var(--karta)" stroke-width="2"/>`).join("")}</g></svg><div class="dymek"></div>`;
+  const svg = el.firstChild, cel = svg.lastChild, dym = el.lastChild;
+  const pokaz = e => {
+    const r = svg.getBoundingClientRect(), px = e.clientX - r.left;
+    let i = Math.round((px - x0) / ((x1 - x0) / Math.max(1, n - 1))); i = Math.max(0, Math.min(n - 1, i));
+    if (serie.every(q => q.y[i] == null)) { cel.style.display = "none"; dym.style.display = "none"; return; }
+    cel.style.display = ""; cel.firstChild.setAttribute("x1", X(i)); cel.firstChild.setAttribute("x2", X(i));
+    serie.forEach((q, k) => { const c = cel.children[k + 1]; if (q.y[i] == null) c.style.display = "none"; else { c.style.display = ""; c.setAttribute("cx", X(i)); c.setAttribute("cy", Y(q.y[i])); } });
+    dym.innerHTML = `<div class="dt">${esc(s.etDymek ? s.etDymek(s.x[i]) : s.x[i])}</div>` + serie.map(q => q.y[i] == null ? "" :
+      `<div><i style="background:${q.kolor}"></i>${serie.length > 1 ? esc(q.nazwa) + " " : ""}<b>${fmt(q.y[i])}</b>${s.jedn ? " " + esc(s.jedn) : ""}</div>`).join("") +
+      (s.pasmo && s.pasmo[i] && s.pasmo[i][0] != null ? `<div class="sz">norma ${fmt(s.pasmo[i][0])}–${fmt(s.pasmo[i][1])}</div>` : "");
+    dym.style.display = "block";
+    const dw = dym.offsetWidth; dym.style.left = Math.max(0, Math.min(W - dw, X(i) - dw / 2)) + "px";
+    if (s.klik && e.type === "pointerup") s.klik(s.x[i], i);
+  };
+  svg.addEventListener("pointermove", pokaz); svg.addEventListener("pointerdown", pokaz); svg.addEventListener("pointerup", pokaz);
+  svg.addEventListener("pointerleave", () => { cel.style.display = "none"; dym.style.display = "none"; });
+}
+
+function rysujSlupki(el, s, W, H) {   // s: {x:[], serie:[{nazwa,y:[],kolor}], jedn, dz, zaznacz}
+  const n = s.x.length, serie = s.serie;
+  if (!n) { el.innerHTML = `<div class="pusto">brak danych</div>`; return; }
+  const fmt = v => lb(v, s.dz || 0);
+  const sumy = s.x.map((_, i) => serie.reduce((a, q) => a + (q.y[i] || 0), 0));
+  const t = zaokr(0, Math.max(...sumy, s.ref || 0, 0.001), 3);
+  const hi = t[t.length - 1];
+  const R = 4, T = 10, B = 22, osL = Math.max(...t.map(v => fmt(v).length)) * 6.5 + 14;
+  const x0 = osL, slot = (W - R - x0) / n, bw = Math.max(2, Math.min(24, slot * 0.7));
+  const X = i => x0 + slot * i + (slot - bw) / 2, Y = v => T + (H - T - B) * (1 - v / hi);
+  let g = t.map(v => `<line x1="${x0}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" class="siatka"/><text x="${x0 - 6}" y="${Y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`).join("");
+  s.x.forEach((_, i) => {
+    let y = Y(0);
+    const seg = serie.map(q => q.y[i] || 0), ostatni = seg.map((v, k) => v > 0 ? k : -1).filter(k => k >= 0).pop();
+    g += `<g class="slup${s.zaznacz === i ? " zazn" : ""}">`;
+    seg.forEach((v, k) => {
+      if (v <= 0) return;
+      const h = Y(0) - Y(v), gora = k === ostatni;
+      const hh = Math.max(1, h - (gora ? 0 : 2));          // 2px przerwy między segmentami
+      y -= h;
+      g += gora ? `<path d="${zaokrRect(X(i), y, bw, hh, 4)}" fill="${serie[k].kolor}"/>` : `<rect x="${X(i)}" y="${y + 2}" width="${bw}" height="${hh}" fill="${serie[k].kolor}"/>`;
+    });
+    g += `</g>`;
+  });
+  if (s.ref != null) g += `<line x1="${x0}" x2="${W - R}" y1="${Y(s.ref)}" y2="${Y(s.ref)}" class="ref"/>`;
+  const ileX = Math.min(n, W < 380 ? 4 : 6);
+  for (let k = 0; k < ileX; k++) { const i = ileX === 1 ? 0 : Math.round((n - 1) * k / (ileX - 1)); g += `<text x="${X(i) + bw / 2}" y="${H - 6}" text-anchor="middle">${esc(s.etX ? s.etX(s.x[i]) : s.x[i])}</text>`; }
+  el.innerHTML = `<svg width="${W}" height="${H}">${g}<rect class="podsw" style="display:none" y="${T}" height="${H - T - B}" width="${slot}" rx="4"/></svg><div class="dymek"></div>`;
+  const svg = el.firstChild, pod = svg.lastChild, dym = el.lastChild;
+  svg.insertBefore(pod, svg.firstChild);
+  const pokaz = e => {
+    const r = svg.getBoundingClientRect(); const i = Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left - x0) / slot)));
+    pod.style.display = ""; pod.setAttribute("x", x0 + slot * i);
+    dym.innerHTML = `<div class="dt">${esc(s.etDymek ? s.etDymek(s.x[i]) : s.x[i])}</div>` + serie.filter(q => q.y[i]).map(q =>
+      `<div><i style="background:${q.kolor}"></i>${serie.length > 1 ? esc(q.nazwa) + " " : ""}<b>${fmt(q.y[i])}</b>${s.jedn ? " " + esc(s.jedn) : ""}</div>`).join("") +
+      (serie.length > 1 ? `<div class="sz">razem ${fmt(sumy[i])}${s.jedn ? " " + esc(s.jedn) : ""}</div>` : "") + (sumy[i] ? "" : `<div class="sz">brak</div>`);
+    dym.style.display = "block";
+    const dw = dym.offsetWidth; dym.style.left = Math.max(0, Math.min(W - dw, x0 + slot * (i + .5) - dw / 2)) + "px";
+    if (s.klik && e.type === "pointerup") s.klik(s.x[i], i);
+  };
+  svg.addEventListener("pointermove", pokaz); svg.addEventListener("pointerdown", pokaz); svg.addEventListener("pointerup", pokaz);
+  svg.addEventListener("pointerleave", () => { pod.style.display = "none"; dym.style.display = "none"; });
+}
+const legenda = serie => serie.length < 2 ? "" : `<div class="legenda">${serie.map(q => `<span><i style="background:${q.kolor}"></i>${esc(q.nazwa)}</span>`).join("")}</div>`;
+
 // ------------------------------------------------------------------ Dziś
-const kafel = (n, w, d = "", kl = "") => `<div class="kafel"><div class="n">${n}</div><div class="w ${kl}">${w ?? "–"}</div><div class="d">${d}</div></div>`;
 const STATUS = { PRODUCTIVE: "produktywny", MAINTAINING: "utrzymanie", RECOVERY: "regeneracja", UNPRODUCTIVE: "nieproduktywny",
   DETRAINING: "roztrenowanie", OVERREACHING: "przeciążenie", PEAKING: "szczyt", STRAINED: "nadwyrężenie" };
 const status = s => s ? (STATUS[String(s).replace(/_\d+$/, "")] || s) : "";
@@ -91,7 +206,7 @@ function trening(t, zrobiony) {
   }).join("");
   const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
   return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}">
-    <b>${SPORT_IKONA[t.sport] || ""} ${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
+    <b>${ikSport(t.sport)}${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
     ${t.opis ? `<div class="szary tresc">${esc(t.opis)}</div>` : ""}
     ${kroki ? `<details><summary>kroki</summary><ul class="kroki">${kroki}</ul></details>` : ""}
     ${t.stan === "blad" ? `<div class="szary zle">${esc(t.zrodlo)}</div>` : ""}</div>`;
@@ -106,30 +221,202 @@ function opisKroku(k) {
   return `${r} ${ile}${cel ? " · " + cel : ""}${k.opis ? ` <i>(${esc(k.opis)})</i>` : ""}`;
 }
 
+// ------------------------------------------------------------------ metryki: definicje, kafle, ekran szczegółów
+const godz = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
+const naMin = t => { if (!t) return null; const [h, m] = t.split(":").map(Number); let x = h * 60 + m; if (x < 720) x += 1440; return x; };  // pora snu liczona od południa
+const hMin = h => h == null ? "–" : `${Math.floor(h)} h ${String(Math.round((h % 1) * 60)).padStart(2, "0")} min`;
+const METRYKI = {
+  sen: { n: "Sen", k: "sen_h", jedn: "h", dz: 1, lepiej: 1, kolor: KOLOR.fiolet, fmtDuzy: hMin, opis: "Długość snu w nocy przed tym dniem." },
+  sen_wynik: { n: "Wynik snu", k: "sen_wynik", jedn: "/100", lepiej: 1, kolor: KOLOR.fiolet, min: 0, max: 100 },
+  hrv: { n: "HRV", k: "hrv", jedn: "ms", lepiej: 1, kolor: KOLOR.morski, pasmo: "hrv_norma", opis: "Średnie HRV z nocy. Pasmo = Twoja norma z Garmina; poniżej normy zwykle znaczy zmęczenie albo choroba." },
+  tetno: { n: "Tętno spocz.", k: "tetno_spocz", jedn: "bpm", lepiej: -1, kolor: KOLOR.niebieski, opis: "Tętno spoczynkowe. Wzrost o 5+ bpm ponad średnią to sygnał zmęczenia." },
+  bb: { n: "Body Battery", k: "bb_rano", jedn: "", lepiej: 1, kolor: KOLOR.niebieski, min: 0, max: 100, opis: "Body Battery rano, po nocy." },
+  gotowosc: { n: "Gotowość", k: "gotowosc", jedn: "", lepiej: 1, kolor: KOLOR.niebieski, min: 0, max: 100, opis: "Gotowość treningowa Garmina (sen, HRV, regeneracja, obciążenie)." },
+  obciazenie: { n: "Obciążenie", k: "obc_ostre", jedn: "", lepiej: 0, kolor: KOLOR.zolty, opis: "Obciążenie ostre (7 dni) na tle przewlekłego (4 tygodnie). Stosunek 0,8–1,3 to bezpieczny rozwój." },
+  stres: { n: "Stres", k: "stres", jedn: "", lepiej: -1, kolor: KOLOR.zolty, min: 0, opis: "Średni stres dnia wg Garmina (0–100)." },
+  vo2: { n: "VO₂max rower", k: "vo2_rower", jedn: "", dz: 0, lepiej: 1, kolor: KOLOR.niebieski, opis: "Szacowane VO₂max z jazd z miernikiem mocy." },
+  kroki: { n: "Kroki", k: "kroki", jedn: "", lepiej: 1, kolor: KOLOR.morski, min: 0, pelnyDzien: true },
+};
+let WSZYSTKIE = null, wszystkieCzas = 0;
+async function wszystkieDni() {
+  if (!WSZYSTKIE || Date.now() - wszystkieCzas > 5 * 60e3) { WSZYSTKIE = await api("dni?od=2000-01-01"); wszystkieCzas = Date.now(); }
+  return WSZYSTKIE;
+}
+const srednia = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+const dzienMinus = (d, n) => { const x = new Date(d + "T12:00"); x.setDate(x.getDate() - n); return x.toISOString().slice(0, 10); };
+
+function delta(m, teraz, odn, nazwa) {   // ▲/▼ z oceną (lepiej/gorzej) — kolor tekstu tylko dla oceny, zawsze z ikoną
+  if (teraz == null || odn == null) return "";
+  const r = teraz - odn, dz = m.dz || 0;
+  if (Math.abs(r) < Math.pow(10, -dz) / 2) return `<span class="delta">= ${nazwa}</span>`;
+  const dobre = m.lepiej ? Math.sign(r) === m.lepiej : null;
+  return `<span class="delta ${dobre == null ? "" : dobre ? "lepiej" : "gorzej"}">${r > 0 ? "▲" : "▼"} ${lb(Math.abs(r), dz)} ${nazwa}</span>`;
+}
+function wartMetryki(m, d) { const v = d[m.k]; return v == null ? null : v; }
+
+function kafelM(klucz, dni, dzis, { podpis = null } = {}) {
+  const m = METRYKI[klucz];
+  const z = dni.filter(d => (m.pelnyDzien ? d.dzien < dzis : d.dzien <= dzis) && wartMetryki(m, d) != null);
+  const ost = z[z.length - 1];
+  const v = ost ? wartMetryki(m, ost) : null;
+  const sr7 = srednia(dni.filter(d => d.dzien < (ost || {}).dzien && d.dzien >= dzienMinus((ost || {}).dzien || dzis, 7)).map(d => wartMetryki(m, d)));
+  const ostatnie = dni.slice(-14).map(d => wartMetryki(m, d));
+  const stare = ost && ost.dzien !== dzis ? `<span class="znaczek">${dataPL(ost.dzien)}</span>` : "";
+  return `<a class="kafel" href="#metryka/${klucz}"><div class="n">${m.n}${stare}<svg class="strz" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></div>
+    <div class="w">${v == null ? "–" : lb(v, m.dz || 0)}<small>${m.jedn && v != null ? " " + m.jedn : ""}</small></div>
+    <div class="d">${podpis ?? delta(m, v, sr7, "vs 7 dni")}</div>${wyk({ typ: "spark", y: ostatnie, kolor: m.kolor })}</a>`;
+}
+
+// grupowanie dla długich zakresów: tygodnie / miesiące
+function grupuj(dni, kl, okres) {
+  if (okres === "dzien") return { x: dni.map(d => d.dzien), y: dni.map(d => typeof kl === "function" ? kl(d) : d[kl]) };
+  const g = new Map();
+  dni.forEach(d => {
+    const x = new Date(d.dzien + "T12:00");
+    let k;
+    if (okres === "tydzien") { x.setDate(x.getDate() - (x.getDay() + 6) % 7); k = x.toISOString().slice(0, 10); } else k = d.dzien.slice(0, 7) + "-01";
+    if (!g.has(k)) g.set(k, []);
+    g.get(k).push(typeof kl === "function" ? kl(d) : d[kl]);
+  });
+  const kl2 = [...g.keys()];
+  return { x: kl2, y: kl2.map(k => { const s = srednia(g.get(k)); return s == null ? null : +s.toFixed(2); }) };
+}
+const ZAKRESY = [[7, "7 dni"], [30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]];
+let zakresM = 30, nocWybrana = null;
+
+async function pokazMetryke(klucz) {
+  const m = METRYKI[klucz]; if (!m) { location.hash = "#dzis"; return; }
+  $("#tytul").textContent = m.n;
+  const wsz = await wszystkieDni();
+  const dzis = new Date().toISOString().slice(0, 10);
+  const z = wsz.filter(d => wartMetryki(m, d) != null && !(m.pelnyDzien && d.dzien === new Date().toISOString().slice(0, 10)));
+  if (!z.length) { widok.innerHTML = `<div class="karta szary">Brak danych dla: ${esc(m.n)}</div>`; return; }
+  const ost = z[z.length - 1], v = wartMetryki(m, ost);
+  const okno = (n, od = ost.dzien) => z.filter(d => d.dzien < od && d.dzien >= dzienMinus(od, n)).map(d => wartMetryki(m, d));
+  const sr7 = srednia(okno(7)), sr30 = srednia(okno(30));
+  const rok = z.filter(d => d.dzien > dzienMinus(ost.dzien, 365)).map(d => wartMetryki(m, d));
+  const pct = m.lepiej ? Math.round(100 * rok.filter(x => m.lepiej > 0 ? x < v : x > v).length / Math.max(1, rok.length)) : null;
+  // rok temu: te same 30 dni rok wcześniej
+  const rt = srednia(z.filter(d => d.dzien <= dzienMinus(ost.dzien, 365) && d.dzien > dzienMinus(ost.dzien, 395)).map(d => wartMetryki(m, d)));
+  const sr30teraz = srednia(z.filter(d => d.dzien > dzienMinus(ost.dzien, 30)).map(d => wartMetryki(m, d)));
+
+  const od = zakresM ? dzienMinus(dzis, zakresM - 1) : "2000-01-01";
+  const wz = wsz.filter(d => d.dzien >= od);
+  const okres = !zakresM ? "miesiac" : zakresM >= 365 ? "tydzien" : "dzien";
+  const gr = grupuj(wz, m.k, okres);
+  const vals = gr.y.filter(x => x != null);
+  const srZ = srednia(vals);
+  const etX = okres === "miesiac" ? x => MIES[+x.slice(5, 7) - 1] + " " + x.slice(2, 4) : dataKr;
+  const etD = okres === "miesiac" ? x => MIES[+x.slice(5, 7) - 1] + " " + x.slice(0, 4) : okres === "tydzien" ? x => "tydz. od " + dataKr(x) : dataPL;
+  const serie = [{ nazwa: m.n, y: gr.y, kolor: m.kolor }];
+  if (klucz === "obciazenie") serie.push({ nazwa: "przewlekłe", y: grupuj(wz, "obc_przewlekle", okres).y, kolor: KOLOR.niebieski });
+  if (klucz === "obciazenie") serie[0].nazwa = "ostre";
+  const pasmo = m.pasmo && okres === "dzien" ? wz.map(d => d[m.pasmo]) : null;
+  const naj = vals.length ? (m.lepiej < 0 ? Math.min(...vals) : Math.max(...vals)) : null, najg = vals.length ? (m.lepiej < 0 ? Math.max(...vals) : Math.min(...vals)) : null;
+
+  let h = `<div class="karta hero"><div class="szary">${ost.dzien === dzis ? "Dziś" : dataPL(ost.dzien)}</div>
+    <div class="duzy">${m.fmtDuzy ? m.fmtDuzy(v) : lb(v, m.dz || 0)}<small>${m.jedn && !m.fmtDuzy ? " " + m.jedn : ""}</small></div>
+    <div class="wiersz delty">${delta(m, v, sr7, "vs 7 dni")}${delta(m, v, sr30, "vs 30 dni")}</div>
+    ${pct != null ? `<div class="pasek-pct"><i style="width:${pct}%"></i></div><div class="szary">Lepiej niż ${pct}% dni z ostatniego roku</div>` : ""}
+    ${klucz === "hrv" && ost.hrv_norma ? `<div class="szary">Norma ${ost.hrv_norma[0]}–${ost.hrv_norma[1]} ms · średnia 7 dni ${lb(ost.hrv_7d)} ms${ost.hrv_status ? " · " + esc(String(ost.hrv_status).toLowerCase()) : ""}</div>` : ""}
+    ${klucz === "obciazenie" ? `<div class="szary">Przewlekłe ${lb(ost.obc_przewlekle)} · stosunek ${lb(ost.acwr, 1)}${ost.status ? " · " + esc(status(ost.status)) : ""}</div>` : ""}
+    </div>`;
+  h += `<div class="zakladki">${ZAKRESY.map(([n, t]) => `<button class="${zakresM === n ? "akt" : ""}" data-z="${n}">${t}</button>`).join("")}</div>`;
+  h += `<div class="karta"><div class="kt">${esc(m.n)}${okres !== "dzien" ? ` <span class="szary">· średnie ${okres === "tydzien" ? "tygodniowe" : "miesięczne"}</span>` : ""}</div>
+    ${wyk({ typ: "linia", x: gr.x, serie, pasmo, ref: serie.length === 1 ? srZ : null, dz: m.dz || 0, jedn: m.jedn, min: m.min, max: m.max, etX, etDymek: etD,
+      klik: klucz === "sen" && okres === "dzien" ? x => { nocWybrana = x; rysujNoc(); } : null })}
+    ${legenda(serie)}
+    <div class="statsy"><div><span>średnio</span><b>${lb(srZ, m.dz || 0)}</b></div><div><span>${m.lepiej ? "najlepiej" : "max"}</span><b>${lb(naj, m.dz || 0)}</b></div><div><span>${m.lepiej ? "najsłabiej" : "min"}</span><b>${lb(najg, m.dz || 0)}</b></div><div><span>dni z danymi</span><b>${vals.length}</b></div></div></div>`;
+  if (klucz === "sen") h += await sekcjaSnu(z, wz, okres);
+  // dni tygodnia
+  const dt = [1, 2, 3, 4, 5, 6, 0].map(w => srednia(z.filter(d => d.dzien > dzienMinus(ost.dzien, 90) && new Date(d.dzien + "T12:00").getDay() === w).map(d => wartMetryki(m, d))));
+  h += `<div class="karta"><div class="kt">Dni tygodnia <span class="szary">· średnia z 90 dni</span></div>
+    ${wyk({ typ: "slupki", x: ["pon", "wt", "śr", "czw", "pt", "sob", "ndz"], serie: [{ nazwa: m.n, y: dt, kolor: m.kolor }], dz: m.dz || 0, jedn: m.jedn, h: 150 })}
+    ${klucz === "sen" ? `<div class="szary">${(() => { const t = srednia(dt.slice(0, 4).concat(dt[6])), w = srednia([dt[4], dt[5]]); return t && w ? `Przed szkołą (ndz–czw) średnio ${hMin(t)}, w weekend (pt–sob) ${hMin(w)}.` : ""; })()}</div>` : ""}</div>`;
+  // porównanie: ostatnie 30 dni vs rok temu
+  h += `<div class="karta"><div class="kt">Porównanie</div><table class="tab">
+    <tr><td>Ostatnie 30 dni</td><td><b>${lb(sr30teraz, m.dz || 0)}</b> ${esc(m.jedn)}</td></tr>
+    <tr><td>Te same 30 dni rok temu</td><td><b>${lb(rt, m.dz || 0)}</b> ${esc(m.jedn)} ${delta(m, sr30teraz, rt, "")}</td></tr>
+    <tr><td>Średnia całej historii</td><td><b>${lb(srednia(z.map(d => wartMetryki(m, d))), m.dz || 0)}</b> ${esc(m.jedn)}</td></tr>
+    <tr><td>Rekord</td><td>${(() => { const r = z.reduce((a, d) => a == null || (m.lepiej < 0 ? wartMetryki(m, d) < wartMetryki(m, a) : wartMetryki(m, d) > wartMetryki(m, a)) ? d : a, null); return r ? `<b>${lb(wartMetryki(m, r), m.dz || 0)}</b> ${esc(m.jedn)} <span class="szary">${dataKr(r.dzien)} ${r.dzien.slice(0, 4)}</span>` : "–"; })()}</td></tr></table>
+    ${m.opis ? `<div class="szary" style="margin-top:8px">${esc(m.opis)}</div>` : ""}</div>`;
+  widok.innerHTML = h;
+  widok.querySelectorAll(".zakladki button").forEach(b => b.onclick = () => { zakresM = +b.dataset.z; pokazMetryke(klucz); });
+  rysuj(widok);
+  if (klucz === "sen") rysujNoc();
+}
+
+// ------------------------------------------------------------------ sen: fazy, pora snu, wybrana noc vs średnia
+const FAZY = [["sen_gleboki_h", "głęboki", KOLOR.niebieski], ["sen_lekki_h", "lekki", KOLOR.morski], ["sen_rem_h", "REM", KOLOR.fiolet], [d => d.sen_czuwanie_min != null ? d.sen_czuwanie_min / 60 : null, "czuwanie", KOLOR.zolty]];
+const faza = (f, d) => typeof f[0] === "function" ? f[0](d) : d[f[0]];
+let NOCE = [];
+async function sekcjaSnu(z, wz, okres) {
+  NOCE = z;
+  if (!nocWybrana || !z.some(d => d.dzien === nocWybrana)) nocWybrana = z[z.length - 1].dzien;
+  const ost14 = z.slice(-14);
+  let h = `<div class="karta"><div class="kt">Fazy snu <span class="szary">· ostatnie 14 nocy, stuknij noc</span></div>
+    ${wyk({ typ: "slupki", x: ost14.map(d => d.dzien), serie: FAZY.map(f => ({ nazwa: f[1], y: ost14.map(d => faza(f, d)), kolor: f[2] })), dz: 1, jedn: "h", etX: dataKr, etDymek: dataPL, h: 170,
+      klik: x => { nocWybrana = x; rysujNoc(); } })}
+    ${legenda(FAZY.map(f => ({ nazwa: f[1], kolor: f[2] })))}</div>
+    <div class="karta" id="noc"></div>`;
+  const gz = grupuj(wz, d => naMin(d.sen_od), okres), gw = grupuj(wz, d => naMin(d.sen_do), okres);
+  h += `<div class="karta"><div class="kt">Pora snu</div>
+    ${wyk({ typ: "linia", x: gz.x, serie: [{ nazwa: "zaśnięcie", y: gz.y, kolor: KOLOR.fiolet }, { nazwa: "pobudka", y: gw.y, kolor: KOLOR.zolty }], fmt: godz, krokY: 60, etX: okres === "miesiac" ? x => MIES[+x.slice(5, 7) - 1] : dataKr, etDymek: dataPL, h: 170 })}
+    ${legenda([{ nazwa: "zaśnięcie", kolor: KOLOR.fiolet }, { nazwa: "pobudka", kolor: KOLOR.zolty }])}
+    <div class="szary">Średnio zasypiasz o ${godz(srednia(gz.y))}, wstajesz o ${godz(srednia(gw.y))}.</div></div>`;
+  h += `<div class="karta"><div class="kt">Ostatnie noce</div><div class="noce">${z.slice(-10).reverse().map(d =>
+    `<button class="noc-w" data-d="${d.dzien}"><span>${dataPL(d.dzien)}</span><span class="szary">${esc(d.sen_od || "")}–${esc(d.sen_do || "")}</span><b>${hMin(d.sen_h)}</b><span class="szary">${d.sen_wynik ?? "–"}</span></button>`).join("")}</div></div>`;
+  setTimeout(() => widok.querySelectorAll(".noc-w").forEach(b => b.onclick = () => { nocWybrana = b.dataset.d; rysujNoc(); $("#noc").scrollIntoView({ behavior: "smooth", block: "center" }); }));
+  return h;
+}
+function rysujNoc() {
+  const el = $("#noc"); if (!el) return;
+  const d = NOCE.find(x => x.dzien === nocWybrana); if (!d) return;
+  const pop = NOCE.filter(x => x.dzien < d.dzien && x.dzien >= dzienMinus(d.dzien, 30));
+  const najl = NOCE.filter(x => x.dzien > dzienMinus(d.dzien, 365)).reduce((a, x) => !a || (x.sen_wynik || 0) > (a.sen_wynik || 0) ? x : a, null);
+  const fazy = FAZY.map(f => [f, faza(f, d) || 0]), razem = fazy.reduce((s, [, v]) => s + v, 0) || 1;
+  const wiersz = (nazwa, kl, fmt, lepiej) => {
+    const v = typeof kl === "function" ? kl(d) : d[kl], sr = srednia(pop.map(x => typeof kl === "function" ? kl(x) : x[kl])), b = najl ? (typeof kl === "function" ? kl(najl) : najl[kl]) : null;
+    if (v == null && sr == null) return "";
+    const r = v != null && sr != null ? v - sr : null, ok = r == null || !lepiej ? "" : Math.sign(r) === lepiej ? "lepiej" : "gorzej";
+    return `<tr><td>${nazwa}</td><td><b>${fmt(v)}</b></td><td class="${ok}">${r == null ? "" : (r > 0 ? "▲" : r < 0 ? "▼" : "=") + " " + fmt(Math.abs(r))}</td><td class="szary">${fmt(b)}</td></tr>`;
+  };
+  const h1 = v => v == null ? "–" : lb(v, 1) + " h", mn = v => v == null ? "–" : Math.round(v * 60) + " min";
+  el.innerHTML = `<div class="kt">Noc ${dataPL(d.dzien)} <span class="szary">· ${esc(d.sen_od || "?")}–${esc(d.sen_do || "?")}</span></div>
+    <div class="fazy-pasek">${fazy.filter(([, v]) => v > 0).map(([f, v]) => `<i style="flex:${v};background:${f[2]}" title="${f[1]}"></i>`).join("")}</div>
+    <div class="fazy-et">${fazy.map(([f, v]) => `<span><i style="background:${f[2]}"></i>${f[1]} <b>${mn(v)}</b> <span class="szary">${Math.round(v / razem * 100)}%</span></span>`).join("")}</div>
+    <table class="tab por"><tr><th></th><th>ta noc</th><th>vs 30 dni</th><th>najlepsza*</th></tr>
+    ${wiersz("Sen", "sen_h", h1, 1)}${wiersz("Wynik", "sen_wynik", v => lb(v), 1)}${wiersz("Głęboki", "sen_gleboki_h", mn, 1)}${wiersz("REM", "sen_rem_h", mn, 1)}
+    ${wiersz("Czuwanie", d => d.sen_czuwanie_min != null ? d.sen_czuwanie_min / 60 : null, mn, -1)}${wiersz("Wybudzenia", "sen_wybudzenia", v => lb(v), -1)}
+    ${wiersz("Tętno w nocy", "sen_tetno", v => lb(v), -1)}${wiersz("HRV", "hrv", v => lb(v), 1)}${wiersz("Oddech", "sen_oddech", v => lb(v, 1), 0)}${wiersz("SpO₂", "sen_spo2", v => lb(v), 0)}${wiersz("Stres w nocy", "sen_stres", v => lb(v), -1)}</table>
+    <div class="szary" style="margin-top:6px">* najlepsza noc roku wg wyniku${najl ? ": " + dataKr(najl.dzien) + " " + najl.dzien.slice(0, 4) : ""}</div>`;
+}
+
+// ------------------------------------------------------------------ Dziś
 async function pokazDzis() {
   const d = await api("dzis");
-  const dz = d.dni.find(x => x.dzien === d.dzis) || {};
-  const wcz = d.dni.find(x => x.dzien < d.dzis && x.sen_h) || {};
+  const dni = d.dni;
+  const dz = dni.find(x => x.dzien === d.dzis) || {};
+  const wcz = dni.slice().reverse().find(x => x.dzien < d.dzis && x.gotowosc != null) || {};
   let h = "";
-  if (d.ustawienia_puste) h += `<div class="karta"><h3>👋 Zacznijmy</h3><div>Trener musi Cię poznać: cel, terminy, ile masz czasu, sprzęt i jak ma wyglądać plan. Potem dopyta o szczegóły, ułoży periodyzację i wyśle treningi na zegarek.</div>
-    <div class="wiersz" style="margin-top:10px"><a class="btn" href="#start">📝 Odpowiedz na kilka pytań</a></div></div>`;
-  if (d.historia && d.historia !== "gotowe") h += `<div class="karta szary">⏳ Pobieram całą historię z Garmina… (doszedłem do ${esc(d.historia)})</div>`;
+  if (d.ustawienia_puste) h += `<div class="karta"><h3>Zacznijmy</h3><div>Trener musi Cię poznać: cel, terminy, ile masz czasu, sprzęt i jak ma wyglądać plan. Potem dopyta o szczegóły, ułoży periodyzację i wyśle treningi na zegarek.</div>
+    <div class="wiersz" style="margin-top:10px"><a class="btn" href="#start">Odpowiedz na kilka pytań</a></div></div>`;
+  if (d.historia && d.historia !== "gotowe") h += `<div class="karta szary">Pobieram całą historię z Garmina… (doszedłem do ${esc(d.historia)})</div>`;
+  const got = dz.gotowosc ?? wcz.gotowosc, poz = dz.gotowosc != null ? dz.gotowosc_poziom : wcz.gotowosc_poziom;
+  const st = got == null ? null : got >= 70 ? ["dobrze", "Gotowy na mocny trening"] : got >= 40 ? ["uwaga", "Raczej spokojnie"] : ["zle", "Odpocznij albo lekko"];
+  h += `<a class="karta hero klik" href="#metryka/gotowosc"><div class="hero-wiersz">
+      <div><div class="szary">Gotowość dziś</div><div class="duzy">${got ?? "–"}<small>/100</small></div>
+      ${st ? `<span class="status ${st[0]}"><i></i>${st[1]}</span>` : ""}</div>
+      ${pierscien(got)}</div>
+      <div class="szary" style="margin-top:8px">${[poz && esc(POZIOM[String(poz).toUpperCase()] || String(poz).toLowerCase()), dz.regeneracja_h != null && `regeneracja ${lb(dz.regeneracja_h)} h`, dz.gotowosc_uwaga && esc(UWAGA_G[dz.gotowosc_uwaga] || String(dz.gotowosc_uwaga).toLowerCase().replace(/_/g, " "))].filter(Boolean).join(" · ")}</div></a>`;
   if (d.analiza) {
-    const a = d.analiza, oc = { dobrze: "ok", uwaga: "uwaga", zle: "zle" }[a.dane.ocena] || "";
+    const a = d.analiza, oc = { dobrze: "dobrze", uwaga: "uwaga", zle: "zle" }[a.dane.ocena] || "";
     h += `<div class="karta"><div class="szary">${esc({ rano: "Analiza poranna", trening: "Po treningu", tydzien: "Tydzień" }[a.rodzaj] || a.rodzaj)} · ${esc(a.utworzono.slice(5, 16).replace("T", " "))}</div>
-      <h3 class="${oc}">${esc(a.tytul)}</h3><div>${esc(a.dane.krotko)}</div>
-      <div class="wiersz" style="margin-top:10px"><a class="btn" href="#analiza/${a.id}">Czytaj</a><a class="btn drugi" href="#czat/${a.id}">💬 Omów</a></div></div>`;
+      <h3>${oc ? `<span class="kropka ${oc}"></span>` : ""}${esc(a.tytul)}</h3><div>${esc(a.dane.krotko)}</div>
+      <div class="wiersz" style="margin-top:10px"><a class="btn" href="#analiza/${a.id}">Czytaj</a><a class="btn drugi" href="#czat/${a.id}">Omów</a></div></div>`;
   }
-  const s = dz.sen_h ? dz : {};
-  const hrvKl = dz.hrv && dz.hrv_norma ? (dz.hrv < dz.hrv_norma[0] ? "zle" : dz.hrv > dz.hrv_norma[1] ? "uwaga" : "ok") : "";
-  const got = dz.gotowosc ?? wcz.gotowosc;
-  h += `<div class="kafle">
-    ${kafel("Sen", s.sen_h ? s.sen_h.toFixed(1) + " h" : null, s.sen_wynik ? `wynik ${s.sen_wynik} · REM ${Math.round((s.sen_rem_h || 0) * 60)}′` : "", s.sen_wynik >= 80 ? "ok" : s.sen_wynik < 60 ? "zle" : "")}
-    ${kafel("HRV", dz.hrv, dz.hrv_norma ? `norma ${dz.hrv_norma[0]}–${dz.hrv_norma[1]}` : "", hrvKl)}
-    ${kafel("Tętno spocz.", dz.tetno_spocz ?? wcz.tetno_spocz, "bpm")}
-    ${kafel("Body Battery", dz.bb_rano ?? dz.bb_max, dz.bb_rano ? "rano" : "max")}
-    ${kafel("Gotowość", got, esc(dz.gotowosc_poziom || ""), got >= 70 ? "ok" : got < 40 ? "zle" : "uwaga")}
-    ${kafel("Obciążenie", dz.obc_ostre ?? wcz.obc_ostre, esc(status(dz.status || wcz.status)))}</div>`;
+  h += `<div class="kafle">${kafelM("sen", dni, d.dzis)}${kafelM("hrv", dni, d.dzis)}${kafelM("tetno", dni, d.dzis)}${kafelM("bb", dni, d.dzis)}
+    ${kafelM("obciazenie", dni, d.dzis, { podpis: esc(status(dz.status || wcz.status)) })}${kafelM("stres", dni, d.dzis)}</div>`;
   h += `<h2>Plan</h2>`;
   const poDniu = {};
   d.plan.forEach(t => (poDniu[t.dzien] = poDniu[t.dzien] || []).push(t));
@@ -137,13 +424,45 @@ async function pokazDzis() {
   Object.keys(poDniu).sort().forEach(k => {
     h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? "Dziś" : dataPL(k)}</div>${poDniu[k].map(t => trening(t, d.zrobione_dni.includes(k) && t.sport !== "odpoczynek")).join("")}</div>`;
   });
-  const dni = d.dni.slice(-30);
-  h += `<h2>30 dni</h2><div class="karta"><div class="szary">HRV (pasmo = norma)</div>${linia(dni.map(x => ({ y: x.hrv, e: dataPL(x.dzien) })), { kolor: "var(--ok)", pasmo: dni.map(x => x.hrv_norma) })}</div>
-    <div class="karta"><div class="szary">Sen (h)</div>${linia(dni.map(x => ({ y: x.sen_h, e: dataPL(x.dzien) })), { kolor: "#9b8cff" })}</div>
-    <div class="karta"><div class="szary">Tętno spoczynkowe</div>${linia(dni.map(x => ({ y: x.tetno_spocz, e: dataPL(x.dzien) })), { kolor: "var(--zle)" })}</div>`;
-  h += `<div class="szary" style="text-align:center">Ostatnia synchronizacja: ${esc((d.ostatni_sync || "–").replace("T", " ").slice(0, 16))}
-    · <a href="#" onclick="akcja('sync');return false" style="color:var(--akcent)">odśwież</a></div>`;
+  h += `<div class="szary stopka">Synchronizacja: ${esc((d.ostatni_sync || "–").replace("T", " ").slice(0, 16))}
+    · <a href="#" onclick="akcja('sync');return false">odśwież</a></div>`;
   widok.innerHTML = h;
+  rysuj(widok);
+}
+const POZIOM = { PRIME: "szczyt formy", HIGH: "wysoka", MODERATE: "umiarkowana", LOW: "niska", POOR: "słaba" };
+const UWAGA_G = { LISTEN_TO_YOUR_BODY: "słuchaj ciała", RECOVERY_TIME: "trwa regeneracja", GOOD_SLEEP_HISTORY: "dobry sen ostatnio", POOR_SLEEP_HISTORY: "słaby sen ostatnio",
+  HIGH_TRAINING_LOAD: "wysokie obciążenie", READY_FOR_HARD: "gotowy na mocny trening", GO_EASY: "lżej dziś", REST: "odpoczynek" };
+function pierscien(v) {   // pierścień gotowości: tor + łuk (status → kolor + etykieta obok)
+  if (v == null) return "";
+  const r = 34, o = 2 * Math.PI * r, kol = v >= 70 ? "var(--dobrze)" : v >= 40 ? "var(--uwaga)" : "var(--zle)";
+  return `<svg class="pierscien" width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--karta2)" stroke-width="8"/>
+    <circle cx="42" cy="42" r="${r}" fill="none" stroke="${kol}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${o * v / 100} ${o}" transform="rotate(-90 42 42)"/></svg>`;
+}
+
+// ------------------------------------------------------------------ Dane
+let zakres = 90;
+async function pokazDane() {
+  const wsz = await wszystkieDni();
+  const dzis = new Date().toISOString().slice(0, 10);
+  const od = zakres ? dzienMinus(dzis, zakres - 1) : "2000-01-01";
+  const okres = zakres && zakres <= 180 ? "tydzien" : "miesiac";
+  const agr = await api("agregaty?okres=" + okres);
+  const ag = agr.filter(x => x.okres >= od.slice(0, x.okres.length));
+  const etX = okres === "miesiac" ? x => x.slice(5, 7) + "." + x.slice(2, 4) : x => x.slice(5);
+  const dni = wsz.filter(d => d.dzien >= dzienMinus(dzis, 29));
+  const sporty = [["rower", "rower"], ["bieg", "bieg"], ["silka", "siłka"], ["inne", "inne"]];
+  const suma = k => ag.reduce((s, x) => s + (x.h[k] || 0), 0);
+  widok.innerHTML = `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]].map(([v, n]) =>
+    `<button class="${zakres === v ? "akt" : ""}" onclick="zakres=${v};pokazDane()">${n}</button>`).join("")}</div>
+    <div class="karta"><div class="kt">Godziny treningu <span class="szary">· ${okres === "tydzien" ? "tygodnie" : "miesiące"}</span></div>
+      <div class="wiersz suma">${sporty.map(([k, n]) => `<div><span>${n}</span><b>${lb(suma(k))} h</b></div>`).join("")}</div>
+      ${wyk({ typ: "slupki", x: ag.map(x => x.okres), serie: sporty.map(([k, n]) => ({ nazwa: n, y: ag.map(x => x.h[k] || 0), kolor: SPORT_KOLOR[k] })), dz: 1, jedn: "h", etX, etDymek: x => (okres === "tydzien" ? "tydzień " : "") + x, h: 190 })}
+      ${legenda(sporty.map(([k, n]) => ({ nazwa: n, kolor: SPORT_KOLOR[k] })))}</div>
+    <div class="karta"><div class="kt">Obciążenie treningowe</div>
+      ${wyk({ typ: "slupki", x: ag.map(x => x.okres), serie: [{ nazwa: "obciążenie", y: ag.map(x => x.obc), kolor: KOLOR.zolty }], etX, etDymek: x => (okres === "tydzien" ? "tydzień " : "") + x, h: 150 })}</div>
+    <h2>Zdrowie i forma <span class="szary">· stuknij, żeby zobaczyć historię</span></h2>
+    <div class="kafle">${Object.keys(METRYKI).map(k => kafelM(k, dni, dzis)).join("")}</div>`;
+  rysuj(widok);
 }
 
 async function akcja(rodzaj, dod = {}) {
@@ -175,7 +494,7 @@ async function pokazAnalize(id) {
 // ------------------------------------------------------------------ Plan
 async function kartaMakro() {
   const m = await api("makrocykl");
-  if (!m.makrocykl) return `<div class="karta"><h3>🗺️ Periodyzacja</h3><div class="szary">Brak — podaj cele (czat albo ⚙️), a trener ułoży fazy do celu wg zasad treningu (baza wiedzy ze źródeł).</div></div>`;
+  if (!m.makrocykl) return `<div class="karta"><div class="kt">Periodyzacja</div><div class="szary">Brak — podaj cele (czat albo ⚙️), a trener ułoży fazy do celu wg zasad treningu (baza wiedzy ze źródeł).</div></div>`;
   const mk = m.makrocykl, dz = new Date().toISOString().slice(0, 10);
   const fazy = mk.fazy.map(f => {
     const teraz = f.od <= dz && dz <= f.do;
@@ -184,7 +503,7 @@ async function kartaMakro() {
       ${teraz ? `<details><summary>szczegóły fazy</summary><div class="szary">Intensywność: ${esc(f.intensywnosc)}<br>Kluczowe: ${(f.sesje_kluczowe || []).map(esc).join("; ")}<br>Siłka ${f.silka_tyg ?? "–"}/tydz., bieg ${f.bieg_tyg ?? "–"}/tydz. · ${esc(f.rytm || "")}${(f.testy || []).length ? "<br>Testy: " + f.testy.map(esc).join(", ") : ""}</div></details>` : ""}</div>`;
   }).join("");
   const u = m.plan_uzasadnienie;
-  return `<div class="karta"><h3>🗺️ ${esc(mk.cel_glowny)}</h3><div class="szary">${mk.data_docelowa ? "do " + esc(mk.data_docelowa) + " · " : ""}${esc(m.progi.split("\n")[0] || "")}</div>
+  return `<div class="karta"><div class="kt">Periodyzacja</div><div style="color:var(--tekst2);font-size:14px">${esc(mk.cel_glowny)}</div><div class="szary">${mk.data_docelowa ? "do " + esc(mk.data_docelowa) + " · " : ""}${esc(m.progi.split("\n")[0] || "")}</div>
     <div style="margin-top:8px">${fazy}</div>
     <details><summary>dlaczego tak (zasady, ocena formy)</summary><div class="tresc szary">${esc(mk.ocena_wyjsciowa)}\n\n${esc(mk.uzasadnienie)}\n\n${(mk.zasady_indywidualne || []).map(x => "• " + esc(x)).join("\n")}</div></details>
     ${u ? `<details><summary>uzasadnienie bieżącego planu</summary><div class="tresc szary">${esc(u.tekst)}${(u.uwagi || []).length ? "\n\n⚠️ Kontrola: " + u.uwagi.map(esc).join("; ") : ""}</div></details>` : ""}
@@ -208,27 +527,6 @@ async function pokazPlan() {
   widok.innerHTML = h;
 }
 
-// ------------------------------------------------------------------ Dane
-let zakres = 90;
-async function pokazDane() {
-  const od = zakres ? new Date(Date.now() - zakres * 864e5).toISOString().slice(0, 10) : "2000-01-01";
-  const [dni, agr] = await Promise.all([api("dni?od=" + od), api("agregaty?okres=" + (zakres && zakres <= 180 ? "tydzien" : "miesiac"))]);
-  const ag = agr.filter(x => x.okres >= od.slice(0, x.okres.length));
-  const P = (k, kol, o = {}) => linia(dni.map(x => ({ y: x[k], e: dataPL(x.dzien) })), { kolor: kol, ...o });
-  widok.innerHTML = `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "cała historia"]].map(([v, n]) =>
-    `<button class="${zakres === v ? "akt" : ""}" onclick="zakres=${v};pokazDane()">${n}</button>`).join("")}</div>
-    <div class="karta"><div class="szary">Godziny treningu (${zakres && zakres <= 180 ? "tygodnie" : "miesiące"})</div>${slupki(ag.map(x => ({ e: x.okres.slice(2), wart: x.h })), [["rower", "var(--rower)"], ["bieg", "var(--bieg)"], ["silka", "var(--silka)"], ["inne", "var(--inne)"]])}</div>
-    <div class="karta"><div class="szary">Obciążenie treningowe</div>${slupki(ag.map(x => ({ e: x.okres.slice(2), wart: { obciążenie: x.obc } })), [["obciążenie", "var(--uwaga)"]])}</div>
-    <div class="karta"><div class="szary">HRV</div>${P("hrv", "var(--ok)", { pasmo: dni.map(x => x.hrv_norma) })}</div>
-    <div class="karta"><div class="szary">Sen (h)</div>${P("sen_h", "#9b8cff")}</div>
-    <div class="karta"><div class="szary">Wynik snu</div>${P("sen_wynik", "#9b8cff")}</div>
-    <div class="karta"><div class="szary">Tętno spoczynkowe</div>${P("tetno_spocz", "var(--zle)")}</div>
-    <div class="karta"><div class="szary">Body Battery rano</div>${P("bb_rano", "var(--akcent)")}</div>
-    <div class="karta"><div class="szary">Gotowość treningowa</div>${P("gotowosc", "var(--uwaga)")}</div>
-    <div class="karta"><div class="szary">Obciążenie ostre / przewlekłe</div>${P("obc_ostre", "var(--uwaga)")}${P("obc_przewlekle", "var(--szary)")}</div>
-    <div class="karta"><div class="szary">VO₂max rower</div>${P("vo2_rower", "var(--rower)")}</div>
-    <div class="karta"><div class="szary">Stres dzienny</div>${P("stres", "var(--szary)")}</div>`;
-}
 
 // ------------------------------------------------------------------ Treningi
 let filtr = "";
@@ -334,11 +632,11 @@ async function wlaczPush() {
 // ------------------------------------------------------------------ router
 async function route() {
   const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
-  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("akt", a.dataset.t === t || (t === "analiza" && a.dataset.t === "dzis")));
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("akt", a.dataset.t === t || (t === "analiza" && a.dataset.t === "dzis") || (t === "metryka" && a.dataset.t === "dane")));
   $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera" }[t] || "Trener";
-  widok.innerHTML = `<div class="ladowanie">Ładuję…</div>`;
+  widok.innerHTML = `<div class="ladowanie">Ładuję…</div>`; WYK.clear(); window.scrollTo(0, 0);
   try {
-    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze }[t] || pokazDzis)();
+    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: () => pokazMetryke(arg) }[t] || pokazDzis)();
   } catch (e) { if (!/nie jest zapamiętane/.test(e.message)) widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
 }
 window.addEventListener("hashchange", route);
