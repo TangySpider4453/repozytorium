@@ -121,6 +121,10 @@ def pelny(db, dni=14, akt_dni=28, tygodnie=16, cel=None):
     from . import cel
     cz.append("MAKROCYKL (periodyzacja do celu, ▶ = bieżąca faza):\n" + cel.tekst(cel.makrocykl(db)))
     cz.append("PROGI:\n" + cel.progi(db))
+    from . import dieta
+    jedz = dieta.tekst(db)
+    if jedz:
+        cz.append("JEDZENIE I SKŁAD CIAŁA (dziennik w apce; cel liczy trener):\n" + jedz)
     pamiec = baza.kv(db, "pamiec_trenera", [])
     if pamiec:
         cz.append("ZAPAMIĘTANE USTALENIA Z ROZMÓW:\n" + "\n".join("- " + p for p in pamiec[-30:]))

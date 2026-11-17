@@ -98,7 +98,8 @@ def dostep():
 @app.after_request
 def bez_cache(r):
     if request.path.startswith("/api/"):
-        r.headers["Cache-Control"] = "no-store"
+        if not request.path.startswith("/api/waga/plik/"):
+            r.headers["Cache-Control"] = "no-store"
         if request.path == "/api/paruj":
             pass
         elif not _z_internetu() and not _sesja():     # tailnet/lokalnie: zapamiętaj urządzenie
@@ -336,6 +337,135 @@ def _progi_wykres(d):
     return {"ftp": (s.get("ftp") or {}).get("functionalThresholdPower"),
             "hr_rower": lt.get("heartRateCycling"), "hr_bieg": lt.get("heartRate"),
             "tempo_bieg": round(100 / lt["speed"]) if lt.get("speed") else None}  # s/km
+
+
+# ---------------------------------------------------------------- jedzenie
+@app.route("/api/dieta")
+def api_dieta():
+    from . import dieta
+    dz = request.args.get("dzien") or date.today().isoformat()
+    date.fromisoformat(dz)
+    w = dieta.dzien(dz)
+    if dieta.potrzebny_przelicz(dieta.polacz(), dz):
+        zadanie("makro", dieta.przelicz, dz)
+        w["cel"]["liczy"] = True
+    return jsonify(w)
+
+
+@app.route("/api/dieta/historia")
+def api_dieta_historia():
+    from . import dieta
+    return jsonify(dieta.historia(min(int(request.args.get("dni", 30)), 365)))
+
+
+@app.route("/api/dieta/wpis", methods=["POST"])
+def api_dieta_wpis():
+    from . import dieta
+    b = request.get_json(silent=True) or {}
+    try:
+        if b.get("usun"):
+            dieta.usun(b["usun"])
+        elif b.get("id"):
+            dieta.zmien(b["id"], b.get("gram"))
+        else:
+            if b.get("produkt"):                    # nowy produkt ręcznie (na 100 g) i od razu wpis
+                p = b["produkt"]
+                kod = dieta.zapisz_produkt(dieta.polacz(), {
+                    "kod": "".join(c for c in str(p.get("kod") or "") if c.isdigit())[:20] or None,
+                    "nazwa": str(p.get("nazwa") or "").strip()[:120] or "produkt", "marka": str(p.get("marka") or "")[:60],
+                    "kcal": float(p["kcal"]), "b": float(p.get("b") or 0), "w": float(p.get("w") or 0),
+                    "t": float(p.get("t") or 0), "porcja_g": None, "zrodlo": "reczny"})
+                b["kod"] = kod
+            dieta.dodaj(b)
+    except (ValueError, KeyError, TypeError) as ex:
+        return jsonify({"blad": str(ex)}), 400
+    return jsonify(dieta.dzien(b.get("dzien") or date.today().isoformat()))
+
+
+@app.route("/api/dieta/przelicz", methods=["POST"])
+def api_dieta_przelicz():
+    from . import dieta
+    dz = (request.get_json(silent=True) or {}).get("dzien") or date.today().isoformat()
+    date.fromisoformat(dz)
+    baza.ustaw_kv(db(), "makro_cel_" + dz, None)
+    return jsonify(zadanie("makro", dieta.przelicz, dz))
+
+
+@app.route("/api/produkt/<kod>")
+def api_produkt(kod):
+    from . import dieta
+    try:
+        p = dieta.produkt(kod)
+    except RuntimeError as ex:
+        return jsonify({"blad": str(ex)}), 502
+    return jsonify(p) if p else (jsonify({"blad": "nie ma tego kodu w Open Food Facts — wpisz ręcznie"}), 404)
+
+
+@app.route("/api/produkty")
+def api_produkty():
+    from . import dieta
+    return jsonify(dieta.szukaj(request.args.get("q", "")))
+
+
+# ---------------------------------------------------------------- waga (dziennik Progres z portalu na tym samym Pi)
+PORTAL = "http://127.0.0.1"
+
+
+def _portal(sciezka, dane=None, typ=None, metoda=None):
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(PORTAL + sciezka, data=dane, method=metoda or ("POST" if dane is not None else "GET"))
+    if typ:
+        req.add_header("Content-Type", typ)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status, r.headers.get("Content-Type", "application/json"), r.read()
+    except urllib.error.HTTPError as ex:
+        return ex.code, "application/json", ex.read()
+    except OSError as ex:
+        return 502, "application/json", json.dumps({"blad": f"portal nie odpowiada: {ex}"}).encode()
+
+
+@app.route("/api/waga")
+def api_waga():
+    k, t, b = _portal("/api/progres")
+    return app.response_class(b, status=k, mimetype=t)
+
+
+@app.route("/api/waga/wpis", methods=["POST"])
+def api_waga_wpis():
+    from . import dieta
+    k, t, b = _portal("/api/progres/wpis", request.get_data(), "application/json")
+    dieta.progres(swiezy=True)
+    # nowa masa = cel jedzenia na dziś ze wzoru się zmienia; trenera przeliczamy przy następnym wejściu
+    baza.ustaw_kv(db(), "makro_cel_" + date.today().isoformat(), None)
+    return app.response_class(b, status=k, mimetype=t)
+
+
+@app.route("/api/waga/zdjecie", methods=["POST"])
+def api_waga_zdjecie():
+    k, t, b = _portal("/api/progres/zdjecie", request.get_data(), request.headers.get("Content-Type"))
+    return app.response_class(b, status=k, mimetype=t)
+
+
+@app.route("/api/waga/zdjecie/<zid>", methods=["POST"])
+def api_waga_zdjecie_zmien(zid):
+    if not all(c in "0123456789abcdef" for c in zid) or len(zid) != 32:
+        abort(404)
+    k, t, b = _portal(f"/api/progres/zdjecie/{zid}", request.get_data(), "application/json")
+    return app.response_class(b, status=k, mimetype=t)
+
+
+@app.route("/api/waga/plik/<nazwa>")
+def api_waga_plik(nazwa):
+    import re
+    if not re.fullmatch(r"[0-9a-f]{32}(_m)?\.jpg", nazwa):
+        abort(404)
+    k, t, b = _portal(f"/api/progres/plik/{nazwa}")
+    r = app.response_class(b, status=k, mimetype=t)
+    if k == 200:
+        r.headers["Cache-Control"] = "private, max-age=86400"
+    return r
 
 
 @app.route("/api/makrocykl")
