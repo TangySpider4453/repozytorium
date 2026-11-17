@@ -8,7 +8,7 @@
 | **Nie restartuj Minecrafta (`powernukkitx`), `playit`, `pi-dashboard` i nie rób rebootu Pi bez pytania** — grają znajomi. Minecraft jest włączany ręcznie. | od początku |
 | Bot/telefon restartuj tylko przez `bash ~/bot/bez_rozmowy.sh` (nie w trakcie rozmowy). | SERWER |
 | **AirPlay: nie ruszaj bez zgody.** | Antek |
-| **Claude nie dotyka Garmina** (od 16.11). Nigdy nie proś o hasło Garmina; usuwaj tylko treningi „auto: restortrain-garmin”; przed `replace_original` pytaj. | Antek |
+| **Garmin** (zmiana 17.11): nowa apka **Trener** może używać Claude do analizy, planów i rozmowy i **sama** zapisuje treningi w Garminie. Usuwa tylko swoje (znacznik w opisie). Claude w sesji tylko czyta dane Garmina, zapis robi kod apki. Stary most RestOrTrain bez Claude do czasu wyłączenia. Nigdy nie proś o hasło Garmina; przed `replace_original` pytaj. | Antek 16.11 → 17.11 |
 | Przy wysokiej temperaturze **nie wyłączaj Ollamy** (alerty od Ollamy wyciszone). | Antek |
 | Klasyfikator bezpieczeństwa zablokował akcję → **nie obchodź**, zapytaj Antka. | Antek |
 | Zdjęcia Progres prywatne: tylko Pi i NAS, nigdy repo. | PROGRES |
