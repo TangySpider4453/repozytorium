@@ -1,12 +1,19 @@
 # Pamięć Claude: indeks
 
+> 👉 **Zacznij od [MAPA.md](MAPA.md)** — mapa wszystkiego i router „gdzie szukać”.
+
 Wspólna pamięć wszystkich sesji Claude (chmura, komputer, iPad). **Każda sesja czyta ten plik na starcie**,
 a na końcu pracy uzupełnia pamięć. Pamięć jest krótka i wskazuje na szczegóły, zamiast je powtarzać.
 
 | Plik | Co tam jest |
 |---|---|
+| [MAPA.md](MAPA.md) | **mózg: mapa świata, pętla pracy, router** |
+| [zasady.md](zasady.md) | czego nie wolno (czytaj zawsze) |
+| [urzadzenia.md](urzadzenia.md) | sprzęt, adresy, sieć |
+| [uslugi.md](uslugi.md) | usługi i timery na Pi 4, stan |
+| [repo.md](repo.md) | gałęzie repo i co jest gdzie |
 | [uzytkownik.md](uzytkownik.md) | kim jest użytkownik, jak lubi pracować, preferencje |
-| [projekty.md](projekty.md) | mapa projektów i gdzie szukać szczegółów (`PLAN.md`, `PROGRES.md`, `SERWER.md`) |
+| [projekty.md](projekty.md) | wszystkie projekty: gdzie działają, dokumentacja, stan |
 | [dostep.md](dostep.md) | jak sesja dostaje się do Raspberry Pi i GitHuba (bez sekretów) |
 | [decyzje.md](decyzje.md) | ustalenia i zasady na stałe, z datą i powodem |
 | [do-zrobienia.md](do-zrobienia.md) | otwarte sprawy, pomysły, rzeczy do sprawdzenia |
