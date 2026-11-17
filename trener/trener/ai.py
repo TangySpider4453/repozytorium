@@ -3,6 +3,7 @@ w pustym katalogu (żadnego CLAUDE.md). Wynik: tekst albo JSON wg schematu (--js
 import json
 import logging
 import os
+import re
 import subprocess
 import tempfile
 
@@ -21,6 +22,31 @@ SYSTEM = (
 
 class BladAI(Exception):
     pass
+
+
+class BrakTokenow(BladAI):
+    """limit konta Claude wyczerpany; .reset = datetime odnowienia (albo None, gdy nie podano godziny)"""
+    def __init__(self, tekst):
+        super().__init__(tekst)
+        self.reset = _godzina_resetu(tekst)
+
+
+def _godzina_resetu(tekst):
+    from datetime import datetime, timedelta
+    m = re.search(r"resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap]m)?", tekst, re.I)
+    if not m:
+        return None
+    h, mi = int(m[1]) % 12 if m[3] else int(m[1]), int(m[2] or 0)
+    if (m[3] or "").lower() == "pm":
+        h += 12
+    t = datetime.now().replace(hour=h % 24, minute=mi, second=0, microsecond=0)
+    return t if t > datetime.now() else t + timedelta(days=1)
+
+
+def _blad(tekst):
+    if re.search(r"limit", tekst, re.I) and re.search(r"reset|limit reached|hit your", tekst, re.I):
+        return BrakTokenow(tekst)
+    return BladAI(tekst)
 
 
 def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None, ciezki=False):
@@ -46,9 +72,9 @@ def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narz
     try:
         w = json.loads(p.stdout)
     except ValueError:
-        raise BladAI(f"Claude: {(p.stderr or p.stdout)[-300:]}")
+        raise _blad(f"Claude: {(p.stderr or p.stdout)[-300:]}")
     if w.get("is_error"):
-        raise BladAI(f"Claude: {str(w.get('result'))[:300]}")
+        raise _blad(f"Claude: {str(w.get('result'))[:300]}")
     if schemat:
         so = w.get("structured_output")
         if so is None:

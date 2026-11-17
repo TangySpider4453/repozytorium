@@ -2,6 +2,8 @@
 ustalenia, zmienić cele/dostępność/sprzęt, poprosić o dane z dowolnego okresu historii (jedna dodatkowa runda)."""
 import json
 import logging
+import threading
+from datetime import datetime, timedelta
 
 from . import ai, baza, cel, config, kontekst
 
@@ -46,10 +48,75 @@ def _dane_okresu(db, od, do):
 
 
 def odpowiedz(tresc, analiza_id=None):
-    """zapisuje wiadomość Antka, pyta Claude, stosuje akcje; -> dict odpowiedzi"""
+    """zapisuje wiadomość Antka, pyta Claude, stosuje akcje; -> dict odpowiedzi.
+    Gdy skończył się limit Claude: pytanie czeka i trener odpowiada sam po odnowieniu (timer + cykl co 20 min)."""
     db = baza.polacz()
     db.execute("INSERT INTO czat (kto, tresc, czas, analiza_id) VALUES ('ja',?,?,?)", (tresc, baza.teraz(), analiza_id))
     db.commit()
+    try:
+        return _odpowiedz(db, tresc, analiza_id)
+    except ai.BrakTokenow as ex:
+        return _odloz(db, tresc, analiza_id, ex.reset)
+
+
+def _odloz(db, tresc, analiza_id, reset):
+    stare = baza.kv(db, "czat_czeka")
+    if stare and stare.get("notka"):          # jedna notka „czekam” naraz
+        db.execute("DELETE FROM czat WHERE id=?", (stare["notka"],))
+    kiedy = f"ok. {reset:%H:%M}" if reset else "za chwilę"
+    notka = db.execute("INSERT INTO czat (kto, tresc, czas, akcje) VALUES ('trener',?,?,?)",
+                       (f"⏳ Skończył się limit Claude. Odpowiem sam, gdy się odnowi ({kiedy}), i dam znać powiadomieniem.",
+                        baza.teraz(), json.dumps(["czeka na limit"], ensure_ascii=False))).lastrowid
+    baza.ustaw_kv(db, "czat_czeka", {"tresc": tresc, "analiza_id": analiza_id, "notka": notka,
+                                     "reset": reset.isoformat(timespec="minutes") if reset else None})
+    db.commit()
+    log.warning("czat: brak limitu, odpowiem po %s", reset)
+    if reset:                                 # w usłudze webowej: spróbuj zaraz po odnowieniu (cykl co 20 min to zapas)
+        za = max(60, (reset - datetime.now()).total_seconds() + 90)
+        t = threading.Timer(za, dokoncz_czekajace)
+        t.daemon = True
+        t.start()
+    return {"odpowiedz": "⏳ czeka na limit", "zmienic_plan": False, "czeka": True}
+
+
+_blokada = threading.Lock()
+
+
+def dokoncz_czekajace():
+    """odpowiada na pytanie odłożone przez limit (wołane z timera i z cyklu); -> True gdy odpowiedział"""
+    if not _blokada.acquire(blocking=False):
+        return False
+    try:
+        db = baza.polacz()
+        r = db.execute("SELECT wartosc FROM kv WHERE klucz='czat_czeka'").fetchone()
+        c = json.loads(r[0]) if r else None
+        if not c:
+            return False
+        if c.get("reset") and datetime.now() < datetime.fromisoformat(c["reset"]) + timedelta(minutes=1):
+            return False
+        # zajęcie zadania atomowo (timer w usłudze webowej i cykl to dwa procesy)
+        if db.execute("DELETE FROM kv WHERE klucz='czat_czeka' AND wartosc=?", (r[0],)).rowcount == 0:
+            return False
+        if c.get("notka"):
+            db.execute("DELETE FROM czat WHERE id=?", (c["notka"],))
+        db.commit()
+        try:
+            w = _odpowiedz(db, c["tresc"], c.get("analiza_id"))
+        except ai.BrakTokenow as ex:
+            _odloz(db, c["tresc"], c.get("analiza_id"), ex.reset)
+            return False
+        except Exception:
+            if c.get("proby", 0) < 3:         # inny błąd: spróbuje cykl (max 3 razy)
+                baza.ustaw_kv(db, "czat_czeka", {**c, "notka": None, "reset": None, "proby": c.get("proby", 0) + 1})
+            raise
+        from . import powiadom
+        powiadom.powiadom("💬 Trener odpowiedział", w["odpowiedz"][:180], "/#czat", db)
+        return True
+    finally:
+        _blokada.release()
+
+
+def _odpowiedz(db, tresc, analiza_id):
     cz = ["BAZA WIEDZY:\n" + cel.wiedza(config.ustawienia()["sporty"]), kontekst.pelny(db)]
     if analiza_id:
         r = db.execute("SELECT * FROM analizy WHERE id=?", (analiza_id,)).fetchone()

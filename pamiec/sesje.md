@@ -43,3 +43,4 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   łazik — `Łazik…/PRZEKAZANIE.md` (kopie na Pi).
 - **2026-10-19 – 2026-10-22**: historia wcześniejszych prac w dziennikach `PLAN.md` (sekcja 9), `PROGRES.md`, `SERWER.md`.
 - Modele Trenera: `model`=Haiku (czat, analiza, ankieta, ocena bazy), `model_ciezki`=Sonnet (`ciezki=True`: plan, cel, badania); `ai.zapytaj` zamienia Opus na Sonnet. `dane/ustawienia.json` na Pi poprawiony.
+- Limit Claude w czacie Trenera: `ai.BrakTokenow` (z godziną resetu) → pytanie czeka w kv `czat_czeka`, w czacie notka ⏳; po resecie odpowiada timer w trener-web, a zapasowo cykl co 20 min; potem push „💬 Trener odpowiedział”. Analizy i plan i tak ponawia cykl.

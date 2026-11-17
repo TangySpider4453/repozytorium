@@ -43,6 +43,11 @@ def przeplanuj(powod, prosba="", powiadamiaj=True):
 def cykl():
     db = baza.polacz()
     u = config.ustawienia()
+    try:                                      # 0) pytanie z czatu odłożone przez limit Claude
+        from .czat import dokoncz_czekajace
+        dokoncz_czekajace()
+    except Exception:
+        log.exception("odłożony czat")
     try:
         w = sync()
     except BrakLogowania as ex:
