@@ -27,6 +27,7 @@ SCHEMAT = {"type": "object", "properties": {
         "zostaw_id": {"type": "integer", "description": "id istniejącego treningu, który zostaje bez zmian"},
         "dzien": {"type": "string"}, "sport": {"type": "string", "enum": ["rower", "bieg", "silka", "odpoczynek"]},
         "tytul": {"type": "string"}, "opis": {"type": "string"},
+        "opcjonalny": {"type": "boolean", "description": "trening do wyboru (np. lekki bieg w dzień wolny)"},
         "cel": {"type": "string", "description": "po co ta jednostka (adaptacja) i jak ją wykonać — 1-2 zdania"},
         "kroki": {"type": "array", "items": KROK}}, "required": ["dzien", "sport", "tytul"]}},
     "uzasadnienie": {"type": "string", "description": "jak plan realizuje fazę makrocyklu i zasady z bazy wiedzy"}},
@@ -36,6 +37,9 @@ ZASADY = """ZASADY FORMATU PLANU:
 - Każdy dzień w zakresie dostaje wpis: trening(i) albo {"sport":"odpoczynek"} (z krótkim opisem, np. regeneracja).
 - Istniejący trening bez zmian: zwróć {"zostaw_id": <id>, "dzien", "sport", "tytul"} (bez kroków). Zmieniaj tylko,
   gdy dane (sen, HRV, gotowość, zmęczenie, wykonanie) albo prośba Antka tego wymagają.
+- Trening OPCJONALNY (np. „jak masz ochotę, lekki bieg 15–20 min” w dzień wolny) to OSOBNY wpis z krokami
+  i "opcjonalny": true (idzie na zegarek z nazwą „Opcjonalny: …”), a nie tylko wzmianka w opisie. Dzień wolny dalej ma
+  wpis {"sport":"odpoczynek"}. Do obciążenia tygodnia liczy się go jako „może być”, więc ma być lekki.
 - tytul ≤ 40 znaków, czytelny na zegarku (np. "Rower Z2 2h", "Bieg 6×400 m", "Siłka Dół A"). opis: cel treningu +
   wskazówki (≤ 600 znaków).
 - Rower/bieg: kroki rozgrzewka / praca / odpoczynek / schlodzenie z czas_min albo dystans_km; pętla
@@ -128,6 +132,8 @@ def zastosuj(db, treningi, od, do, ist, zrodlo):
             continue
         if not (od <= (t.get("dzien") or "") <= do):
             continue
+        if t.get("opcjonalny") and t["sport"] != "odpoczynek" and not t["tytul"].lower().startswith("opcjonal"):
+            t["tytul"] = "Opcjonalny: " + t["tytul"]   # tak go widać w Garminie i w apce
         if t["sport"] != "odpoczynek":
             try:
                 budowa.buduj(t)                        # walidacja przed zapisem
