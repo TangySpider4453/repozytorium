@@ -9,7 +9,7 @@
   --r: 16px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; background: var(--tlo); color: var(--tekst); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+html, body { margin: 0; overflow-x: hidden; background: var(--tlo); color: var(--tekst); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
 a { color: var(--akcent-t); }
 
@@ -140,7 +140,11 @@ button:active, .btn:active, .kafel:active, .klik:active { transform: scale(.98);
 .pisz { position: fixed; left: 0; right: 0; bottom: calc(max(calc(var(--dol) - 16px), 4px) + 52px); display: flex; gap: 8px; padding: 8px 12px;
   background: rgba(13,13,13,.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); max-width: 760px; margin: 0 auto; }
 .pisz textarea { flex: 1; resize: none; height: 44px; border-radius: 22px; padding: 11px 14px; }
-.pisz button { border-radius: 22px; width: 44px; padding: 0; }
+.pisz button { border-radius: 22px; width: 44px; flex: none; padding: 0; }
+.pisz textarea { min-width: 0; }
+/* klawiatura otwarta: chowamy dolne menu, pole pisania przy klawiaturze */
+body.pisze nav { display: none; }
+body.pisze .pisz { bottom: 0; }
 
 textarea, input[type=text], input[type=number], select { width: 100%; background: var(--karta2); color: var(--tekst); border: 1px solid transparent;
   border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; }

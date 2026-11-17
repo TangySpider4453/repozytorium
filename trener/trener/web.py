@@ -122,7 +122,14 @@ def api_urzadzenia():
 # ---------------------------------------------------------------- statyczne
 @app.route("/")
 def index():
-    return send_from_directory(config.STATIC, "index.html")
+    # wersja w adresach CSS/JS: iPhone (apka z ekranu głównego) nie trzyma wtedy starych plików
+    html = (config.STATIC / "index.html").read_text(encoding="utf-8")
+    for f in ("styl.css", "app.js"):
+        v = int((config.STATIC / f).stat().st_mtime)
+        html = html.replace(f'"/{f}"', f'"/{f}?v={v}"')
+    r = app.response_class(html, mimetype="text/html")
+    r.headers["Cache-Control"] = "no-store"
+    return r
 
 
 @app.route("/sw.js")

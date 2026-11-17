@@ -642,6 +642,8 @@ async function route() {
 window.addEventListener("hashchange", route);
 $("#btn-ust").onclick = pokazUstawienia;
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+document.addEventListener("focusin", e => { if (e.target.matches(".pisz textarea")) document.body.classList.add("pisze"); });
+document.addEventListener("focusout", e => { if (e.target.matches(".pisz textarea")) setTimeout(() => { if (!document.activeElement?.matches(".pisz textarea")) document.body.classList.remove("pisze"); }, 250); });
 route();
 
 // ------------------------------------------------------------------ Ankieta startowa
