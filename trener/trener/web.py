@@ -401,6 +401,53 @@ def api_produkt(kod):
     return jsonify(p) if p else (jsonify({"blad": "nie ma tego kodu w Open Food Facts — wpisz ręcznie"}), 404)
 
 
+@app.route("/api/produkt/<kod>", methods=["POST"])
+def api_produkt_popraw(kod):
+    from . import dieta
+    try:
+        return jsonify(dieta.popraw_produkt(kod, request.get_json(silent=True) or {}))
+    except (ValueError, TypeError) as ex:
+        return jsonify({"blad": str(ex)}), 400
+
+
+def _jpg(pole="zdjecie"):
+    """zdjęcie z formularza (apka zmniejsza je w przeglądarce); None, gdy brak"""
+    f = request.files.get(pole)
+    if not f:
+        return None
+    dane = f.read(6_000_001)
+    if len(dane) > 6_000_000:
+        raise ValueError("zdjęcie za duże")
+    if not dane.startswith(b"\xff\xd8"):
+        raise ValueError("to nie jest JPG")
+    return dane
+
+
+@app.route("/api/dieta/etykieta", methods=["POST"])
+def api_dieta_etykieta():
+    from . import dieta
+    try:
+        jpg = _jpg()
+    except ValueError as ex:
+        return jsonify({"blad": str(ex)}), 400
+    if not jpg:
+        return jsonify({"blad": "brak zdjęcia"}), 400
+    return jsonify(zadanie("etykieta", dieta.z_etykiety, jpg))
+
+
+@app.route("/api/dieta/posilek", methods=["POST"])
+def api_dieta_posilek():
+    from . import dieta
+    try:
+        jpg = _jpg()
+    except ValueError as ex:
+        return jsonify({"blad": str(ex)}), 400
+    opis = (request.form.get("opis") or "").strip()
+    if not jpg and not opis:
+        return jsonify({"blad": "dodaj zdjęcie albo opis"}), 400
+    return jsonify(zadanie("posilek", dieta.szacuj_posilek, jpg, opis))
+
+
 @app.route("/api/produkty")
 def api_produkty():
     from . import dieta

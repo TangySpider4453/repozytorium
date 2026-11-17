@@ -74,10 +74,13 @@ POLA = "code,product_name,product_name_pl,brands,nutriments,serving_quantity"
 
 def produkt(kod):
     """z bazy, a jak nie ma — z Open Food Facts (i zapamiętaj). None = nie znaleziono."""
+    d = polacz()
+    r = d.execute("SELECT * FROM produkty WHERE kod=?", ("".join(c for c in str(kod) if c.isalnum())[:20],)).fetchone()
+    if r:                                                     # też ręczne (kod "r…")
+        return dict(r)
     kod = "".join(c for c in str(kod) if c.isdigit())[:20]
     if not kod:
         return None
-    d = polacz()
     r = d.execute("SELECT * FROM produkty WHERE kod=?", (kod,)).fetchone()
     if r:
         return dict(r)
@@ -173,6 +176,96 @@ def zmien(nid, gram):
     d.execute("UPDATE jedzenie SET gram=?, kcal=?, b=?, w=?, t=? WHERE id=?",
               (gram, round(r["kcal"] * k, 1), round(r["b"] * k, 1), round(r["w"] * k, 1), round(r["t"] * k, 1), r["id"]))
     d.commit()
+
+
+def popraw_produkt(kod, p):
+    """poprawka wartości na 100 g (zła baza / OFF); wpisy z tym produktem i gramaturą liczone od nowa"""
+    d = polacz()
+    r = d.execute("SELECT * FROM produkty WHERE kod=?", (str(kod),)).fetchone()
+    if not r:
+        raise ValueError("nie ma takiego produktu")
+    kcal = _liczba(p.get("kcal"))
+    if kcal is None or kcal > 1000:
+        raise ValueError("kcal na 100 g: 0–1000")
+    nowy = {"nazwa": str(p.get("nazwa") or r["nazwa"]).strip()[:120] or r["nazwa"], "kcal": kcal,
+            **{k: min(_liczba(p.get(k)) or 0, 100) for k in ("b", "w", "t")},
+            "porcja_g": _liczba(p.get("porcja_g")) or None}
+    d.execute("UPDATE produkty SET nazwa=?, kcal=?, b=?, w=?, t=?, porcja_g=?, zrodlo='poprawiony' WHERE kod=?",
+              (nowy["nazwa"], nowy["kcal"], nowy["b"], nowy["w"], nowy["t"], nowy["porcja_g"], r["kod"]))
+    n = 0
+    for w in d.execute("SELECT id, gram FROM jedzenie WHERE kod=? AND gram > 0", (r["kod"],)).fetchall():
+        k = w["gram"] / 100
+        d.execute("UPDATE jedzenie SET nazwa=?, kcal=?, b=?, w=?, t=? WHERE id=?",
+                  (nowy["nazwa"], *(round(nowy[x] * k, 1) for x in ("kcal", "b", "w", "t")), w["id"]))
+        n += 1
+    d.commit()
+    return {**dict(d.execute("SELECT * FROM produkty WHERE kod=?", (r["kod"],)).fetchone()), "przeliczone": n}
+
+
+# ---------------------------------------------------------------- zdjęcia (Claude czyta obraz)
+_LICZBA = {"type": "number", "minimum": 0}
+ETYKIETA = {"type": "object", "additionalProperties": False, "required": ["czytelne", "nazwa", "kcal", "b", "w", "t"],
+            "properties": {"czytelne": {"type": "boolean"}, "nazwa": {"type": "string"}, "kcal": _LICZBA,
+                           "b": _LICZBA, "w": _LICZBA, "t": _LICZBA, "porcja_g": _LICZBA, "uwagi": {"type": "string"}}}
+
+
+def z_etykiety(jpg):
+    """zdjęcie tabeli wartości odżywczych -> wartości na 100 g (do sprawdzenia w formularzu)"""
+    from . import ai
+    w = ai.zapytaj(
+        "Przeczytaj plik etykieta.jpg: zdjęcie tabeli wartości odżywczych produktu spożywczego. Podaj wartości "
+        "NA 100 g (albo 100 ml): kcal (jeśli jest tylko kJ, przelicz /4,184), białko b, węglowodany w (ogółem, nie "
+        "„w tym cukry”), tłuszcz t (ogółem, nie „w tym nasycone”), w gramach. Jeśli tabela podaje tylko porcję, "
+        "przelicz na 100 g i wpisz porcja_g. nazwa: nazwa produktu, jeśli widać na zdjęciu, inaczej pusty tekst. "
+        "Nie zgaduj: gdy tabela jest nieczytelna albo to nie tabela wartości odżywczych, czytelne=false i opisz w "
+        "uwagi. uwagi: krótko po polsku, tylko jeśli coś niepewne.",
+        schemat=ETYKIETA, effort="low", limit_s=120, pliki={"etykieta.jpg": jpg})
+    if not w.get("czytelne"):
+        raise ValueError(w.get("uwagi") or "nie widzę tabeli wartości odżywczych — zrób ostrzejsze zdjęcie")
+    return {k: round(float(w.get(k) or 0), 1) for k in ("kcal", "b", "w", "t")} | {
+        "nazwa": (w.get("nazwa") or "").strip()[:120], "porcja_g": w.get("porcja_g") or None, "uwagi": w.get("uwagi") or ""}
+
+
+POSILEK = {"type": "object", "additionalProperties": False, "required": ["pozycje", "komentarz", "pewnosc"],
+           "properties": {
+               "pozycje": {"type": "array", "maxItems": 15, "items": {
+                   "type": "object", "additionalProperties": False, "required": ["nazwa", "gram", "kcal", "b", "w", "t"],
+                   "properties": {"nazwa": {"type": "string"}, "gram": _LICZBA, "kcal": _LICZBA,
+                                  "b": _LICZBA, "w": _LICZBA, "t": _LICZBA}}},
+               "komentarz": {"type": "string"},
+               "pewnosc": {"type": "string", "enum": ["niska", "srednia", "wysoka"]}}}
+
+
+def szacuj_posilek(jpg, opis):
+    """zdjęcie gotowego posiłku i/lub opis -> lista składników z gramami i makro; AI sprawdza opis ze zdjęciem"""
+    from . import ai
+    opis = (opis or "").strip()[:800]
+    if not jpg and not opis:
+        raise ValueError("dodaj zdjęcie albo opis")
+    d = polacz()
+    moje = [f"{r['nazwa']}: {r['kcal']:g} kcal, B {r['b']:g}, W {r['w']:g}, T {r['t']:g} /100 g"
+            for r in d.execute("SELECT * FROM produkty ORDER BY ile DESC LIMIT 40")]
+    prompt = (
+        ("Plik posilek.jpg to zdjęcie gotowego posiłku Antka. Przeczytaj go. " if jpg else "Nie ma zdjęcia, tylko opis. ")
+        + f"Opis od Antka (wie tylko mniej więcej, co tam jest): «{opis or 'brak opisu'}».\n\n"
+        "Oszacuj, z czego składa się posiłek: rozbij na składniki (z tłuszczem do smażenia, sosami, dodatkami), "
+        "dla każdego gramaturę porcji i kcal, białko b, węgle w, tłuszcz t w gramach DLA TEJ PORCJI (nie na 100 g). "
+        "Gramaturę oceniaj po wielkości talerza, sztućców, dłoni i typowych porcji. Liczby mają się zgadzać: "
+        "kcal ≈ 4·b + 4·w + 9·t.\n"
+        + ("SPRAWDŹ opis ze zdjęciem: jeśli coś z opisu nie pasuje do zdjęcia (inna ilość, czegoś nie widać, widać "
+           "coś, czego nie wymienił, np. sos, olej, panierka), oprzyj się na zdjęciu i napisz to wprost w komentarzu. "
+           if jpg else "")
+        + "komentarz: 1–3 krótkie zdania po polsku: co jest najmniej pewne i co sprawdzić/zważyć; bez oceniania "
+        "jedzenia. pewnosc: jak dokładne jest oszacowanie.\n"
+        + ("Produkty, które Antek ma w bazie (wartości na 100 g, użyj ich, gdy pasują):\n" + "\n".join(moje) if moje else ""))
+    w = ai.zapytaj(prompt, schemat=POSILEK, ciezki=True, effort="medium", limit_s=240,
+                   pliki={"posilek.jpg": jpg} if jpg else None)
+    poz = []
+    for p in w.get("pozycje") or []:
+        x = {k: round(float(p.get(k) or 0), 1) for k in ("gram", "kcal", "b", "w", "t")}
+        if str(p.get("nazwa") or "").strip() and x["kcal"] <= 5000:
+            poz.append({"nazwa": str(p["nazwa"]).strip()[:120], **x})
+    return {"pozycje": poz, "komentarz": (w.get("komentarz") or "")[:600], "pewnosc": w.get("pewnosc") or "srednia"}
 
 
 def suma(d, dzien):

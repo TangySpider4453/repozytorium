@@ -660,6 +660,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   FFM, białko ~2 g/kg), potem Haiku z wiedzą `07_odzywianie.md`, przycinany do progów, w kv `makro_cel_<dzień>`.
   Liczy się sam przy pierwszym otwarciu dnia; „Przelicz” liczy od nowa. Ekran Waga to dane Progresu z portalu przez
   proxy `/api/waga*` (wpisy, zdjęcia, pliki); film i porównania zostają na portalu.
+- Zdjęcia w Jedzeniu (17.11): `ai.zapytaj(pliki={...})` zapisuje plik w pustym katalogu i włącza tylko narzędzie Read.
+  „Zdjęcie tabelki” (`/api/dieta/etykieta`, Haiku) wypełnia formularz wartościami na 100 g. „Zdjęcie posiłku”
+  (`/api/dieta/posilek`, zdjęcie i/lub opis, Sonnet) zwraca składniki z gramami i makro, a w komentarzu pisze, co z opisu
+  nie zgadza się ze zdjęciem; lista jest do poprawienia przed „Dodaj wszystko”. „Popraw” (`POST /api/produkt/<kod>`)
+  zmienia wartości produktu na 100 g i przelicza jego wpisy. Zdjęcia nie są zapisywane (tylko w katalogu tymczasowym).
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

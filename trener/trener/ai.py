@@ -49,14 +49,15 @@ def _blad(tekst):
     return BladAI(tekst)
 
 
-def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None, ciezki=False):
+def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None, ciezki=False, pliki=None):
     """-> str albo dict (gdy schemat). narzedzia: np. ["WebSearch", "WebFetch"] (tylko odczyt internetu).
-    ciezki=True -> Sonnet (plan, cel, badania); domyślnie Haiku. Opus nigdy (za drogi)."""
+    ciezki=True -> Sonnet (plan, cel, badania); domyślnie Haiku. Opus nigdy (za drogi).
+    pliki={"z.jpg": bytes}: zapisane w pustym katalogu roboczym, Claude czyta je narzędziem Read (prompt podaje nazwy)."""
     u = config.ustawienia()
     model = model or (u.get("model_ciezki") if ciezki else u.get("model")) or "claude-haiku-5-5"
     if "opus" in model.lower():
         model = "claude-sonnet-5-5"
-    nz = ",".join(narzedzia or [])
+    nz = ",".join([*(narzedzia or []), *(["Read"] if pliki else [])])
     cmd = [str(config.CLAUDE), "-p", "--output-format", "json", "--model", model, "--tools", nz,
            *(["--allowedTools", nz] if nz else []),
            "--strict-mcp-config", "--no-session-persistence", "--permission-mode", "dontAsk",
@@ -64,6 +65,9 @@ def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narz
     if schemat:
         cmd += ["--json-schema", json.dumps(schemat, ensure_ascii=False)]
     with tempfile.TemporaryDirectory(prefix="trener-ai-") as kat:
+        for nazwa, dane in (pliki or {}).items():
+            with open(os.path.join(kat, os.path.basename(nazwa)), "wb") as f:
+                f.write(dane)
         try:
             p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=limit_s, cwd=kat,
                                env={**os.environ, "HOME": os.environ.get("HOME", "/home/tonyg")})

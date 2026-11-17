@@ -55,3 +55,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-17: dziennik kalorii w Trenerze (skaner kodów, Open Food Facts, cel kcal/makro liczony przez trenera na każdy dzień
   pod trening) i ekran Waga (Progres w stylu Liquid Glass); kafelki Kalorie i Waga na Dziś. Do celów dopisany priorytet
   „spalić jak najwięcej tłuszczu” w bezpiecznym tempie (0,5–0,7%/tydz.). Wiedza: `07_odzywianie.md`, poprawiona `06`.
+- 2026-11-17: Jedzenie: zdjęcie tabelki (AI czyta wartości na 100 g), poprawianie produktu z bazy/OFF (przelicza wpisy),
+  zdjęcie posiłku + opis (Sonnet szacuje składniki i gramy, sprawdza opis ze zdjęciem; lista do edycji).

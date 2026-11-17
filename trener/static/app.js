@@ -779,6 +779,8 @@ function dodajJedzenie(posilek) {
   const a = arkusz(`<div class="kt">Dodaj · ${POSILEK[posilek]}</div>
     <div class="wiersz"><button onclick="skanuj()" class="skanuj"><svg viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>Skanuj kod</button>
       <button class="drugi" onclick="formRecznie()">Wpisz ręcznie</button></div>
+    <div class="wiersz" style="margin-top:8px"><button class="drugi" onclick="tabelkaZdjecie()">📷 Zdjęcie tabelki</button>
+      <button class="drugi" onclick="posilekZdjecie()">🍽️ Zdjęcie posiłku</button></div>
     <input type="text" id="szukaj" placeholder="Szukaj produktu…" autocomplete="off" style="margin-top:12px">
     <div id="wyniki" class="wyniki"><div class="szary" style="padding:10px 2px">Ładuję ostatnie…</div></div>`);
   const inp = a.querySelector("#szukaj");
@@ -801,7 +803,8 @@ async function szukaj(q) {
 function wybierz(kod) {
   const p = PRODUKTY[kod]; if (!p) return;
   const g0 = p.porcja_g || 100;
-  const a = arkusz(`<div class="kt">${esc(p.nazwa)}</div><div class="szary">${esc(p.marka || "")} · ${lb(p.kcal)} kcal / 100 g</div>
+  const a = arkusz(`<div class="kt">${esc(p.nazwa)}</div><div class="szary">${esc(p.marka || "")}${p.marka ? " · " : ""}na 100 g: ${lb(p.kcal)} kcal · B ${lb(p.b, 1)} · W ${lb(p.w, 1)} · T ${lb(p.t, 1)}
+      · <a href="javascript:void 0" onclick="poprawProdukt('${esc(p.kod)}', () => wybierz('${esc(p.kod)}'))">Popraw</a></div>
     <label>Ile gramów</label><input type="number" id="gram" inputmode="decimal" value="${g0}">
     <div class="chipy wiersz">${[...new Set([p.porcja_g && Math.round(p.porcja_g), 50, 100, 150, 200, 250].filter(Boolean))].map(g => `<button class="chip" data-g="${g}">${g} g</button>`).join("")}</div>
     <div id="podglad" class="podglad"></div>
@@ -818,13 +821,16 @@ function wybierz(kod) {
   };
 }
 
-function formRecznie(kod = "") {
+function formRecznie(kod = "", zdj = null) {
   const a = arkusz(`<div class="kt">Nowy produkt</div>${kod ? `<div class="szary">Kodu ${esc(kod)} nie ma w Open Food Facts. Przepisz z etykiety (wartości na 100 g); zapamiętam go na następny raz.</div>` : `<div class="szary">Wartości na 100 g (z etykiety). Zapamiętam produkt.</div>`}
     <label>Nazwa</label><input type="text" id="r-nazwa">
     <div class="pola4"><div><label>kcal</label><input type="number" inputmode="decimal" id="r-kcal"></div><div><label>białko</label><input type="number" inputmode="decimal" id="r-b"></div>
       <div><label>węgle</label><input type="number" inputmode="decimal" id="r-w"></div><div><label>tłuszcz</label><input type="number" inputmode="decimal" id="r-t"></div></div>
+    <div class="wiersz" style="margin-top:8px"><button class="drugi" id="r-zdj">📷 Odczytaj ze zdjęcia</button><span class="szary" id="r-info"></span></div>
     <label>Ile zjadłeś (g)</label><input type="number" inputmode="decimal" id="r-g" value="100">
     <div class="wiersz" style="margin-top:14px"><button id="ok">Dodaj</button><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>`);
+  a.querySelector("#r-zdj").onclick = () => wybierzZdjecie(f => czytajTabelke(a, f));
+  if (zdj) czytajTabelke(a, zdj);
   a.querySelector("#ok").onclick = async () => {
     const v = id => a.querySelector(id).value.replace(",", ".");
     const nazwa = v("#r-nazwa").trim(), kcal = +v("#r-kcal"), gram = +v("#r-g");
@@ -832,16 +838,152 @@ function formRecznie(kod = "") {
     try { await api("dieta/wpis", { dzien: dietaDzien, posilek: posilekDod, gram, produkt: { kod, nazwa, kcal, b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0 } }); } catch (e) { alert(e.message); return; }
     zamknijArkusz(); pokazJedzenie(dietaDzien);
   };
-  a.querySelector("#r-nazwa").focus();
+  if (!zdj) a.querySelector("#r-nazwa").focus();
 }
 
 function edytujWpis(id) {
   const x = DIETA.wpisy.find(q => q.id === id); if (!x) return;
   const a = arkusz(`<div class="kt">${esc(x.nazwa)}</div><div class="szary">${lb(x.kcal)} kcal · B ${lb(x.b)} · W ${lb(x.w)} · T ${lb(x.t)}</div>
     ${x.gram ? `<label>Gramy</label><input type="number" inputmode="decimal" id="gram" value="${x.gram}">` : ""}
-    <div class="wiersz" style="margin-top:14px">${x.gram ? `<button id="ok">Zapisz</button>` : ""}<button class="drugi zle-t" id="usun">Usuń</button></div>`);
+    <div class="wiersz" style="margin-top:14px">${x.gram ? `<button id="ok">Zapisz</button>` : ""}<button class="drugi zle-t" id="usun">Usuń</button>
+      ${x.kod ? `<button class="drugi" id="popraw">Popraw wartości produktu</button>` : ""}</div>`);
+  if (x.kod) a.querySelector("#popraw").onclick = () => poprawProdukt(x.kod, () => edytujWpis(id));
   if (x.gram) a.querySelector("#ok").onclick = async () => { await api("dieta/wpis", { id, gram: +a.querySelector("#gram").value, dzien: dietaDzien }); zamknijArkusz(); pokazJedzenie(dietaDzien); };
   a.querySelector("#usun").onclick = async () => { await api("dieta/wpis", { usun: id, dzien: dietaDzien }); zamknijArkusz(); pokazJedzenie(dietaDzien); };
+}
+
+// ---- zdjęcia: tabelka wartości odżywczych i gotowy posiłek (czyta Claude na Pi)
+function wybierzZdjecie(fn) {        // wywołuj prosto z kliknięcia (iOS wymaga gestu); aparat albo galeria
+  const i = document.createElement("input"); i.type = "file"; i.accept = "image/*";
+  i.onchange = () => { if (i.files[0]) fn(i.files[0]); };
+  i.click();
+}
+async function naJpg(f, max = 1600) {
+  const url = URL.createObjectURL(f), img = new Image();
+  try {
+    await new Promise((ok, zle) => { img.onload = ok; img.onerror = () => zle(new Error("to nie jest zdjęcie")); img.src = url; });
+    return await zmniejsz(img, max, .85);
+  } finally { URL.revokeObjectURL(url); }
+}
+async function wyslijDoAI(sciezka, f, pola = {}) {
+  const fd = new FormData();
+  if (f) fd.append("zdjecie", await naJpg(f), "z.jpg");
+  Object.entries(pola).forEach(([k, v]) => fd.append(k, v));
+  const r = await fetch("/api/" + sciezka, { method: "POST", body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.blad || "serwer: " + r.status);
+  return czekaj(j);
+}
+function tabelkaZdjecie() { wybierzZdjecie(f => formRecznie("", f)); }
+async function czytajTabelke(a, f) {
+  const info = a.querySelector("#r-info");
+  info.innerHTML = `<span class="mysli">Czytam tabelkę</span>`;
+  try {
+    const w = await wyslijDoAI("dieta/etykieta", f);
+    if (!a.isConnected) return;
+    const ust = (id, v) => { const e = a.querySelector(id); if (e && v != null && v !== "") e.value = v; };
+    if (w.nazwa && !a.querySelector("#r-nazwa").value) ust("#r-nazwa", w.nazwa);
+    ust("#r-kcal", w.kcal); ust("#r-b", w.b); ust("#r-w", w.w); ust("#r-t", w.t);
+    if (w.porcja_g && a.querySelector("#r-g")) ust("#r-g", Math.round(w.porcja_g));
+    info.textContent = "Odczytane — sprawdź z etykietą." + (w.uwagi ? " " + w.uwagi : "");
+    if (!a.querySelector("#r-nazwa").value) a.querySelector("#r-nazwa").focus();
+  } catch (e) { if (a.isConnected) info.textContent = "Błąd: " + e.message; }
+}
+
+async function poprawProdukt(kod, wroc) {
+  let p = PRODUKTY[kod];
+  if (!p) { try { p = PRODUKTY[kod] = await api("produkt/" + encodeURIComponent(kod)); } catch (e) { alert(e.message); return; } }
+  const a = arkusz(`<div class="kt">Popraw produkt</div><div class="szary">Wartości na 100 g. Poprawię też wszystkie wpisy z tym produktem.</div>
+    <label>Nazwa</label><input type="text" id="r-nazwa" value="${esc(p.nazwa)}">
+    <div class="pola4"><div><label>kcal</label><input type="number" inputmode="decimal" id="r-kcal" value="${p.kcal}"></div><div><label>białko</label><input type="number" inputmode="decimal" id="r-b" value="${p.b}"></div>
+      <div><label>węgle</label><input type="number" inputmode="decimal" id="r-w" value="${p.w}"></div><div><label>tłuszcz</label><input type="number" inputmode="decimal" id="r-t" value="${p.t}"></div></div>
+    <label>Porcja (g, opcjonalnie)</label><input type="number" inputmode="decimal" id="r-porcja" value="${p.porcja_g || ""}">
+    <div class="wiersz" style="margin-top:8px"><button class="drugi" id="r-zdj">📷 Odczytaj ze zdjęcia</button><span class="szary" id="r-info"></span></div>
+    <div class="wiersz" style="margin-top:14px"><button id="ok">Zapisz</button><button class="drugi" id="wroc">Wróć</button></div>`);
+  a.querySelector("#r-zdj").onclick = () => wybierzZdjecie(f => czytajTabelke(a, f));
+  a.querySelector("#wroc").onclick = wroc;
+  a.querySelector("#ok").onclick = async () => {
+    const v = id => a.querySelector(id).value.replace(",", ".");
+    if (v("#r-kcal") === "" || !(+v("#r-kcal") >= 0)) { alert("Podaj kcal"); return; }
+    let n;
+    try { n = await api("produkt/" + encodeURIComponent(kod), { nazwa: v("#r-nazwa").trim(), kcal: +v("#r-kcal"), b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0, porcja_g: +v("#r-porcja") || null }); }
+    catch (e) { alert(e.message); return; }
+    PRODUKTY[kod] = n;
+    if (location.hash.startsWith("#jedzenie")) await pokazJedzenie(dietaDzien);
+    wroc();
+  };
+}
+
+let posZdj = null;
+function posilekZdjecie() {
+  posZdj = null;
+  const a = arkusz(`<div class="kt">Zdjęcie posiłku</div><div class="szary">Zrób zdjęcie talerza z góry (najlepiej ze sztućcem obok) i napisz, co mniej więcej jest w środku. Trener oszacuje gramy i makro i sprawdzi opis ze zdjęciem.</div>
+    <div class="wiersz" style="margin-top:10px"><button class="drugi" id="p-zdj">📷 Dodaj zdjęcie</button><img id="p-min" class="p-min" hidden></div>
+    <label>Co tam jest</label><textarea id="p-opis" rows="3" placeholder="np. kurczak smażony, ryż ok. 1 woreczek, surówka z marchewki"></textarea>
+    <div class="wiersz" style="margin-top:14px"><button id="p-ok">Oszacuj</button><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>
+    <div id="p-wynik"></div>`);
+  a.querySelector("#p-zdj").onclick = () => wybierzZdjecie(f => {
+    posZdj = f; const m = a.querySelector("#p-min"); m.src = URL.createObjectURL(f); m.hidden = false;
+    a.querySelector("#p-zdj").textContent = "📷 Zmień zdjęcie";
+  });
+  a.querySelector("#p-ok").onclick = async () => {
+    const opis = a.querySelector("#p-opis").value.trim(), wy = a.querySelector("#p-wynik"), b = a.querySelector("#p-ok");
+    if (!posZdj && !opis) { alert("Dodaj zdjęcie albo opis"); return; }
+    b.disabled = true;
+    wy.innerHTML = `<div class="szary" style="margin-top:12px"><span class="mysli">Trener ogląda posiłek</span></div>`;
+    try {
+      const w = await wyslijDoAI("dieta/posilek", posZdj, { opis });
+      if (a.isConnected) listaSzacunku(a, w);
+    } catch (e) { if (a.isConnected) wy.innerHTML = `<div class="szary" style="margin-top:12px">Błąd: ${esc(e.message)}</div>`; }
+    b.disabled = false;
+  };
+}
+function listaSzacunku(a, w) {
+  const wy = a.querySelector("#p-wynik");
+  const POLA = [["kcal", "kcal"], ["b", "B"], ["w", "W"], ["t", "T"]];
+  const wiersz = (p = { nazwa: "", gram: 100, kcal: 0, b: 0, w: 0, t: 0 }) => `<div class="szac" data-baza='${esc(JSON.stringify(p))}'>
+      <div class="wiersz"><input type="text" class="s-nazwa" value="${esc(p.nazwa)}" placeholder="składnik"><input type="number" inputmode="decimal" class="s-gram" value="${p.gram || ""}"><span class="szary">g</span><button class="drugi zle-t s-usun" aria-label="usuń">✕</button></div>
+      <div class="pola4">${POLA.map(([k, n]) => `<div><label>${n}</label><input type="number" inputmode="decimal" class="s-${k}" value="${+(+p[k] || 0).toFixed(k === "kcal" ? 0 : 1)}"></div>`).join("")}</div></div>`;
+  wy.innerHTML = `<div class="kt" style="margin-top:16px">Szacunek <span class="szary">· pewność ${{ niska: "niska", srednia: "średnia", wysoka: "wysoka" }[w.pewnosc] || w.pewnosc}</span></div>
+    ${w.komentarz ? `<div class="karta-info">${esc(w.komentarz)}</div>` : ""}
+    <div id="s-lista">${w.pozycje.map(wiersz).join("")}</div>
+    <button class="drugi" id="s-plus" style="margin-top:8px">+ składnik</button>
+    <div class="podglad" id="s-suma"></div>
+    <label>Posiłek</label><select id="s-posilek">${Object.entries(POSILEK).map(([k, n]) => `<option value="${k}" ${k === posilekDod ? "selected" : ""}>${n}</option>`).join("")}</select>
+    <div class="wiersz" style="margin-top:14px"><button id="s-dodaj">Dodaj wszystko</button></div>`;
+  const lista = wy.querySelector("#s-lista");
+  const num = el => +String(el.value).replace(",", ".") || 0;
+  const suma = () => {
+    const s = { kcal: 0, b: 0, w: 0, t: 0 };
+    lista.querySelectorAll(".szac").forEach(r => POLA.forEach(([k]) => s[k] += num(r.querySelector(".s-" + k))));
+    wy.querySelector("#s-suma").innerHTML = `Razem: <b>${lb(s.kcal)} kcal</b> · B ${lb(s.b)} g · W ${lb(s.w)} g · T ${lb(s.t)} g`;
+  };
+  const podlacz = r => {
+    const g = r.querySelector(".s-gram");
+    g.oninput = () => {      // zmiana gramów przelicza makro proporcjonalnie do szacunku
+      const b = JSON.parse(r.dataset.baza); if (!(b.gram > 0)) return;
+      const k = num(g) / b.gram;
+      POLA.forEach(([x]) => r.querySelector(".s-" + x).value = +(b[x] * k).toFixed(x === "kcal" ? 0 : 1));
+      suma();
+    };
+    POLA.forEach(([x]) => r.querySelector(".s-" + x).oninput = () => {   // ręczna poprawka = nowa baza do przeliczania
+      const b = { gram: num(g) }; POLA.forEach(([y]) => b[y] = num(r.querySelector(".s-" + y)));
+      r.dataset.baza = JSON.stringify(b); suma();
+    });
+    r.querySelector(".s-usun").onclick = () => { r.remove(); suma(); };
+  };
+  lista.querySelectorAll(".szac").forEach(podlacz);
+  wy.querySelector("#s-plus").onclick = () => { lista.insertAdjacentHTML("beforeend", wiersz()); podlacz(lista.lastElementChild); lista.lastElementChild.querySelector(".s-nazwa").focus(); };
+  suma();
+  wy.querySelector("#s-dodaj").onclick = async () => {
+    const poz = [...lista.querySelectorAll(".szac")].map(r => ({ nazwa: r.querySelector(".s-nazwa").value.trim(), gram: num(r.querySelector(".s-gram")) || null,
+      ...Object.fromEntries(POLA.map(([k]) => [k, num(r.querySelector(".s-" + k))])) })).filter(p => p.nazwa);
+    if (!poz.length) { alert("Lista jest pusta"); return; }
+    const posilek = wy.querySelector("#s-posilek").value, bt = wy.querySelector("#s-dodaj"); bt.disabled = true;
+    try { for (const p of poz) await api("dieta/wpis", { dzien: dietaDzien, posilek, ...p }); }
+    catch (e) { alert(e.message); bt.disabled = false; return; }
+    zamknijArkusz(); pokazJedzenie(dietaDzien);
+  };
 }
 
 // ---- skaner kodów kreskowych (ZXing, ładowany dopiero przy pierwszym skanowaniu; działa też w Safari)
