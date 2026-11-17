@@ -38,3 +38,5 @@
 ## 2026-11-17 — Trener PWA: aktualizacje i wygląd
 - Apka sama sprawdza `/wersja` (najnowszy mtime index/styl/app) przy powrocie do niej i co 60 s; przy nowej wersji przeładowuje się, ale nie w trakcie pisania, ankiety ani czekania na zadanie (wtedy przy następnym przejściu). Po wgraniu plików na Pi nie trzeba nic robić w telefonie.
 - Styl Liquid Glass na całej apce; zmienne `--szklo`, `--blask`, `--rozmyj`, `--sprezyna` w `styl.css`. `--karta` jest półprzezroczysta, a do obwódek na wykresach jest `--pierscien`.
+- Rogi kafelków/kart to squircle (ciągłe zaokrąglenie jak w iOS): maska 9-slice `static/sq.svg` przez `-webkit-mask-box-image`; przyciski i pasek kart zostają kapsułami.
+- Apki nie da się powiększać: `user-scalable=no`, `touch-action: pan-x pan-y` (blokuje podwójne stuknięcie) i blokada gestów `gesture*` w JS. Nie blokować `touchend`, bo zjada szybkie drugie kliknięcie.

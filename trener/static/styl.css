@@ -16,7 +16,8 @@
 html, body { margin: 0; background: var(--tlo); color: var(--tekst); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
 a { color: var(--akcent-t); }
-html { overflow-x: hidden; overscroll-behavior-y: none; background: var(--tlo); }
+/* bez powiększania (szczypanie / podwójne stuknięcie) i bez skalowania tekstu przy obrocie */
+html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; overscroll-behavior-y: none; background: var(--tlo); }
 body { background: transparent; overflow-x: clip; }
 /* tło pod szkłem: miękkie poświaty, żeby było co rozmywać */
 body::before { content: ""; position: fixed; inset: -20vh -20vw; z-index: -1; pointer-events: none;
@@ -197,3 +198,13 @@ details.makro > summary .kt { display: inline; margin: 0; }
 details.makro[open] > summary { margin-bottom: 8px; }
 
 @media (prefers-reduced-motion: reduce) { .kapsula, nav a svg, button, .kafel, .trening, .pisz { transition: none !important; } main.wychodzi { filter: none; } }
+
+/* squircle jak w iOS (ciągłe zaokrąglenie): maska 9-slice z sq.svg; róg ~1.5× szerszy niż zwykły promień */
+@supports (-webkit-mask-box-image: url(/sq.svg) 40 stretch) {
+  .karta, .kafel, .trening, .dymek, .logo, textarea, input[type=text], input[type=number], select {
+    border-radius: 0; -webkit-mask-box-image: url(/sq.svg) 40 / 34px stretch; }
+  .trening { -webkit-mask-box-image: url(/sq.svg) 40 / 28px stretch; }
+  .dymek, textarea, input[type=text], input[type=number], select { -webkit-mask-box-image: url(/sq.svg) 40 / 22px stretch; }
+  .logo { -webkit-mask-box-image: url(/sq.svg) 40 / 15px stretch; }
+  .pisz textarea { -webkit-mask-box-image: none; }
+}

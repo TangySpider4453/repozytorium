@@ -697,6 +697,9 @@ async function route() {
   if (nr === nawNr && wejscie !== null) { wejscie = null; clearTimeout(ladTimer); widok.classList.remove("wychodzi"); }
 }
 window.addEventListener("hashchange", route);
+// iOS ignoruje user-scalable=no — blokujemy gest szczypania ręcznie (podwójne stuknięcie blokuje touch-action w CSS)
+["gesturestart", "gesturechange", "gestureend"].forEach(g => document.addEventListener(g, e => e.preventDefault(), { passive: false }));
+document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 window.addEventListener("unhandledrejection", e => { if (e.reason instanceof Anulowano) e.preventDefault(); });
 
 // ------------------------------------------------------------------ auto-aktualizacja
