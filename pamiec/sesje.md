@@ -5,7 +5,8 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - **2026-11-17 (chmura, 4)**: Start z mózgu. Hook połączył Tailscale sam (`TS_AUTHKEY`), `ssh pi` wymagał linku
   „check” (podany, zatwierdzony). Przegląd Pi 4 09:23: wszystko zgodne z `uslugi.md` (45 °C, 0x0, RAM 1,8 GB, dysk 61%,
   kopia 02:00 OK). Na prośbę Antka oznaczono incydent `rtg-garmin-teraz` (05.11) jako przejrzany przez
-  `POST /api/zdrowie/przejrzane` z `{"id": …}` → zdrowie: 0/0.
+  `POST /api/zdrowie/przejrzane` z `{"id": …}` → zdrowie: 0/0. Usunięto testowe modele Ollamy
+  `qwen3:4b`, `qwen3:1.7b`, `llama3.2:3b` (nieużywane w kodzie ani w env) → dysk 61% → 51%; zostały qwen2.5:1.5b/3b i moondream.
 - **2026-11-17 (chmura)**: Podłączono repo do sesji. Tailscale nie działa: brak `TS_AUTHKEY` i sieć „Limited”
   blokuje hosty Tailscale; podano użytkownikowi instrukcję (angielskie nazwy w aplikacji). Utworzono `pamiec/` i
   wpisano do `CLAUDE.md`, że sesje mają z niej korzystać. Użytkownik ustawił sieć i klucz; połączono przez link

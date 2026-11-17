@@ -22,7 +22,6 @@
 - [ ] Polski: tekst Tetmajera z podręcznikiem (s. 90); edukacja obywatelska: czy temat 4 obowiązuje.
 
 ## Pomysły
-- Usunąć testowe modele Ollamy (`qwen3:*`, `llama3.2:3b`) — miejsce.
 - Łazik: iPhone 14 Pro LiDAR przez Record3D jako kamera głębi; nowy OLED; radio DX-LR03 na UART.
 - Planer nauki bez modelu: gotowy patch `niewdrozone_planer_i_lokalny_zapas.patch` w kopiach na Pi.
 - Interaktywna wersja tej mapy jako strona na portalu.
