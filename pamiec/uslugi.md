@@ -8,7 +8,7 @@
 | `glos-whisper` | rozpoznawanie mowy whisper.cpp | ✅ |
 | `ollama` | modele lokalne (qwen2.5:1.5b zapas rozmów, qwen2.5:3b Garmin, moondream — stary model wizji; testowe usunięte 17.11) | ✅ |
 | `rtg-garmin.timer` | RestOrTrain → Garmin co 10 min | ✅ |
-| `trener-web` + `trener-cykl.timer` (20 min) | apka **Trener** (`~/trener/`), HTTPS przez `tailscale serve` :443 → 127.0.0.1:8095 | ✅ od 17.11 |
+| `trener-web` + `trener-cykl.timer` (20 min) | apka **Trener** (`~/trener/`), HTTPS przez **Tailscale Funnel** :443 → 127.0.0.1:8095 (publicznie; `/api` tylko z zapamiętanym urządzeniem) | ✅ od 17.11 |
 | `playit`, `pi-dashboard` | tunel i panel Minecrafta | ✅ |
 | `powernukkitx` | serwer Minecraft | ⏸️ wyłączony **celowo** (włączany ręcznie) |
 | `airplay` | głośnik AirPlay 2 | ⏸️ inactive — nie ruszać bez zgody |

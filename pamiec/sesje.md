@@ -3,6 +3,7 @@
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
 - **2026-11-17 (chmura, 4c)**: Claude Code na Pi: `~/.claude/settings.json` = `autoCompactWindow` 200000 + env `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS=100000` (kompakt po ~1 h bezczynności, przed wygaśnięciem cache). Interaktywny `claude` na Pi nie jest zalogowany (token tylko w env usług). W chmurze tę zmienną Antek musi dodać sam w Settings środowiska (sesja nie może).
+  Funnel włączony za zgodą Antka (`--https=443 http://127.0.0.1:8095`); test z internetu: strona 200, `/api/*` bez klucza 401.
 - **2026-11-17 (chmura, 4b)**: Zbudowano apkę **Trener** (`trener/`, Pi `~/trener/`): sync Garmina (pełna historia
   od 2021 w tle), analizy/plan/czat przez Claude (`--json-schema`), generator treningów rower/bieg/siłka (test: Garmin
   przyjął i usunął 3 treningi próbne), push VAPID + Linphone, PWA przez `tailscale serve` HTTPS. Testy: plan 44 s,

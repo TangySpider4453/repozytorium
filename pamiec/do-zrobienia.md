@@ -9,8 +9,7 @@
 - [x] Hook łączy się sam kluczem `TS_AUTHKEY` (potwierdzone 17.11); `ssh pi` nadal pyta o link „check”.
 
 ## Trener (nowa apka, 17.11)
-- [ ] **Funnel (apka z internetu bez Tailscale)**: Antek uruchamia na Pi `sudo tailscale funnel --bg 443` (klasyfikator
-  zablokował Claude). Ochrona kluczem urządzenia już działa. Potem raz otworzyć apkę z włączonym Tailscale (zapamiętanie).
+- [ ] Antek: raz otworzyć apkę z włączonym Tailscale (zapamiętanie urządzenia), potem działa bez niego (Funnel włączony 17.11).
 - [ ] Antek: otworzyć apkę na iPhonie, Add to Home Screen, włączyć push, wypełnić **ankietę startową** (karta „Zacznijmy” → 7 kroków + dopytanie). Bez niej apka nie planuje.
 - [ ] Po pierwszym planie i jego sprawdzeniu na zegarku: wyłączyć stary most (`sudo systemctl disable --now rtg-garmin.timer`)
   i zdecydować, czy RestOrTrain w ogóle zostaje.
