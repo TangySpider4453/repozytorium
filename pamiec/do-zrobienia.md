@@ -6,7 +6,7 @@
 - [ ] **Unieważnić/zmienić** sekrety, które padły w starych czatach (lista w `DOSTEP_PRYWATNE.md` na Pi): hasło NAS,
   Linphone Pi, portalu, token bota Telegram, stary klucz Tailscale.
 - [x] Scalić gałęzie z domyślną (2026-11-17). Ewentualnie usunąć stare gałęzie na GitHubie.
-- [ ] W nowej sesji sprawdzić, czy hook łączy się sam kluczem `TS_AUTHKEY`.
+- [x] Hook łączy się sam kluczem `TS_AUTHKEY` (potwierdzone 17.11); `ssh pi` nadal pyta o link „check”.
 
 ## Problemy
 - [ ] 📞 Telefon nie słyszy Antka (od ~11.11): zadzwonić, mówić, odczytać `journalctl -u serwerek-telefon`

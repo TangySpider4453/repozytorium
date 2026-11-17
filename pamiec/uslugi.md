@@ -1,4 +1,4 @@
-# Usługi na Pi 4 — stan sprawdzony 2026-11-17 09:06
+# Usługi na Pi 4 — stan sprawdzony 2026-11-17 09:23
 
 | Usługa | Co robi | Stan |
 |---|---|---|
