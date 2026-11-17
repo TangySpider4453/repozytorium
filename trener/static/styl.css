@@ -48,7 +48,7 @@ button:disabled { opacity: .5; }
   background: var(--tlo); border-top: 1px solid var(--linia); max-width: 760px; margin: 0 auto; }
 .pisz textarea { flex: 1; resize: none; height: 42px; }
 textarea, input[type=text], input[type=number], select { width: 100%; background: var(--karta2); color: var(--tekst); border: 1px solid var(--linia);
-  border-radius: 10px; padding: 9px 10px; font: inherit; }
+  border-radius: 10px; padding: 9px 10px; font: inherit; font-size: 16px; }
 label { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--szary); }
 .wiersz { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .przelacznik { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linia); }
