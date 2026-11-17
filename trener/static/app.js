@@ -94,8 +94,8 @@ async function pokazDzis() {
   const dz = d.dni.find(x => x.dzien === d.dzis) || {};
   const wcz = d.dni.find(x => x.dzien < d.dzis && x.sen_h) || {};
   let h = "";
-  if (d.ustawienia_puste) h += `<div class="karta"><h3>👋 Zacznijmy</h3><div>Powiedz trenerowi, do czego trenujesz, kiedy masz czas i jaki masz sprzęt — wtedy ułoży plan i wyśle treningi na zegarek.</div>
-    <div class="wiersz" style="margin-top:10px"><a class="btn" href="#czat">💬 Napisz w czacie</a><button class="drugi" onclick="pokazUstawienia()">⚙️ Ustawienia</button></div></div>`;
+  if (d.ustawienia_puste) h += `<div class="karta"><h3>👋 Zacznijmy</h3><div>Trener musi Cię poznać: cel, terminy, ile masz czasu, sprzęt i jak ma wyglądać plan. Potem dopyta o szczegóły, ułoży periodyzację i wyśle treningi na zegarek.</div>
+    <div class="wiersz" style="margin-top:10px"><a class="btn" href="#start">📝 Odpowiedz na kilka pytań</a></div></div>`;
   if (d.historia && d.historia !== "gotowe") h += `<div class="karta szary">⏳ Pobieram całą historię z Garmina… (doszedłem do ${esc(d.historia)})</div>`;
   if (d.analiza) {
     const a = d.analiza, oc = { dobrze: "ok", uwaga: "uwaga", zle: "zle" }[a.dane.ocena] || "";
@@ -270,7 +270,8 @@ async function ekranUstawien() {
   const pr = (k, n) => `<div class="przelacznik"><span>${n}</span><input type="checkbox" id="u-${k}" ${u[k] ? "checked" : ""}></div>`;
   const pushStan = !("PushManager" in window) ? "Na iPhonie: Safari → Share → Add to Home Screen, potem otwórz apkę z ekranu głównego." :
     Notification.permission === "granted" ? "włączone ✅" : Notification.permission === "denied" ? "zablokowane w ustawieniach iOS" : "wyłączone";
-  widok.innerHTML = `<div class="karta"><h3>Cele i warunki</h3>
+  widok.innerHTML = `<a class="btn" style="width:100%;text-align:center;margin-bottom:12px" href="#start">📝 Ankieta: cele i jak ma wyglądać plan</a>
+    <div class="karta"><h3>Cele i warunki</h3>
     <label>Do czego trenujesz (cele, zawody, terminy)</label><textarea id="u-cele" rows="3">${esc(u.cele)}</textarea>
     <label>Kiedy możesz trenować</label><textarea id="u-dostepnosc" rows="2">${esc(u.dostepnosc)}</textarea>
     <label>Sprzęt (rower, trenażer, siłownia…)</label><textarea id="u-sprzet" rows="2">${esc(u.sprzet)}</textarea>
@@ -308,13 +309,112 @@ async function wlaczPush() {
 async function route() {
   const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
   document.querySelectorAll("nav a").forEach(a => a.classList.toggle("akt", a.dataset.t === t || (t === "analiza" && a.dataset.t === "dzis")));
-  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia" }[t] || "Trener";
+  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się" }[t] || "Trener";
   widok.innerHTML = `<div class="ladowanie">Ładuję…</div>`;
   try {
-    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien }[t] || pokazDzis)();
+    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart }[t] || pokazDzis)();
   } catch (e) { widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
 }
 window.addEventListener("hashchange", route);
 $("#btn-ust").onclick = pokazUstawienia;
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 route();
+
+// ------------------------------------------------------------------ Ankieta startowa
+const KROKI = [
+  { t: "🎯 Do czego trenujesz?", p: [
+    { k: "cele", typ: "multi", o: ["Wyścigi XCO (MTB)", "Maratony MTB", "Wyścigi szosowe", "Długie trasy / gran fondo", "Wyższe FTP i forma", "Bieg (np. 5–10 km)", "Siła i sylwetka", "Zdrowie i kondycja"] },
+    { k: "cel_opis", typ: "tekst", l: "Własnymi słowami (co chcesz osiągnąć, np. „top 10 w juniorach”, „FTP 270 W”)" }] },
+  { t: "📅 Terminy", p: [
+    { k: "zawody", typ: "tekst", l: "Zawody i ważne daty (który start najważniejszy?)", ph: "np. 16.05 XC — najważniejszy; 12.04 start testowy" },
+    { k: "szkola", typ: "tekst", l: "Szkoła: egzaminy, ferie, wyjazdy", ph: "np. ferie 15–28.02, matura próbna w marcu" }] },
+  { t: "⏱️ Ile masz czasu?", p: [
+    { k: "dni", typ: "dni", o: ["—", "do 1 h", "1–1,5 h", "1,5–2 h", "2–3 h", "3 h+"] },
+    { k: "gdzie", typ: "jeden", l: "Gdzie jeździsz zimą", o: ["na zewnątrz", "trenażer", "zależy od pogody"] }] },
+  { t: "🚲 Sprzęt", p: [
+    { k: "sprzet", typ: "multi", o: ["rower szosowy", "MTB", "gravel", "trenażer smart", "miernik mocy", "pas tętna", "siłownia (pełna)", "siłownia szkolna", "sprzęt w domu"] }] },
+  { t: "🏋️ Siłownia i bieganie", p: [
+    { k: "silka", typ: "jeden", l: "Siłownia w tygodniu", o: ["0", "1", "2", "3"] },
+    { k: "bieg", typ: "jeden", l: "Bieganie", o: ["nie", "1× w tygodniu", "2–3× w tygodniu"] }] },
+  { t: "🎨 Jak ma wyglądać plan", p: [
+    { k: "styl", typ: "jeden", l: "Charakter", o: ["spokojnie — zdrowie i przyjemność", "zrównoważony", "ambitnie — maksimum progresu"] },
+    { k: "zegarek", typ: "jeden", l: "Treningi na zegarku", o: ["szczegółowe (moc/tętno, interwały)", "proste (czas + strefa)"] },
+    { k: "analizy", typ: "jeden", l: "Analizy", o: ["krótkie", "szczegółowe z liczbami"] },
+    { k: "powiadomienia", typ: "jeden", l: "Powiadomienia", o: ["codziennie rano + po treningu", "tylko ważne zmiany"] }] },
+  { t: "🩺 Zdrowie i reszta", p: [
+    { k: "zdrowie", typ: "tekst", l: "Kontuzje, bóle, ograniczenia", ph: "np. kolano po upadku, nic" },
+    { k: "inne", typ: "tekst", l: "Coś jeszcze, co trener powinien wiedzieć?" }] },
+];
+let ank = null, krokNr = 0;
+const DNI_T = ["pon", "wt", "śr", "czw", "pt", "sob", "ndz"];
+
+async function pokazStart() {
+  if (!ank) { const s = await api("start"); ank = s.ankieta || {}; }
+  rysujKrok();
+}
+function rysujKrok() {
+  const kr = KROKI[krokNr];
+  const pola = kr.p.map(p => {
+    const v = ank[p.k];
+    if (p.typ === "multi" || p.typ === "jeden") return `${p.l ? `<label>${esc(p.l)}</label>` : ""}<div class="wiersz chipy" data-k="${p.k}" data-typ="${p.typ}">${p.o.map(o =>
+      `<button class="chip ${(p.typ === "multi" ? (v || []).includes(o) : v === o) ? "akt" : ""}" data-v="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+    if (p.typ === "tekst") return `<label>${esc(p.l)}</label><textarea data-k="${p.k}" rows="3" placeholder="${esc(p.ph || "")}">${esc(v || "")}</textarea>`;
+    if (p.typ === "dni") return DNI_T.map(d => `<div class="przelacznik"><span>${d}</span><select data-dzien="${d}" style="width:auto">${p.o.map(o =>
+      `<option ${((v || {})[d] || "—") === o ? "selected" : ""}>${o}</option>`).join("")}</select></div>`).join("");
+  }).join("");
+  widok.innerHTML = `<div class="szary">Krok ${krokNr + 1} z ${KROKI.length}</div><div class="pasek"><i style="width:${(krokNr + 1) / KROKI.length * 100}%"></i></div>
+    <div class="karta"><h3>${kr.t}</h3>${pola}</div>
+    <div class="wiersz">${krokNr ? `<button class="drugi" onclick="zbierz();krokNr--;rysujKrok()">← Wstecz</button>` : ""}
+    <button onclick="zbierz();dalej()">${krokNr === KROKI.length - 1 ? "Wyślij trenerowi ✓" : "Dalej →"}</button></div>`;
+  widok.querySelectorAll(".chipy").forEach(g => g.addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    if (g.dataset.typ === "jeden") g.querySelectorAll(".chip").forEach(x => x !== b && x.classList.remove("akt"));
+    b.classList.toggle("akt");
+  }));
+  window.scrollTo(0, 0);
+}
+function zbierz() {
+  widok.querySelectorAll(".chipy").forEach(g => {
+    const w = [...g.querySelectorAll(".chip.akt")].map(b => b.dataset.v);
+    ank[g.dataset.k] = g.dataset.typ === "multi" ? w : (w[0] || "");
+  });
+  widok.querySelectorAll("textarea[data-k]").forEach(t => ank[t.dataset.k] = t.value.trim());
+  const dni = widok.querySelectorAll("select[data-dzien]");
+  if (dni.length) { ank.dni = {}; dni.forEach(s => ank.dni[s.dataset.dzien] = s.value === "—" ? "" : s.value); }
+}
+async function dalej() {
+  if (krokNr < KROKI.length - 1) { krokNr++; rysujKrok(); return; }
+  widok.innerHTML = `<div class="karta mysli">Trener czyta Twoje odpowiedzi i dane z Garmina</div>`;
+  try {
+    const w = await czekaj(await api("start", ank));
+    pokazPytania(w);
+  } catch (e) { widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div><button onclick="rysujKrok()">Wróć</button>`; }
+}
+function pokazPytania(w) {
+  const pyt = w.pytania || [];
+  widok.innerHTML = `<div class="karta"><h3>🧑‍🏫 Trener</h3><div class="tresc">${esc(w.podsumowanie)}</div></div>
+    ${pyt.length ? `<h2>Jeszcze ${pyt.length === 1 ? "jedno pytanie" : "kilka pytań"}</h2>` : ""}
+    ${pyt.map((p, i) => `<div class="karta" data-i="${i}"><b>${esc(p.pytanie)}</b>
+      ${(p.opcje || []).length ? `<div class="wiersz chipy" data-typ="${p.wielokrotny ? "multi" : "jeden"}" style="margin-top:8px">${p.opcje.map(o => `<button class="chip" data-v="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : ""}
+      <textarea rows="2" placeholder="${(p.opcje || []).length ? "albo napisz po swojemu" : "odpowiedź"}" style="margin-top:8px"></textarea></div>`).join("")}
+    <button style="width:100%" id="uloz">🗺️ Ułóż periodyzację i plan</button>
+    <div class="szary" style="margin-top:8px">To potrwa kilka minut. Możesz zamknąć apkę — dostaniesz powiadomienie, a treningi same trafią na zegarek.</div>`;
+  widok.querySelectorAll(".chipy").forEach(g => g.addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    if (g.dataset.typ === "jeden") g.querySelectorAll(".chip").forEach(x => x !== b && x.classList.remove("akt"));
+    b.classList.toggle("akt");
+  }));
+  $("#uloz").onclick = async () => {
+    const odp = pyt.map((p, i) => {
+      const k = widok.querySelector(`[data-i="${i}"]`);
+      const wyb = [...k.querySelectorAll(".chip.akt")].map(b => b.dataset.v), t = k.querySelector("textarea").value.trim();
+      return { pytanie: p.pytanie, odpowiedz: [...wyb, t].filter(Boolean).join("; ") };
+    });
+    widok.innerHTML = `<div class="karta mysli">Trener układa periodyzację do Twojego celu, plan tygodnia i sprawdza go z zasadami treningu</div>
+      <div class="szary">Zwykle 4–7 minut.</div>`;
+    try {
+      await czekaj(await api("start/koniec", { odpowiedzi: odp }));
+      location.hash = "#plan";
+    } catch (e) { widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
+  };
+}

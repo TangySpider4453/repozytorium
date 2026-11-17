@@ -86,7 +86,7 @@ def cykl():
             log.exception("makrocykl")
     # 4) plan: brakujące dni
     braki = plan.braki(db)
-    if braki and (u["cele"] or baza.kv(db, "plan_bez_celow_ok")):
+    if braki and u.get("start_gotowy"):
         try:
             przeplanuj(f"uzupełnienie planu ({len(braki)} dni bez treningu)")
         except Exception:

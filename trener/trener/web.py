@@ -121,7 +121,7 @@ def api_dzis():
         "plan": _plan(d, dzis.isoformat(), (dzis + timedelta(days=2)).isoformat()),
         "zrobione_dni": sorted(zrobione),
         "ostatni_sync": baza.kv(d, "ostatni_sync"), "historia": baza.kv(d, "historia_postep"),
-        "ustawienia_puste": not config.ustawienia()["cele"]})
+        "ustawienia_puste": not config.ustawienia().get("start_gotowy")})
 
 
 @app.route("/api/dni")
@@ -246,6 +246,25 @@ def api_ustawienia():
         baza.ustaw_kv(d, "pamiec_trenera", (request.get_json(silent=True) or {}).get("pamiec", baza.kv(d, "pamiec_trenera", [])))
         return jsonify(u)
     return jsonify(dict(config.ustawienia(), pamiec=baza.kv(db(), "pamiec_trenera", [])))
+
+
+@app.route("/api/start", methods=["GET", "POST"])
+def api_start():
+    from . import start
+    if request.method == "GET":
+        u = config.ustawienia()
+        return jsonify({"ankieta": u.get("ankieta") or {}, "gotowy": u.get("start_gotowy"), "pytania": baza.kv(db(), "start_pytania")})
+    a = request.get_json(silent=True) or {}
+    if not isinstance(a, dict) or len(json.dumps(a)) > 20000:
+        abort(400)
+    return jsonify(zadanie("start", start.dopytaj, a))
+
+
+@app.route("/api/start/koniec", methods=["POST"])
+def api_start_koniec():
+    from . import start
+    o = (request.get_json(silent=True) or {}).get("odpowiedzi") or []
+    return jsonify(zadanie("start_koniec", start.zakoncz, o))
 
 
 @app.route("/api/push/klucz")

@@ -23,6 +23,8 @@ INSTRUKCJA = """Rozmawiasz z Antkiem w apce Trener. Odpowiadaj konkretnie (zwykl
 - Gdy Antek prosi o zmianę treningów albo z rozmowy wynika, że plan trzeba zmienić: zmienic_plan=true i opisz zmianę
   w prosba_do_planu — apka sama przeplanuje i wyśle na zegarek (powiedz mu, że to się dzieje).
 - Gdy poda cele / kiedy może trenować / sprzęt — wpisz w ustawienia (pełny nowy tekst pola).
+- Jeśli w kontekście nie ma ANKIETY ANTKA: zachęć go do wypełnienia ankiety startowej w apce (karta „Zacznijmy”) —
+  plan powstaje dopiero po niej.
 - Nowy cel / termin zawodów / duża zmiana (kontuzja, wyjazd na miesiąc) → przebuduj_makrocykl=true (periodyzacja od nowa).
 - Opieraj się na BAZIE WIEDZY; na pytanie „dlaczego tak” odpowiadaj zasadą i źródłem.
 - Trwałe fakty (kontuzja, nie lubi biegać, ma zawody 12.04) — zapamietaj.
@@ -71,7 +73,10 @@ def odpowiedz(tresc, analiza_id=None):
         p = baza.kv(db, "pamiec_trenera", [])
         baza.ustaw_kv(db, "pamiec_trenera", (p + [f"{baza.teraz()[:10]}: {x}" for x in w["zapamietaj"]])[-60:])
         akcje.append("zapamiętane: " + "; ".join(w["zapamietaj"]))
-    nowy_makro = w.get("przebuduj_makrocykl") or cel.potrzebny(db)
+    gotowy = config.ustawienia().get("start_gotowy")
+    if not gotowy:                            # przed ankietą startową: rozmowa tak, planowanie nie
+        w["zmienic_plan"] = False
+    nowy_makro = gotowy and (w.get("przebuduj_makrocykl") or cel.potrzebny(db))
     if nowy_makro:
         akcje.append("nowa periodyzacja")
     if w.get("zmienic_plan") or nowy_makro:

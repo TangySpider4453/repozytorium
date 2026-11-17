@@ -64,3 +64,9 @@ svg.wykres text { fill: var(--szary); font-size: 10px; }
 .mysli::after { content: "…"; animation: kropki 1.2s infinite; }
 @keyframes kropki { 0% { content: "."; } 33% { content: ".."; } 66% { content: "..."; } }
 details summary { cursor: pointer; color: var(--akcent); font-size: 13px; margin-top: 6px; }
+
+.chipy { gap: 6px; margin-top: 4px; }
+.chip { background: var(--karta2); color: var(--tekst); font-weight: 500; padding: 8px 12px; border: 1px solid var(--linia); border-radius: 99px; font-size: 14px; }
+.chip.akt { background: var(--akcent); border-color: var(--akcent); color: #fff; }
+.pasek { height: 4px; background: var(--karta2); border-radius: 4px; margin: 6px 0 12px; overflow: hidden; }
+.pasek i { display: block; height: 100%; background: var(--akcent); }

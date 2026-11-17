@@ -11,6 +11,7 @@ Dane z Garmin Connect (nieoficjalne API, `garminconnect`) → SQLite → analizy
 | Claude CLI (`--json-schema`, bez narzędzi, pusty katalog) | `trener/ai.py` |
 | **baza wiedzy** (metodyka ze źródeł: periodyzacja, rozkład intensywności, strefy Coggana, biblioteka jednostek,
 siłownia dla kolarza, bieg, HRV/sen, młody sportowiec — z linkami do badań) | `trener/wiedza/*.md` |
+| **ankieta startowa** (7 kroków: cele, terminy, dni, sprzęt, siłka/bieg, jak ma wyglądać plan, zdrowie) → Claude dopytuje (0–4 pytania z opcjami) → dopiero wtedy makrocykl i plan (`start_gotowy`) | `trener/start.py`, `#start` w apce |
 | **makrocykl** (fazy do celu: godziny, intensywność, sesje kluczowe, testy FTP; przebudowa przy zmianie celów) | `trener/cel.py` |
 | analizy: rano (po śnie), po treningu, tydzień (pon.) | `trener/analiza.py` |
 | plan na 7 dni wg fazy makrocyklu i bazy wiedzy + **kontrola kodem** (skok objętości > 30%, > 3 akcenty, akcenty dzień po dniu, < 48 h po ciężkich nogach, widełki fazy) → jedna poprawka przez Claude | `trener/plan.py` |

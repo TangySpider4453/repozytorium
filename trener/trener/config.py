@@ -26,6 +26,8 @@ DOMYSLNE = {
     "push": True,
     "linphone": True,
     "model": "claude-sonnet-5-5",
+    "ankieta": {},                  # odpowiedzi z ankiety startowej (cele, terminy, dni, sprzęt, styl planu…)
+    "start_gotowy": False,          # ankieta + dopytanie zakończone → wolno planować
 }
 
 

@@ -63,7 +63,8 @@ def ftp(db):
 
 def odcisk_celow():
     u = config.ustawienia()
-    return hashlib.sha1(json.dumps([u["cele"], u["dostepnosc"], u["sprzet"], u["sporty"]], ensure_ascii=False).encode()).hexdigest()[:12]
+    return hashlib.sha1(json.dumps([u["cele"], u["dostepnosc"], u["sprzet"], u["sporty"], u.get("ankieta")],
+                                   ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:12]
 
 
 def makrocykl(db=None):
@@ -82,7 +83,7 @@ def faza_teraz(m, d=None):
 def potrzebny(db):
     """makrocykl do (prze)budowy: brak, inne cele, skończył się"""
     u = config.ustawienia()
-    if not u["cele"]:
+    if not u["cele"] or not u.get("start_gotowy"):
         return False
     m = makrocykl(db)
     if not m or m.get("_odcisk") != odcisk_celow():

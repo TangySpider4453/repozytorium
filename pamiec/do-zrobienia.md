@@ -9,7 +9,7 @@
 - [x] Hook łączy się sam kluczem `TS_AUTHKEY` (potwierdzone 17.11); `ssh pi` nadal pyta o link „check”.
 
 ## Trener (nowa apka, 17.11)
-- [ ] Antek: otworzyć apkę na iPhonie, Add to Home Screen, włączyć push, wpisać cele/dostępność/sprzęt (czat albo ⚙️).
+- [ ] Antek: otworzyć apkę na iPhonie, Add to Home Screen, włączyć push, wypełnić **ankietę startową** (karta „Zacznijmy” → 7 kroków + dopytanie). Bez niej apka nie planuje.
 - [ ] Po pierwszym planie i jego sprawdzeniu na zegarku: wyłączyć stary most (`sudo systemctl disable --now rtg-garmin.timer`)
   i zdecydować, czy RestOrTrain w ogóle zostaje.
 - [ ] Sprawdzić, czy `trener-historia` (pobieranie od 2021) skończył: `kv.historia_postep == "gotowe"`.
