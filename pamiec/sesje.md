@@ -8,7 +8,7 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   Sen: fazy z 14 nocy, szczegóły nocy vs 30 dni i najlepsza noc, pora snu. Wgrane na Pi (md5 zgodne), bez restartu.
   Potem: iPhone pokazywał starą wersję → `/` wstawia `?v=<mtime>` do CSS/JS i ma `no-store`; przy pisaniu w czacie
   dolne menu się chowa (pole przy klawiaturze). Restart `trener-web`.
-  Push nie działał (pywebpush nie czyta klucza PEM z tekstu) → `Vapid.from_pem`; test doszedł do 1 urządzenia.
+  Push nie działał (pywebpush nie czyta klucza PEM z tekstu) → `Vapid.from_pem`; test doszedł do 1 urządzenia. Przycisk Test wysyła z Pi po 10 s (żeby zablokować telefon).
 - **2026-11-17 (chmura, 4c)**: Claude Code na Pi: `~/.claude/settings.json` = `autoCompactWindow` 200000 + env `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS=100000` (kompakt po ~1 h bezczynności, przed wygaśnięciem cache). Interaktywny `claude` na Pi nie jest zalogowany (token tylko w env usług). W chmurze tę zmienną Antek musi dodać sam w Settings środowiska (sesja nie może).
   Funnel włączony za zgodą Antka (`--https=443 http://127.0.0.1:8095`); test z internetu: strona 200, `/api/*` bez klucza 401.
   iPhone z Tailscale i tak szedł przez Funnel → dodano kod parowania (`python -m trener kod`) i poprawiono dolny pasek.

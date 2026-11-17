@@ -595,7 +595,7 @@ async function ekranUstawien() {
     <label>Planuj na ile dni do przodu</label><input type="number" id="u-plan_dni" min="3" max="14" value="${u.plan_dni}"></div>
     <div class="karta"><h3>Automatyka</h3>${pr("auto_zegarek", "Treningi same idą na zegarek")}${pr("analiza_rano", "Analiza poranna po śnie")}${pr("push", "Powiadomienia push")}${pr("linphone", "Kopia na Linphone")}
     <div class="wiersz" style="margin-top:10px"><span class="szary">Push: ${pushStan}</span></div>
-    <div class="wiersz" style="margin-top:8px"><button onclick="wlaczPush()">🔔 Włącz powiadomienia</button><button class="drugi" onclick="api('push/test',{}).then(n=>alert('Wysłano do '+n+' urządzeń'))">Test</button></div></div>
+    <div class="wiersz" style="margin-top:8px"><button onclick="wlaczPush()">🔔 Włącz powiadomienia</button><button class="drugi" onclick="testPush(this)">Test za 10 s</button></div></div>
     <div class="karta"><h3>🔐 Zapamiętane urządzenia</h3><div id="urz" class="szary">…</div>
       <button class="drugi" style="margin-top:8px" onclick="if(confirm('Wylogować wszystkie inne urządzenia?'))api('urzadzenia',{}).then(ekranUstawien)">Wyloguj inne urządzenia</button></div>
     <div class="karta"><h3>Pamięć trenera</h3><div class="szary">Ustalenia z rozmów (jedno na linię)</div><textarea id="u-pamiec" rows="5">${esc((u.pamiec || []).join("\n"))}</textarea></div>
@@ -613,6 +613,12 @@ async function zapiszUst() {
   ["auto_zegarek", "analiza_rano", "push", "linphone"].forEach(k => u[k] = $("#u-" + k).checked);
   await api("ustawienia", u);
   if (confirm("Zapisane. Przeplanować teraz według nowych ustawień?")) { location.hash = "#plan"; setTimeout(() => akcja("plan"), 300); }
+}
+async function testPush(b) {
+  await api("push/test", { za: 10 });
+  b.disabled = true;
+  for (let i = 10; i > 0; i--) { b.textContent = `Zablokuj telefon… ${i}`; await new Promise(r => setTimeout(r, 1000)); }
+  b.textContent = "Wysłane"; setTimeout(() => { b.textContent = "Test za 10 s"; b.disabled = false; }, 3000);
 }
 async function wlaczPush() {
   try {

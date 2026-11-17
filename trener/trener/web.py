@@ -401,4 +401,8 @@ def api_push_sub():
 
 @app.route("/api/push/test", methods=["POST"])
 def api_push_test():
+    za = min(int((request.get_json(silent=True) or {}).get("za", 0) or 0), 60)
+    if za:   # opóźnienie po stronie Pi: zdążysz zablokować telefon (zablokowany iPhone wstrzymuje apkę)
+        threading.Timer(za, powiadom.push, ("🏋️ Trener", "Test: działa też na zablokowanym telefonie.", "/")).start()
+        return jsonify(-1)
     return jsonify(powiadom.push("🏋️ Trener", "Powiadomienia działają.", "/"))
