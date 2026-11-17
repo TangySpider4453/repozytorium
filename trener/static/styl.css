@@ -167,3 +167,7 @@ details summary { cursor: pointer; color: var(--akcent-t); font-size: 13px; marg
 .pasek { height: 4px; background: var(--karta2); border-radius: 4px; margin: 6px 0 12px; overflow: hidden; }
 .pasek i { display: block; height: 100%; background: var(--akcent); }
 code { background: var(--karta2); padding: 1px 5px; border-radius: 5px; }
+details.makro > summary { list-style: none; margin-top: 0; color: inherit; font-size: inherit; }
+details.makro > summary::-webkit-details-marker { display: none; }
+details.makro > summary .kt { display: inline; margin: 0; }
+details.makro[open] > summary { margin-bottom: 8px; }

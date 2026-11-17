@@ -48,3 +48,4 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - Stałe wymagania Trenera: `wymagania` w kontekście jako nadrzędne, `plan.partia()` liczy górę po kategoriach Garmina, zmiana wymagań przebudowuje makrocykl (`odcisk_makro`, bez nowych badań). Wiedza: sekcja „Nogi” w `wiedza/03_silka.md`. Stara notka 2+2 usunięta z `pamiec_trenera`.
 - Kontrola planu sprawdza też: Push/Pull/Full Upper w tytułach, brzuch (kategorie CRUNCH/LEG_RAISE/CORE/PLANK) na każdej siłce, max 1 ćwiczenie skośne/tydz. Uwaga: „prostowanie nóg” Antka jest w Garminie pod CRUNCH.
 - 2026-11-17: ustalenia z RestOrTrain przeniesione do Trenera (wymagania na Pi, nowe kontrole planu, cel rekompozycji).
+- 2026-11-17: karta Periodyzacja w zakładce Plan zwijana (pamięta stan), szczegóły rozwijane przy każdej fazie.

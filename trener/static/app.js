@@ -500,14 +500,15 @@ async function kartaMakro() {
     const teraz = f.od <= dz && dz <= f.do;
     return `<div class="trening" style="${teraz ? "border-color:var(--akcent)" : "opacity:.8"}"><b>${teraz ? "▶ " : ""}${esc(f.nazwa)}</b> <span class="szary">${esc(f.od.slice(5))}–${esc(f.do.slice(5))} · ${f.godziny_tyg_od}–${f.godziny_tyg_do} h/tydz.</span>
       <div class="szary">${esc(f.cel)}</div>
-      ${teraz ? `<details><summary>szczegóły fazy</summary><div class="szary">Intensywność: ${esc(f.intensywnosc)}<br>Kluczowe: ${(f.sesje_kluczowe || []).map(esc).join("; ")}<br>Siłka ${f.silka_tyg ?? "–"}/tydz., bieg ${f.bieg_tyg ?? "–"}/tydz. · ${esc(f.rytm || "")}${(f.testy || []).length ? "<br>Testy: " + f.testy.map(esc).join(", ") : ""}</div></details>` : ""}</div>`;
+      ${`<details${teraz ? " open" : ""}><summary>szczegóły fazy</summary><div class="szary">Intensywność: ${esc(f.intensywnosc)}<br>Kluczowe: ${(f.sesje_kluczowe || []).map(esc).join("; ")}<br>Siłka ${f.silka_tyg ?? "–"}/tydz., bieg ${f.bieg_tyg ?? "–"}/tydz. · ${esc(f.rytm || "")}${(f.testy || []).length ? "<br>Testy: " + f.testy.map(esc).join(", ") : ""}</div></details>`}</div>`;
   }).join("");
   const u = m.plan_uzasadnienie;
-  return `<div class="karta"><div class="kt">Periodyzacja</div><div style="color:var(--tekst2);font-size:14px">${esc(mk.cel_glowny)}</div><div class="szary">${mk.data_docelowa ? "do " + esc(mk.data_docelowa) + " · " : ""}${esc(m.progi.split("\n")[0] || "")}</div>
+  const biez = mk.fazy.find(f => f.od <= dz && dz <= f.do);
+  return `<details class="karta makro"${localStorage.makroOtwarte === "1" ? " open" : ""} ontoggle="localStorage.makroOtwarte=this.open?'1':'0'"><summary><span class="kt">Periodyzacja ▾</span><span class="szary"> ${biez ? "▶ " + esc(biez.nazwa) + " do " + esc(biez.do.slice(5)) : ""}</span></summary><div style="color:var(--tekst2);font-size:14px">${esc(mk.cel_glowny)}</div><div class="szary">${mk.data_docelowa ? "do " + esc(mk.data_docelowa) + " · " : ""}${esc(m.progi.split("\n")[0] || "")}</div>
     <div style="margin-top:8px">${fazy}</div>
     <details><summary>dlaczego tak (zasady, ocena formy)</summary><div class="tresc szary">${esc(mk.ocena_wyjsciowa)}\n\n${esc(mk.uzasadnienie)}\n\n${(mk.zasady_indywidualne || []).map(x => "• " + esc(x)).join("\n")}</div></details>
     ${u ? `<details><summary>uzasadnienie bieżącego planu</summary><div class="tresc szary">${esc(u.tekst)}${(u.uwagi || []).length ? "\n\n⚠️ Kontrola: " + u.uwagi.map(esc).join("; ") : ""}</div></details>` : ""}
-    <div class="wiersz" style="margin-top:8px"><a class="btn drugi" href="#wiedza">📚 Źródła trenera</a><button class="drugi" onclick="if(confirm('Ułożyć periodyzację od nowa i przeplanować?'))akcja('makrocykl')">🔁 Przebuduj periodyzację</button></div></div>`;
+    <div class="wiersz" style="margin-top:8px"><a class="btn drugi" href="#wiedza">📚 Źródła trenera</a><button class="drugi" onclick="if(confirm('Ułożyć periodyzację od nowa i przeplanować?'))akcja('makrocykl')">🔁 Przebuduj periodyzację</button></div></div></details>`;
 }
 
 async function pokazPlan() {
