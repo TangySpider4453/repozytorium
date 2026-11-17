@@ -16,6 +16,8 @@ SCHEMAT = {"type": "object", "properties": {
     "zmienic_plan": {"type": "boolean"},
     "przebuduj_makrocykl": {"type": "boolean", "description": "nowy/zmieniony cel, termin zawodów albo duża zmiana sytuacji"},
     "prosba_do_planu": {"type": "string"},
+    "decyzja_propozycji": {"type": "string", "enum": ["zmien", "zostaw", "brak"],
+                           "description": "odpowiedź Antka na propozycję CZEKA NA DECYZJĘ (gdy jest w kontekście)"},
     "zapamietaj": {"type": "array", "items": {"type": "string"}, "description": "trwałe ustalenia (np. kontuzja, preferencje)"},
     "ustawienia": {"type": "object", "properties": {"cele": {"type": "string"}, "dostepnosc": {"type": "string"},
                                                    "sprzet": {"type": "string"}}}},
@@ -29,6 +31,8 @@ INSTRUKCJA = """Rozmawiasz z Antkiem w apce Trener. Odpowiadaj konkretnie (zwykl
   plan powstaje dopiero po niej.
 - Nowy cel / termin zawodów / duża zmiana (kontuzja, wyjazd na miesiąc) → przebuduj_makrocykl=true (periodyzacja od nowa).
 - Opieraj się na BAZIE WIEDZY; na pytanie „dlaczego tak” odpowiadaj zasadą i źródłem.
+- Gdy w kontekście jest CZEKA NA DECYZJĘ ANTKA, a Antek odpowiada (np. „słabo się czuję, zmień” / „czuję się
+  dobrze, zostaw”) → decyzja_propozycji = zmien / zostaw. Inaczej „brak”.
 - Trwałe fakty (kontuzja, nie lubi biegać, ma zawody 12.04) — zapamietaj.
 - Gdy pyta o konkretny okres z historii, a nie masz szczegółów — podaj potrzebne_dane {od, do} (RRRR-MM-DD), a
   odpowiedz krótko „sprawdzam”; dostaniesz dane w drugiej rundzie."""
@@ -140,6 +144,17 @@ def _odpowiedz(db, tresc, analiza_id):
         p = baza.kv(db, "pamiec_trenera", [])
         baza.ustaw_kv(db, "pamiec_trenera", (p + [f"{baza.teraz()[:10]}: {x}" for x in w["zapamietaj"]])[-60:])
         akcje.append("zapamiętane: " + "; ".join(w["zapamietaj"]))
+    if w.get("decyzja_propozycji") in ("zmien", "zostaw"):
+        from .plan import zdecyduj
+        zm = zdecyduj(db, w["decyzja_propozycji"] == "zmien", tresc[:120])
+        akcje.append("propozycja: " + ("zmienione" if w["decyzja_propozycji"] == "zmien" else "plan bez zmian"))
+        if zm:
+            from . import zegarek
+            from .garmin import polacz
+            try:
+                zegarek.synchronizuj_plan(polacz(), db)
+            except Exception:
+                log.exception("zegarek po decyzji")
     gotowy = config.ustawienia().get("start_gotowy")
     if not gotowy:                            # przed ankietą startową: rozmowa tak, planowanie nie
         w["zmienic_plan"] = False

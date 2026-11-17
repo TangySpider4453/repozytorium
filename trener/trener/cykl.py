@@ -24,8 +24,8 @@ def odswiez_strefy(g, db):
     baza.ustaw_kv(db, "strefy_dzien", date.today().isoformat())
 
 
-def przeplanuj(powod, prosba="", powiadamiaj=True):
-    wyn = plan.zaplanuj(powod, prosba)
+def przeplanuj(powod, prosba="", powiadamiaj=True, pytaj=False):
+    wyn = plan.zaplanuj(powod, prosba, pytaj=pytaj)
     if not wyn:
         return None
     db = baza.polacz()
@@ -35,7 +35,12 @@ def przeplanuj(powod, prosba="", powiadamiaj=True):
         except Exception as ex:
             log.exception("zegarek")
             wyn["zegarek"] = [f"błąd wysyłania: {ex}"]
-    if powiadamiaj and wyn["zmiany"]:
+    p = wyn.get("propozycja")
+    if p:                                     # duża zmiana (usunięcie/dodanie jednostki) → pytanie do Antka
+        powiadom.powiadom("❓ Trener pyta: zmienić plan?", wyn["komentarz"] + "\n" + "\n".join(p["zmiany"][:8])
+                          + ("\nJuż zmienione: " + "; ".join(wyn["zmiany"][:6]) if wyn["zmiany"] else "")
+                          + "\nSłabo się czujesz → Zmień. Czujesz się dobrze → Zostaw.", "/#plan", db)
+    elif powiadamiaj and wyn["zmiany"]:
         powiadom.powiadom("📅 Plan zmieniony", wyn["komentarz"] + "\n" + "\n".join(wyn["zmiany"][:12]), "/#plan", db)
     return wyn
 
@@ -66,7 +71,7 @@ def cykl():
         try:
             a = analiza.analizuj("trening", aktywnosci=tr, db=db)
             if a and a.get("zmienic_plan"):
-                przeplanuj("analiza treningu", a.get("prosba_do_planu", ""))
+                przeplanuj("analiza treningu", a.get("prosba_do_planu", ""), pytaj=True)
         except Exception:
             log.exception("analiza treningu")
     # 2) rano, gdy jest dzisiejszy sen
@@ -75,8 +80,12 @@ def cykl():
             and not analiza.zrobiona(db, "rano", date.today().isoformat()):
         try:
             a = analiza.analizuj("rano", db=db)
-            if a and a.get("zmienic_plan"):
-                przeplanuj("analiza poranna", a.get("prosba_do_planu", ""))
+            if a and u.get("korekta_po_snie", True) and u.get("start_gotowy"):   # codziennie: plan pod dzisiejszy sen
+                przeplanuj("korekta po ocenie snu", a.get("prosba_do_planu", "") if a.get("zmienic_plan") else
+                           "Sprawdź najbliższe 2–3 dni pod dzisiejszy sen i regenerację; jeśli pasują — bez zmian.",
+                           pytaj=True)
+            elif a and a.get("zmienic_plan"):
+                przeplanuj("analiza poranna", a.get("prosba_do_planu", ""), pytaj=True)
             if date.today().weekday() == 0:
                 analiza.analizuj("tydzien", db=db)
         except Exception:

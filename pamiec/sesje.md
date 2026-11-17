@@ -49,3 +49,4 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - Kontrola planu sprawdza też: Push/Pull/Full Upper w tytułach, brzuch (kategorie CRUNCH/LEG_RAISE/CORE/PLANK) na każdej siłce, max 1 ćwiczenie skośne/tydz. Uwaga: „prostowanie nóg” Antka jest w Garminie pod CRUNCH.
 - 2026-11-17: ustalenia z RestOrTrain przeniesione do Trenera (wymagania na Pi, nowe kontrole planu, cel rekompozycji).
 - 2026-11-17: karta Periodyzacja w zakładce Plan zwijana (pamięta stan), szczegóły rozwijane przy każdej fazie.
+- 2026-11-17: codzienna korekta planu po ocenie snu; duże zmiany (usunięcie/dodanie jednostki) czekają na decyzję Antka (push + przyciski + czat).

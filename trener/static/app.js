@@ -409,6 +409,7 @@ async function pokazDzis() {
       ${st ? `<span class="status ${st[0]}"><i></i>${st[1]}</span>` : ""}</div>
       ${pierscien(got)}</div>
       <div class="szary" style="margin-top:8px">${[poz && esc(POZIOM[String(poz).toUpperCase()] || String(poz).toLowerCase()), dz.regeneracja_h != null && `regeneracja ${lb(dz.regeneracja_h)} h`, dz.gotowosc_uwaga && esc(UWAGA_G[dz.gotowosc_uwaga] || String(dz.gotowosc_uwaga).toLowerCase().replace(/_/g, " "))].filter(Boolean).join(" · ")}</div></a>`;
+  h += kartaPropozycji(d.propozycja);
   if (d.analiza) {
     const a = d.analiza, oc = { dobrze: "dobrze", uwaga: "uwaga", zle: "zle" }[a.dane.ocena] || "";
     h += `<div class="karta"><div class="szary">${esc({ rano: "Analiza poranna", trening: "Po treningu", tydzien: "Tydzień" }[a.rodzaj] || a.rodzaj)} · ${esc(a.utworzono.slice(5, 16).replace("T", " "))}</div>
@@ -511,11 +512,20 @@ async function kartaMakro() {
     <div class="wiersz" style="margin-top:8px"><a class="btn drugi" href="#wiedza">📚 Źródła trenera</a><button class="drugi" onclick="if(confirm('Ułożyć periodyzację od nowa i przeplanować?'))akcja('makrocykl')">🔁 Przebuduj periodyzację</button></div></div></details>`;
 }
 
+function kartaPropozycji(p) {
+  if (!p) return "";
+  return `<div class="karta" style="border:1px solid var(--akcent)"><div class="kt">❓ Trener pyta: zmienić plan?</div>
+    <div>${esc(p.komentarz || "")}</div>
+    <div class="szary" style="margin-top:6px;white-space:pre-line">${p.zmiany.map(esc).join("\n")}</div>
+    <div class="szary" style="margin-top:6px">Słabo się czujesz albo źle spałeś → zmień. Czujesz się dobrze → zostaw plan.</div>
+    <div class="wiersz" style="margin-top:10px"><button onclick="akcja('propozycja',{zmien:true})">✅ Zmień</button><button class="drugi" onclick="akcja('propozycja',{zmien:false})">💪 Zostaw, czuję się dobrze</button><a class="btn drugi" href="#czat">💬 Omów</a></div></div>`;
+}
+
 async function pokazPlan() {
   const [d, makro] = await Promise.all([api("plan"), kartaMakro()]);
   const dni = [];
   for (let i = -7; i <= 14; i++) { const x = new Date(d.dzis + "T12:00"); x.setDate(x.getDate() + i); dni.push(x.toISOString().slice(0, 10)); }
-  let h = makro + `<div class="karta"><label>Poproś o zmianę (opcjonalnie)</label><textarea id="prosba" rows="2" placeholder="np. w czwartek nie mogę, w weekend dłuższy rower"></textarea>
+  let h = kartaPropozycji(d.propozycja) + makro + `<div class="karta"><label>Poproś o zmianę (opcjonalnie)</label><textarea id="prosba" rows="2" placeholder="np. w czwartek nie mogę, w weekend dłuższy rower"></textarea>
     <div class="wiersz" style="margin-top:8px"><button onclick="akcja('plan',{prosba:$('#prosba').value})">📅 Przeplanuj</button></div></div>`;
   for (const k of dni) {
     const pl = d.plan.filter(t => t.dzien === k), zr = d.zrobione[k] || [];

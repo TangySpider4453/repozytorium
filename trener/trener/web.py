@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 
 from flask import Flask, abort, jsonify, request, send_from_directory
 
-from . import baza, budowa, config, kontekst, powiadom
+from . import baza, budowa, config, kontekst, plan, powiadom
 
 log = logging.getLogger(__name__)
 app = Flask(__name__, static_folder=None)
@@ -197,6 +197,17 @@ def api_akcja():
         from .cykl import przeplanuj
         return jsonify(zadanie("badania", lambda: (zbadaj(prosba=b.get("prosba", "")), zbuduj(b.get("prosba", "")),
                                                    przeplanuj("nowe źródła"))[0]))
+    if r == "propozycja":                     # decyzja Antka: duża zmiana planu po ocenie snu
+        def decyzja():
+            from .plan import zdecyduj
+            d = db()
+            zm = zdecyduj(d, bool(b.get("zmien")), "przycisk w apce")
+            if zm and config.ustawienia()["auto_zegarek"]:
+                from . import zegarek
+                from .garmin import polacz
+                zegarek.synchronizuj_plan(polacz(), d)
+            return zm or "bez zmian"
+        return jsonify(zadanie("plan", decyzja))
     if r == "analiza":
         from .analiza import analizuj
         return jsonify(zadanie("analiza", analizuj, b.get("typ", "rano"), True))
@@ -227,6 +238,7 @@ def api_dzis():
         "dzis": dzis.isoformat(), "dni": dni,
         "analiza": dict(ost, dane=json.loads(ost["dane"])) if ost else None,
         "plan": _plan(d, dzis.isoformat(), (dzis + timedelta(days=2)).isoformat()),
+        "propozycja": plan.propozycja(d),
         "zrobione_dni": sorted(zrobione),
         "ostatni_sync": baza.kv(d, "ostatni_sync"), "historia": baza.kv(d, "historia_postep"),
         "ustawienia_puste": not config.ustawienia().get("start_gotowy")})
@@ -300,7 +312,7 @@ def api_plan():
     zrobione = {}
     for r in d.execute("SELECT dzien, typ, nazwa, dane FROM aktywnosci WHERE dzien BETWEEN ? AND ?", (od, do)):
         zrobione.setdefault(r[0], []).append(kontekst.dane.streszczenie_aktywnosci(baza.rozpakuj(r[3]) or {}))
-    return jsonify({"plan": _plan(d, od, do), "zrobione": zrobione, "dzis": dzis.isoformat()})
+    return jsonify({"plan": _plan(d, od, do), "zrobione": zrobione, "dzis": dzis.isoformat(), "propozycja": plan.propozycja(d)})
 
 
 @app.route("/api/makrocykl")

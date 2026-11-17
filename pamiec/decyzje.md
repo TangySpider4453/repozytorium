@@ -30,3 +30,7 @@
 - Pełne ustalenia (profil, strefy, lubiane ćwiczenia, wzór tygodnia, styl prowadzenia) są TYLKO na Pi w `dane/ustawienia.json` → `wymagania` (dane osobowe, nie do repo). Postęp ćwiczeń w kv `pamiec_trenera`.
 - Cel dopisany: rekompozycja do 30.04.2027 bez agresywnego deficytu; rower dalej pod cele kolarskie (nie „ogólne spalanie”). Sporty: + bieg.
 - Kontrola planu w kodzie: nogi 2×/tydz. (`nogi_tyg`), dni tylko na nogi (`dni_tylko_nogi`, na Pi = wtorek), odwodzenie+przywodzenie na końcu nóg, bez szrugsów, bez 2 tricepsów pod rząd, `tetno_ciezkie` (bpm) do liczenia jednostek intensywnych. Strefy własne → cele „tetno”/„moc” w bpm/W.
+
+## 2026-11-17 — Codzienna korekta planu po ocenie snu
+- Po porannej analizie (sen) trener ZAWSZE przegląda najbliższe dni (`korekta_po_snie`, domyślnie włączone). Małe zmiany (krócej/lżej/strefa) wchodzą od razu.
+- Usunięcie albo dodanie jednostki (dzień+sport) NIE wchodzi samo: kv `propozycja_planu`, push „❓ Trener pyta”, karta na Dziś i w Plan z przyciskami Zmień / Zostaw. Można też odpowiedzieć w czacie. Decyzja trafia do `pamiec_trenera`. To samo dotyczy przeplanowania po analizie treningu. Prośby z czatu i przebudowa periodyzacji zmieniają plan bez pytania.

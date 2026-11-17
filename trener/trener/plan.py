@@ -78,7 +78,7 @@ def zrobione_dzis(db):
     return [r[0] for r in db.execute("SELECT typ FROM aktywnosci WHERE dzien=?", (date.today().isoformat(),))]
 
 
-def zaplanuj(powod="", prosba="", dni=None):
+def zaplanuj(powod="", prosba="", dni=None, pytaj=False):
     """-> dict(komentarz, zmiany) albo None (plan już się liczy)"""
     config.DANE.mkdir(parents=True, exist_ok=True)
     f = open(config.DANE / "plan.lock", "w")
@@ -107,7 +107,12 @@ def zaplanuj(powod="", prosba="", dni=None):
         ZASADY,
         f"ZADANIE: ułóż plan na dni {od} .. {do} (sporty: {', '.join(u['sporty'])}). Powód: {powod or 'aktualizacja'}."
         + (f"\nPROŚBA ANTKA: {prosba}" if prosba else "")
-        + ("\nDziś już był trening — dzisiejszego dnia nie planuj." if od != dzis.isoformat() else "")] if x)
+        + ("\nDziś już był trening — dzisiejszego dnia nie planuj." if od != dzis.isoformat() else "")
+        + ("\nTRYB KOREKTY: zmieniaj tylko to, co wynika z dzisiejszej oceny (sen, HRV, regeneracja, ostatnie treningi); "
+           "resztę zostaw przez zostaw_id. Drobne zmiany (krócej, lżej, inna strefa, mniej serii) wchodzą od razu. "
+           "Usunięcie albo dodanie jednostki wymaga zgody Antka — wtedy w 'komentarz' napisz wprost dlaczego "
+           "(np. słaby sen, niski HRV) i co proponujesz zamiast. Nie usuwaj z ostrożności, gdy dane są w normie."
+           if pytaj else "")] if x)
     w = ai.zapytaj(prompt, SCHEMAT, effort="high", limit_s=600, ciezki=True)
     problemy = kontrola(db, w.get("treningi") or [], ist, cel.faza_teraz(m), cel.ftp(db))
     if problemy:                              # jedna poprawka: Claude dostaje konkretne zarzuty
@@ -116,44 +121,111 @@ def zaplanuj(powod="", prosba="", dni=None):
                        "\n\nKONTROLA WYKRYŁA PROBLEMY:\n- " + "\n- ".join(problemy) +
                        "\nPopraw plan (albo uzasadnij w 'uzasadnienie', dlaczego to celowe).", SCHEMAT, effort="high", limit_s=600, ciezki=True)
         problemy = kontrola(db, w.get("treningi") or [], ist, cel.faza_teraz(m), cel.ftp(db))
-    zmiany = zastosuj(db, w.get("treningi") or [], od, do, ist, powod)
+    wstrzymaj = dni_duzych_zmian(w.get("treningi") or [], ist) if pytaj else set()
+    zmiany, prop = zastosuj(db, w.get("treningi") or [], od, do, ist, powod, wstrzymaj)
+    if prop:
+        prop.update(powod=powod, komentarz=w.get("komentarz", ""), kiedy=baza.teraz(), do=max(wstrzymaj))
+        baza.ustaw_kv(db, "propozycja_planu", prop)
     baza.ustaw_kv(db, "plan_uzasadnienie", {"tekst": w.get("uzasadnienie", ""), "uwagi": problemy, "kiedy": baza.teraz()})
     log.info("plan: %s", zmiany)
-    return {"komentarz": w.get("komentarz", ""), "zmiany": zmiany, "od": od, "do": do,
+    return {"komentarz": w.get("komentarz", ""), "zmiany": zmiany, "od": od, "do": do, "propozycja": prop,
             "uzasadnienie": w.get("uzasadnienie", ""), "uwagi": problemy}
 
 
-def zastosuj(db, treningi, od, do, ist, zrodlo):
+def _usun(db, r):
+    db.execute("UPDATE plan SET stan=?, zmieniono=? WHERE id=?",
+               ("do_usuniecia" if r["workout_id"] else "usuniety", baza.teraz(), r["id"]))
+    return f"− {r['dzien']} {r['tytul']}"
+
+
+def _dodaj(db, t, zrodlo):
+    if t.get("opcjonalny") and t["sport"] != "odpoczynek" and not t["tytul"].lower().startswith("opcjonal"):
+        t["tytul"] = "Opcjonalny: " + t["tytul"]       # tak go widać w Garminie i w apce
+    if t["sport"] != "odpoczynek":
+        try:
+            budowa.buduj(t)                            # walidacja przed zapisem
+        except Exception as ex:
+            log.warning("odrzucony trening %s: %s", t.get("tytul"), ex)
+            return f"⚠️ {t.get('dzien')} {t.get('tytul')}: błąd planu ({ex})"
+    opis = t.get("opis", "") + (f"\nCel: {t['cel']}" if t.get("cel") else "")
+    db.execute("INSERT INTO plan (dzien, sport, tytul, opis, kroki, hash, stan, utworzono, zmieniono, zrodlo) "
+               "VALUES (?,?,?,?,?,?,?,?,?,?)",
+               (t["dzien"], t["sport"], t["tytul"][:60], opis, json.dumps(t.get("kroki") or [], ensure_ascii=False),
+                budowa.hash_treningu(t), "nowy" if t["sport"] != "odpoczynek" else "w_apce", baza.teraz(), baza.teraz(),
+                zrodlo[:200]))
+    return f"+ {t['dzien']} {t['tytul']}" + (f" (~{budowa.czas_min(t)} min)" if t["sport"] != "odpoczynek" else "")
+
+
+def dni_duzych_zmian(treningi, ist):
+    """dni z usunięciem albo dodaniem jednostki (dzień+sport). Zmiana treści/długości/intensywności tej samej
+    jednostki = mała. Uzupełnianie pustego dnia i trening opcjonalny = małe."""
+    po_id = {r["id"]: r for r in ist}
+    zostaja = {t["zostaw_id"] for t in treningi if t.get("zostaw_id") in po_id}
+    nowe = [t for t in treningi if t.get("zostaw_id") not in po_id]
+    ist_ds = {(r["dzien"], r["sport"]) for r in ist if r["sport"] != "odpoczynek"}
+    nowe_ds = {(t.get("dzien"), t.get("sport")) for t in nowe if t.get("sport") != "odpoczynek"}
+    dni_ist = {r["dzien"] for r in ist}
+    dni = {r["dzien"] for r in ist if r["id"] not in zostaja and r["sport"] != "odpoczynek"
+           and (r["dzien"], r["sport"]) not in nowe_ds}
+    dni |= {t["dzien"] for t in nowe if t.get("sport") != "odpoczynek" and not t.get("opcjonalny")
+            and t.get("dzien") in dni_ist and (t["dzien"], t["sport"]) not in ist_ds}
+    return dni
+
+
+def zastosuj(db, treningi, od, do, ist, zrodlo, wstrzymaj_dni=()):
+    """wprowadza plan; zmiany w dniach z wstrzymaj_dni nie są wprowadzane -> (zmiany, propozycja albo None)"""
     zostaja = {t["zostaw_id"] for t in treningi if t.get("zostaw_id")}
     po_id = {r["id"]: r for r in ist}
-    zmiany = []
+    zmiany, prop = [], {"usun": [], "dodaj": [], "zmiany": []}
     for r in ist:
         if r["id"] not in zostaja:
-            db.execute("UPDATE plan SET stan=?, zmieniono=? WHERE id=?",
-                       ("do_usuniecia" if r["workout_id"] else "usuniety", baza.teraz(), r["id"]))
-            zmiany.append(f"− {r['dzien']} {r['tytul']}")
+            if r["dzien"] in wstrzymaj_dni:
+                prop["usun"].append(r["id"])
+                prop["zmiany"].append(f"− {r['dzien']} {r['tytul']}")
+            else:
+                zmiany.append(_usun(db, r))
     for t in treningi:
-        if t.get("zostaw_id") in po_id:
+        if t.get("zostaw_id") in po_id or not (od <= (t.get("dzien") or "") <= do):
             continue
-        if not (od <= (t.get("dzien") or "") <= do):
-            continue
-        if t.get("opcjonalny") and t["sport"] != "odpoczynek" and not t["tytul"].lower().startswith("opcjonal"):
-            t["tytul"] = "Opcjonalny: " + t["tytul"]   # tak go widać w Garminie i w apce
-        if t["sport"] != "odpoczynek":
-            try:
-                budowa.buduj(t)                        # walidacja przed zapisem
-            except Exception as ex:
-                log.warning("odrzucony trening %s: %s", t.get("tytul"), ex)
-                zmiany.append(f"⚠️ {t.get('dzien')} {t.get('tytul')}: błąd planu ({ex})")
-                continue
-        opis = t.get("opis", "") + (f"\nCel: {t['cel']}" if t.get("cel") else "")
-        db.execute("INSERT INTO plan (dzien, sport, tytul, opis, kroki, hash, stan, utworzono, zmieniono, zrodlo) "
-                   "VALUES (?,?,?,?,?,?,?,?,?,?)",
-                   (t["dzien"], t["sport"], t["tytul"][:60], opis, json.dumps(t.get("kroki") or [], ensure_ascii=False),
-                    budowa.hash_treningu(t), "nowy" if t["sport"] != "odpoczynek" else "w_apce", baza.teraz(), baza.teraz(),
-                    zrodlo[:200]))
-        zmiany.append(f"+ {t['dzien']} {t['tytul']}" + (f" (~{budowa.czas_min(t)} min)" if t["sport"] != "odpoczynek" else ""))
+        if t["dzien"] in wstrzymaj_dni:
+            prop["dodaj"].append(t)
+            prop["zmiany"].append(f"+ {t['dzien']} {t['tytul']}" + (f" (~{budowa.czas_min(t)} min)" if t["sport"] != "odpoczynek" else ""))
+        else:
+            zmiany.append(_dodaj(db, t, zrodlo))
     db.commit()
+    return zmiany, (prop if prop["zmiany"] else None)
+
+
+def propozycja(db):
+    """czekająca duża zmiana planu (do decyzji Antka); przeterminowana znika"""
+    p = baza.kv(db, "propozycja_planu")
+    if p and p.get("do", "") < date.today().isoformat():
+        baza.ustaw_kv(db, "propozycja_planu", None)
+        return None
+    return p
+
+
+def zdecyduj(db, zmienic, dlaczego=""):
+    """Antek zatwierdza (zmienic=True) albo odrzuca dużą zmianę -> lista wprowadzonych zmian"""
+    p = propozycja(db)
+    if not p:
+        return []
+    baza.ustaw_kv(db, "propozycja_planu", None)
+    zmiany = []
+    dzis = date.today().isoformat()
+    if zmienic:
+        for rid in p["usun"]:
+            r = db.execute("SELECT * FROM plan WHERE id=? AND stan NOT IN ('usuniety','do_usuniecia')", (rid,)).fetchone()
+            if r and r["dzien"] >= dzis:
+                zmiany.append(_usun(db, dict(r)))
+        for t in p["dodaj"]:
+            if t.get("dzien", "") >= dzis:
+                zmiany.append(_dodaj(db, t, "decyzja Antka: " + p.get("powod", "")))
+        db.commit()
+    pm = baza.kv(db, "pamiec_trenera", []) or []
+    pm.append(f"{dzis}: propozycja po ocenie snu ({'; '.join(p['zmiany'][:4])}) — Antek "
+              + ("ZGODZIŁ SIĘ" if zmienic else "ODRZUCIŁ, plan bez zmian") + (f" ({dlaczego})" if dlaczego else ""))
+    baza.ustaw_kv(db, "pamiec_trenera", pm[-60:])
     return zmiany
 
 
