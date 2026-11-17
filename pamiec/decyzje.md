@@ -25,3 +25,8 @@
 | 2026-11-17 | Trener (i każdy Claude na Pi): domyślnie Haiku; Sonnet tylko do cięższych rzeczy (plan, cel, badania); **Opus nigdy** — za drogi | Antek |
 | 2026-11-17 | Trener: siłka GÓRA 3× w tygodniu zawsze (`gora_tyg`, `wymagania` w ustawieniach; kontrola planu to sprawdza); nogi wg bazy wiedzy | Antek |
 | 2026-11-17 | Trener: góra = Push, Pull, Full Upper (3 różne sesje/tydz.); brzuch na końcu każdej siłki; skośne/boczne max 1/tydz. (V-taper) | Antek |
+
+## 2026-11-17 — Trener przejmuje ustalenia z RestOrTrain
+- Pełne ustalenia (profil, strefy, lubiane ćwiczenia, wzór tygodnia, styl prowadzenia) są TYLKO na Pi w `dane/ustawienia.json` → `wymagania` (dane osobowe, nie do repo). Postęp ćwiczeń w kv `pamiec_trenera`.
+- Cel dopisany: rekompozycja do 30.04.2027 bez agresywnego deficytu; rower dalej pod cele kolarskie (nie „ogólne spalanie”). Sporty: + bieg.
+- Kontrola planu w kodzie: nogi 2×/tydz. (`nogi_tyg`), dni tylko na nogi (`dni_tylko_nogi`, na Pi = wtorek), odwodzenie+przywodzenie na końcu nóg, bez szrugsów, bez 2 tricepsów pod rząd, `tetno_ciezkie` (bpm) do liczenia jednostek intensywnych. Strefy własne → cele „tetno”/„moc” w bpm/W.

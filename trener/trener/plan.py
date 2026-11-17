@@ -43,13 +43,15 @@ ZASADY = """ZASADY FORMATU PLANU:
 - tytul ≤ 40 znaków, czytelny na zegarku (np. "Rower Z2 2h", "Bieg 6×400 m", "Siłka Dół A"). opis: cel treningu +
   wskazówki (≤ 600 znaków).
 - Rower/bieg: kroki rozgrzewka / praca / odpoczynek / schlodzenie z czas_min albo dystans_km; pętla
-  {"rodzaj":"powtorz","razy":N,"kroki":[...]}. Cel: "strefa_tetna"+"strefa" (1-5, strefy z Garmina) — domyślnie;
+  {"rodzaj":"powtorz","razy":N,"kroki":[...]}. Cel: "strefa_tetna"+"strefa" (1-5, strefy z Garmina) — domyślnie,
+  ALE gdy STAŁE WYMAGANIA podają własne strefy Antka — "tetno" od/do w bpm i "moc" od/do w W z JEGO stref;
   "moc" od/do w W (rower, gdy znane FTP); "tempo" od/do w SEKUNDACH na km (bieg); "kadencja" od/do; "brak".
 - Siłka: rozgrzewka (czas_min), potem {"rodzaj":"cwiczenie","nazwa": polska nazwa (najlepiej z listy Antka),
   "garmin":"KATEGORIA/NAZWA" z listy Garmina, "serie","powt" albo "czas_s","kg" (gdy znasz z historii),
   "przerwa_s"}. Superserie/obwody: "powtorz" z ćwiczeniami w środku (bez "serie" w środku). Na koniec schlodzenie.
 - Ciężary dobieraj z historii siłowni (serie z ostatnich treningów). Gdy brak historii — bez kg.
-- Rower z mocą: znasz FTP → cele "moc" w W liczone z % FTP wg stref Coggana z bazy wiedzy (Z2 = 56–75% FTP itd.).
+- Rower z mocą: własne strefy mocy Antka w STAŁYCH WYMAGANIACH → bierz W z nich; inaczej (znane FTP) % FTP wg stref
+  Coggana z bazy wiedzy (Z2 = 56–75% FTP itd.).
 - STAŁE WYMAGANIA ANTKA są ważniejsze niż faza makrocyklu: siłka GÓRA tyle razy w tygodniu, ile podał — zawsze
   jako Push / Pull / Full Upper (tytuły „Siłka Push…”, „Siłka Pull…”, „Siłka Full Upper…”); brzuch na końcu KAŻDEJ
   siłki (także nóg), skośne/boczne max 1 w tygodniu; nogi dokładasz wg bazy wiedzy, nie kosztem góry.
@@ -171,8 +173,11 @@ def _ciezki(t, ftp):
         for k in ks or []:
             yield k
             yield from kroki(k.get("kroki"))
+    prog_hr = config.ustawienia().get("tetno_ciezkie")     # bpm od którego jednostka jest intensywna (np. Z4 Antka)
     for k in kroki(t.get("kroki")):
         if k.get("cel") in ("strefa_tetna", "strefa_mocy") and (k.get("strefa") or 0) >= 4:
+            return True
+        if k.get("cel") == "tetno" and prog_hr and (k.get("od") or 0) >= prog_hr:
             return True
         if k.get("cel") == "moc" and ftp and (k.get("od") or 0) >= 0.9 * ftp:
             return True
@@ -270,7 +275,29 @@ def kontrola(db, treningi, ist, faza, ftp):
             brak = [n for n, x in (("Push", "push"), ("Pull", "pull"), ("Full Upper", "full")) if x not in tyt]
             if brak:
                 p.append("góra ma być jako Push, Pull i Full Upper — brakuje: " + ", ".join(brak))
+    u = config.ustawienia()
+    nogi_tyg = int(u.get("nogi_tyg") or 0)
+    if nogi_tyg and len(dni) >= 6:
+        dol = [t for t in tren if partia(t) == "nogi" and not t.get("opcjonalny")]
+        if len(dol) < nogi_tyg:
+            p.append(f"siłka NOGI {len(dol)}×, a Antek ma {nogi_tyg}× w tygodniu (Dół A i Dół B)")
+    for wd in u.get("dni_tylko_nogi") or []:     # np. wtorek: tylko Dół A (plan lekcji)
+        dzien_t = [t for t in tren if date.fromisoformat(t["dzien"]).weekday() == wd]
+        if dzien_t and any(partia(t) != "nogi" for t in dzien_t):
+            p.append(f"{['pon', 'wt', 'śr', 'czw', 'pt', 'sob', 'ndz'][wd]}: Antek ma wtedy czas TYLKO na siłkę nóg "
+                     "(bez roweru/biegu/góry) — " + ", ".join(t["tytul"] for t in dzien_t))
     silki = [t for t in tren if t["sport"] == "silka"]
+    for t in silki:
+        ks = [k for k in _kroki(t.get("kroki")) if k.get("garmin") or k.get("nazwa")]
+        kat = [(k.get("garmin") or "").split("/")[0].upper() for k in ks]
+        if "SHRUG" in kat or any("szrug" in (k.get("nazwa") or "").lower() for k in ks):
+            p.append(f"{t['dzien']} {t['tytul']}: szrugsy — Antek ich nie robi (bez celowej pracy na kaptury)")
+        if any(a == b == "TRICEPS_EXTENSION" for a, b in zip(kat, kat[1:])):
+            p.append(f"{t['dzien']} {t['tytul']}: dwa ćwiczenia na triceps bezpośrednio po sobie — rozdziel je")
+        if partia(t) == "nogi":
+            nz = " ".join((k.get("nazwa") or "").lower() for k in ks)
+            if not ("odwodz" in nz and "przywodz" in nz):
+                p.append(f"{t['dzien']} {t['tytul']}: na końcu dnia nóg ma być odwodzenie i przywodzenie bioder 2×12–20")
     bez_brzucha = [f"{t['dzien']} {t['tytul']}" for t in silki if not any(
         (k.get("garmin") or "").split("/")[0].upper() in BRZUCH and "prostowanie nóg" not in (k.get("nazwa") or "").lower()
         for k in _kroki(t.get("kroki")))]   # „prostowanie nóg” Antka siedzi w Garminie pod CRUNCH
