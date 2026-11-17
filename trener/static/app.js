@@ -213,9 +213,39 @@ function trening(t, zrobiony) {
   const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
   return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}">
     <b>${ikSport(t.sport)}${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
+    ${wykresTreningu(t)}
     ${t.opis ? `<div class="szary tresc">${esc(t.opis)}</div>` : ""}
     ${kroki ? `<details><summary>kroki</summary><ul class="kroki">${kroki}</ul></details>` : ""}
     ${t.stan === "blad" ? `<div class="szary zle">${esc(t.zrodlo)}</div>` : ""}</div>`;
+}
+// wykres bloczkowy (jak w interwałach): szerokość = czas kroku, wysokość i kolor = intensywność (strefa)
+let PROGI = {};
+const STREFA_KOLOR = ["#8e8e93", "#0a84ff", "#30d158", "#ff9f0a", "#ff453a"];
+function intensywnosc(k, sport) {  // ~ ułamek progu (1 = próg/FTP)
+  const sr = (k.od != null && k.do != null) ? (k.od + k.do) / 2 : null, z = [.5, .68, .83, .97, 1.12];
+  if ((k.cel === "strefa_tetna" || k.cel === "strefa_mocy") && k.strefa) return z[Math.min(5, Math.max(1, k.strefa)) - 1];
+  if (k.cel === "moc" && sr && PROGI.ftp) return sr / PROGI.ftp;
+  const hrp = sport === "bieg" ? PROGI.hr_bieg : PROGI.hr_rower;
+  if (k.cel === "tetno" && sr && hrp) return Math.min(1.15, .5 + (sr / hrp - .55) * 1.4);  // tętno rośnie wolniej niż moc
+  if (k.cel === "tempo" && sr && PROGI.tempo_bieg) return PROGI.tempo_bieg / sr;
+  return { rozgrzewka: .55, schlodzenie: .5, odpoczynek: .48, przerwa: .4 }[k.rodzaj] || .75;
+}
+function wykresTreningu(t) {
+  if (!["rower", "bieg"].includes(t.sport) || !(t.kroki || []).length) return "";
+  const bl = [], dodaj = k => {
+    const min = k.czas_min || (k.dystans_km ? k.dystans_km * (t.sport === "bieg" ? 5.5 : 2.2) : 3);
+    const i = intensywnosc(k, t.sport);
+    bl.push({ min, i, z: i < .56 ? 0 : i < .76 ? 1 : i < .91 ? 2 : i < 1.06 ? 3 : 4, op: opisKroku(k).replace(/<[^>]+>/g, "") });
+  };
+  for (const k of t.kroki) {
+    if (k.rodzaj === "powtorz") for (let r = 0; r < (k.razy || 1); r++) (k.kroki || []).forEach(dodaj);
+    else dodaj(k);
+  }
+  const suma = bl.reduce((a, b) => a + b.min, 0);
+  if (!suma) return "";
+  return `<div class="bloczki" role="img" aria-label="Przebieg treningu">${bl.map(b =>
+    `<i title="${esc(b.op)}" style="flex:${b.min.toFixed(2)};height:${Math.round(Math.max(.18, Math.min(1, (b.i - .3) / .9)) * 100)}%;background:${STREFA_KOLOR[b.z]}"></i>`).join("")}</div>
+    <div class="bloczki-os"><span>0</span><span>${Math.round(suma)} min</span></div>`;
 }
 function opisKroku(k) {
   if (k.rodzaj === "cwiczenie") return `${esc(k.nazwa)} ${k.serie ? k.serie + "×" : ""}${k.czas_s ? k.czas_s + " s" : (k.powt || "")}${k.kg ? " @" + k.kg + " kg" : ""}${k.przerwa_s ? `, przerwa ${k.przerwa_s} s` : ""}`;
@@ -401,6 +431,7 @@ function rysujNoc() {
 // ------------------------------------------------------------------ Dziś
 async function pokazDzis() {
   const d = await api("dzis");
+  PROGI = d.progi || {};
   const dni = d.dni;
   const dz = dni.find(x => x.dzien === d.dzis) || {};
   const wcz = dni.slice().reverse().find(x => x.dzien < d.dzis && x.gotowosc != null) || {};
@@ -531,17 +562,22 @@ async function pokazPlan() {
   const [d, makro] = await Promise.all([api("plan"), kartaMakro()]);
   const dni = [];
   for (let i = -7; i <= 14; i++) { const x = new Date(d.dzis + "T12:00"); x.setDate(x.getDate() + i); dni.push(x.toISOString().slice(0, 10)); }
-  let h = kartaPropozycji(d.propozycja) + makro + `<div class="karta"><label>Poproś o zmianę (opcjonalnie)</label><textarea id="prosba" rows="2" placeholder="np. w czwartek nie mogę, w weekend dłuższy rower"></textarea>
+  PROGI = d.progi || {};
+  let h = makro + `<div class="karta"><label>Poproś o zmianę (opcjonalnie)</label><textarea id="prosba" rows="2" placeholder="np. w czwartek nie mogę, w weekend dłuższy rower"></textarea>
     <div class="wiersz" style="margin-top:8px"><button onclick="akcja('plan',{prosba:$('#prosba').value})">📅 Przeplanuj</button></div></div>`;
   for (const k of dni) {
     const pl = d.plan.filter(t => t.dzien === k), zr = d.zrobione[k] || [];
     if (!pl.length && !zr.length && k < d.dzis) continue;
-    h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? "Dziś · " : ""}${dataPL(k)}</div>
+    if (k === d.dzis) h += `<div id="plan-dzis"></div>` + kartaPropozycji(d.propozycja);
+    h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? `Dziś<small>${dataPL(k)}</small>` : dataPL(k)}</div>
       ${pl.map(t => trening(t, zr.some(a => kat(a.typ) === t.sport))).join("")}
       ${zr.map(a => `<div class="trening zrobiony sport-${kat(a.typ)}">✓ ${esc(a.nazwa)} <span class="szary">${a.min} min${a.km ? " · " + a.km + " km" : ""}${a.obc ? " · obc " + a.obc : ""}</span></div>`).join("")}
       ${!pl.length && !zr.length ? `<div class="szary">—</div>` : ""}</div>`;
   }
+  h += `<div style="height:40vh"></div>`;  // żeby dzisiaj dało się przewinąć na samą górę
   widok.innerHTML = h;
+  const kotwica = $("#plan-dzis");
+  if (kotwica) window.scrollTo(0, kotwica.getBoundingClientRect().top + scrollY - ($("header")?.offsetHeight || 0) - 8);
 }
 
 

@@ -250,7 +250,7 @@ def api_dzis():
     return jsonify({
         "dzis": dzis.isoformat(), "dni": dni,
         "analiza": dict(ost, dane=json.loads(ost["dane"])) if ost else None,
-        "plan": _plan(d, dzis.isoformat(), (dzis + timedelta(days=2)).isoformat()),
+        "plan": _plan(d, dzis.isoformat(), (dzis + timedelta(days=2)).isoformat()), "progi": _progi_wykres(d),
         "propozycja": plan.propozycja(d),
         "zrobione_dni": sorted(zrobione),
         "ostatni_sync": baza.kv(d, "ostatni_sync"), "historia": baza.kv(d, "historia_postep"),
@@ -325,7 +325,17 @@ def api_plan():
     zrobione = {}
     for r in d.execute("SELECT dzien, typ, nazwa, dane FROM aktywnosci WHERE dzien BETWEEN ? AND ?", (od, do)):
         zrobione.setdefault(r[0], []).append(kontekst.dane.streszczenie_aktywnosci(baza.rozpakuj(r[3]) or {}))
-    return jsonify({"plan": _plan(d, od, do), "zrobione": zrobione, "dzis": dzis.isoformat(), "propozycja": plan.propozycja(d)})
+    return jsonify({"plan": _plan(d, od, do), "zrobione": zrobione, "dzis": dzis.isoformat(), "propozycja": plan.propozycja(d),
+                    "progi": _progi_wykres(d)})
+
+
+def _progi_wykres(d):
+    """progi do wysokości bloczków na wykresie treningu (FTP, tętno progowe, tempo progowe)"""
+    s = baza.kv(d, "strefy", {}) or {}
+    lt = (s.get("prog_mleczanowy") or {}).get("speed_and_heart_rate") or {}
+    return {"ftp": (s.get("ftp") or {}).get("functionalThresholdPower"),
+            "hr_rower": lt.get("heartRateCycling"), "hr_bieg": lt.get("heartRate"),
+            "tempo_bieg": round(100 / lt["speed"]) if lt.get("speed") else None}  # s/km
 
 
 @app.route("/api/makrocykl")

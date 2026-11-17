@@ -40,3 +40,4 @@
 - Styl Liquid Glass na całej apce; zmienne `--szklo`, `--blask`, `--rozmyj`, `--sprezyna` w `styl.css`. `--karta` jest półprzezroczysta, a do obwódek na wykresach jest `--pierscien`.
 - Rogi kafelków/kart to squircle (ciągłe zaokrąglenie jak w iOS): maska 9-slice `static/sq.svg` przez `-webkit-mask-box-image`; przyciski i pasek kart zostają kapsułami.
 - Apki nie da się powiększać: `user-scalable=no`, `touch-action: pan-x pan-y` (blokuje podwójne stuknięcie) i blokada gestów `gesture*` w JS. Nie blokować `touchend`, bo zjada szybkie drugie kliknięcie.
+- Wykres bloczkowy treningu (`wykresTreningu` w app.js): szerokość = czas kroku, wysokość i kolor = strefa liczona z FTP / tętna progowego / tempa progowego (`progi` z `/api/plan` i `/api/dzis`); kroki na dystans liczone ~5,5 min/km bieg, ~2,2 min/km rower.
