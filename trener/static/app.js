@@ -1,11 +1,17 @@
 "use strict";
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// numer nawigacji: odpowiedź, która przyszła po przejściu na inną zakładkę, nie może nadpisać ekranu
+let nawNr = 0;
+class Anulowano extends Error {}
 const api = async (p, opt) => {
+  const nr = nawNr;
   const r = await fetch("/api/" + p, opt && { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opt) });
   if (r.status === 401) { niezapamietane(); throw new Error("To urządzenie nie jest zapamiętane"); }
   if (!r.ok) throw new Error(r.status + " " + p);
-  return r.json();
+  const j = await r.json();
+  if (!opt && nr !== nawNr && !p.startsWith("zadanie/")) throw new Anulowano("anulowano");
+  return j;
 };
 const DNI = ["ndz", "pon", "wt", "śr", "czw", "pt", "sob"];
 const SPORT_IKONA = { rower: "🚴", bieg: "🏃", silka: "🏋️", odpoczynek: "😴", inne: "⚡" };
@@ -86,7 +92,7 @@ function rysujSpark(el, s, W, H) {
   const d = ok.map(([i, q], k) => (k ? "L" : "M") + X(i).toFixed(1) + "," + Y(q).toFixed(1)).join("");
   const [li, lv] = ok[ok.length - 1];
   el.innerHTML = `<svg width="${W}" height="${H}"><path d="${d}" fill="none" stroke="${s.kolor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${X(li)}" cy="${Y(lv)}" r="3.5" fill="${s.kolor}" stroke="var(--karta)" stroke-width="2"/></svg>`;
+    <circle cx="${X(li)}" cy="${Y(lv)}" r="3.5" fill="${s.kolor}" stroke="var(--pierscien)" stroke-width="2"/></svg>`;
 }
 
 function rysujLinie(el, s, W, H) {
@@ -124,13 +130,13 @@ function rysujLinie(el, s, W, H) {
     q.y.forEach((v, i) => { if (v != null && q.y[i - 1] == null && q.y[i + 1] == null) g += `<circle cx="${X(i)}" cy="${Y(v)}" r="2" fill="${q.kolor}"/>`; });
     const ost = q.y.map((v, i) => [i, v]).filter(([, v]) => v != null).pop();
     if (ost) {
-      g += `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4.5" fill="${q.kolor}" stroke="var(--karta)" stroke-width="2"/>`;
+      g += `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`;
       if (s.etykietaKonca !== false) konce.push([X(ost[0]) + 8, Y(ost[1]) + 4, fmt(ost[1])]);
     }
   });
   konce.sort((p, q) => p[1] - q[1]).forEach((k, i, t) => { if (i && k[1] - t[i - 1][1] < 13) k[1] = t[i - 1][1] + 13; });
   g += konce.map(([x, y, v]) => `<text x="${x}" y="${y}" class="koniec">${v}</text>`).join("");
-  el.innerHTML = `<svg width="${W}" height="${H}">${g}<g class="celownik" style="display:none"><line y1="${T}" y2="${H - B}"/>${serie.map(q => `<circle r="4.5" fill="${q.kolor}" stroke="var(--karta)" stroke-width="2"/>`).join("")}</g></svg><div class="dymek"></div>`;
+  el.innerHTML = `<svg width="${W}" height="${H}">${g}<g class="celownik" style="display:none"><line y1="${T}" y2="${H - B}"/>${serie.map(q => `<circle r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`).join("")}</g></svg><div class="dymek"></div>`;
   const svg = el.firstChild, cel = svg.lastChild, dym = el.lastChild;
   const pokaz = e => {
     const r = svg.getBoundingClientRect(), px = e.clientX - r.left;
@@ -647,16 +653,70 @@ async function wlaczPush() {
 }
 
 // ------------------------------------------------------------------ router
+// przejścia w stylu Liquid Glass: stary ekran mięknie i rozmywa się, nowy wjeżdża ze sprężyną
+const ZAKLADKI = ["dzis", "plan", "dane", "treningi", "czat"];
+const _ih = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+const spokojnie = matchMedia("(prefers-reduced-motion: reduce)");
+let wejscie = null, ladTimer = 0, ostatniaZak = -1;
+Object.defineProperty(widok, "innerHTML", { configurable: true, get() { return _ih.get.call(this); }, set(v) {
+  _ih.set.call(this, v);
+  if (wejscie === null) return;
+  const k = wejscie; wejscie = null; clearTimeout(ladTimer);
+  window.scrollTo(0, 0); widok.classList.remove("wychodzi");
+  if (!spokojnie.matches) widok.animate([
+    { opacity: 0, transform: `translateX(${k * 22}px) scale(.965)`, filter: "blur(7px)" },
+    { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 520, easing: "cubic-bezier(.2, 1.2, .32, 1)" });
+} });
+
 async function route() {
+  if (czekaUpdate) { location.reload(); return; }
+  const nr = ++nawNr;
   const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
-  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("akt", a.dataset.t === t || (t === "analiza" && a.dataset.t === "dzis") || (t === "metryka" && a.dataset.t === "dane")));
+  const zak = t === "analiza" ? "dzis" : t === "metryka" ? "dane" : t;
+  const i = ZAKLADKI.indexOf(zak), nav = $("nav");
+  nav.querySelectorAll("a").forEach(a => a.classList.toggle("akt", a.dataset.t === zak));
+  if (i >= 0) nav.style.setProperty("--i", i);
+  nav.classList.toggle("bez-zak", i < 0);
   $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera" }[t] || "Trener";
-  widok.innerHTML = `<div class="ladowanie">Ładuję…</div>`; WYK.clear(); window.scrollTo(0, 0);
+  const pusto = !widok.firstElementChild;
+  wejscie = i < 0 || ostatniaZak < 0 || i === ostatniaZak ? 0 : Math.sign(i - ostatniaZak);
+  ostatniaZak = i;
+  clearTimeout(ladTimer);
+  if (pusto) _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`);
+  else {
+    widok.classList.add("wychodzi");
+    ladTimer = setTimeout(() => { if (nr === nawNr && wejscie !== null) { _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`); widok.classList.remove("wychodzi"); window.scrollTo(0, 0); } }, 450);
+  }
+  WYK.clear();
   try {
     await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: () => pokazMetryke(arg) }[t] || pokazDzis)();
-  } catch (e) { if (!/nie jest zapamiętane/.test(e.message)) widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`; }
+  } catch (e) {
+    if (e instanceof Anulowano || nr !== nawNr) return;
+    if (!/nie jest zapamiętane/.test(e.message)) widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`;
+  }
+  if (nr === nawNr && wejscie !== null) { wejscie = null; clearTimeout(ladTimer); widok.classList.remove("wychodzi"); }
 }
 window.addEventListener("hashchange", route);
+window.addEventListener("unhandledrejection", e => { if (e.reason instanceof Anulowano) e.preventDefault(); });
+
+// ------------------------------------------------------------------ auto-aktualizacja
+// Pi podaje wersję plików; gdy się zmieni, apka przeładowuje się sama (nie trzeba jej zamykać)
+const WERSJA = document.querySelector('meta[name="wersja"]')?.content;
+let czekaUpdate = false;
+const zajety = () => !!(document.getElementById("postep") || location.hash.startsWith("#start") ||
+  [...document.querySelectorAll("textarea, input[type=text], input[type=number]")].some(x => x.value && x.closest(".pisz, #widok") && document.activeElement === x) ||
+  ($(".pisz textarea")?.value || "").trim());
+async function sprawdzWersje() {
+  if (!WERSJA || document.hidden) return;
+  try {
+    const w = (await (await fetch("/wersja", { cache: "no-store" })).text()).trim();
+    if (!w || w === WERSJA) return;
+    if (zajety()) czekaUpdate = true; else location.reload();
+  } catch (_) {}
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) sprawdzWersje(); });
+window.addEventListener("pageshow", sprawdzWersje);
+setInterval(sprawdzWersje, 60000);
 $("#btn-ust").onclick = pokazUstawienia;
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 document.addEventListener("focusin", e => { if (e.target.matches(".pisz textarea")) document.body.classList.add("pisze"); });

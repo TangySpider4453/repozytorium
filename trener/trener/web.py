@@ -127,7 +127,20 @@ def index():
     for f in ("styl.css", "app.js"):
         v = int((config.STATIC / f).stat().st_mtime)
         html = html.replace(f'"/{f}"', f'"/{f}?v={v}"')
+    html = html.replace("<head>", f'<head>\n<meta name="wersja" content="{_wersja()}">', 1)
     r = app.response_class(html, mimetype="text/html")
+    r.headers["Cache-Control"] = "no-store"
+    return r
+
+
+def _wersja():
+    return str(max(int((config.STATIC / f).stat().st_mtime) for f in ("index.html", "styl.css", "app.js")))
+
+
+@app.route("/wersja")
+def wersja():
+    # apka sprawdza to co chwilę: inna wersja = przeładuj się sama (bez zamykania z ekranu głównego)
+    r = app.response_class(_wersja(), mimetype="text/plain")
     r.headers["Cache-Control"] = "no-store"
     return r
 

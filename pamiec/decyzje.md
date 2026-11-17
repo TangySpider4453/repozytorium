@@ -34,3 +34,7 @@
 ## 2026-11-17 — Codzienna korekta planu po ocenie snu
 - Po porannej analizie (sen) trener ZAWSZE przegląda najbliższe dni (`korekta_po_snie`, domyślnie włączone). Małe zmiany (krócej/lżej/strefa) wchodzą od razu.
 - Usunięcie albo dodanie jednostki (dzień+sport) NIE wchodzi samo: kv `propozycja_planu`, push „❓ Trener pyta”, karta na Dziś i w Plan z przyciskami Zmień / Zostaw. Można też odpowiedzieć w czacie. Decyzja trafia do `pamiec_trenera`. To samo dotyczy przeplanowania po analizie treningu. Prośby z czatu i przebudowa periodyzacji zmieniają plan bez pytania.
+
+## 2026-11-17 — Trener PWA: aktualizacje i wygląd
+- Apka sama sprawdza `/wersja` (najnowszy mtime index/styl/app) przy powrocie do niej i co 60 s; przy nowej wersji przeładowuje się, ale nie w trakcie pisania, ankiety ani czekania na zadanie (wtedy przy następnym przejściu). Po wgraniu plików na Pi nie trzeba nic robić w telefonie.
+- Styl Liquid Glass na całej apce; zmienne `--szklo`, `--blask`, `--rozmyj`, `--sprezyna` w `styl.css`. `--karta` jest półprzezroczysta, a do obwódek na wykresach jest `--pierscien`.

@@ -50,3 +50,4 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-17: ustalenia z RestOrTrain przeniesione do Trenera (wymagania na Pi, nowe kontrole planu, cel rekompozycji).
 - 2026-11-17: karta Periodyzacja w zakładce Plan zwijana (pamięta stan), szczegóły rozwijane przy każdej fazie.
 - 2026-11-17: codzienna korekta planu po ocenie snu; duże zmiany (usunięcie/dodanie jednostki) czekają na decyzję Antka (push + przyciski + czat).
+- 2026-11-17: apka Trener — wygląd Liquid Glass (pływający szklany pasek kart z przesuwaną soczewką, szklane karty, przejścia ze sprężyną i rozmyciem), auto-aktualizacja (`/wersja` + przeładowanie, gdy apka nie jest zajęta), poprawka wyścigu przy szybkim klikaniu zakładek (numer nawigacji w `api()`), nagłówek znów przyklejony (body `overflow-x: clip`).
