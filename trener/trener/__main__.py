@@ -1,4 +1,4 @@
-"""python -m trener <polecenie>: sync | historia | dzien RRRR-MM-DD | serwer | analiza [rano|tydzien] | plan | cykl"""
+"""python -m trener <polecenie>: sync | historia | dzien RRRR-MM-DD | serwer | analiza [rano|tydzien] | plan | cykl | kod"""
 import json
 import logging
 import sys
@@ -26,6 +26,9 @@ def main():
     elif a[0] == "plan":
         from .plan import zaplanuj
         print(zaplanuj(powod=" ".join(a[1:]) or "ręcznie"))
+    elif a[0] == "kod":
+        from .web import nowy_kod
+        print(nowy_kod())
     elif a[0] == "serwer":
         from .web import app
         app.run(host="127.0.0.1", port=8095, threaded=True)

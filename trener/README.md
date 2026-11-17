@@ -39,6 +39,8 @@ siłownia dla kolarza, bieg, HRV/sen, młody sportowiec — z linkami do badań)
 - Ochrona: żądania z Funnel (nagłówek `Tailscale-Funnel-Request`) do `/api/*` tylko z zapamiętanym urządzeniem
   (ciasteczko `trener_klucz`, 400 dni, w bazie sha256 w tabeli `urzadzenia`). Urządzenie zapamiętuje się samo przy
   otwarciu apki przez tailnet. ⚙️ → „Wyloguj inne urządzenia”.
+- Parowanie bez Tailscale: `python -m trener kod` na Pi → 8 znaków, jednorazowy, 15 min, 5 prób → wpisać na ekranie
+  „Zapamiętaj to urządzenie”. (iPhone z włączonym Tailscale i tak łączył się przez Funnel, więc auto-zapamiętanie nie działało.)
 - Push działa bez Tailscale (idzie przez serwery Apple); Tailscale/Funnel potrzebny tylko do otwarcia apki.
 
 ## iPhone

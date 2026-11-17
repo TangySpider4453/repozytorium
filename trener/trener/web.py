@@ -6,7 +6,7 @@ import logging
 import secrets
 import threading
 import traceback
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from flask import Flask, abort, jsonify, request, send_from_directory
 
@@ -48,9 +48,47 @@ def _sesja():
     return r
 
 
+KOD_ZNAKI = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def nowy_kod(minuty=15):
+    """jednorazowy kod parowania (Claude/Antek: python -m trener kod); w bazie tylko hash"""
+    k = "".join(secrets.choice(KOD_ZNAKI) for _ in range(8))
+    d = baza.polacz()
+    baza.ustaw_kv(d, "parowanie", {"hash": _h(k), "wygasa": (datetime.now() + timedelta(minutes=minuty)).isoformat(),
+                                    "proby": 0})
+    return k
+
+
+def _zapamietaj(r):
+    k = secrets.token_urlsafe(32)
+    d = db()
+    d.execute("INSERT INTO urzadzenia VALUES (?,?,?,?)", (_h(k), (request.headers.get("User-Agent") or "")[:120],
+                                                          baza.teraz(), baza.teraz()))
+    d.commit()
+    r.set_cookie(CIASTKO, k, max_age=ROK, secure=True, httponly=True, samesite="Lax", path="/")
+
+
+@app.route("/api/paruj", methods=["POST"])
+def api_paruj():
+    d = db()
+    p = baza.kv(d, "parowanie")
+    kod = str((request.get_json(silent=True) or {}).get("kod") or "").upper().replace(" ", "").replace("-", "")[:20]
+    if not p or p["wygasa"] < datetime.now().isoformat() or p["proby"] >= 5:
+        return jsonify({"blad": "Kod wygasł albo go nie ma — poproś o nowy"}), 403
+    if not secrets.compare_digest(_h(kod), p["hash"]):
+        p["proby"] += 1
+        baza.ustaw_kv(d, "parowanie", p)
+        return jsonify({"blad": f"Zły kod (zostało prób: {5 - p['proby']})"}), 403
+    baza.ustaw_kv(d, "parowanie", None)              # jednorazowy
+    r = jsonify({"ok": True})
+    _zapamietaj(r)
+    return r
+
+
 @app.before_request
 def dostep():
-    if not request.path.startswith("/api/"):
+    if not request.path.startswith("/api/") or request.path == "/api/paruj":
         return None                                   # strona/ikony/sw bez danych — publiczne
     if _z_internetu() and not _sesja():
         return jsonify({"blad": "niezapamietane"}), 401
@@ -61,13 +99,10 @@ def dostep():
 def bez_cache(r):
     if request.path.startswith("/api/"):
         r.headers["Cache-Control"] = "no-store"
-        if not _z_internetu() and not _sesja():       # tailnet/lokalnie: zapamiętaj urządzenie
-            k = secrets.token_urlsafe(32)
-            d = db()
-            d.execute("INSERT INTO urzadzenia VALUES (?,?,?,?)", (_h(k), (request.headers.get("User-Agent") or "")[:120],
-                                                                  baza.teraz(), baza.teraz()))
-            d.commit()
-            r.set_cookie(CIASTKO, k, max_age=ROK, secure=True, httponly=True, samesite="Lax", path="/")
+        if request.path == "/api/paruj":
+            pass
+        elif not _z_internetu() and not _sesja():     # tailnet/lokalnie: zapamiętaj urządzenie
+            _zapamietaj(r)
         elif request.cookies.get(CIASTKO):            # przedłużenie ważności
             r.set_cookie(CIASTKO, request.cookies[CIASTKO], max_age=ROK, secure=True, httponly=True, samesite="Lax", path="/")
     return r

@@ -26,9 +26,17 @@ async function czekaj(zid, co) {
 
 function niezapamietane() {
   widok.innerHTML = `<div class="karta"><h3>🔐 Zapamiętaj to urządzenie</h3>
-    <div>Apka jest dostępna z internetu, ale wpuszcza tylko Twoje urządzenia.</div>
-    <ol class="szary" style="padding-left:18px"><li>Włącz raz <b>Tailscale</b> na tym telefonie.</li><li>Otwórz apkę (z ekranu głównego) i odśwież.</li>
-    <li>Gotowe — przez rok działa bez Tailscale.</li></ol><button onclick="location.reload()">↻ Odśwież</button></div>`;
+    <div>Apka jest dostępna z internetu, ale wpuszcza tylko Twoje urządzenia. Wpisz jednorazowy kod parowania
+    (dostaniesz go od Claude albo na Pi: <code>python -m trener kod</code>, ważny 15 min).</div>
+    <div class="wiersz" style="margin-top:10px"><input id="kod" type="text" placeholder="KOD" autocomplete="one-time-code" autocapitalize="characters"
+      style="flex:1;min-width:0;font-size:18px;letter-spacing:.15em;text-transform:uppercase">
+    <button id="paruj">Połącz</button></div><div id="paruj-info" class="szary" style="margin-top:6px"></div></div>`;
+  $("#paruj").onclick = async () => {
+    const info = $("#paruj-info"); info.textContent = "Sprawdzam…";
+    const r = await fetch("/api/paruj", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kod: $("#kod").value }) });
+    if (r.ok) { info.textContent = "✅ Zapamiętane"; setTimeout(() => location.reload(), 500); }
+    else info.textContent = (await r.json().catch(() => ({}))).blad || "Błąd " + r.status;
+  };
 }
 
 // ------------------------------------------------------------------ wykresy (SVG)
