@@ -52,3 +52,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-17: codzienna korekta planu po ocenie snu; duże zmiany (usunięcie/dodanie jednostki) czekają na decyzję Antka (push + przyciski + czat).
 - 2026-11-17: apka Trener — wygląd Liquid Glass (pływający szklany pasek kart z przesuwaną soczewką, szklane karty, przejścia ze sprężyną i rozmyciem), auto-aktualizacja (`/wersja` + przeładowanie, gdy apka nie jest zajęta), poprawka wyścigu przy szybkim klikaniu zakładek (numer nawigacji w `api()`), nagłówek znów przyklejony (body `overflow-x: clip`). Potem: rogi squircle (sq.svg) i blokada powiększania.
 - 2026-11-17: zakładka Plan otwiera się przewinięta do dzisiaj (wyżej: periodyzacja, prośba, poprzednie dni), duży nagłówek „Dziś”, wykres bloczkowy treningu roweru i biegu (jak w interwałach).
+- 2026-11-17: dziennik kalorii w Trenerze (skaner kodów, Open Food Facts, cel kcal/makro liczony przez trenera na każdy dzień
+  pod trening) i ekran Waga (Progres w stylu Liquid Glass); kafelki Kalorie i Waga na Dziś. Do celów dopisany priorytet
+  „spalić jak najwięcej tłuszczu” w bezpiecznym tempie (0,5–0,7%/tydz.). Wiedza: `07_odzywianie.md`, poprawiona `06`.

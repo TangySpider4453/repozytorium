@@ -41,3 +41,6 @@
 - Rogi kafelków/kart to squircle (ciągłe zaokrąglenie jak w iOS): maska 9-slice `static/sq.svg` przez `-webkit-mask-box-image`; przyciski i pasek kart zostają kapsułami.
 - Apki nie da się powiększać: `user-scalable=no`, `touch-action: pan-x pan-y` (blokuje podwójne stuknięcie) i blokada gestów `gesture*` w JS. Nie blokować `touchend`, bo zjada szybkie drugie kliknięcie.
 - Wykres bloczkowy treningu (`wykresTreningu` w app.js): szerokość = czas kroku, wysokość i kolor = strefa liczona z FTP / tętna progowego / tempa progowego (`progi` z `/api/plan` i `/api/dzis`); kroki na dystans liczone ~5,5 min/km bieg, ~2,2 min/km rower.
+- 2026-11-17: redukcja tłuszczu „jak najwięcej” znaczy u Antka (nastolatek, sportowiec) maksymalne **bezpieczne** tempo: deficyt
+  ≤ 500 kcal i ≤ 20%, dostępność energii ≥ 35 kcal/kg FFM, białko ~2 g/kg, tłuszcz ≥ 0,8 g/kg, bez głodówek i „spalaczy”.
+  Progi pilnuje kod (`dieta._przytnij`), nie tylko prompt.

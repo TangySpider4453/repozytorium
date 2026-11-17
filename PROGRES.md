@@ -3,6 +3,9 @@
 Podstrona portalu na Raspberry Pi: **http://100.108.241.58/strony/progres/** (kafelek „Progres sylwetki” na stronie
 głównej i link „Progres” w menu portalu). Uruchomiona 2026-10-21.
 
+Te same dane (pomiary i zdjęcia) są też w apce Trener: kafelek i ekran **Waga** (od 2026-11-17), przez proxy
+`/api/waga*`. Film i porównania są tylko tu.
+
 ## Co robi
 - **Dodaj:** data (domyślnie dzisiaj, można wybrać wcześniejszą), masa [kg], tłuszcz [%], mięśnie [%], notatka;
   zdjęcia z typem: `przod`, `bok`, `biceps` (przód z napięciem bicepsa), `tyl`, `tylbiceps` (plecy z bicepsem), `inne`. Przy starszych zdjęciach strona

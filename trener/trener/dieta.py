@@ -8,6 +8,7 @@ import json
 import logging
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, timedelta
@@ -51,7 +52,7 @@ def _z_off(p, kod=None):
     nazwa = (p.get("product_name_pl") or p.get("product_name") or "").strip()
     if not nazwa or kcal is None:
         return None
-    return {"kod": kod or p.get("code"), "nazwa": nazwa[:120], "marka": (p.get("brands") or "").split(",")[0].strip()[:60],
+    return {"kod": kod or p.get("code"), "nazwa": nazwa[:120], "marka": _marka(p.get("brands")),
             "kcal": round(kcal, 1), "b": round(_liczba(n.get("proteins_100g")) or 0, 1),
             "w": round(_liczba(n.get("carbohydrates_100g")) or 0, 1), "t": round(_liczba(n.get("fat_100g")) or 0, 1),
             "porcja_g": _liczba(p.get("serving_quantity")), "zrodlo": "off"}
@@ -61,6 +62,11 @@ def _pobierz(url, limit=8):
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=limit) as r:
         return json.loads(r.read().decode("utf-8"))
+
+
+def _marka(b):
+    b = b[0] if isinstance(b, list) and b else b if isinstance(b, str) else ""
+    return b.split(",")[0].strip()[:60]
 
 
 POLA = "code,product_name,product_name_pl,brands,nutriments,serving_quantity"
@@ -77,6 +83,11 @@ def produkt(kod):
         return dict(r)
     try:
         j = _pobierz(f"{OFF}/api/v2/product/{kod}.json?fields={POLA}")
+    except urllib.error.HTTPError as ex:
+        if ex.code == 404:                                    # OFF: nieznany kod
+            return None
+        log.warning("OFF %s: %s", kod, ex)
+        raise RuntimeError("Open Food Facts nie odpowiada — wpisz produkt ręcznie") from ex
     except Exception as ex:                                   # brak sieci / OFF leży
         log.warning("OFF %s: %s", kod, ex)
         raise RuntimeError("Open Food Facts nie odpowiada — wpisz produkt ręcznie") from ex
@@ -96,11 +107,13 @@ def szukaj(tekst):
                                        (f"%{tekst}%", f"%{tekst}%"))]
     obce = []
     try:
-        q = urllib.parse.urlencode({"search_terms": tekst, "json": 1, "page_size": 20, "fields": POLA,
-                                    "sort_by": "unique_scans_n", "lc": "pl", "cc": "pl"})
-        j = _pobierz(f"{OFF}/cgi/search.pl?{q}", limit=10)
+        # search-a-licious (stare cgi/search.pl zwraca 503); tylko produkty sprzedawane w Polsce
+        czyste = "".join(c if c.isalnum() or c in " -" else " " for c in tekst)
+        q = urllib.parse.urlencode({"q": f'{czyste} countries_tags:"en:poland"', "page_size": 20, "fields": POLA,
+                                    "sort_by": "-unique_scans_n", "langs": "pl"})
+        j = _pobierz(f"https://search.openfoodfacts.org/search?{q}", limit=10)
         kody = {m["kod"] for m in moje}
-        obce = [p for p in (_z_off(x) for x in j.get("products") or []) if p and p["kod"] not in kody]
+        obce = [p for p in (_z_off(x) for x in j.get("hits") or []) if p and p["kod"] not in kody]
     except Exception as ex:
         log.warning("OFF szukaj: %s", ex)
     return moje + obce[:20]

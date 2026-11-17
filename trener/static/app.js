@@ -8,7 +8,7 @@ const api = async (p, opt) => {
   const nr = nawNr;
   const r = await fetch("/api/" + p, opt && { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opt) });
   if (r.status === 401) { niezapamietane(); throw new Error("To urządzenie nie jest zapamiętane"); }
-  if (!r.ok) throw new Error(r.status + " " + p);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).blad || r.status + " " + p);
   const j = await r.json();
   if (!opt && nr !== nawNr && !p.startsWith("zadanie/")) throw new Anulowano("anulowano");
   return j;
@@ -430,7 +430,7 @@ function rysujNoc() {
 
 // ------------------------------------------------------------------ Dziś
 async function pokazDzis() {
-  const d = await api("dzis");
+  const [d, jedz, waga] = await Promise.all([api("dzis"), api("dieta").catch(e => { if (e instanceof Anulowano) throw e; return null; }), api("waga").catch(e => { if (e instanceof Anulowano) throw e; return null; })]);
   PROGI = d.progi || {};
   const dni = d.dni;
   const dz = dni.find(x => x.dzien === d.dzis) || {};
@@ -454,7 +454,8 @@ async function pokazDzis() {
       <div class="wiersz" style="margin-top:10px"><a class="btn" href="#analiza/${a.id}">Czytaj</a><a class="btn drugi" href="#czat/${a.id}">Omów</a></div></div>`;
   }
   h += `<div class="kafle">${kafelM("sen", dni, d.dzis)}${kafelM("hrv", dni, d.dzis)}${kafelM("tetno", dni, d.dzis)}${kafelM("bb", dni, d.dzis)}
-    ${kafelM("obciazenie", dni, d.dzis, { podpis: esc(status(dz.status || wcz.status)) })}${kafelM("stres", dni, d.dzis)}</div>`;
+    ${kafelM("obciazenie", dni, d.dzis, { podpis: esc(status(dz.status || wcz.status)) })}${kafelM("stres", dni, d.dzis)}
+    ${kafelJedzenie(jedz)}${kafelWaga(waga)}</div>`;
   h += `<h2>Plan</h2>`;
   const poDniu = {};
   d.plan.forEach(t => (poDniu[t.dzien] = poDniu[t.dzien] || []).push(t));
@@ -688,6 +689,343 @@ async function wlaczPush() {
   } catch (e) { alert("Nie udało się: " + e.message); }
 }
 
+// ------------------------------------------------------------------ Jedzenie: dziennik kalorii, skaner kodów, cel od trenera
+const POSILEK = { sniadanie: "Śniadanie", drugie: "Drugie śniadanie", obiad: "Obiad", przekaska: "Przekąski", kolacja: "Kolacja" };
+const MAKRO = [["b", "Białko", KOLOR.niebieski], ["w", "Węglowodany", KOLOR.zolty], ["t", "Tłuszcz", KOLOR.fiolet]];
+const dzisISO = () => { const x = new Date(); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0, 10); };
+let DIETA = null, dietaDzien = null;
+
+function kolko(zj, cel, dzwiek = 84) {   // pierścień kcal: ile zjedzone z celu; ponad cel = kolor uwagi + etykieta
+  const r = 34, o = 2 * Math.PI * r, p = cel ? Math.min(zj / cel, 1) : 0, ponad = cel && zj > cel * 1.05;
+  return `<svg class="pierscien" width="${dzwiek}" height="${dzwiek}" viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--karta2)" stroke-width="8"/>
+    <circle cx="42" cy="42" r="${r}" fill="none" stroke="${ponad ? "var(--uwaga)" : "var(--akcent)"}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${o * p} ${o}" transform="rotate(-90 42 42)"/></svg>`;
+}
+const paskiMakro = (s, c) => `<div class="makra">${MAKRO.map(([k, n, kol]) => `<div><div class="wiersz-m"><span>${n}</span><b>${lb(s[k])}<small> / ${lb(c[k])} g</small></b></div>
+  <div class="pasek-pct"><i style="width:${Math.min(100, 100 * (s[k] || 0) / (c[k] || 1))}%;background:${kol}"></i></div></div>`).join("")}</div>`;
+
+async function pokazJedzenie(dzien) {
+  dietaDzien = dzien && /^\d{4}-\d\d-\d\d$/.test(dzien) ? dzien : dzisISO();
+  const [d, hist] = await Promise.all([api("dieta?dzien=" + dietaDzien), api("dieta/historia?dni=28")]);
+  DIETA = d;
+  const c = d.cel, s = d.suma, zostalo = Math.round(c.kcal - s.kcal), dzis = dzisISO();
+  let h = `<div class="dni-nav"><a class="btn drugi" href="#jedzenie/${dzienMinus(dietaDzien, 1)}">‹</a>
+    <b>${dietaDzien === dzis ? "Dziś" : dataPL(dietaDzien)}</b>
+    ${dietaDzien < dzis ? `<a class="btn drugi" href="#jedzenie/${dzienMinus(dietaDzien, -1)}">›</a>` : `<span style="width:44px"></span>`}</div>`;
+  h += `<div class="karta hero"><div class="hero-wiersz"><div>
+      <div class="szary">${zostalo >= 0 ? "Zostało" : "Ponad cel"}</div>
+      <div class="duzy">${lb(Math.abs(zostalo))}<small>kcal</small></div>
+      <div class="szary">zjedzone ${lb(s.kcal)} z ${lb(c.kcal)} kcal</div></div>${kolko(s.kcal, c.kcal)}</div>
+    ${paskiMakro(s, c)}</div>`;
+  h += `<div class="karta" id="cel-trenera"><div class="kt">Cel na dziś ${c.zrodlo === "trener" ? `<span class="znaczek">od trenera</span>` : `<span class="znaczek">ze wzoru</span>`}</div>
+    ${c.liczy ? `<div class="szary"><span class="mysli">Trener liczy cel pod dzisiejszy trening</span></div>` : ""}
+    ${c.komentarz ? `<div>${esc(c.komentarz)}</div>` : ""}${c.pory ? `<div class="szary" style="margin-top:6px">${esc(c.pory)}</div>` : ""}
+    <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.trening_kcal ? `trening ~${lb(c.trening_kcal)} kcal` : "dzień bez treningu"].filter(Boolean).join(" · ")}</div>
+    <div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div></div>`;
+  d.posilki.forEach(p => {
+    const w = d.wpisy.filter(x => x.posilek === p), sk = w.reduce((a, x) => a + x.kcal, 0);
+    h += `<div class="karta posilek"><div class="kt wiersz" style="justify-content:space-between"><span>${POSILEK[p]}</span><span class="szary">${w.length ? lb(sk) + " kcal" : ""}</span></div>
+      ${w.map(x => `<div class="pozycja klik" onclick="edytujWpis(${x.id})"><div><div>${esc(x.nazwa)}</div><div class="szary">${x.gram ? lb(x.gram) + " g · " : ""}B ${lb(x.b)} · W ${lb(x.w)} · T ${lb(x.t)}</div></div><b>${lb(x.kcal)}</b></div>`).join("")}
+      <button class="drugi dodaj" onclick="dodajJedzenie('${p}')">+ Dodaj</button></div>`;
+  });
+  const hx = hist.filter(x => x.dzien >= dzienMinus(dzis, 13));
+  if (hx.length > 1) {
+    const x = Array.from({ length: 14 }, (_, i) => dzienMinus(dzis, 13 - i)), po = Object.fromEntries(hx.map(q => [q.dzien, q]));
+    const cele = hx.map(q => q.cel).filter(Boolean);
+    h += `<div class="karta"><div class="kt">Ostatnie 2 tygodnie</div>
+      ${wyk({ typ: "slupki", x, serie: [{ nazwa: "zjedzone", y: x.map(k => po[k] ? po[k].kcal : null), kolor: KOLOR.niebieski }], ref: cele.length ? srednia(cele) : null, refNazwa: "cel", jedn: "kcal", etX: dataKr, etDymek: dataPL, h: 150 })}
+      <div class="szary">Średnio ${lb(srednia(hx.map(q => q.kcal)))} kcal, białko ${lb(srednia(hx.map(q => q.b)))} g (dni z wpisami).</div></div>`;
+  }
+  widok.innerHTML = h;
+  rysuj(widok);
+  if (c.liczy) czekajNaCel(dietaDzien);
+}
+
+async function czekajNaCel(dzien) {
+  const nr = nawNr;
+  for (let i = 0; i < 40; i++) {
+    await new Promise(r => setTimeout(r, 5000));
+    if (nr !== nawNr || !location.hash.startsWith("#jedzenie")) return;
+    let d; try { d = await api("dieta?dzien=" + dzien); } catch (e) { return; }
+    if (!d.cel.liczy) { if (!zajety()) pokazJedzenie(dzien); return; }
+  }
+}
+async function przeliczCel() {
+  const k = $("#cel-trenera");
+  if (k) k.insertAdjacentHTML("beforeend", `<div class="szary"><span class="mysli">Trener liczy</span></div>`);
+  try { await czekaj(await api("dieta/przelicz", { dzien: dietaDzien })); } catch (e) { alert("Błąd: " + e.message); }
+  pokazJedzenie(dietaDzien);
+}
+
+// ---- arkusz (okno od dołu) do dodawania / edycji
+function arkusz(html) {
+  zamknijArkusz();
+  const t = document.createElement("div");
+  t.className = "arkusz-tlo";
+  t.innerHTML = `<div class="arkusz" role="dialog"><div class="uchwyt"></div>${html}</div>`;
+  t.addEventListener("click", e => { if (e.target === t) zamknijArkusz(); });
+  document.body.appendChild(t);
+  document.body.classList.add("arkusz-otwarty");
+  return t.firstChild;
+}
+function zamknijArkusz() {
+  stopSkaner();
+  document.querySelectorAll(".arkusz-tlo").forEach(x => x.remove());
+  document.body.classList.remove("arkusz-otwarty");
+}
+
+let posilekDod = "przekaska", szukT = 0;
+function dodajJedzenie(posilek) {
+  posilekDod = posilek;
+  const a = arkusz(`<div class="kt">Dodaj · ${POSILEK[posilek]}</div>
+    <div class="wiersz"><button onclick="skanuj()" class="skanuj"><svg viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>Skanuj kod</button>
+      <button class="drugi" onclick="formRecznie()">Wpisz ręcznie</button></div>
+    <input type="text" id="szukaj" placeholder="Szukaj produktu…" autocomplete="off" style="margin-top:12px">
+    <div id="wyniki" class="wyniki"><div class="szary" style="padding:10px 2px">Ładuję ostatnie…</div></div>`);
+  const inp = a.querySelector("#szukaj");
+  inp.oninput = () => { clearTimeout(szukT); szukT = setTimeout(() => szukaj(inp.value), 450); };
+  szukaj("");
+}
+let PRODUKTY = {};
+async function szukaj(q) {
+  const el = $("#wyniki"); if (!el) return;
+  if (q) el.innerHTML = `<div class="szary" style="padding:10px 2px"><span class="mysli">Szukam</span></div>`;
+  let l;
+  try { l = await api("produkty?q=" + encodeURIComponent(q)); } catch (e) { el.innerHTML = `<div class="szary">${esc(e.message)}</div>`; return; }
+  if (($("#szukaj") || {}).value !== q && q !== "") return;
+  l.forEach(p => PRODUKTY[p.kod] = p);
+  el.innerHTML = l.length ? (q ? "" : `<div class="szary" style="padding:4px 2px">Ostatnio</div>`) + l.map(p => `<div class="pozycja klik" onclick="wybierz('${esc(p.kod)}')">
+      <div><div>${esc(p.nazwa)}</div><div class="szary">${esc(p.marka || "")}${p.marka ? " · " : ""}na 100 g: B ${lb(p.b, 1)} · W ${lb(p.w, 1)} · T ${lb(p.t, 1)}</div></div><b>${lb(p.kcal)}</b></div>`).join("")
+    : `<div class="szary" style="padding:10px 2px">${q ? "Nic nie znalazłem. Zeskanuj kod albo wpisz ręcznie." : "Jeszcze nic nie jadłeś w apce. Zeskanuj kod albo wyszukaj."}</div>`;
+}
+
+function wybierz(kod) {
+  const p = PRODUKTY[kod]; if (!p) return;
+  const g0 = p.porcja_g || 100;
+  const a = arkusz(`<div class="kt">${esc(p.nazwa)}</div><div class="szary">${esc(p.marka || "")} · ${lb(p.kcal)} kcal / 100 g</div>
+    <label>Ile gramów</label><input type="number" id="gram" inputmode="decimal" value="${g0}">
+    <div class="chipy wiersz">${[...new Set([p.porcja_g && Math.round(p.porcja_g), 50, 100, 150, 200, 250].filter(Boolean))].map(g => `<button class="chip" data-g="${g}">${g} g</button>`).join("")}</div>
+    <div id="podglad" class="podglad"></div>
+    <label>Posiłek</label><select id="posilek">${Object.entries(POSILEK).map(([k, n]) => `<option value="${k}" ${k === posilekDod ? "selected" : ""}>${n}</option>`).join("")}</select>
+    <div class="wiersz" style="margin-top:14px"><button id="ok">Dodaj</button><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>`);
+  const gi = a.querySelector("#gram");
+  const pod = () => { const k = (+gi.value || 0) / 100; a.querySelector("#podglad").innerHTML = `<b>${lb(p.kcal * k)} kcal</b> · B ${lb(p.b * k)} g · W ${lb(p.w * k)} g · T ${lb(p.t * k)} g`; };
+  gi.oninput = pod; pod();
+  a.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { gi.value = b.dataset.g; pod(); });
+  a.querySelector("#ok").onclick = async () => {
+    const gram = +gi.value; if (!(gram > 0)) { gi.focus(); return; }
+    try { await api("dieta/wpis", { dzien: dietaDzien, posilek: a.querySelector("#posilek").value, kod: p.kod, gram }); } catch (e) { alert(e.message); return; }
+    zamknijArkusz(); pokazJedzenie(dietaDzien);
+  };
+}
+
+function formRecznie(kod = "") {
+  const a = arkusz(`<div class="kt">Nowy produkt</div>${kod ? `<div class="szary">Kodu ${esc(kod)} nie ma w Open Food Facts. Przepisz z etykiety (wartości na 100 g); zapamiętam go na następny raz.</div>` : `<div class="szary">Wartości na 100 g (z etykiety). Zapamiętam produkt.</div>`}
+    <label>Nazwa</label><input type="text" id="r-nazwa">
+    <div class="pola4"><div><label>kcal</label><input type="number" inputmode="decimal" id="r-kcal"></div><div><label>białko</label><input type="number" inputmode="decimal" id="r-b"></div>
+      <div><label>węgle</label><input type="number" inputmode="decimal" id="r-w"></div><div><label>tłuszcz</label><input type="number" inputmode="decimal" id="r-t"></div></div>
+    <label>Ile zjadłeś (g)</label><input type="number" inputmode="decimal" id="r-g" value="100">
+    <div class="wiersz" style="margin-top:14px"><button id="ok">Dodaj</button><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>`);
+  a.querySelector("#ok").onclick = async () => {
+    const v = id => a.querySelector(id).value.replace(",", ".");
+    const nazwa = v("#r-nazwa").trim(), kcal = +v("#r-kcal"), gram = +v("#r-g");
+    if (!nazwa || !(kcal >= 0) || v("#r-kcal") === "" || !(gram > 0)) { alert("Podaj nazwę, kcal i gramy"); return; }
+    try { await api("dieta/wpis", { dzien: dietaDzien, posilek: posilekDod, gram, produkt: { kod, nazwa, kcal, b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0 } }); } catch (e) { alert(e.message); return; }
+    zamknijArkusz(); pokazJedzenie(dietaDzien);
+  };
+  a.querySelector("#r-nazwa").focus();
+}
+
+function edytujWpis(id) {
+  const x = DIETA.wpisy.find(q => q.id === id); if (!x) return;
+  const a = arkusz(`<div class="kt">${esc(x.nazwa)}</div><div class="szary">${lb(x.kcal)} kcal · B ${lb(x.b)} · W ${lb(x.w)} · T ${lb(x.t)}</div>
+    ${x.gram ? `<label>Gramy</label><input type="number" inputmode="decimal" id="gram" value="${x.gram}">` : ""}
+    <div class="wiersz" style="margin-top:14px">${x.gram ? `<button id="ok">Zapisz</button>` : ""}<button class="drugi zle-t" id="usun">Usuń</button></div>`);
+  if (x.gram) a.querySelector("#ok").onclick = async () => { await api("dieta/wpis", { id, gram: +a.querySelector("#gram").value, dzien: dietaDzien }); zamknijArkusz(); pokazJedzenie(dietaDzien); };
+  a.querySelector("#usun").onclick = async () => { await api("dieta/wpis", { usun: id, dzien: dietaDzien }); zamknijArkusz(); pokazJedzenie(dietaDzien); };
+}
+
+// ---- skaner kodów kreskowych (ZXing, ładowany dopiero przy pierwszym skanowaniu; działa też w Safari)
+let skaner = null;
+const zaladujZxing = () => window.ZXing ? Promise.resolve() : new Promise((ok, zle) => {
+  const s = document.createElement("script"); s.src = "/zxing.min.js"; s.onload = ok; s.onerror = () => zle(new Error("nie udało się wczytać skanera")); document.head.appendChild(s);
+});
+async function skanuj() {
+  const a = arkusz(`<div class="kt">Skanuj kod kreskowy</div><div class="kamera"><video id="kam" playsinline muted></video><i class="ramka"></i></div>
+    <div class="szary" id="sk-info" style="margin-top:8px">Nakieruj aparat na kod kreskowy produktu.</div>
+    <div class="wiersz" style="margin-top:10px"><input type="text" inputmode="numeric" id="sk-kod" placeholder="albo wpisz cyfry kodu" style="flex:1"><button class="drugi" id="sk-ok">OK</button></div>
+    <div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>`);
+  a.querySelector("#sk-ok").onclick = () => { const k = a.querySelector("#sk-kod").value.replace(/\D/g, ""); if (k) znalezionyKod(k); };
+  try {
+    await zaladujZxing();
+    const hints = new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E]);
+    skaner = new ZXing.BrowserMultiFormatReader(hints, 300);
+    const video = a.querySelector("#kam");
+    await skaner.decodeFromConstraints({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } }, video, (w) => {
+      if (w && skaner) { const k = w.getText(); navigator.vibrate && navigator.vibrate(60); stopSkaner(); znalezionyKod(k); }
+    });
+  } catch (e) {
+    const i = $("#sk-info"); if (i) i.textContent = "Aparat niedostępny (" + e.message + "). Wpisz cyfry kodu spod kreskówki.";
+  }
+}
+function stopSkaner() { if (skaner) { try { skaner.reset(); } catch (_) {} skaner = null; } }
+async function znalezionyKod(kod) {
+  const i = $("#sk-info"); if (i) i.innerHTML = `<span class="mysli">Szukam ${esc(kod)}</span>`;
+  const r = await fetch("/api/produkt/" + encodeURIComponent(kod));
+  if (r.ok) { const p = await r.json(); PRODUKTY[p.kod] = p; wybierz(p.kod); return; }
+  if (r.status === 404) { formRecznie(kod); return; }
+  let b = ""; try { b = (await r.json()).blad; } catch (_) {}
+  if (i) i.textContent = b || "Błąd " + r.status;
+}
+
+// ------------------------------------------------------------------ Waga: masa, skład ciała, zdjęcia (dziennik Progres z portalu)
+const TYPY_ZDJ = { przod: "przód", bok: "bok", biceps: "biceps", tyl: "tył", tylbiceps: "tył biceps", inne: "inne" };
+let WAGA = null, zakresW = 90, wagaPokaz = "masa";
+async function pokazWage() {
+  const d = WAGA = await api("waga");
+  const wp = Object.entries(d.wpisy || {}).sort(([a], [b]) => a < b ? -1 : 1).map(([dzien, v]) => ({ dzien, ...v }));
+  const dzis = dzisISO();
+  const ost = k => wp.filter(x => x[k] != null).slice(-1)[0];
+  const om = ost("masa"), of = ost("fat"), oM = ost("muscle");
+  const przed = (k, n) => { if (!ost(k)) return null; const gr = dzienMinus(ost(k).dzien, n); const x = wp.filter(q => q[k] != null && q.dzien <= gr).slice(-1)[0]; return x ? x[k] : null; };
+  const dlt = (k, n, lepiej, jedn) => { const a = ost(k), b = przed(k, n); if (!a || b == null) return ""; const r = a[k] - b; if (Math.abs(r) < 0.05) return `<span class="delta">= ${n} dni temu</span>`;
+    return `<span class="delta ${Math.sign(r) === lepiej ? "lepiej" : "gorzej"}">${r > 0 ? "▲" : "▼"} ${lb(Math.abs(r), 1)} ${jedn} vs ${n} dni temu</span>`; };
+  let h = `<div class="karta hero"><div class="szary">${om ? (om.dzien === dzis ? "Dziś" : dataPL(om.dzien)) : "Brak pomiarów"}</div>
+    <div class="duzy">${om ? lb(om.masa, 1) : "–"}<small>kg</small></div>
+    <div class="wiersz delty">${dlt("masa", 7, -1, "kg")}${dlt("masa", 30, -1, "kg")}</div>
+    <div class="wiersz suma">${of ? `<div><span>tłuszcz</span><b>${lb(of.fat, 1)}%</b>${dlt("fat", 30, -1, "pp")}</div>` : ""}
+      ${of && om ? `<div><span>tkanka tłuszczowa</span><b>${lb(om.masa * of.fat / 100, 1)} kg</b></div>` : ""}
+      ${oM ? `<div><span>mięśnie</span><b>${lb(oM.muscle, 1)}%</b>${dlt("muscle", 30, 1, "pp")}</div>` : ""}</div></div>`;
+  h += `<div class="karta"><div class="kt">Nowy pomiar</div>
+    <div class="pola4"><div><label>Data</label><input type="date" id="w-data" value="${dzis}"></div><div><label>Masa (kg)</label><input type="number" inputmode="decimal" id="w-masa" step="0.1"></div>
+      <div><label>Tłuszcz %</label><input type="number" inputmode="decimal" id="w-fat" step="0.1"></div><div><label>Mięśnie %</label><input type="number" inputmode="decimal" id="w-muscle" step="0.1"></div></div>
+    <label>Notatka</label><input type="text" id="w-nota" placeholder="opcjonalnie">
+    <div class="wiersz" style="margin-top:12px"><button id="w-zapisz">Zapisz</button><span class="szary">Waż się rano, po toalecie, przed jedzeniem.</span></div></div>`;
+  const od = zakresW ? dzienMinus(dzis, zakresW - 1) : "0000";
+  const wz = wp.filter(x => x.dzien >= od);
+  h += `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]].map(([n, t]) => `<button class="${zakresW === n ? "akt" : ""}" data-zw="${n}">${t}</button>`).join("")}</div>`;
+  const zM = wz.filter(x => x.masa != null);
+  // średnia krocząca 7 dni = prawdziwy trend (pojedyncze ważenie skacze o ±1 kg od wody)
+  const trend = zM.map(x => srednia(zM.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => q.masa)));
+  h += `<div class="karta"><div class="kt">Masa <span class="szary">· kg</span></div>
+    ${wyk({ typ: "linia", x: zM.map(x => x.dzien), serie: [{ nazwa: "ważenie", y: zM.map(x => x.masa), kolor: KOLOR.niebieski, przerywana: true }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski }], dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
+    <div class="legenda"><span><i class="kropki-l"></i>ważenie</span><span><i style="background:${KOLOR.niebieski}"></i>średnia 7 dni</span></div>
+    ${tempoTekst(zM)}</div>`;
+  const zS = wz.filter(x => x.fat != null || x.muscle != null);
+  if (zS.length) {
+    const kg = wagaPokaz === "kg";
+    const y = (x, k) => x[k] == null ? null : kg ? (x.masa != null ? +(x.masa * x[k] / 100).toFixed(1) : null) : x[k];
+    h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Skład ciała</span>
+      <span class="zakladki mini"><button class="${kg ? "" : "akt"}" data-wp="masa">%</button><button class="${kg ? "akt" : ""}" data-wp="kg">kg</button></span></div>
+      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski }], dz: 1, jedn: kg ? "kg" : "%", etX: dataKr, etDymek: dataPL })}
+      ${legenda([{ nazwa: "tłuszcz", kolor: KOLOR.zolty }, { nazwa: "mięśnie", kolor: KOLOR.morski }])}</div>`;
+  }
+  const zd = (d.zdjecia || []).slice().sort((a, b) => a.data < b.data ? 1 : -1);
+  h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Zdjęcia</span><span class="szary">${zd.length}</span></div>
+    <div class="wiersz"><select id="z-typ" style="flex:1">${Object.entries(TYPY_ZDJ).map(([k, n]) => `<option value="${k}">${n}</option>`).join("")}</select>
+      <label class="btn" style="margin:0">Dodaj zdjęcie<input type="file" accept="image/*" id="z-plik" hidden></label></div>
+    <div id="z-info" class="szary"></div>
+    <div class="galeria">${zd.slice(0, 24).map(z => `<a class="miniatura" href="#" data-zid="${z.id}"><img loading="lazy" src="/api/waga/plik/${z.id}_m.jpg" alt=""><span>${dataKr(z.data)} · ${TYPY_ZDJ[z.typ] || z.typ}</span></a>`).join("")}</div>
+    <div class="szary" style="margin-top:8px">Film z sylwetki i porównania „przed / po” są w <a href="http://${location.hostname}/strony/progres/" target="_blank" rel="noopener">Progres na portalu</a>.</div></div>`;
+  h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
+      <div class="szary">${[x.fat != null && `tłuszcz ${lb(x.fat, 1)}%`, x.muscle != null && `mięśnie ${lb(x.muscle, 1)}%`, x.notatka && esc(x.notatka)].filter(Boolean).join(" · ")}</div></div><b>${x.masa != null ? lb(x.masa, 1) + " kg" : ""}</b></div>`).join("") : `<div class="szary">Brak wpisów.</div>`}${wp.length > 10 ? `<button class="drugi dodaj" id="w-wiecej" style="margin-top:10px">Pokaż wszystkie (${wp.length})</button>` : ""}</div>`;
+  widok.innerHTML = h;
+  const wi = $("#w-wiecej"); if (wi) wi.onclick = () => { widok.querySelectorAll(".pozycja.ukryty").forEach(x => x.classList.remove("ukryty")); wi.remove(); };
+  rysuj(widok);
+  widok.querySelectorAll("[data-zw]").forEach(b => b.onclick = () => { zakresW = +b.dataset.zw; pokazWage(); });
+  widok.querySelectorAll("[data-wp]").forEach(b => b.onclick = () => { wagaPokaz = b.dataset.wp; pokazWage(); });
+  widok.querySelectorAll("[data-wd]").forEach(el => el.onclick = () => edytujPomiar(el.dataset.wd));
+  widok.querySelectorAll("[data-zid]").forEach(el => el.onclick = e => { e.preventDefault(); pokazZdjecie(el.dataset.zid); });
+  $("#w-zapisz").onclick = zapiszPomiar;
+  $("#z-plik").onchange = e => wyslijZdjecie(e.target.files[0]);
+}
+
+function tempoTekst(zM) {   // tempo z trendu: ostatnie 3 tygodnie średniej
+  if (zM.length < 4) return "";
+  const k = zM[zM.length - 1], od = dzienMinus(k.dzien, 21);
+  const a = zM.filter(x => x.dzien >= od && x.dzien <= dzienMinus(k.dzien, 14)), b = zM.filter(x => x.dzien > dzienMinus(k.dzien, 7));
+  if (!a.length || !b.length) return "";
+  const r = (srednia(b.map(x => x.masa)) - srednia(a.map(x => x.masa))) / 2, pct = 100 * r / k.masa;
+  const ok = pct <= -0.3 && pct >= -0.9, za = pct < -0.9;
+  return `<div class="szary" style="margin-top:8px"><span class="status ${ok ? "dobrze" : za ? "uwaga" : ""}"><i></i>${r <= 0 ? "▼" : "▲"} ${lb(Math.abs(r), 2)} kg/tydz.</span>
+    ${ok ? " Dobre tempo spalania tłuszczu." : za ? " Za szybko: tracisz też mięśnie. Jedz trochę więcej." : pct > 0 ? " Masa rośnie." : " Wolno: sprawdź dziennik jedzenia."}</div>`;
+}
+
+async function zapiszPomiar() {
+  const v = id => { const s = $(id).value.replace(",", "."); return s === "" ? null : +s; };
+  const b = { data: $("#w-data").value, masa: v("#w-masa"), fat: v("#w-fat"), muscle: v("#w-muscle"), notatka: $("#w-nota").value.trim() || null };
+  if (b.masa == null && b.fat == null && b.muscle == null) { alert("Wpisz masę albo skład."); return; }
+  const stary = (WAGA.wpisy || {})[b.data] || {};
+  Object.keys(b).forEach(k => { if (b[k] == null && k !== "data") b[k] = stary[k] ?? undefined; });
+  try { await api("waga/wpis", JSON.parse(JSON.stringify(b))); } catch (e) { alert("Błąd: " + e.message); return; }
+  pokazWage();
+}
+function edytujPomiar(dzien) {
+  const x = (WAGA.wpisy || {})[dzien] || {};
+  const a = arkusz(`<div class="kt">${dataPL(dzien)} ${dzien.slice(0, 4)}</div>
+    <div class="pola4"><div><label>Masa</label><input type="number" inputmode="decimal" id="e-masa" value="${x.masa ?? ""}"></div><div><label>Tłuszcz %</label><input type="number" inputmode="decimal" id="e-fat" value="${x.fat ?? ""}"></div>
+      <div><label>Mięśnie %</label><input type="number" inputmode="decimal" id="e-muscle" value="${x.muscle ?? ""}"></div></div>
+    <label>Notatka</label><input type="text" id="e-nota" value="${esc(x.notatka || "")}">
+    <div class="wiersz" style="margin-top:14px"><button id="ok">Zapisz</button><button class="drugi zle-t" id="usun">Usuń wpis</button></div>`);
+  const v = id => { const s = a.querySelector(id).value.replace(",", "."); return s === "" ? undefined : +s; };
+  a.querySelector("#ok").onclick = async () => { await api("waga/wpis", { data: dzien, masa: v("#e-masa"), fat: v("#e-fat"), muscle: v("#e-muscle"), notatka: a.querySelector("#e-nota").value.trim() || undefined }); zamknijArkusz(); pokazWage(); };
+  a.querySelector("#usun").onclick = async () => { if (!confirm("Usunąć pomiar z " + dzien + "?")) return; await api("waga/wpis", { data: dzien }); zamknijArkusz(); pokazWage(); };
+}
+
+function pokazZdjecie(zid) {
+  const z = (WAGA.zdjecia || []).find(q => q.id === zid); if (!z) return;
+  const a = arkusz(`<div class="kt">${dataPL(z.data)} ${z.data.slice(0, 4)} · ${TYPY_ZDJ[z.typ] || z.typ}</div><img class="zdjecie" src="/api/waga/plik/${z.id}.jpg" alt="">
+    <div class="wiersz" style="margin-top:12px"><select id="zt" style="flex:1">${Object.entries(TYPY_ZDJ).map(([k, n]) => `<option value="${k}" ${k === z.typ ? "selected" : ""}>${n}</option>`).join("")}</select>
+      <button class="drugi zle-t" id="usun">Usuń</button></div>`);
+  a.querySelector("#zt").onchange = async e => { await api("waga/zdjecie/" + zid, { typ: e.target.value }); WAGA = await api("waga"); };
+  a.querySelector("#usun").onclick = async () => { if (!confirm("Usunąć zdjęcie? (trafi do kosza na NAS)")) return; await api("waga/zdjecie/" + zid, { usun: true }); zamknijArkusz(); pokazWage(); };
+}
+
+function zmniejsz(img, max, jakosc) {   // przez canvas: mniejszy plik i bez EXIF (GPS)
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return new Promise(ok => c.toBlob(ok, "image/jpeg", jakosc));
+}
+async function wyslijZdjecie(f) {
+  if (!f) return;
+  const info = $("#z-info"); info.innerHTML = `<span class="mysli">Wysyłam</span>`;
+  try {
+    const url = URL.createObjectURL(f), img = new Image();
+    await new Promise((ok, zle) => { img.onload = ok; img.onerror = () => zle(new Error("to nie jest zdjęcie")); img.src = url; });
+    const [duze, male] = [await zmniejsz(img, 1800, .88), await zmniejsz(img, 480, .8)];
+    URL.revokeObjectURL(url);
+    const fd = new FormData();
+    fd.append("plik", duze, "z.jpg"); fd.append("miniatura", male, "m.jpg");
+    fd.append("data", $("#w-data").value || dzisISO()); fd.append("typ", $("#z-typ").value);
+    const r = await fetch("/api/waga/zdjecie", { method: "POST", body: fd });
+    if (!r.ok) throw new Error("serwer: " + r.status);
+    pokazWage();
+  } catch (e) { info.textContent = "Błąd: " + e.message; }
+}
+
+// kafle na Dziś
+function kafelJedzenie(d) {
+  if (!d) return "";
+  const c = d.cel, s = d.suma, p = c.kcal ? Math.min(100, 100 * s.kcal / c.kcal) : 0;
+  return `<a class="kafel" href="#jedzenie"><div class="n">Kalorie<svg class="strz" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></div>
+    <div class="w">${lb(s.kcal)}<small> / ${lb(c.kcal)}</small></div>
+    <div class="d">${s.n ? `białko ${lb(s.b)} / ${lb(c.b)} g` : "dotknij, by wpisać"}</div>
+    <div class="pasek-pct" style="margin-top:10px"><i style="width:${p}%;${s.kcal > c.kcal * 1.05 ? "background:var(--uwaga)" : ""}"></i></div></a>`;
+}
+function kafelWaga(w) {
+  if (!w) return "";
+  const wp = Object.entries(w.wpisy || {}).filter(([, v]) => v.masa != null).sort(([a], [b]) => a < b ? -1 : 1);
+  const o = wp[wp.length - 1];
+  const fat = Object.entries(w.wpisy || {}).filter(([, v]) => v.fat != null).sort(([a], [b]) => a < b ? -1 : 1).slice(-1)[0];
+  const m = { lepiej: -1, dz: 1 };
+  const st = o ? wp.filter(([k]) => k <= dzienMinus(o[0], 7)).slice(-1)[0] : null;
+  return `<a class="kafel" href="#waga"><div class="n">Waga${o && o[0] !== dzisISO() ? `<span class="znaczek">${dataPL(o[0])}</span>` : ""}<svg class="strz" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></div>
+    <div class="w">${o ? lb(o[1].masa, 1) : "–"}<small>${o ? " kg" : ""}</small></div>
+    <div class="d">${st ? delta(m, o[1].masa, st[1].masa, "kg vs tydz.") : fat ? `tłuszcz ${lb(fat[1].fat, 1)}%` : "dotknij, by wpisać"}</div>
+    ${wyk({ typ: "spark", y: wp.slice(-14).map(([, v]) => v.masa), kolor: KOLOR.niebieski })}</a>`;
+}
+
 // ------------------------------------------------------------------ router
 // przejścia w stylu Liquid Glass: stary ekran mięknie i rozmywa się, nowy wjeżdża ze sprężyną
 const ZAKLADKI = ["dzis", "plan", "dane", "treningi", "czat"];
@@ -708,12 +1046,12 @@ async function route() {
   if (czekaUpdate) { location.reload(); return; }
   const nr = ++nawNr;
   const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
-  const zak = t === "analiza" ? "dzis" : t === "metryka" ? "dane" : t;
+  const zak = t === "analiza" || t === "jedzenie" || t === "waga" ? "dzis" : t === "metryka" ? "dane" : t;
   const i = ZAKLADKI.indexOf(zak), nav = $("nav");
   nav.querySelectorAll("a").forEach(a => a.classList.toggle("akt", a.dataset.t === zak));
   if (i >= 0) nav.style.setProperty("--i", i);
   nav.classList.toggle("bez-zak", i < 0);
-  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera" }[t] || "Trener";
+  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga" }[t] || "Trener";
   const pusto = !widok.firstElementChild;
   wejscie = i < 0 || ostatniaZak < 0 || i === ostatniaZak ? 0 : Math.sign(i - ostatniaZak);
   ostatniaZak = i;
@@ -724,8 +1062,9 @@ async function route() {
     ladTimer = setTimeout(() => { if (nr === nawNr && wejscie !== null) { _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`); widok.classList.remove("wychodzi"); window.scrollTo(0, 0); } }, 450);
   }
   WYK.clear();
+  zamknijArkusz();
   try {
-    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: () => pokazMetryke(arg) }[t] || pokazDzis)();
+    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: () => pokazMetryke(arg), jedzenie: () => pokazJedzenie(arg), waga: pokazWage }[t] || pokazDzis)();
   } catch (e) {
     if (e instanceof Anulowano || nr !== nawNr) return;
     if (!/nie jest zapamiętane/.test(e.message)) widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`;

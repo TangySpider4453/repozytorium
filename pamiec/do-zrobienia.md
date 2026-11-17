@@ -15,6 +15,8 @@
   i zdecydować, czy RestOrTrain w ogóle zostaje.
 - [ ] Sprawdzić, czy `trener-historia` (pobieranie od 2021) skończył: `kv.historia_postep == "gotowe"`.
 - [ ] Antek: podać terminy ferii/egzaminów i ewentualnych zawodów (trener wstawi je do periodyzacji).
+- [ ] Za 2–3 tygodnie: sprawdzić, czy tempo spadku masy (średnia 7 dni na ekranie Waga) mieści się w 0,5–0,7%/tydz.
+  i czy cel kcal od trenera ma sens (Antek wpisuje jedzenie?).
 - [ ] Pomysły: porównanie plan vs wykonanie w analizach, rekordy mocy (power curve), FTP z testu, pływanie/inne sporty.
 
 ## Problemy

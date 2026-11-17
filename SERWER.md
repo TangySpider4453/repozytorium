@@ -652,6 +652,14 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   trwa ok. 10–15 min.
 - Historia od 24.06.2021 (pierwsza aktywność): ~1900 aktywności + każdy dzień (sen, HRV, podsumowanie, gotowość,
   status). Stary most `restortrain-garmin` działa do przełączenia (potem wyłączyć `rtg-garmin.timer`).
+- Jedzenie i Waga (17.11): `trener/dieta.py`. Dziennik kalorii (tabele `produkty`, `jedzenie` w `trener.db`), kody
+  kreskowe skanuje ZXing w przeglądarce (`static/zxing.min.js`, działa w Safari). Produkty pobiera z Open Food Facts:
+  kod przez `api/v2/product`, a wyszukiwanie przez `search.openfoodfacts.org` (stare `cgi/search.pl` daje 503).
+  Pobrane produkty zostają w cache. Nieznany kod otwiera ręczny formularz i zostaje zapamiętany. Cel kcal/makro na
+  dzień: najpierw wzór (`wzor`: Cunningham + trening z planu i Garmina, deficyt ≤ 500 kcal i ≤ 20%, EA ≥ 35 kcal/kg
+  FFM, białko ~2 g/kg), potem Haiku z wiedzą `07_odzywianie.md`, przycinany do progów, w kv `makro_cel_<dzień>`.
+  Liczy się sam przy pierwszym otwarciu dnia; „Przelicz” liczy od nowa. Ekran Waga to dane Progresu z portalu przez
+  proxy `/api/waga*` (wpisy, zdjęcia, pliki); film i porównania zostają na portalu.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
