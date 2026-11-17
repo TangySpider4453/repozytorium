@@ -1,9 +1,8 @@
 # Do zrobienia (stan 2026-11-17)
 
 ## Pilne / zmiana konta
-- [ ] **Token Claude dla bota i telefonu** ze starego konta (wygasa 17.11!) → Antek w terminalu na Pi
-  (portal → Zdalne → Terminal): `bash ~/bot/nowy_token.sh` — robi `claude setup-token`, testuje token, zapisuje do
-  `/etc/serwerek-bot/claude.env` (kopia `.bak_DATA`) i restartuje przez `bez_rozmowy.sh`. Token nie idzie przez czat.
+- [x] Token Claude dla bota i telefonu z nowego konta (17.11, ważny rok → odnowić ~11.2027 przez
+  `bash ~/bot/nowy_token.sh` albo tak jak w `decyzje.md`).
 - [ ] **Unieważnić/zmienić** sekrety, które padły w starych czatach (lista w `DOSTEP_PRYWATNE.md` na Pi): hasło NAS,
   Linphone Pi, portalu, token bota Telegram, stary klucz Tailscale.
 - [x] Scalić gałęzie z domyślną (2026-11-17). Ewentualnie usunąć stare gałęzie na GitHubie.

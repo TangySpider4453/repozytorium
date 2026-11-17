@@ -3,7 +3,7 @@
 | Usługa | Co robi | Stan |
 |---|---|---|
 | `home-portal` | portal Flask `~/portal/app.py`, port 80, wszystkie strony `/strony/*` i API | ✅ |
-| `serwerek-bot` | bot Telegram + Linphone czat, Claude (Haiku szybki / Sonnet mądry), pamięć `~/bot/pamiec.db` | ✅ (token Claude jeszcze ze **starego konta**) |
+| `serwerek-bot` | bot Telegram + Linphone czat, Claude (Haiku szybki / Sonnet mądry), pamięć `~/bot/pamiec.db` | ✅ (token Claude z nowego konta od 17.11, ważny rok) |
 | `serwerek-telefon` | rozmowy głosowe Linphone (pjsua2), `~/glos/telefon.py` | ✅ (problem: nie słyszy Antka) |
 | `glos-whisper` | rozpoznawanie mowy whisper.cpp | ✅ |
 | `ollama` | modele lokalne (qwen2.5:1.5b zapas rozmów, qwen2.5:3b Garmin, moondream — stary model wizji; testowe usunięte 17.11) | ✅ |

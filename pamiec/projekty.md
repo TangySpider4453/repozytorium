@@ -4,7 +4,7 @@
 |---|---|---|---|
 | 📚 **Nauka** — notatki, fiszki, quizy, „Licz”, postępy | Pi 4 `/strony/nauka/` | `PLAN.md` | działa; Mobidziennik co 10 min wykrywa sprawdziany |
 | 💪 **Progres sylwetki** — pomiary, zdjęcia, film | Pi 4 `/strony/progres/`, zdjęcia na NAS | `PROGRES.md` | działa |
-| 🤖 **Bot** Telegram/Linphone + szybkie odpowiedzi bez AI, todo, budziki | Pi 4 `~/bot/` | `SERWER.md` | działa; **token Claude do podmiany (nowe konto)** |
+| 🤖 **Bot** Telegram/Linphone + szybkie odpowiedzi bez AI, todo, budziki | Pi 4 `~/bot/` | `SERWER.md` | działa; token Claude z nowego konta (17.11, ważny do ~11.2027) |
 | 📞 **Telefon** (rozmowy głosowe z Pi) | Pi 4 `~/glos/` | `SERWER.md` „Głos, telefon” | ❌ Pi nie słyszy Antka od ~11.11 |
 | 🏋️ **Garmin RestOrTrain** → treningi na zegarek | Pi 4 `~/restortrain-garmin` (własny git) | `SERWER.md`, `restortrain-garmin-strength-SPEC.md` | działa, parser regułowy + Ollama; bez Claude |
 | 🩺 **Zdrowie serwera**, NAS, kopia systemu | Pi 4 `/strony/zdrowie/` | `SERWER.md` | działa |

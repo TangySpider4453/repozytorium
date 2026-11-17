@@ -7,7 +7,9 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   kopia 02:00 OK). Na prośbę Antka oznaczono incydent `rtg-garmin-teraz` (05.11) jako przejrzany przez
   `POST /api/zdrowie/przejrzane` z `{"id": …}` → zdrowie: 0/0. Usunięto testowe modele Ollamy
   `qwen3:4b`, `qwen3:1.7b`, `llama3.2:3b` (nieużywane w kodzie ani w env) → dysk 61% → 51%; zostały qwen2.5:1.5b/3b i moondream.
-  Stary token Claude na Pi wygasa dziś → napisano `pi/bot/nowy_token.sh` (wgrany do `~/bot/`), uruchamia go Antek.
+  Stary token Claude przestał działać („organization has disabled Claude subscription access”) → nowy token:
+  `claude setup-token` w tmux na Pi, Antek dał link→kod na czacie, token zapisany prosto do `claude.env` (kopia
+  `.bak_2026-11-17`), test OK, restart przez `bez_rozmowy.sh` 09:29:54. Zapasowo jest `pi/bot/nowy_token.sh` (w `~/bot/`).
 - **2026-11-17 (chmura)**: Podłączono repo do sesji. Tailscale nie działa: brak `TS_AUTHKEY` i sieć „Limited”
   blokuje hosty Tailscale; podano użytkownikowi instrukcję (angielskie nazwy w aplikacji). Utworzono `pamiec/` i
   wpisano do `CLAUDE.md`, że sesje mają z niej korzystać. Użytkownik ustawił sieć i klucz; połączono przez link

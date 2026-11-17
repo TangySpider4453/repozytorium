@@ -12,3 +12,9 @@
 | 2026-11-16 | Bez lokalnego modelu do rozmów i planowania (za wolny: 79–164 s) | pomiar na Pi |
 | 2026-11-17 | Zmiana konta Claude; kopie starych rozmów na Pi w `~/Desktop/dla claude kopie zapasowe/` | Antek |
 | 2026-11-17 | `pamiec/MAPA.md` = punkt startowy mózgu; węzły tematyczne zamiast jednego wielkiego pliku | prośba Antka |
+
+## Token Claude na Pi (2026-11-17)
+- Bot i telefon używają `CLAUDE_CODE_OAUTH_TOKEN` z `/etc/serwerek-bot/claude.env` (token z `claude setup-token`, ważny rok).
+- Odnawianie z chmury: `tmux new -d -x 400 claude setup-token` na Pi → link Antkowi → jego jednorazowy kod przez
+  `tmux send-keys` → token wyciągnięty z `capture-pane` do pliku 600 i **nigdy nie wypisany** (sed maskuje `sk-ant-…`)
+  → test `claude -p` → zapis do env → `bez_rozmowy.sh`. Albo Antek sam: `bash ~/bot/nowy_token.sh` w terminalu portalu.
