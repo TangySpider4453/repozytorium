@@ -2,6 +2,9 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-18 (chmura, Trener — plan)**: śr i pt tylko jedna sesja, siłki pełne (min. 55 min, zwykle 60–75):
+  nowe reguły w kontroli planu (`dni_jedna_sesja`, `silka_min_min`) i w `wymagania`; makrocykl i plan przebudowane.
+
 - **2026-11-18 (chmura, usunięcie mostu RestOrTrain)**: skasowane z Garmina 8 treningów „Siłka …” ze znacznikiem
   `auto: restortrain-garmin` (odplanowane + usunięte; oryginały RestOrTrain i treningi Trenera zostały). Token Garmina
   przeniesiony do `~/trener/dane/garmin_tokens/`, Trener ma `python -m trener login`. Jednostki `rtg-garmin*` i projekt

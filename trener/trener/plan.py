@@ -358,7 +358,24 @@ def kontrola(db, treningi, ist, faza, ftp):
         if dzien_t and any(partia(t) != "nogi" for t in dzien_t):
             p.append(f"{['pon', 'wt', 'śr', 'czw', 'pt', 'sob', 'ndz'][wd]}: Antek ma wtedy czas TYLKO na siłkę nóg "
                      "(bez roweru/biegu/góry) — " + ", ".join(t["tytul"] for t in dzien_t))
+    dn = ['pon', 'wt', 'śr', 'czw', 'pt', 'sob', 'ndz']
+    for wd in u.get("dni_jedna_sesja") or []:    # np. śr i pt: jedna sesja dziennie (decyzja Antka 18.11)
+        dzien_t = {}
+        for t in tren:
+            if date.fromisoformat(t["dzien"]).weekday() == wd:
+                dzien_t.setdefault(t["dzien"], []).append(t)
+        for d, ts in dzien_t.items():
+            if len(ts) > 1:
+                p.append(f"{dn[wd]} {d}: Antek chce wtedy TYLKO JEDNĄ sesję (bez dokładania roweru/biegu do siłki) — "
+                         + ", ".join(t["tytul"] for t in ts) + "; przenieś drugą na inny dzień albo pomiń")
     silki = [t for t in tren if t["sport"] == "silka"]
+    min_s = int(u.get("silka_min_min") or 0)
+    for t in silki:                              # „porządne” siłki: nie skracać do 30–40 min (decyzja Antka 18.11)
+        lzej = any(x in ((t.get("tytul") or "") + " " + (t.get("opis") or "")).lower() for x in ("deload", "techniczn"))
+        prog = round(min_s * 0.8) if lzej else min_s
+        if prog and not t.get("opcjonalny") and budowa.czas_min(t) < prog:
+            p.append(f"{t['dzien']} {t['tytul']}: siłka ~{budowa.czas_min(t)} min, a Antek chce pełnych treningów "
+                     f"(min. {prog} min z rozgrzewką: więcej ćwiczeń/serii; lżej = wyższy RIR albo ciężar, nie 2 serie)")
     for t in silki:
         ks = [k for k in _kroki(t.get("kroki")) if k.get("garmin") or k.get("nazwa")]
         kat = [(k.get("garmin") or "").split("/")[0].upper() for k in ks]
