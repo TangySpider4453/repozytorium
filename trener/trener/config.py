@@ -24,7 +24,7 @@ DOMYSLNE = {
     "analiza_rano": True,
     "analiza_godzina_min": "06:30", # nie wcześniej niż
     "push": True,
-    "linphone": True,
+    "linphone": False,   # Linphone tylko zapasowo, gdy push nie dojdzie do nikogo (Antek 18.11: bez podwójnych)
     "model": "claude-haiku-5-5",         # lekkie: czat, analiza, ankieta (decyzja Antka 17.11)
     "model_ciezki": "claude-sonnet-5-5", # ciężkie: plan, cel, badania; Opus NIE (za drogi)
     "gora_tyg": 3, "nogi_tyg": 2, "dni_tylko_nogi": [], "dni_jedna_sesja": [], "weekend_dwie_max": 2, "silka_min_min": 55, "tetno_ciezkie": None,                  # siłka góra: tyle razy w tygodniu ZAWSZE (decyzja Antka 17.11, sprawdza kontrola planu)

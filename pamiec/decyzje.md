@@ -30,6 +30,8 @@
 - Pełne ustalenia (profil, strefy, lubiane ćwiczenia, wzór tygodnia, styl prowadzenia) są TYLKO na Pi w `dane/ustawienia.json` → `wymagania` (dane osobowe, nie do repo). Postęp ćwiczeń w kv `pamiec_trenera`.
 - Cel dopisany: rekompozycja do 30.04.2027 bez agresywnego deficytu; rower dalej pod cele kolarskie (nie „ogólne spalanie”). Sporty: + bieg.
 - Kontrola planu w kodzie: nogi 2×/tydz. (`nogi_tyg`), dni tylko na nogi (`dni_tylko_nogi`, na Pi = wtorek), odwodzenie+przywodzenie na końcu nóg, bez szrugsów, bez 2 tricepsów pod rząd, `tetno_ciezkie` (bpm) do liczenia jednostek intensywnych. Strefy własne → cele „tetno”/„moc” w bpm/W.
+- 2026-11-18 (Antek): **powiadomienia Trenera tylko push z apki**, bez kopii na Linphone (`linphone`: false);
+  Linphone tylko zapasowo, gdy push nie dojdzie do żadnego urządzenia, i przy błędzie logowania Garmina.
 - 2026-11-18 (Antek, poprawka): **dwie sesje tylko w czwartek i w jeden dzień weekendu**; pon, wt, śr, pt = jedna
   (`dni_jedna_sesja` [0,1,2,4], `weekend_dwie_max` 1).
 - 2026-11-18 (Antek): **śr i pt = jedna sesja** (sama siłka, bez roweru/biegu; `dni_jedna_sesja` [2,4]); **siłka zawsze pełna**,
