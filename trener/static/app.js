@@ -626,9 +626,9 @@ async function wyslij(analizaId) {
   window.scrollTo(0, document.body.scrollHeight);
   try {
     const zid = await api("czat", { tresc, analiza_id: analizaId ? +analizaId : null });
-    await czekaj(zid, i => { if (i === 25) $("#mysli").textContent = "Trener układa plan i wysyła na zegarek"; });
+    await czekaj(zid, i => { const m = $("#mysli"); if (i === 25 && m) m.textContent = "Trener układa plan i wysyła na zegarek"; });
   } catch (e) { alert("Błąd: " + e.message); }
-  pokazCzat(analizaId);
+  if (location.hash.startsWith("#czat")) pokazCzat(analizaId);
 }
 
 // ------------------------------------------------------------------ Ustawienia

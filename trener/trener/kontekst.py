@@ -101,12 +101,31 @@ def agregaty(db, okres="tydzien", od=None):
 DNI_TYG = ['pon', 'wt', 'śr', 'czw', 'pt', 'sob', 'ndz']
 
 
+DNI_PELNE = ['poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota', 'niedziela']
+
+
 def z_dniem(iso):
-    """2026-11-19 → '2026-11-19 czw' (żeby model wiedział, jaki to dzień tygodnia)"""
+    """2026-11-19 → '2026-11-19 czw JUTRO' (dzień tygodnia + względem dziś, żeby model nie mylił dni)"""
     try:
-        return f"{iso} {DNI_TYG[date.fromisoformat(iso[:10]).weekday()]}"
+        d = date.fromisoformat(iso[:10])
     except ValueError:
         return iso
+    r = (d - date.today()).days
+    wzgl = {0: " DZIŚ", 1: " JUTRO", -1: " WCZORAJ", 2: " POJUTRZE"}.get(r, "")
+    return f"{iso} {DNI_TYG[d.weekday()]}{wzgl}"
+
+
+def slownie(iso):
+    """dzień dla Antka: dziś / jutro / wczoraj / pojutrze / czwartek; dalej niż tydzień: 'czwartek 26.11'"""
+    try:
+        d = date.fromisoformat(iso[:10])
+    except ValueError:
+        return iso
+    r = (d - date.today()).days
+    if r in (-1, 0, 1, 2):
+        return {0: "dziś", 1: "jutro", -1: "wczoraj", 2: "pojutrze"}[r]
+    n = DNI_PELNE[d.weekday()]
+    return n if -7 < r < 7 else f"{n} {d.day}.{d.month:02d}"
 
 
 def plan_tekst(db, od, do):
@@ -118,7 +137,10 @@ def plan_tekst(db, od, do):
 def pelny(db, dni=14, akt_dni=28, tygodnie=16, cel=None):
     dzis = date.today()
     u = config.ustawienia()
-    cz = [f"DZIŚ: {dzis.isoformat()} ({['pon', 'wt', 'śr', 'czw', 'pt', 'sob', 'ndz'][dzis.weekday()]})",
+    from datetime import datetime
+    cz = [f"DZIŚ: {dzis.isoformat()} ({DNI_PELNE[dzis.weekday()]}), teraz godz. {datetime.now():%H:%M}. JUTRO: "
+          f"{(dzis + timedelta(days=1)).isoformat()} ({DNI_PELNE[(dzis + timedelta(days=1)).weekday()]}). Pilnuj, o którym "
+          "dniu mówisz: „dziś” to tylko DZIŚ; trening z planu na jutro nazywaj „jutro”, dalsze — dniem tygodnia.",
           f"CELE ANTKA: {u['cele'] or '(nie podał jeszcze — zapytaj / załóż ogólny rozwój formy kolarskiej)'}",
           f"DOSTĘPNOŚĆ: {u['dostepnosc'] or '(brak)'}", f"SPRZĘT: {u['sprzet'] or '(brak)'}",
           f"SPORTY DO PLANU: {', '.join(u['sporty'])}"]

@@ -108,6 +108,8 @@ def zaplanuj(powod="", prosba="", dni=None, pytaj=False):
         f"ZADANIE: ułóż plan na dni {od} .. {do} (sporty: {', '.join(u['sporty'])}). Powód: {powod or 'aktualizacja'}."
         + (f"\nPROŚBA ANTKA: {prosba}" if prosba else "")
         + ("\nDziś już był trening — dzisiejszego dnia nie planuj." if od != dzis.isoformat() else "")
+        + "\nW 'komentarz' i 'uzasadnienie' mów o dniach słowami względem dziś (dziś / jutro / w piątek), bez dat, "
+          "i pilnuj, którego dnia dotyczy dany trening — nie pisz „dziś” o treningu zaplanowanym na jutro."
         + ("\nTRYB KOREKTY: zmieniaj tylko to, co wynika z dzisiejszej oceny (sen, HRV, regeneracja, ostatnie treningi); "
            "resztę zostaw przez zostaw_id. Drobne zmiany (krócej, lżej, inna strefa, mniej serii) wchodzą od razu. "
            "Usunięcie albo dodanie jednostki wymaga zgody Antka — wtedy w 'komentarz' napisz wprost dlaczego "
@@ -135,7 +137,7 @@ def zaplanuj(powod="", prosba="", dni=None, pytaj=False):
 def _usun(db, r):
     db.execute("UPDATE plan SET stan=?, zmieniono=? WHERE id=?",
                ("do_usuniecia" if r["workout_id"] else "usuniety", baza.teraz(), r["id"]))
-    return f"− {r['dzien']} {r['tytul']}"
+    return f"− {kontekst.slownie(r['dzien'])}: {r['tytul']}"
 
 
 def _dodaj(db, t, zrodlo):
@@ -146,14 +148,14 @@ def _dodaj(db, t, zrodlo):
             budowa.buduj(t)                            # walidacja przed zapisem
         except Exception as ex:
             log.warning("odrzucony trening %s: %s", t.get("tytul"), ex)
-            return f"⚠️ {t.get('dzien')} {t.get('tytul')}: błąd planu ({ex})"
+            return f"⚠️ {kontekst.slownie(t.get('dzien') or '')} {t.get('tytul')}: błąd planu ({ex})"
     opis = t.get("opis", "") + (f"\nCel: {t['cel']}" if t.get("cel") else "")
     db.execute("INSERT INTO plan (dzien, sport, tytul, opis, kroki, hash, stan, utworzono, zmieniono, zrodlo) "
                "VALUES (?,?,?,?,?,?,?,?,?,?)",
                (t["dzien"], t["sport"], t["tytul"][:60], opis, json.dumps(t.get("kroki") or [], ensure_ascii=False),
                 budowa.hash_treningu(t), "nowy" if t["sport"] != "odpoczynek" else "w_apce", baza.teraz(), baza.teraz(),
                 zrodlo[:200]))
-    return f"+ {t['dzien']} {t['tytul']}" + (f" (~{budowa.czas_min(t)} min)" if t["sport"] != "odpoczynek" else "")
+    return f"+ {kontekst.slownie(t['dzien'])}: {t['tytul']}" + (f" (~{budowa.czas_min(t)} min)" if t["sport"] != "odpoczynek" else "")
 
 
 def dni_duzych_zmian(treningi, ist):
@@ -181,7 +183,7 @@ def zastosuj(db, treningi, od, do, ist, zrodlo, wstrzymaj_dni=()):
         if r["id"] not in zostaja:
             if r["dzien"] in wstrzymaj_dni:
                 prop["usun"].append(r["id"])
-                prop["zmiany"].append(f"− {r['dzien']} {r['tytul']}")
+                prop["zmiany"].append(f"− {kontekst.slownie(r['dzien'])}: {r['tytul']}")
             else:
                 zmiany.append(_usun(db, r))
     for t in treningi:
@@ -189,7 +191,7 @@ def zastosuj(db, treningi, od, do, ist, zrodlo, wstrzymaj_dni=()):
             continue
         if t["dzien"] in wstrzymaj_dni:
             prop["dodaj"].append(t)
-            prop["zmiany"].append(f"+ {t['dzien']} {t['tytul']}" + (f" (~{budowa.czas_min(t)} min)" if t["sport"] != "odpoczynek" else ""))
+            prop["zmiany"].append(f"+ {kontekst.slownie(t['dzien'])}: {t['tytul']}" + (f" (~{budowa.czas_min(t)} min)" if t["sport"] != "odpoczynek" else ""))
         else:
             zmiany.append(_dodaj(db, t, zrodlo))
     db.commit()
