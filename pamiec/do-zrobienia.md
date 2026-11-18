@@ -11,8 +11,9 @@
 ## Trener (nowa apka, 17.11)
 - [ ] Antek: sparować iPhone kodem (`python -m trener kod` na Pi; Claude daje kod w czacie).
 - [ ] Antek: otworzyć apkę na iPhonie, Add to Home Screen, włączyć push, wypełnić **ankietę startową** (karta „Zacznijmy” → 7 kroków + dopytanie). Bez niej apka nie planuje.
-- [ ] Po pierwszym planie i jego sprawdzeniu na zegarku: wyłączyć stary most (`sudo systemctl disable --now rtg-garmin.timer`)
-  i zdecydować, czy RestOrTrain w ogóle zostaje.
+- [x] Stary most RestOrTrain usunięty (18.11): 8 jego treningów „Siłka …” skasowanych z Garmina, usługi i projekt usunięte.
+- [ ] Portal: usunąć martwe resztki mostu (`/api/garmin`, `/api/garmin/silownia`, moduł `garmin` na Automatycznych, strona
+  Siłownia). Wymaga restartu portalu: zapytać Antka.
 - [ ] Sprawdzić, czy `trener-historia` (pobieranie od 2021) skończył: `kv.historia_postep == "gotowe"`.
 - [ ] Antek: podać terminy ferii/egzaminów i ewentualnych zawodów (trener wstawi je do periodyzacji).
 - [ ] Za 2–3 tygodnie: sprawdzić, czy tempo spadku masy (średnia 7 dni na ekranie Waga) mieści się w 0,5–0,7%/tydz.

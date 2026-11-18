@@ -11,7 +11,7 @@ bo następna sesja jej nie zobaczy.
 | `pamiec/` | mózg Claude |
 | `strona/`, `narzedzia/` | Nauka (kopie z Pi `~/portal/sites/nauka/`) |
 | `progres/` | Progres sylwetki |
-| `pi/` | kopie kodu z Pi 4: `app.py` (portal), `bot/`, `glos/`, `restortrain-garmin/`, `nas/`, `airplay/`… |
+| `pi/` | kopie kodu z Pi 4: `app.py` (portal), `bot/`, `glos/`, `nas/`, `airplay/`… |
 | `zdrowie/`, `automatyczne/`, `kalendarz/`, `todo/`, `mobi/`, `silownia/`, `komunikacja/`, `budziki/`, `glosnik/`, `wspolne/` | strony portalu |
 | `lazik/` | łazik: apki Pi 5, kopie, strony |
 | `.claude/hooks/session-start.sh` | start sesji: Tailscale, `ssh pi`, wypisuje stan |

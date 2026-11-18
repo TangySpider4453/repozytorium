@@ -38,7 +38,7 @@ graph LR
   PI4 --- P1["📚 Nauka"]
   PI4 --- P2["💪 Progres sylwetki"]
   PI4 --- P3["🤖 Bot + 📞 telefon"]
-  PI4 --- P4["🏋️ Garmin RestOrTrain"]
+  PI4 --- P4["🏋️ Trener (Garmin, jedzenie)"]
   PI4 --- P5["🩺 Zdrowie, NAS, kopie"]
   PI4 --- P6["🎮 Minecraft (znajomi!)"]
   PI4 --- P7["📅 todo, kalendarz, Mobidziennik, ZTM"]

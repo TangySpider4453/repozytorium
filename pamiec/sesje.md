@@ -2,6 +2,12 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-18 (chmura, usunięcie mostu RestOrTrain)**: skasowane z Garmina 8 treningów „Siłka …” ze znacznikiem
+  `auto: restortrain-garmin` (odplanowane + usunięte; oryginały RestOrTrain i treningi Trenera zostały). Token Garmina
+  przeniesiony do `~/trener/dane/garmin_tokens/`, Trener ma `python -m trener login`. Jednostki `rtg-garmin*` i projekt
+  usunięte (archiwum `~/kopie/restortrain-garmin-20261118.tar.gz`), kopia `pi/restortrain-garmin/` usunięta z repo.
+  Zostało: martwe resztki w portalu (wymaga restartu portalu).
+
 - **2026-11-17 (chmura, Trener — wygląd)**: Rebranding Trenera: nowa ciemna paleta, logo i ikony SVG, wykresy SVG
   z dymkiem po dotknięciu (linie, słupki, fazy snu). Kafelki (sen, HRV, tętno, BB, obciążenie, stres…) prowadzą do
   `#metryka/<klucz>`: historia w zakresach 7/30/90/365/całość, średnia, dni tygodnia, porównanie z rokiem temu i rekordem.

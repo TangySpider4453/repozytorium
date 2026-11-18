@@ -6,7 +6,6 @@
 | 💪 **Progres sylwetki** — pomiary, zdjęcia, film | Pi 4 `/strony/progres/`, zdjęcia na NAS | `PROGRES.md` | działa |
 | 🤖 **Bot** Telegram/Linphone + szybkie odpowiedzi bez AI, todo, budziki | Pi 4 `~/bot/` | `SERWER.md` | działa; token Claude z nowego konta (17.11, ważny do ~11.2027) |
 | 📞 **Telefon** (rozmowy głosowe z Pi) | Pi 4 `~/glos/` | `SERWER.md` „Głos, telefon” | ❌ Pi nie słyszy Antka od ~11.11 |
-| 🏋️ **Garmin RestOrTrain** → treningi na zegarek (stary most) | Pi 4 `~/restortrain-garmin` (własny git) | `SERWER.md`, `restortrain-garmin-strength-SPEC.md` | działa do przełączenia na Trenera, potem wyłączyć |
 | 🩺 **Zdrowie serwera**, NAS, kopia systemu | Pi 4 `/strony/zdrowie/` | `SERWER.md` | działa |
 | 📅 Kalendarz, Zadania, ZTM Poznań, Zawodowe, Zdalne, Automatyczne, Siłownia | Pi 4 portal | `SERWER.md` | działa; Google Calendar OAuth odłożony |
 | 📬 Poczta (tylko odczyt) | Pi 4 bot | `SERWER.md` | czeka na 4 hasła aplikacji |

@@ -530,7 +530,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - Wyjątek w logowaniu wejść (zgoda Antka 2026-10-28): port 7000 i porty >= 32768 nie są logowane jako SERWEREK-SKAN
   (granie AirPlay z iPhone'a otwiera kilka portów naraz). Nazwa głośnika: „Antek Pokój rpi”.
 
-## Treningi siłowe RestOrTrain → Garmin (od 2026-11-05, w budowie)
+## Treningi siłowe RestOrTrain → Garmin (2026-11-05 – 2026-11-18, USUNIĘTE)
+- **Usunięte 2026-11-18** (zastąpił je Trener): 8 treningów z jego znacznikiem skasowane z Garmina (oryginały RestOrTrain
+  i treningi Trenera nietknięte), jednostki `rtg-garmin*` i `~/restortrain-garmin` usunięte. Archiwum bez tokenu i venv:
+  `~/kopie/restortrain-garmin-20261118.tar.gz`; kod też w historii gita (`pi/restortrain-garmin/`). Token Garmina
+  przeniesiony do `~/trener/dane/garmin_tokens/`. Portal: `/api/garmin` i `/api/garmin/silownia` zwracają puste listy,
+  strona Siłownia i moduł `garmin` na Automatycznych są martwe (do sprzątnięcia przy restarcie portalu). Niżej opis historyczny.
 - Projekt `~/restortrain-garmin/` (osobne repo git na Pi, kopia w `pi/restortrain-garmin/`), venv `.venv`, biblioteka
   `garminconnect` 0.3.20 (własne logowanie mobilne z MFA; `garth` porzucony). Spec: tryby `parse`, `login`,
   `pobierz-wzorce`, `sync [--dry-run]`, `status` (`./rtg.sh …`). Token: `tokens/garmin_tokens.json` (700/600, poza gitem).
@@ -651,7 +656,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ocena bazy vs cel + 2–5 tematów → `~/trener/dane/wiedza_cel/`, sprawdzanie linków; ankieta → badania → makrocykl → plan
   trwa ok. 10–15 min.
 - Historia od 24.06.2021 (pierwsza aktywność): ~1900 aktywności + każdy dzień (sen, HRV, podsumowanie, gotowość,
-  status). Stary most `restortrain-garmin` działa do przełączenia (potem wyłączyć `rtg-garmin.timer`).
+  status). Stary most `restortrain-garmin` usunięty 18.11; token Garmina w `~/trener/dane/garmin_tokens/` (logowanie:
+  `python -m trener login`, tylko Antek w terminalu).
 - Jedzenie i Waga (17.11): `trener/dieta.py`. Dziennik kalorii (tabele `produkty`, `jedzenie` w `trener.db`), kody
   kreskowe skanuje ZXing w przeglądarce (`static/zxing.min.js`, działa w Safari). Produkty pobiera z Open Food Facts:
   kod przez `api/v2/product`, a wyszukiwanie przez `search.openfoodfacts.org` (stare `cgi/search.pl` daje 503).

@@ -1,4 +1,4 @@
-"""Ścieżki i ustawienia. Sekrety tylko poza gitem: token Garmina (wspólny z restortrain-garmin), klucze VAPID w dane/."""
+"""Ścieżki i ustawienia. Sekrety tylko poza gitem: token Garmina w dane/garmin_tokens/, klucze VAPID w dane/."""
 import json
 import os
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 KAT = Path(__file__).resolve().parent.parent
 DANE = Path(os.environ.get("TRENER_DANE", KAT / "dane"))
 BAZA = DANE / "trener.db"
-TOKENY = Path(os.environ.get("TRENER_TOKENY", "/home/tonyg/restortrain-garmin/tokens"))
+TOKENY = Path(os.environ.get("TRENER_TOKENY", KAT / "dane" / "garmin_tokens"))
 BLOKADA_GARMIN = DANE / "garmin.lock"
 CLAUDE = Path(os.environ.get("TRENER_CLAUDE", "/home/tonyg/.local/bin/claude"))
 KOLEJKA_BOTA = Path("/home/tonyg/bot/powiadomienia")

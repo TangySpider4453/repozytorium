@@ -30,7 +30,7 @@ siłownia dla kolarza, bieg, HRV/sen, młody sportowiec — z linkami do badań)
 - Ręcznie: `.venv/bin/python -m trener sync | historia | dzien RRRR-MM-DD | cykl | analiza rano | plan "prośba"`.
   Polecenia z Claude potrzebują tokenu: `sudo systemd-run --uid=tonyg -p EnvironmentFile=/etc/serwerek-bot/claude.env
   -E HOME=/home/tonyg --wait --pipe ...`.
-- Token Garmina wspólny z `~/restortrain-garmin/tokens` (logowanie z blokadą `dane/garmin.lock`).
+- Token Garmina w `dane/garmin_tokens/` (700/600, poza gitem; nowe logowanie: Antek w terminalu `python -m trener login`) (logowanie z blokadą `dane/garmin.lock`).
 
 ## Dostęp z internetu (bez Tailscale w telefonie)
 - Włączone 17.11: `sudo tailscale funnel --bg --https=443 http://127.0.0.1:8095` (UWAGA: samo `--bg 443` kieruje na

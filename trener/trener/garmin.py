@@ -1,4 +1,4 @@
-"""Połączenie z Garmin Connect (nieoficjalne API, biblioteka garminconnect). Token wspólny z restortrain-garmin;
+"""Połączenie z Garmin Connect (nieoficjalne API, biblioteka garminconnect). Token w dane/garmin_tokens/ (700/600);
 logowanie z tokenu pod blokadą pliku, żeby dwa procesy naraz nie odświeżały tokenu. Ponowienia przy 429/5xx."""
 import fcntl
 import logging
@@ -28,7 +28,7 @@ def _blokada():
 def polacz():
     from garminconnect import Garmin
     if not (config.TOKENY / "garmin_tokens.json").exists():
-        raise BrakLogowania("brak tokenu Garmina (zaloguj w restortrain-garmin: ./rtg.sh login)")
+        raise BrakLogowania("brak tokenu Garmina (Antek w terminalu: python -m trener login)")
     g = Garmin()
     with _blokada():
         try:
@@ -36,6 +36,21 @@ def polacz():
         except Exception as ex:
             raise BrakLogowania(f"token Garmina nie działa ({type(ex).__name__})") from ex
     return g
+
+
+def zaloguj_interaktywnie():
+    """tylko w terminalu z Antkiem: hasło przez getpass (nie trafia do plików ani historii), kod MFA z input()"""
+    from getpass import getpass
+    from garminconnect import Garmin
+    config.TOKENY.mkdir(mode=0o700, parents=True, exist_ok=True)
+    config.TOKENY.chmod(0o700)
+    email = input("E-mail Garmin Connect: ").strip()
+    g = Garmin(email, getpass("Hasło Garmin Connect (nie jest zapisywane): "), prompt_mfa=lambda: input("Kod MFA: ").strip())
+    with _blokada():
+        g.login(str(config.TOKENY))
+    for p in config.TOKENY.iterdir():
+        p.chmod(0o600)
+    print("zalogowano, token zapisany")
 
 
 def wywolaj(fn, *a, pauza=0.4, **kw):
@@ -59,7 +74,7 @@ def wywolaj(fn, *a, pauza=0.4, **kw):
 
 
 def api(g, metoda, sciezka, **kw):
-    """surowe zapytanie do connectapi (jak w restortrain-garmin)"""
+    """surowe zapytanie do connectapi """
     if metoda == "GET":
         return wywolaj(g.client.connectapi, sciezka, **kw)
     f = {"POST": g.client.post, "PUT": g.client.put, "DELETE": g.client.delete}[metoda]
