@@ -13,6 +13,8 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   Potem: trener nazywa dni słowami (zasada w `ai.SYSTEM`, dzień tygodnia przy datach w kontekście).
   Potem: kontekst ma godzinę i znaczniki DZIŚ/JUTRO przy dniach, lista zmian planu pokazuje dni słowami
   (`kontekst.slownie`), poprawiony błąd czatu `#mysli` null. Wgrane na Pi, restart trener-web.
+  Potem: cel kalorii przelicza się po zmianie planu na dziś (`dieta.plan_inny` w cyklu + `po_zmianie_planu` po
+  przeplanowaniu). Dziś: 3170 → 2530 kcal (rower + Push → wolne).
 
 - **2026-11-18 (chmura, usunięcie mostu RestOrTrain)**: skasowane z Garmina 8 treningów „Siłka …” ze znacznikiem
   `auto: restortrain-garmin` (odplanowane + usunięte; oryginały RestOrTrain i treningi Trenera zostały). Token Garmina

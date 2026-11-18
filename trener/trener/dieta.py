@@ -457,6 +457,9 @@ def aktualizuj(d, nowe_aktywnosci=()):
     if any((a.get("startTimeLocal") or "")[:10] == dzis for a in nowe_aktywnosci):
         log.info("dieta: nowy trening — przeliczam cel")
         return przelicz(dzis)
+    if plan_inny(d, c, dzis):
+        log.info("dieta: zmienił się plan na dziś — przeliczam cel")
+        return przelicz(dzis)
     ost = baza.kv(d, "makro_garmin_spr") or ""
     if ost > (datetime.now() - timedelta(minutes=55)).isoformat(timespec="seconds"):
         return None
@@ -473,6 +476,23 @@ def aktualizuj(d, nowe_aktywnosci=()):
     baza.ustaw_kv(d, "makro_cel_" + dzis, nowy)
     log.info("dieta: +%d kcal z Garmina", roznica)
     return nowy
+
+
+def plan_inny(d, c, dzien_):
+    """czy treningi w planie na ten dzień różnią się od tych, pod które policzono cel"""
+    _, opis, _ = _trening_kcal(d, dzien_, None)
+    return sorted(opis) != sorted(c.get("trening") or [])
+
+
+def po_zmianie_planu():
+    """po przeplanowaniu: gdy zmienił się dzisiejszy trening, cel kalorii liczy się od nowa"""
+    d = polacz()
+    dzis = date.today().isoformat()
+    c = baza.kv(d, "makro_cel_" + dzis)
+    if c and dzis not in _liczy and plan_inny(d, c, dzis):
+        log.info("dieta: plan na dziś zmieniony — przeliczam cel")
+        return przelicz(dzis)
+    return None
 
 
 def cel(d, dzien_):

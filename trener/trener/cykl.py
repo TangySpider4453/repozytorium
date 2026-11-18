@@ -35,6 +35,11 @@ def przeplanuj(powod, prosba="", powiadamiaj=True, pytaj=False):
         except Exception as ex:
             log.exception("zegarek")
             wyn["zegarek"] = [f"błąd wysyłania: {ex}"]
+    try:
+        from . import dieta
+        dieta.po_zmianie_planu()
+    except Exception:
+        log.exception("cel kalorii po zmianie planu")
     p = wyn.get("propozycja")
     if p:                                     # duża zmiana (usunięcie/dodanie jednostki) → pytanie do Antka
         powiadom.powiadom("❓ Trener pyta: zmienić plan?", wyn["komentarz"] + "\n" + "\n".join(p["zmiany"][:8])
