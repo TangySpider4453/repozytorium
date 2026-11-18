@@ -709,18 +709,19 @@ async function pokazJedzenie(dzien) {
   DIETA = d;
   const c = d.cel, s = d.suma, zostalo = Math.round(c.kcal - s.kcal), dzis = dzisISO();
   let h = `<div class="dni-nav"><a class="btn drugi" href="#jedzenie/${dzienMinus(dietaDzien, 1)}">‹</a>
-    <b>${dietaDzien === dzis ? "Dziś" : dataPL(dietaDzien)}</b>
-    ${dietaDzien < dzis ? `<a class="btn drugi" href="#jedzenie/${dzienMinus(dietaDzien, -1)}">›</a>` : `<span style="width:44px"></span>`}</div>`;
+    <b>${dietaDzien === dzis ? "Dziś" : dietaDzien === dzienMinus(dzis, -1) ? "Jutro" : dataPL(dietaDzien)}</b>
+    ${dietaDzien < dzienMinus(dzis, -1) ? `<a class="btn drugi" href="#jedzenie/${dzienMinus(dietaDzien, -1)}">›</a>` : `<span style="width:44px"></span>`}</div>`;
   h += `<div class="karta hero"><div class="hero-wiersz"><div>
       <div class="szary">${zostalo >= 0 ? "Zostało" : "Ponad cel"}</div>
       <div class="duzy">${lb(Math.abs(zostalo))}<small>kcal</small></div>
       <div class="szary">zjedzone ${lb(s.kcal)} z ${lb(c.kcal)} kcal</div></div>${kolko(s.kcal, c.kcal)}</div>
     ${paskiMakro(s, c)}</div>`;
-  h += `<div class="karta" id="cel-trenera"><div class="kt">Cel na dziś ${c.zrodlo === "trener" ? `<span class="znaczek">od trenera</span>` : `<span class="znaczek">ze wzoru</span>`}</div>
+  h += `<div class="karta" id="cel-trenera"><div class="kt">Cel ${dietaDzien > dzis ? "na jutro" : dietaDzien < dzis ? "tego dnia" : "na dziś"} ${c.zrodlo === "trener" ? `<span class="znaczek">od trenera</span>` : `<span class="znaczek">ze wzoru</span>`}</div>
     ${c.liczy ? `<div class="szary"><span class="mysli">Trener liczy cel pod dzisiejszy trening</span></div>` : ""}
+    ${dietaDzien > dzis ? `<div class="szary">Wstępnie z planu treningu. Trener policzy dokładny cel jutro rano (sen, Garmin).</div>` : ""}
     ${c.komentarz ? `<div>${esc(c.komentarz)}</div>` : ""}${c.pory ? `<div class="szary" style="margin-top:6px">${esc(c.pory)}</div>` : ""}
     <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.trening_kcal ? `trening ~${lb(c.trening_kcal)} kcal` : "dzień bez treningu", c.ruch_ekstra && `dodatkowy ruch z Garmina +${lb(c.ruch_ekstra)} kcal`].filter(Boolean).join(" · ")}</div>
-    <div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div></div>`;
+    ${dietaDzien > dzis ? "" : `<div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div>`}</div>`;
   d.posilki.forEach(p => {
     const w = d.wpisy.filter(x => x.posilek === p), sk = w.reduce((a, x) => a + x.kcal, 0);
     h += `<div class="karta posilek"><div class="kt wiersz" style="justify-content:space-between"><span>${POSILEK[p]}</span><span class="szary">${w.length ? lb(sk) + " kcal" : ""}</span></div>

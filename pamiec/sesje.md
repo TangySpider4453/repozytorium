@@ -8,6 +8,8 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   Potem: wyłączona kopia powiadomień na Linphone (`linphone`: false na Pi i w domyślnych), restart trener-web.
   Potem: iOS — po schowaniu klawiatury dolne menu i tło zostawały w połowie ekranu; `app.js` wymusza przeliczenie
   (visualViewport resize, focusout, powrót do apki). Do sprawdzenia przez Antka, czy już się nie zdarza.
+  Potem: Jedzenie — można wpisywać na jutro (strzałka › do jutra); cel jutra wstępnie ze wzoru, trener liczy go
+  dopiero w tym dniu (`potrzebny_przelicz` tylko dla dziś), Przelicz ukryty dla jutra.
 
 - **2026-11-18 (chmura, usunięcie mostu RestOrTrain)**: skasowane z Garmina 8 treningów „Siłka …” ze znacznikiem
   `auto: restortrain-garmin` (odplanowane + usunięte; oryginały RestOrTrain i treningi Trenera zostały). Token Garmina

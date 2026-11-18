@@ -484,7 +484,7 @@ def cel(d, dzien_):
 
 
 def potrzebny_przelicz(d, dzien_):
-    return not baza.kv(d, "makro_cel_" + dzien_) and dzien_ not in _liczy and dzien_ >= date.today().isoformat()
+    return not baza.kv(d, "makro_cel_" + dzien_) and dzien_ not in _liczy and dzien_ == date.today().isoformat()   # jutro: wstępnie ze wzoru, trener liczy rano
 
 
 def tekst(db, dni=7):
