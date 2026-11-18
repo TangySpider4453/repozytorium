@@ -10,6 +10,8 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   (visualViewport resize, focusout, powrót do apki). Do sprawdzenia przez Antka, czy już się nie zdarza.
   Potem: Jedzenie — można wpisywać na jutro (strzałka › do jutra); cel jutra wstępnie ze wzoru, trener liczy go
   dopiero w tym dniu (`potrzebny_przelicz` tylko dla dziś), Przelicz ukryty dla jutra.
+  Potem: trener nazywa dni słowami (zasada w `ai.SYSTEM`, dzień tygodnia przy datach w kontekście).
+  **Niewgrane na Pi** (ai.py, kontekst.py) — czekało na zatwierdzenie Tailscale; wgrać + restart trener-web.
 
 - **2026-11-18 (chmura, usunięcie mostu RestOrTrain)**: skasowane z Garmina 8 treningów „Siłka …” ze znacznikiem
   `auto: restortrain-garmin` (odplanowane + usunięte; oryginały RestOrTrain i treningi Trenera zostały). Token Garmina

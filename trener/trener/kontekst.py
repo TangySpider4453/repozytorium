@@ -27,7 +27,7 @@ def wiersz_dnia(d):
     w = d
     tr = "; ".join(f"{t['nazwa']} {t['min']}min{(' ' + str(t['km']) + 'km') if t.get('km') else ''} obc{t.get('obc')}"
                    for t in w.get("treningi", []))
-    pola = [w["dzien"],
+    pola = [z_dniem(w["dzien"]),
             f"sen {w.get('sen_h')}h wynik {w.get('sen_wynik')} (głęb {w.get('sen_gleboki_h')} REM {w.get('sen_rem_h')}) {w.get('sen_od')}-{w.get('sen_do')}" if w.get("sen_h") else "sen brak",
             f"HRV {w.get('hrv')} (7d {w.get('hrv_7d')}, {w.get('hrv_status')}, norma {w.get('hrv_norma')})" if w.get("hrv") else "",
             f"tętno spocz {w.get('tetno_spocz')}" if w.get("tetno_spocz") else "",
@@ -98,8 +98,19 @@ def agregaty(db, okres="tydzien", od=None):
     return wyn
 
 
+DNI_TYG = ['pon', 'wt', 'śr', 'czw', 'pt', 'sob', 'ndz']
+
+
+def z_dniem(iso):
+    """2026-11-19 → '2026-11-19 czw' (żeby model wiedział, jaki to dzień tygodnia)"""
+    try:
+        return f"{iso} {DNI_TYG[date.fromisoformat(iso[:10]).weekday()]}"
+    except ValueError:
+        return iso
+
+
 def plan_tekst(db, od, do):
-    return [f"{r['dzien']} [{r['sport']}] {r['tytul']} ({r['stan']}): {r['opis'] or ''}"
+    return [f"{z_dniem(r['dzien'])} [{r['sport']}] {r['tytul']} ({r['stan']}): {r['opis'] or ''}"
             for r in db.execute("SELECT * FROM plan WHERE dzien BETWEEN ? AND ? AND stan != 'usuniety' ORDER BY dzien",
                                 (od, do))]
 
