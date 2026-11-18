@@ -392,8 +392,12 @@ def kontrola(db, treningi, ist, faza, ftp):
         for k in _kroki(t.get("kroki")))]   # „prostowanie nóg” Antka siedzi w Garminie pod CRUNCH
     if bez_brzucha:
         p.append("brak brzucha na końcu siłki (wymaganie Antka: na każdej): " + "; ".join(bez_brzucha))
-    skosne = sum(1 for t in silki for k in _kroki(t.get("kroki")) if (k.get("garmin") or "").split("/")[0].upper() == "CHOP"
-                 or any(x in (k.get("nazwa") or "").lower() for x in ("bokiem", "skośn", "skosn", "woodchop", "boczn", "side")))
+    def _skosne(k):                              # tylko ćwiczenia brzucha (unoszenie hantli „bokiem” to barki, nie skośne)
+        kat = (k.get("garmin") or "").split("/")[0].upper()
+        return kat == "CHOP" or ((kat in BRZUCH or kat == "PLANK") and any(
+            x in ((k.get("nazwa") or "") + " " + (k.get("garmin") or "")).lower()
+            for x in ("bokiem", "skośn", "skosn", "woodchop", "boczn", "side", "oblique", "twist")))
+    skosne = sum(1 for t in silki for k in _kroki(t.get("kroki")) if _skosne(k))
     if skosne > 1:
         p.append(f"{skosne} ćwiczeń na skośne/boczne brzucha — Antek chce max 1 w tygodniu (poszerzają talię)")
     return p
