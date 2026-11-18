@@ -1384,3 +1384,21 @@ async function pokazWiedze() {
   }
   widok.innerHTML = h;
 }
+
+// iOS: po schowaniu klawiatury (albo powrocie z aparatu) elementy position:fixed (dolne menu, tło)
+// potrafią zostać tam, gdzie kończył się ekran z klawiaturą. Lekkie przewinięcie wymusza ich przeliczenie.
+(() => {
+  const vv = window.visualViewport;
+  let maks = vv ? vv.height : innerHeight;
+  const napraw = () => requestAnimationFrame(() => {
+    const y = scrollY;
+    window.scrollTo(0, y + 1); window.scrollTo(0, y);
+    const n = $("nav"); if (n) { n.style.transform = "translate3d(-50%, 0.01px, 0)"; requestAnimationFrame(() => n.style.transform = ""); }
+  });
+  if (vv) vv.addEventListener("resize", () => {
+    if (vv.height >= maks - 40) { maks = Math.max(maks, vv.height); setTimeout(napraw, 60); setTimeout(napraw, 400); }
+  });
+  document.addEventListener("focusout", e => { if (e.target.matches("input, textarea, select")) setTimeout(napraw, 300); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(napraw, 200); });
+  window.addEventListener("orientationchange", () => { maks = 0; });
+})();

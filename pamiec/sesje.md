@@ -6,6 +6,8 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   nowe reguły w kontroli planu (`dni_jedna_sesja`, `silka_min_min`) i w `wymagania`; makrocykl i plan przebudowane.
   Potem: dwie sesje dozwolone tylko w czw i w jeden dzień weekendu (`weekend_dwie_max`).
   Potem: wyłączona kopia powiadomień na Linphone (`linphone`: false na Pi i w domyślnych), restart trener-web.
+  Potem: iOS — po schowaniu klawiatury dolne menu i tło zostawały w połowie ekranu; `app.js` wymusza przeliczenie
+  (visualViewport resize, focusout, powrót do apki). Do sprawdzenia przez Antka, czy już się nie zdarza.
 
 - **2026-11-18 (chmura, usunięcie mostu RestOrTrain)**: skasowane z Garmina 8 treningów „Siłka …” ze znacznikiem
   `auto: restortrain-garmin` (odplanowane + usunięte; oryginały RestOrTrain i treningi Trenera zostały). Token Garmina
