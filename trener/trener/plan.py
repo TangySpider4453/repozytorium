@@ -368,6 +368,16 @@ def kontrola(db, treningi, ist, faza, ftp):
             if len(ts) > 1:
                 p.append(f"{dn[wd]} {d}: Antek chce wtedy TYLKO JEDNĄ sesję (bez dokładania roweru/biegu do siłki) — "
                          + ", ".join(t["tytul"] for t in ts) + "; przenieś drugą na inny dzień albo pomiń")
+    wkd = int(u.get("weekend_dwie_max", 2))     # ile dni weekendu może mieć 2+ sesje (Antek 18.11: jeden)
+    tyg = {}
+    for t in tren:
+        d = date.fromisoformat(t["dzien"])
+        if d.weekday() >= 5:
+            tyg.setdefault(d.isocalendar()[:2], {}).setdefault(t["dzien"], []).append(t)
+    for dni_w in tyg.values():
+        podw = sorted(d for d, ts in dni_w.items() if len(ts) > 1)
+        if len(podw) > wkd:
+            p.append(f"weekend: dwie sesje w {len(podw)} dni ({', '.join(podw)}), a Antek pozwala tylko w {wkd} dzień weekendu")
     silki = [t for t in tren if t["sport"] == "silka"]
     min_s = int(u.get("silka_min_min") or 0)
     for t in silki:                              # „porządne” siłki: nie skracać do 30–40 min (decyzja Antka 18.11)

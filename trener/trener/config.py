@@ -27,7 +27,7 @@ DOMYSLNE = {
     "linphone": True,
     "model": "claude-haiku-5-5",         # lekkie: czat, analiza, ankieta (decyzja Antka 17.11)
     "model_ciezki": "claude-sonnet-5-5", # ciężkie: plan, cel, badania; Opus NIE (za drogi)
-    "gora_tyg": 3, "nogi_tyg": 2, "dni_tylko_nogi": [], "dni_jedna_sesja": [], "silka_min_min": 55, "tetno_ciezkie": None,                  # siłka góra: tyle razy w tygodniu ZAWSZE (decyzja Antka 17.11, sprawdza kontrola planu)
+    "gora_tyg": 3, "nogi_tyg": 2, "dni_tylko_nogi": [], "dni_jedna_sesja": [], "weekend_dwie_max": 2, "silka_min_min": 55, "tetno_ciezkie": None,                  # siłka góra: tyle razy w tygodniu ZAWSZE (decyzja Antka 17.11, sprawdza kontrola planu)
     "wymagania": "Góra na siłowni 3× w tygodniu, niezmiennie, w każdej fazie i każdym tygodniu (w lżejszym tygodniu "
                  "lżej, ale 3×), zawsze jako trzy różne sesje: PUSH (klatka, barki przód/bok, triceps), PULL (plecy "
                  "szerokość i grubość, tylne barki, biceps) i FULL UPPER (cała góra). Tytuły: „Siłka Push”, „Siłka "
