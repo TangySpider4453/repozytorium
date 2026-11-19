@@ -60,4 +60,4 @@
 - Trener (PWA): okno strony nigdy się nie przewija, przewija się `body` (`SKR` w app.js). Do przewijania używaj
   `SKR.scrollTo`/`SKR.scrollTop`, nie `window.scrollTo`/`scrollY`. Powód: iOS po klawiaturze zostawiał przesunięte okno
   i fixed menu wisiało w połowie ekranu.
-- iOS (apka z ekranu głównego): elementy fixed liczyć z --brak (patrz koniec app.js), bo okno układu jest niższe od ekranu.
+- iOS 26 (apka z ekranu głównego): dokument nie może być niższy niż ekran, bo okno skraca się o pasek statusu (WebKit 301108) → czarny pas. Trzyma to `@media (display-mode: standalone) html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))) }` w styl.css. Nie usuwać.

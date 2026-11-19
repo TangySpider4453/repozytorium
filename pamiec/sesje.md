@@ -115,3 +115,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   Poprawka: JS mierzy 100lvh − innerHeight → --brak; body, nav, .pisz, .arkusz-tlo schodzą o --brak. Potwierdzone pomiarem z telefonu.
 - 2026-11-19: Dziś i Plan: zrobiony trening z planu (✓ zrobione) po kliknięciu otwiera dane aktywności z Garmina (#trening/<id>),
   /api/dzis zwraca zrobione_id (dzień → kategoria → id). Niezrobione dalej otwierają plan treningu.
+- 2026-11-19: --brak nie pomógł (pas to obszar poza oknem, menu się w nim chowało). Prawdziwa przyczyna: WebKit 301108,
+  okno krótsze, gdy dokument niższy niż ekran. Poprawka: min-height html w trybie standalone; pomiar z telefonu: 852/852.

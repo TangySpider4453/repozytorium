@@ -20,7 +20,11 @@ a { color: var(--akcent-t); }
 /* iOS: okno nigdy się nie przewija (przewija się body). Inaczej po klawiaturze okno zostaje przesunięte i dolne menu,
    nagłówek i tło (position: fixed/sticky) lądują w połowie ekranu. app.js cofa okno do 0, gdyby iOS je przesunął. */
 html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--tlo); }
-body { background: transparent; position: fixed; inset: 0 0 calc(-1 * var(--brak, 0px)); height: auto; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
+/* iOS 26, apka z ekranu głównego: gdy dokument jest niższy niż ekran, okno dostaje wysokość krótszą o pasek statusu
+   (WebKit 301108) → czarny pas na dole, którego nie da się zamalować. Dokument wyższy o ten pasek = okno na cały ekran;
+   min() z 100lvh pilnuje, żeby po naprawie nie zrobił się wyższy od ekranu. */
+@media (display-mode: standalone) { html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))); } }
+body { background: transparent; position: fixed; inset: 0; height: auto; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
 /* tło pod szkłem: miękkie poświaty, żeby było co rozmywać */
 body::before { content: ""; position: fixed; inset: -20vh -20vw; z-index: -1; pointer-events: none;
   background: radial-gradient(42% 32% at 12% 8%, rgba(57,135,229,.28), transparent 70%),
@@ -40,7 +44,7 @@ main { padding: 6px 14px calc(var(--dol) + 104px); max-width: 760px; margin: 0 a
 main.wychodzi { opacity: .3; transform: scale(.985); filter: blur(4px); transition: opacity .2s ease, transform .2s ease, filter .2s ease; pointer-events: none; }
 
 /* dolna nawigacja: pływająca szklana kapsuła (jak pasek kart w iOS) */
-nav { position: fixed; bottom: calc(var(--nav-dol) - var(--brak, 0px)); left: 50%; width: min(calc(100% - 24px), 460px); height: 64px; z-index: 6; display: flex; padding: 4px;
+nav { position: fixed; bottom: var(--nav-dol); left: 50%; width: min(calc(100% - 24px), 460px); height: 64px; z-index: 6; display: flex; padding: 4px;
   transform: translate3d(-50%, 0, 0); border-radius: 32px; background: var(--szklo); backdrop-filter: var(--rozmyj); -webkit-backdrop-filter: var(--rozmyj);
   border: .5px solid var(--szklo-kr); box-shadow: var(--blask), 0 10px 34px rgba(0,0,0,.45); -webkit-user-select: none; user-select: none; touch-action: manipulation; }
 nav a { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--tekst2);
@@ -166,7 +170,7 @@ button:active, .btn:active, .kafel:active, .klik:active, .lista-akt .trening:act
 .msg.ja { align-self: flex-end; background: linear-gradient(180deg, #4a95ec, #2f7bdb); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); color: #fff; border-bottom-right-radius: 6px; }
 .msg.trener { align-self: flex-start; background: var(--karta2); box-shadow: var(--blask); border-bottom-left-radius: 6px; }
 .msg .akcje { font-size: 11px; opacity: .7; margin-top: 4px; }
-.pisz { position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-dol) + 72px - var(--brak, 0px)); display: flex; gap: 8px; padding: 6px; z-index: 5;
+.pisz { position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-dol) + 72px); display: flex; gap: 8px; padding: 6px; z-index: 5;
   background: var(--szklo); backdrop-filter: var(--rozmyj); -webkit-backdrop-filter: var(--rozmyj); border: .5px solid var(--szklo-kr); border-radius: 28px;
   box-shadow: var(--blask), 0 8px 28px rgba(0,0,0,.4); max-width: 736px; margin: 0 auto; transition: bottom .35s var(--sprezyna); }
 .pisz textarea { background: transparent; }
@@ -249,7 +253,7 @@ input[type=text], input[type=number] { height: 44px; }
 .wyniki { margin-top: 6px; }
 button.skanuj { display: inline-flex; align-items: center; gap: 8px; }
 button.skanuj svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.arkusz-tlo { position: fixed; inset: 0 0 calc(-1 * var(--brak, 0px)); z-index: 50; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; animation: tlo-w .25s; }
+.arkusz-tlo { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; animation: tlo-w .25s; }
 .arkusz { width: 100%; max-width: 640px; max-height: 88vh; overflow-y: auto; background: var(--szklo); -webkit-backdrop-filter: var(--rozmyj); backdrop-filter: var(--rozmyj);
   border-radius: 28px 28px 0 0; border: .5px solid var(--szklo-kr); box-shadow: var(--blask), 0 -10px 40px rgba(0,0,0,.5);
   padding: 8px 18px calc(18px + var(--dol)); animation: arkusz-w .45s var(--sprezyna); overscroll-behavior: contain; }
