@@ -5,14 +5,50 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 // numer nawigacji: odpowiedź, która przyszła po przejściu na inną zakładkę, nie może nadpisać ekranu
 let nawNr = 0;
 class Anulowano extends Error {}
-const api = async (p, opt) => {
-  const nr = nawNr;
+// pamięć odpowiedzi: zakładki pokazują się od razu z pamięci, a świeże dane dociągają się w tle (i po cichu przerysowują
+// ekran, gdy coś się zmieniło). Po każdej zmianie (POST) wpisy są „brudne”: przejście na zakładkę dalej pokazuje je
+// od razu, ale przerysowanie po akcji (np. dodany produkt) czeka na świeże dane z sieci.
+const PAMIEC = new Map(), W_LOCIE = new Map();
+const bezPamieci = p => /^(zadanie|push|produkt|start)/.test(p);
+let nawigacja = false, uzyte = new Set();
+async function siec(p, opt) {
   const r = await fetch("/api/" + p, opt && { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opt) });
   if (r.status === 401) { niezapamietane(); throw new Error("To urządzenie nie jest zapamiętane"); }
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).blad || r.status + " " + p);
-  const j = await r.json();
-  if (!opt && nr !== nawNr && !p.startsWith("zadanie/")) throw new Anulowano("anulowano");
-  return j;
+  return r.text();
+}
+function pobierzDoPamieci(p) {               // jedno zapytanie naraz o ten sam adres (wczytywanie z góry + ekran)
+  if (!W_LOCIE.has(p)) W_LOCIE.set(p, siec(p).then(s => {
+    const st = PAMIEC.get(p), zmiana = !st || st.s !== s;
+    PAMIEC.set(p, { s, t: Date.now() });
+    return [s, zmiana];
+  }).finally(() => W_LOCIE.delete(p)));
+  return W_LOCIE.get(p);
+}
+function odswiezWTle(p) {
+  const nr = nawNr;
+  pobierzDoPamieci(p).then(([, zmiana]) => { if (zmiana && nr === nawNr && uzyte.has(p)) przerysujPoCichu(); }).catch(() => {});
+}
+const api = async (p, opt) => {
+  const nr = nawNr;
+  if (opt) {
+    const j = JSON.parse(await siec(p, opt));
+    PAMIEC.forEach(w => w.brudne = true);
+    wczytajZGory(2500);
+    return j;
+  }
+  let s;
+  if (bezPamieci(p)) s = await siec(p);
+  else {
+    uzyte.add(p);
+    const w = PAMIEC.get(p);
+    if (w && (nawigacja || !w.brudne)) {
+      if (w.brudne || Date.now() - w.t > 20e3) odswiezWTle(p);
+      s = w.s;
+    } else s = (await pobierzDoPamieci(p))[0];
+  }
+  if (nr !== nawNr && !p.startsWith("zadanie/")) throw new Anulowano("anulowano");
+  return JSON.parse(s);
 };
 const DNI = ["ndz", "pon", "wt", "śr", "czw", "pt", "sob"];
 const SPORT_IKONA = { rower: "🚴", bieg: "🏃", silka: "🏋️", odpoczynek: "😴", inne: "⚡" };
@@ -364,10 +400,11 @@ const METRYKI = {
   vo2: { n: "VO₂max rower", k: "vo2_rower", jedn: "", dz: 0, lepiej: 1, kolor: KOLOR.niebieski, opis: "Szacowane VO₂max z jazd z miernikiem mocy." },
   kroki: { n: "Kroki", k: "kroki", jedn: "", lepiej: 1, kolor: KOLOR.morski, min: 0, pelnyDzien: true },
 };
-let WSZYSTKIE = null, wszystkieCzas = 0;
+let WSZYSTKIE = null, wszystkieZ = null;           // sparsowane raz na wersję z pamięci (duży JSON)
 async function wszystkieDni() {
-  if (!WSZYSTKIE || Date.now() - wszystkieCzas > 5 * 60e3) { WSZYSTKIE = await api("dni?od=2000-01-01"); wszystkieCzas = Date.now(); }
-  return WSZYSTKIE;
+  const d = await api("dni?od=2000-01-01"), w = PAMIEC.get("dni?od=2000-01-01");
+  if (w && w.s === wszystkieZ && WSZYSTKIE) return WSZYSTKIE;
+  wszystkieZ = w && w.s; return WSZYSTKIE = d;
 }
 const srednia = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
 const dzienMinus = (d, n) => { const x = new Date(d + "T12:00"); x.setDate(x.getDate() - n); return x.toISOString().slice(0, 10); };
@@ -1461,50 +1498,164 @@ function kafelWaga(w) {
 }
 
 // ------------------------------------------------------------------ router
-// przejścia w stylu Liquid Glass: stary ekran mięknie i rozmywa się, nowy wjeżdża ze sprężyną
+// Przejścia: zakładka → zakładka: ekran przesuwa się w bok (nowy wjeżdża od strony klikniętej zakładki);
+// otwarcie szczegółów: nowy ekran rośnie z dotkniętej karty na cały ekran; wyjście: ekran kurczy się z powrotem do karty.
 const ZAKLADKI = ["dzis", "plan", "jedzenie", "dane", "czat"];
+const DETALE = new Set(["analiza", "metryka", "trening", "zaplanowany", "waga", "ustawienia", "wiedza"]);
+const RODZIC = { analiza: "dzis", waga: "dzis", metryka: "dane", trening: "dane", zaplanowany: "plan", ustawienia: "dzis", wiedza: "dzis" };
 const _ih = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
 const spokojnie = matchMedia("(prefers-reduced-motion: reduce)");
-let wejscie = null, ladTimer = 0, ostatniaZak = -1;
+const SPR = "cubic-bezier(.32, .72, 0, 1)";            // jak przejścia w iOS
+let przejscie = null, ladTimer = 0, poprz = null, ostatniKlik = null, anim = [];
+const ZRODLA = new Map();                              // hash szczegółów → {rect karty, przewinięcie, hash rodzica}
+document.addEventListener("click", e => {
+  const el = e.target.closest(".kafel, .trening, .karta.klik, a.karta, .hero, .klik, #btn-ust, a, button");
+  if (el) ostatniKlik = { r: el.getBoundingClientRect(), t: Date.now() };
+}, true);
+const ramka = (r, b) => `inset(${Math.max(0, r.top - b.top)}px ${Math.max(0, b.right - r.right)}px ${Math.max(0, b.bottom - r.bottom)}px ${Math.max(0, r.left - b.left)}px round var(--r))`;
+const srodek = () => { const w = innerWidth, h = innerHeight; return { top: h * .4, bottom: h * .6, left: w * .3, right: w * .7 }; };
+
+function skonczAnimacje() { anim.forEach(x => x.finish ? x.finish() : x.remove()); anim = []; }
+function duch() {                                     // stary ekran wyjęty z #widok (te same węzły, wykresy zostają)
+  const r = widok.getBoundingClientRect(), g = document.createElement("div");
+  g.className = "duch";
+  g.style.cssText = `top:${r.top}px;left:${r.left}px;width:${r.width}px`;
+  while (widok.firstChild) g.appendChild(widok.firstChild);
+  document.body.appendChild(g);
+  return g;
+}
+function animuj(el, kl, opt) { const x = el.animate(kl, opt); anim.push(x); return x; }
+
+function pokazZPrzejsciem(v) {
+  const p = przejscie; przejscie = null; clearTimeout(ladTimer);
+  skonczAnimacje();
+  const g = !spokojnie.matches && p.typ !== "zanik" && widok.firstElementChild && !widok.querySelector(".ladowanie") ? duch() : null;
+  _ih.set.call(widok, v);
+  SKR.scrollTo(0, p.y || 0);
+  if (spokojnie.matches) return;
+  const o = { duration: 460, easing: SPR };
+  if (!g) {
+    animuj(widok, [{ opacity: 0, transform: "scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "ease-out" });
+    return;
+  }
+  anim.push(g);
+  const sprzataj = x => x.finished.then(() => g.remove(), () => g.remove());
+  if (p.typ === "bok") {
+    animuj(widok, [{ transform: `translateX(${p.k * 100}%)` }, { transform: "none" }], o);
+    sprzataj(animuj(g, [{ transform: "none", opacity: 1 }, { transform: `translateX(${-p.k * 100}%)`, opacity: 1 }], o));
+  } else if (p.typ === "otworz") {
+    widok.classList.add("nad");
+    const b = widok.getBoundingClientRect();
+    const x = animuj(widok, [{ clipPath: ramka(p.r, b), opacity: .5 }, { clipPath: "inset(0px 0px 0px 0px round 0px)", opacity: 1, offset: .9 }, { clipPath: "inset(0px 0px 0px 0px round 0px)", opacity: 1 }], { duration: 500, easing: SPR });
+    x.finished.then(() => widok.classList.remove("nad"), () => widok.classList.remove("nad"));
+    sprzataj(animuj(g, [{ transform: "none", opacity: 1, filter: "blur(0)" }, { transform: "scale(.93)", opacity: 0, filter: "blur(6px)" }], { duration: 500, easing: SPR }));
+  } else if (p.typ === "zamknij") {
+    g.classList.add("nad");
+    const b = g.getBoundingClientRect();
+    animuj(widok, [{ transform: "scale(.93)", opacity: .3, filter: "blur(6px)" }, { transform: "none", opacity: 1, filter: "blur(0)" }], { duration: 440, easing: SPR });
+    sprzataj(animuj(g, [{ clipPath: "inset(0px 0px 0px 0px round 0px)", opacity: 1 }, { clipPath: ramka(p.r, b), opacity: .7, offset: .85 }, { clipPath: ramka(p.r, b), opacity: 0 }], { duration: 420, easing: SPR }));
+  }
+}
 Object.defineProperty(widok, "innerHTML", { configurable: true, get() { return _ih.get.call(this); }, set(v) {
-  _ih.set.call(this, v);
-  if (wejscie === null) return;
-  const k = wejscie; wejscie = null; clearTimeout(ladTimer);
-  SKR.scrollTo(0, 0); widok.classList.remove("wychodzi");
-  if (!spokojnie.matches) widok.animate([
-    { opacity: 0, transform: `translateX(${k * 22}px) scale(.965)`, filter: "blur(7px)" },
-    { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 520, easing: "cubic-bezier(.2, 1.2, .32, 1)" });
+  if (przejscie) pokazZPrzejsciem(v); else _ih.set.call(this, v);
 } });
+
+const pozycja = (t, zak) => t === "treningi" ? 3.5 : ZAKLADKI.indexOf(zak);
+const EKRANY = { dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: a => pokazCzat(a), analiza: a => pokazAnalize(a), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: a => pokazMetryke(a), jedzenie: a => pokazJedzenie(a), waga: pokazWage, trening: a => pokazTrening(a), zaplanowany: a => pokazZaplanowany(a) };
 
 async function route() {
   if (czekaUpdate) { location.reload(); return; }
   const nr = ++nawNr;
-  const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
+  const hash = location.hash.slice(1) || "dzis";
+  const [t, arg] = hash.split("/");
   const zak = t === "analiza" || t === "waga" ? "dzis" : t === "metryka" || t === "trening" || t === "treningi" ? "dane" : t === "zaplanowany" ? "plan" : t;
   const i = ZAKLADKI.indexOf(zak), nav = $("nav");
   nav.querySelectorAll("a").forEach(a => a.classList.toggle("akt", a.dataset.t === zak));
   if (i >= 0) nav.style.setProperty("--i", i);
   nav.classList.toggle("bez-zak", i < 0);
   $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Dane", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga", trening: "Trening", zaplanowany: "Zaplanowany trening" }[t] || "Trener";
-  const pusto = !widok.firstElementChild;
-  wejscie = i < 0 || ostatniaZak < 0 || i === ostatniaZak ? 0 : Math.sign(i - ostatniaZak);
-  ostatniaZak = i;
-  clearTimeout(ladTimer);
-  if (pusto) _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`);
-  else {
-    widok.classList.add("wychodzi");
-    ladTimer = setTimeout(() => { if (nr === nawNr && wejscie !== null) { _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`); widok.classList.remove("wychodzi"); SKR.scrollTo(0, 0); } }, 450);
+  document.body.classList.toggle("detal", DETALE.has(t));
+  // rodzaj przejścia
+  if (poprz) poprz.y = SKR.scrollTop;                // przewinięcie ekranu, z którego wychodzisz
+  const teraz = { t, hash, poz: pozycja(t, zak), y: 0 };
+  let p = { typ: "zanik" };
+  if (poprz && poprz.hash !== hash) {
+    if (DETALE.has(t) && !DETALE.has(poprz.t)) {
+      const r = ostatniKlik && Date.now() - ostatniKlik.t < 1500 ? ostatniKlik.r : srodek();
+      ZRODLA.set(hash, { r, y: poprz.y, rodzic: poprz.hash });
+      p = { typ: "otworz", r };
+    } else if (DETALE.has(poprz.t) && !DETALE.has(t)) {
+      const z = ZRODLA.get(poprz.hash);
+      p = z && z.rodzic === hash ? { typ: "zamknij", r: z.r, y: z.y } : { typ: "zamknij", r: srodek() };
+    } else if (!DETALE.has(t) && !DETALE.has(poprz.t) && teraz.poz >= 0 && poprz.poz >= 0 && teraz.poz !== poprz.poz)
+      p = { typ: "bok", k: Math.sign(teraz.poz - poprz.poz) };
   }
+  poprz = teraz;
+  przejscie = p;
+  ostatniKlik = null;
+  clearTimeout(ladTimer);
+  if (!widok.firstElementChild) _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`);
+  else ladTimer = setTimeout(() => {               // brak w pamięci i sieć wolna: dopiero wtedy „Ładuję…”
+    if (nr === nawNr && przejscie) { skonczAnimacje(); _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`); SKR.scrollTo(0, 0); }
+  }, 450);
   WYK.clear();
   zamknijArkusz();
+  uzyte = new Set();
+  nawigacja = true;
   try {
-    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: () => pokazMetryke(arg), jedzenie: () => pokazJedzenie(arg), waga: pokazWage, trening: () => pokazTrening(arg), zaplanowany: () => pokazZaplanowany(arg) }[t] || pokazDzis)();
+    await (EKRANY[t] || pokazDzis)(arg);
   } catch (e) {
     if (e instanceof Anulowano || nr !== nawNr) return;
     if (!/nie jest zapamiętane/.test(e.message)) widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`;
+  } finally { if (nr === nawNr) nawigacja = false; }
+  if (nr === nawNr) { przejscie = null; clearTimeout(ladTimer); }
+  if (nr === nawNr && i >= 0) {                    // zapamiętaj, czego zakładka potrzebuje → wczytywanie z góry
+    const tr = JSON.parse(localStorage.getItem("trasyApi") || "{}");
+    tr[t] = [...uzyte].slice(0, 30);
+    localStorage.setItem("trasyApi", JSON.stringify(tr));
   }
-  if (nr === nawNr && wejscie !== null) { wejscie = null; clearTimeout(ladTimer); widok.classList.remove("wychodzi"); }
+  wczytajZGory(800);
 }
+// po cichu: świeże dane z tła → przerysuj ten sam ekran bez animacji, w tym samym miejscu
+let cichyTimer = 0;
+function przerysujPoCichu() {
+  clearTimeout(cichyTimer);
+  cichyTimer = setTimeout(async () => {
+    const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
+    if (przejscie || ["czat", "start", "ustawienia"].includes(t) || zajety() || document.body.classList.contains("arkusz-otwarty") ||
+        document.activeElement?.matches("input, textarea, select") || anim.length) return;
+    const nr = nawNr, y = SKR.scrollTop;
+    WYK.clear();
+    try { await (EKRANY[t] || pokazDzis)(arg); } catch (_) { return; }
+    if (nr === nawNr) SKR.scrollTo(0, y);
+  }, 120);
+}
+// wczytywanie z góry: wszystko, czego potrzebują zakładki, leży w pamięci zanim w nie wejdziesz
+let zGoryTimer = 0;
+function wczytajZGory(ms) {
+  clearTimeout(zGoryTimer);
+  zGoryTimer = setTimeout(async () => {
+    const d = new Date(), dz = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const tr = JSON.parse(localStorage.getItem("trasyApi") || "{}");
+    const lista = new Set(["dzis", "dieta", "waga", "plan", "makrocykl", "dieta?dzien=" + dz, "dieta/historia?dni=28", "dni?od=2000-01-01",
+      "agregaty?okres=miesiac", "agregaty?okres=tydzien", "aktywnosci?limit=40&offset=0", "czat", ...Object.values(tr).flat()]);
+    const doPobrania = [...lista].filter(p => /^dieta\?dzien=/.test(p) ? p === "dieta?dzien=" + dz : true)
+      .filter(p => { const w = PAMIEC.get(p); return !w || w.brudne || Date.now() - w.t > 60e3; });
+    for (let k = 0; k < doPobrania.length; k += 3)   // po 3 naraz, żeby nie zapchać telefonu
+      await Promise.all(doPobrania.slice(k, k + 3).map(p => pobierzDoPamieci(p).catch(() => {})));
+  }, ms);
+}
+document.addEventListener("visibilitychange", () => {   // powrót do apki: odśwież to, co widać, i resztę w tle
+  if (document.hidden) return;
+  uzyte.forEach(p => { const w = PAMIEC.get(p); if (w) w.t = 0; });
+  uzyte.forEach(odswiezWTle);
+  wczytajZGory(1500);
+});
+// ‹ w nagłówku na ekranach szczegółów: wraca tam, skąd przyszedłeś (z animacją zmniejszania)
+$("#btn-wstecz").onclick = () => {
+  const z = ZRODLA.get(location.hash.slice(1));
+  if (z && history.length > 1) history.back(); else location.hash = "#" + (RODZIC[(location.hash.slice(1) || "").split("/")[0]] || "dzis");
+};
 window.addEventListener("hashchange", route);
 // iOS ignoruje user-scalable=no — blokujemy gest szczypania ręcznie (podwójne stuknięcie blokuje touch-action w CSS)
 ["gesturestart", "gesturechange", "gestureend"].forEach(g => document.addEventListener(g, e => e.preventDefault(), { passive: false }));

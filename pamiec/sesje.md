@@ -122,3 +122,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-19: tierlista ćwiczeń siłowych od Antka (S/A/B/C/wykluczone + 10 zasad układania siłki) w Ustawieniach.
   Plan układa siłkę głównie z S/A, kontrola odrzuca wykluczone. Po siłce z nowym ćwiczeniem: push + karta na Dziś
   z ocenami S/A/B/C/✕/pomiń, ocena dopisuje się do tierlisty.
+- 2026-11-19: apka bez „Ładuję…”: dane wszystkich zakładek pobierane z góry i trzymane w pamięci, a odświeżane w tle.
+  Animacje: zmiana zakładki przesuwa ekran w stronę zakładki (karuzela); otwarcie karty rośnie z niej na cały ekran;
+  wyjście (‹ w nagłówku albo gest wstecz) kurczy ekran do karty.

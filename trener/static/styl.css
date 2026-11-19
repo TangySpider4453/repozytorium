@@ -41,6 +41,12 @@ h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -.01em; flex:
 h2 { font-size: 13px; margin: 22px 2px 10px; color: var(--szary); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 h2 .szary { text-transform: none; letter-spacing: 0; font-weight: 400; }
 main { padding: 6px 14px calc(var(--dol) + 104px); max-width: 760px; margin: 0 auto; min-height: 100lvh; transform-origin: 50% 30vh; }
+#btn-wstecz { display: none; margin: 0 -4px 0 -8px; color: var(--tekst); }
+body.detal #btn-wstecz { display: grid; } body.detal .logo { display: none; }
+#btn-wstecz svg { width: 26px; height: 26px; stroke-width: 2.4; }
+.duch { position: fixed; z-index: 0; padding: 6px 14px; box-sizing: border-box; pointer-events: none; transform-origin: 50% 30vh; will-change: transform, opacity; }
+.duch.nad { z-index: 4; background: var(--tlo, #0a0b0f); }
+main#widok.nad { position: relative; z-index: 4; background: var(--tlo, #0a0b0f); }
 main.wychodzi { opacity: .3; transform: scale(.985); filter: blur(4px); transition: opacity .2s ease, transform .2s ease, filter .2s ease; pointer-events: none; }
 
 /* dolna nawigacja: pływająca szklana kapsuła (jak pasek kart w iOS) */

@@ -698,33 +698,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   planu odrzuca ćwiczenia z X. Po zsynchronizowanej siłce (`cykl.py`) push „Oceń nowe ćwiczenia” dla ćwiczeń z planu
   tego dnia spoza listy (każde raz, kv `tier_zgloszone`); karta z S/A/B/C/✕/pomiń na Dziś (`do_oceny` w `/api/dzis`,
   `POST /api/tierlista`). „Pomiń” → kv `tier_pominiete`. Dopasowanie nazw: aliasy z `cwiczenia_antka.json` + słowa po kolei.
-
-## Zdrowie serwera (od 2026-10-22)
-- **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`
-  przed `</body>` (`wstaw_diode` w `after_request`). Zielona = OK, żółta = do sprawdzenia albo zakończony problem
-  czekający na „Przejrzane”, czerwona = aktywny problem krytyczny. Liczba = aktywne + do przejrzenia.
-- **Strona**: `/strony/zdrowie/` (repo `zdrowie/`): teraz, do przejrzenia, pomiary, historia, dziennik.
-- **Monitor** (wątek w `app.py`, co 60 s, `zdrowie_problemy` + `zdrowie_krok`): temperatura (70/80 °C), napięcie
-  i throttling (`vcgencmd get_throttled`; „wystąpiło od uruchomienia” zapisywane raz na boot), dysk `/` i
-  `/boot/firmware` (80/90 %), RAM (85/95 %), swap (80/95 %), CPU średnio ≥ 85 % przez 10 min (żółta) / ≥ 95 % przez
-  30 min (czerwona), usługi krytyczne (`powernukkitx`, `playit`, `tailscaled`, `home-portal`) i zwykłe (`pi-dashboard`,
-  `home-terminal`, `smbd`, `nmbd`, `wayvnc`, `ollama`), zadania (`mc-autoupdate`: wynik ostatniego przebiegu),
-  `systemctl --failed`, potrzeba restartu. Problem startuje po 2 kolejnych wykryciach, kończy się po 2 kolejnych brakach.
-- **Dane**: `~/portal/dane/zdrowie/incydenty.json` (problemy z `od`, `do`, `poziom` = najgorszy, `teraz`, `przejrzane`),
-  `dziennik.log` (każda zmiana), `boot.json`. API: `GET /api/zdrowie[?historia=1]`, `POST /api/zdrowie/przejrzane
-  {id | wszystkie:true}`, `GET /api/zdrowie/dziennik`.
-- **Progi i listy usług** można zmienić w `~/portal/config.json` → `"zdrowie": {"temp": [70, 80], "uslugi": [...]}`
-  (restart portalu niepotrzebny; czytane przy każdym pomiarze). Nowa usługa (np. kopia zapasowa) = dopisać do
-  `uslugi`/`uslugi_kryt` albo `zadania` (dla usług uruchamianych timerem). NAS i kopia systemu: sekcja NAS wyżej.
-
-## Dziennik
-- **2026-10-22**: Monitor zdrowia, dioda na wszystkich stronach, strona „Zdrowie serwera”, link w menu portalu.
-  Backup `app.py.bak_2026-10-22_zdrowie`. Pierwszy pomiar: wszystko OK (46,7 °C, throttled 0x0, 10 usług aktywnych).
-
-## Most kopii zapasowych łazika (od 2026-11-01)
-- Pi 5 i Zero 2W łazika co 7 dni (zaległe od razu) wysyłają kopię systemu przez SSH w sieci domowej
-  (`tonyg@172.23.0.20`) na NAS: `/mnt/nas/Raspberry/Kopie-lazika/<pi>/` (3 ostatnie, `.tar.zst` + `.sha256`).
-- Jedyne zmiany na tym Pi: `/usr/local/sbin/lazik-kopia-odbierz`, folder na NAS i linie z
-  `command="/usr/local/sbin/lazik-kopia-odbierz <pi>",restrict` w `~/.ssh/authorized_keys` (klucz każdego Pi może tylko
-  zapisać kopię do swojego folderu). Żadna usługa ani timer nie doszły. Log: `/mnt/nas/Raspberry/Logi/kopie-lazika.log`.
-- Szczegóły i przywracanie: `lazik/LAZIK.md`, sekcja „Kopie zapasowe na NAS”; skrypty w `lazik/kopie/`.
+- Pamięć i animacje apki (19.11): `api()` trzyma odpowiedzi GET w pamięci (`PAMIEC`). Zakładka pokazuje je od razu,
+  a w tle pobiera świeże i po cichu przerysowuje ekran. `wczytajZGory()` pobiera po starcie wszystko, czego używają zakładki:
+  stała lista plus trasy zapisane w localStorage `trasyApi`. POST oznacza pamięć jako nieaktualną. „Ładuję…” pojawia się tylko,
+  gdy danych nie ma w pamięci i sieć odpowiada dłużej niż 450 ms. Przejścia robi `pokazZPrzejsciem`: stary ekran przenosi się
+  do `.duch`, a potem: zakładka → zakładka to karuzela w stronę klikniętej zakładki; otwarcie szczegółów (`DETALE`) rośnie
+  z klikniętej karty (clip-path); powrót kurczy się do tej karty. Na szczegółach w nagłówku jest ‹ (`#btn-wstecz`).
