@@ -108,3 +108,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   zdjęcie posiłku + opis (Sonnet szacuje składniki i gramy, sprawdza opis ze zdjęciem; lista do edycji).
 - 2026-11-17: cel kalorii sam się przelicza po nowym treningu z Garmina i co godzinę dolicza nadwyżkę aktywnych kcal;
   poprawione pole daty w Wadze na iOS.
+- 2026-11-19: Jedzenie: przy nazwie posiłku suma B/W/T jako kolorowe liczby (kolory jak paski makro: niebieski B,
+  żółty W, fioletowy T) obok kcal.

@@ -944,7 +944,7 @@ async function pokazJedzenie(dzien) {
     ${dietaDzien > dzis ? "" : `<div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div>`}</div>`;
   d.posilki.forEach(p => {
     const w = d.wpisy.filter(x => x.posilek === p), sk = w.reduce((a, x) => a + x.kcal, 0);
-    h += `<div class="karta posilek"><div class="kt wiersz" style="justify-content:space-between"><span>${POSILEK[p]}</span><span class="szary">${w.length ? lb(sk) + " kcal" : ""}</span></div>
+    h += `<div class="karta posilek"><div class="kt wiersz" style="justify-content:space-between"><span>${POSILEK[p]}</span><span class="posilek-suma">${w.length ? `${MAKRO.map(([k, n, kol]) => `<b style="color:${kol}" title="${n}">${lb(w.reduce((a, x) => a + (x[k] || 0), 0))}</b>`).join("")}<span class="szary">${lb(sk)} kcal</span>` : ""}</span></div>
       ${w.map(x => `<div class="pozycja klik" onclick="edytujWpis(${x.id})"><div><div>${esc(x.nazwa)}</div><div class="szary">${x.gram ? lb(x.gram) + " g · " : ""}B ${lb(x.b)} · W ${lb(x.w)} · T ${lb(x.t)}</div></div><b>${lb(x.kcal)}</b></div>`).join("")}
       <button class="drugi dodaj" onclick="dodajJedzenie('${p}')">+ Dodaj</button></div>`;
   });

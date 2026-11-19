@@ -311,3 +311,6 @@ body.arkusz-otwarty { overflow: hidden; }
 .zoom-pod { margin-top: 8px; }
 .grupa-t { font-size: 12px; font-weight: 600; color: var(--tekst2); text-transform: uppercase; letter-spacing: .04em; margin-top: 14px; }
 .grupa-t + .statki { margin-top: 6px; padding-top: 8px; }
+.posilek-suma { display: flex; align-items: baseline; gap: 9px; font-variant-numeric: tabular-nums; }
+.posilek-suma b { font-weight: 600; font-size: 15px; }
+.posilek-suma .szary { margin-left: 3px; }
