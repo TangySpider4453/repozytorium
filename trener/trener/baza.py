@@ -21,6 +21,7 @@ CREATE INDEX IF NOT EXISTS plan_dzien ON plan (dzien);
 CREATE TABLE IF NOT EXISTS czat (id INTEGER PRIMARY KEY AUTOINCREMENT, kto TEXT, tresc TEXT, czas TEXT,
     analiza_id INTEGER, akcje TEXT);
 CREATE TABLE IF NOT EXISTS push (endpoint TEXT PRIMARY KEY, dane TEXT, dodano TEXT);
+CREATE TABLE IF NOT EXISTS przebiegi (id INTEGER PRIMARY KEY, dane BLOB, pobrano TEXT);
 CREATE TABLE IF NOT EXISTS kv (klucz TEXT PRIMARY KEY, wartosc TEXT);
 CREATE TABLE IF NOT EXISTS urzadzenia (hash TEXT PRIMARY KEY, opis TEXT, dodano TEXT, ostatnio TEXT);
 CREATE TABLE IF NOT EXISTS zadania (id INTEGER PRIMARY KEY AUTOINCREMENT, rodzaj TEXT, stan TEXT, wynik TEXT,
@@ -38,6 +39,14 @@ def polacz():
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA journal_mode=WAL")
     db.executescript(SCHEMAT)
+    kol = {r[1] for r in db.execute("PRAGMA table_info(czat)")}
+    for k, typ in (("wykresy", "TEXT"), ("aktywnosc_id", "INTEGER")):
+        if k not in kol:
+            try:
+                db.execute(f"ALTER TABLE czat ADD COLUMN {k} {typ}")
+                db.commit()
+            except sqlite3.OperationalError:
+                pass                          # inny proces dodał w tym samym momencie
     return db
 
 

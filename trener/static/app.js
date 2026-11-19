@@ -58,6 +58,7 @@ const WYK = new Map();
 let wykNr = 0;
 const wyk = spec => { const id = "w" + (++wykNr); WYK.set(id, spec); return `<div class="wyk${spec.typ === "spark" ? " spark" : ""}" data-id="${id}" style="height:${spec.h || (spec.typ === "spark" ? 30 : 180)}px"></div>`; };
 const lb = (v, dz = 0) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("pl-PL", { minimumFractionDigits: dz, maximumFractionDigits: dz });
+const hm = h => { if (h == null || isNaN(h)) return "–"; const m = Math.round(Math.abs(h) * 60); return `${h < 0 ? "-" : ""}${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };  // 7,57 h → 7:34
 const dataKr = d => { const x = new Date(d + "T12:00"); return `${x.getDate()} ${MIES[x.getMonth()]}`; };
 
 function zaokr(lo, hi, n = 4, stalyKrok = null) {     // ładne podziałki osi Y
@@ -97,12 +98,12 @@ function rysujSpark(el, s, W, H) {
 
 function rysujLinie(el, s, W, H) {
   const n = s.x.length, serie = s.serie;
-  const wart = serie.flatMap(q => q.y).concat(s.pasmo ? s.pasmo.flat() : []).concat(s.ref != null ? [s.ref] : []).filter(v => v != null);
+  const wart = serie.flatMap(q => q.y).concat(s.pasmo ? s.pasmo.flat() : []).concat(s.ref != null ? [s.ref] : []).concat((s.linie || []).map(l => l.y)).filter(v => v != null);
   if (wart.length < 2) { el.innerHTML = `<div class="pusto">za mało danych</div>`; return; }
   const fmt = s.fmt || (v => lb(v, s.dz || 0));
   const t = zaokr(s.min ?? Math.min(...wart), s.max ?? Math.max(...wart), 4, s.krokY);
   const lo = t[0], hi = t[t.length - 1];
-  const L = 6, R = 6, T = 10, B = 22, osL = Math.max(...t.map(v => fmt(v).length)) * 6.5 + 8;
+  const L = 6, R = 6, T = (s.znaczniki || []).length ? 24 : 10, B = 22, osL = Math.max(...t.map(v => fmt(v).length)) * 6.5 + 8;
   const x0 = L + osL, x1 = W - R - (s.etykietaKonca === false ? 0 : 30);
   const X = i => n === 1 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / (n - 1), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
   let g = t.map(v => `<line x1="${x0}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" class="siatka"/><text x="${x0 - 6}" y="${Y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`).join("");
@@ -114,6 +115,13 @@ function rysujLinie(el, s, W, H) {
     if (p.length > 1) g += `<path d="M${p.map(([i, b]) => X(i).toFixed(1) + "," + Y(b[1]).toFixed(1)).join("L")}L${p.slice().reverse().map(([i, b]) => X(i).toFixed(1) + "," + Y(b[0]).toFixed(1)).join("L")}Z" fill="${serie[0].kolor}" opacity=".13"/>`;
   }
   if (s.ref != null) g += `<line x1="${x0}" x2="${x1}" y1="${Y(s.ref)}" y2="${Y(s.ref)}" class="ref"/><text x="${x0 + 4}" y="${Y(s.ref) - 5}" class="ref-t">${esc(s.refNazwa || "średnia")} ${fmt(s.ref)}</text>`;
+  (s.linie || []).forEach(l => { g += `<line x1="${x0}" x2="${x1}" y1="${Y(l.y)}" y2="${Y(l.y)}" class="ref"/><text x="${x1 - 2}" y="${Y(l.y) - 5}" text-anchor="end" class="ref-t">${esc(l.tekst || "")} ${fmt(l.y)}</text>`; });
+  const znacz = (s.znaczniki || []).filter(z => z.i != null && z.i >= 0 && z.i < n);
+  let ostX = -99;
+  znacz.slice().sort((a, b) => a.i - b.i).forEach(z => {   // pionowa linia + numer nad wykresem (opis w legendzie pod wykresem)
+    const x = X(z.i), xt = Math.max(x, ostX + 17); ostX = xt;
+    g += `<line x1="${x}" x2="${x}" y1="${T - 4}" y2="${H - B}" class="znacznik"/><circle cx="${xt}" cy="${T - 13}" r="8" class="znacznik-k"/><text x="${xt}" y="${T - 9.5}" text-anchor="middle" class="znacznik-t">${esc(z.tekst)}</text>`;
+  });
   const konce = [];
   serie.forEach((q, si) => {
     let d = "", a = "", seg = [];
@@ -198,6 +206,63 @@ function rysujSlupki(el, s, W, H) {   // s: {x:[], serie:[{nazwa,y:[],kolor}], j
   svg.addEventListener("pointermove", pokaz); svg.addEventListener("pointerdown", pokaz); svg.addEventListener("pointerup", pokaz);
   svg.addEventListener("pointerleave", () => { pod.style.display = "none"; dym.style.display = "none"; });
 }
+// ------------------------------------------------------------------ przebieg treningu (tętno, moc, …) i wykresy z czatu
+const KANAL = { tetno: ["Tętno", "bpm", "#e5484d"], moc: ["Moc", "W", KOLOR.fiolet], predkosc: ["Prędkość", "km/h", KOLOR.niebieski],
+  kadencja: ["Kadencja", "rpm", KOLOR.morski], wysokosc: ["Wysokość", "m", KOLOR.zolty] };
+const mmss = s => { s = Math.round(s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
+const etCzasu = s => { s = Math.round(s || 0); return s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")} h` : `${Math.floor(s / 60)} min`; };
+const PRZEBIEG = new Map();
+async function przebieg(id, od, doS) {
+  const k = `${id}/${od ?? ""}/${doS ?? ""}`;
+  if (!PRZEBIEG.has(k)) PRZEBIEG.set(k, api(`aktywnosc/${id}/przebieg?n=500${od != null ? "&od=" + od : ""}${doS != null ? "&do=" + doS : ""}`).catch(e => { PRZEBIEG.delete(k); throw e; }));
+  return PRZEBIEG.get(k);
+}
+const najblizszy = (xs, v) => { let b = -1, bd = Infinity; xs.forEach((x, i) => { const d = Math.abs(x - v); if (d < bd) { bd = d; b = i; } }); return b; };
+// wykres na każdy kanał (jedna oś Y na wykres), wspólna oś czasu; znaczniki [{s, tekst}], linie [{kanal, wartosc, tekst}]
+function wykresyKanalow(p, kanaly, { znaczniki = [], linie = [], h = 150 } = {}) {
+  const ks = (kanaly || Object.keys(KANAL)).filter(k => KANAL[k] && (p[k] || []).some(v => v != null));
+  if (!ks.length) return `<div class="szary">Brak przebiegu w danych z zegarka.</div>`;
+  const zs = znaczniki.filter(z => z.s != null).sort((a, b) => a.s - b.s);
+  const zn = zs.map((z, k) => ({ i: najblizszy(p.t, z.s), tekst: k + 1 }));
+  return ks.map(k => {
+    const [nazwa, jedn, kolor] = KANAL[k];
+    const serie = [{ nazwa: k === "moc" && p.moc_max ? "średnia" : nazwa, y: p[k], kolor }];
+    if (k === "moc" && p.moc_max) serie.push({ nazwa: "max", y: p.moc_max, kolor: kolor + "55" });
+    return `<div class="kanal"><div class="kanal-t">${nazwa} <span class="szary">${jedn}</span></div>${wyk({ typ: "linia", x: p.t, serie, jedn, h,
+      dz: 0, min: k === "wysokosc" || k === "tetno" ? undefined : 0, etykietaKonca: false, etX: etCzasu, etDymek: mmss, znaczniki: zn,
+      linie: linie.filter(l => l.kanal === k).map(l => ({ y: l.wartosc, tekst: l.tekst })) })}</div>`;
+  }).join("") + legZnacz(zs);
+}
+const legZnacz = zs => zs.length ? `<ol class="znacz-leg">${zs.map(z => `<li>${esc(z.tekst)}</li>`).join("")}</ol>` : "";
+const METRYKI_CZAT = { hrv: ["HRV", "ms", KOLOR.fiolet], sen_h: ["Sen", "h", KOLOR.niebieski, hm], sen_wynik: ["Wynik snu", "", KOLOR.niebieski],
+  tetno_spocz: ["Tętno spoczynkowe", "bpm", "#e5484d"], bb_rano: ["Body Battery rano", "", KOLOR.morski], gotowosc: ["Gotowość", "", KOLOR.morski],
+  stres: ["Stres", "", KOLOR.zolty], obc_ostre: ["Obciążenie ostre", "", KOLOR.fiolet], acwr: ["Stosunek obciążeń", "", KOLOR.fiolet, v => lb(v, 2)],
+  kroki: ["Kroki", "", KOLOR.morski], vo2_rower: ["VO2max rower", "", KOLOR.niebieski], sen_gleboki_h: ["Sen głęboki", "h", KOLOR.niebieski, hm],
+  sen_tetno: ["Tętno w nocy", "bpm", "#e5484d"], kcal_akt: ["Kcal aktywne", "kcal", KOLOR.zolty] };
+async function wykresDni(w) {
+  const doD = w.do || dzisISO(), odD = w.od || dzienMinus(doD, 13);
+  const dni = await api(`dni?od=${odD}&do=${doD}`);
+  const x = dni.map(d => d.dzien);
+  const zs = (w.znaczniki || []).filter(z => z.dzien && x.includes(z.dzien)).sort((a, b) => a.dzien < b.dzien ? -1 : 1);
+  return (w.metryki || []).filter(k => METRYKI_CZAT[k]).map(k => {
+    const [nazwa, jedn, kolor, f] = METRYKI_CZAT[k];
+    const zn = zs.map((z, n) => ({ i: x.indexOf(z.dzien), tekst: n + 1 }));
+    return `<div class="kanal"><div class="kanal-t">${nazwa}${jedn ? ` <span class="szary">${jedn}</span>` : ""}</div>${wyk({ typ: "linia", x, serie: [{ nazwa, y: dni.map(d => d[k] ?? null), kolor }],
+      jedn: f === hm ? "h" : jedn, fmt: f, dz: k === "hrv" || k === "tetno_spocz" ? 0 : undefined, h: 150, etX: dataKr, etDymek: dataPL, znaczniki: zn,
+      linie: (w.linie || []).filter(l => l.kanal === k).map(l => ({ y: l.wartosc, tekst: l.tekst })) })}</div>`;
+  }).join("") + legZnacz(zs) || `<div class="szary">brak danych</div>`;
+}
+async function wykresCzatu(el, w) {
+  try {
+    el.innerHTML = w.rodzaj === "trening"
+      ? wykresyKanalow(await przebieg(w.aktywnosc_id, w.od_s, w.do_s), w.kanaly, { znaczniki: w.znaczniki || [], linie: w.linie || [], h: 130 })
+        + `<a class="szary maly" href="#trening/${w.aktywnosc_id}">cały trening ›</a>`
+      : await wykresDni(w);
+    rysuj(el);
+  } catch (e) { if (!(e instanceof Anulowano)) el.innerHTML = `<div class="szary">Nie udało się pobrać wykresu (${esc(e.message)})</div>`; }
+}
+
 const legenda = serie => serie.length < 2 ? "" : `<div class="legenda">${serie.map(q => `<span><i style="background:${q.kolor}"></i>${esc(q.nazwa)}</span>`).join("")}</div>`;
 
 // ------------------------------------------------------------------ Dziś
@@ -211,7 +276,8 @@ function trening(t, zrobiony) {
     return `<li>${opisKroku(k)}</li>`;
   }).join("");
   const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
-  return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}">
+  const klik = t.id && t.sport !== "odpoczynek" ? ` klik" onclick="if(!event.target.closest('details,a,button'))location.hash='#zaplanowany/${t.id}'` : "";
+  return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}${klik}">
     <b>${ikSport(t.sport)}${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
     ${wykresTreningu(t)}
     ${t.opis ? `<div class="szary tresc">${esc(t.opis)}</div>` : ""}
@@ -261,8 +327,9 @@ function opisKroku(k) {
 const godz = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
 const naMin = t => { if (!t) return null; const [h, m] = t.split(":").map(Number); let x = h * 60 + m; if (x < 720) x += 1440; return x; };  // pora snu liczona od południa
 const hMin = h => h == null ? "–" : `${Math.floor(h)} h ${String(Math.round((h % 1) * 60)).padStart(2, "0")} min`;
+const fm = (m, v) => m.fmt ? (v == null ? "–" : m.fmt(v)) : lb(v, m.dz || 0);
 const METRYKI = {
-  sen: { n: "Sen", k: "sen_h", jedn: "h", dz: 1, lepiej: 1, kolor: KOLOR.fiolet, fmtDuzy: hMin, opis: "Długość snu w nocy przed tym dniem." },
+  sen: { n: "Sen", k: "sen_h", jedn: "h", dz: 1, fmt: hm, lepiej: 1, kolor: KOLOR.fiolet, fmtDuzy: hMin, opis: "Długość snu w nocy przed tym dniem." },
   sen_wynik: { n: "Wynik snu", k: "sen_wynik", jedn: "/100", lepiej: 1, kolor: KOLOR.fiolet, min: 0, max: 100 },
   hrv: { n: "HRV", k: "hrv", jedn: "ms", lepiej: 1, kolor: KOLOR.morski, pasmo: "hrv_norma", opis: "Średnie HRV z nocy. Pasmo = Twoja norma z Garmina; poniżej normy zwykle znaczy zmęczenie albo choroba." },
   tetno: { n: "Tętno spocz.", k: "tetno_spocz", jedn: "bpm", lepiej: -1, kolor: KOLOR.niebieski, opis: "Tętno spoczynkowe. Wzrost o 5+ bpm ponad średnią to sygnał zmęczenia." },
@@ -286,7 +353,7 @@ function delta(m, teraz, odn, nazwa) {   // ▲/▼ z oceną (lepiej/gorzej) —
   const r = teraz - odn, dz = m.dz || 0;
   if (Math.abs(r) < Math.pow(10, -dz) / 2) return `<span class="delta">= ${nazwa}</span>`;
   const dobre = m.lepiej ? Math.sign(r) === m.lepiej : null;
-  return `<span class="delta ${dobre == null ? "" : dobre ? "lepiej" : "gorzej"}">${r > 0 ? "▲" : "▼"} ${lb(Math.abs(r), dz)} ${nazwa}</span>`;
+  return `<span class="delta ${dobre == null ? "" : dobre ? "lepiej" : "gorzej"}">${r > 0 ? "▲" : "▼"} ${m.fmt ? m.fmt(Math.abs(r)) : lb(Math.abs(r), dz)} ${nazwa}</span>`;
 }
 function wartMetryki(m, d) { const v = d[m.k]; return v == null ? null : v; }
 
@@ -299,7 +366,7 @@ function kafelM(klucz, dni, dzis, { podpis = null } = {}) {
   const ostatnie = dni.slice(-14).map(d => wartMetryki(m, d));
   const stare = ost && ost.dzien !== dzis ? `<span class="znaczek">${dataPL(ost.dzien)}</span>` : "";
   return `<a class="kafel" href="#metryka/${klucz}"><div class="n">${m.n}${stare}<svg class="strz" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></div>
-    <div class="w">${v == null ? "–" : lb(v, m.dz || 0)}<small>${m.jedn && v != null ? " " + m.jedn : ""}</small></div>
+    <div class="w">${v == null ? "–" : fm(m, v)}<small>${m.jedn && v != null ? " " + m.jedn : ""}</small></div>
     <div class="d">${podpis ?? delta(m, v, sr7, "vs 7 dni")}</div>${wyk({ typ: "spark", y: ostatnie, kolor: m.kolor })}</a>`;
 }
 
@@ -351,7 +418,7 @@ async function pokazMetryke(klucz) {
   const naj = vals.length ? (m.lepiej < 0 ? Math.min(...vals) : Math.max(...vals)) : null, najg = vals.length ? (m.lepiej < 0 ? Math.max(...vals) : Math.min(...vals)) : null;
 
   let h = `<div class="karta hero"><div class="szary">${ost.dzien === dzis ? "Dziś" : dataPL(ost.dzien)}</div>
-    <div class="duzy">${m.fmtDuzy ? m.fmtDuzy(v) : lb(v, m.dz || 0)}<small>${m.jedn && !m.fmtDuzy ? " " + m.jedn : ""}</small></div>
+    <div class="duzy">${m.fmtDuzy ? m.fmtDuzy(v) : fm(m, v)}<small>${m.jedn && !m.fmtDuzy ? " " + m.jedn : ""}</small></div>
     <div class="wiersz delty">${delta(m, v, sr7, "vs 7 dni")}${delta(m, v, sr30, "vs 30 dni")}</div>
     ${pct != null ? `<div class="pasek-pct"><i style="width:${pct}%"></i></div><div class="szary">Lepiej niż ${pct}% dni z ostatniego roku</div>` : ""}
     ${klucz === "hrv" && ost.hrv_norma ? `<div class="szary">Norma ${ost.hrv_norma[0]}–${ost.hrv_norma[1]} ms · średnia 7 dni ${lb(ost.hrv_7d)} ms${ost.hrv_status ? " · " + esc(String(ost.hrv_status).toLowerCase()) : ""}</div>` : ""}
@@ -359,10 +426,10 @@ async function pokazMetryke(klucz) {
     </div>`;
   h += `<div class="zakladki">${ZAKRESY.map(([n, t]) => `<button class="${zakresM === n ? "akt" : ""}" data-z="${n}">${t}</button>`).join("")}</div>`;
   h += `<div class="karta"><div class="kt">${esc(m.n)}${okres !== "dzien" ? ` <span class="szary">· średnie ${okres === "tydzien" ? "tygodniowe" : "miesięczne"}</span>` : ""}</div>
-    ${wyk({ typ: "linia", x: gr.x, serie, pasmo, ref: serie.length === 1 ? srZ : null, dz: m.dz || 0, jedn: m.jedn, min: m.min, max: m.max, etX, etDymek: etD,
+    ${wyk({ typ: "linia", x: gr.x, serie, pasmo, ref: serie.length === 1 ? srZ : null, dz: m.dz || 0, fmt: m.fmt, jedn: m.jedn, min: m.min, max: m.max, etX, etDymek: etD,
       klik: klucz === "sen" && okres === "dzien" ? x => { nocWybrana = x; rysujNoc(); } : null })}
     ${legenda(serie)}
-    <div class="statsy"><div><span>średnio</span><b>${lb(srZ, m.dz || 0)}</b></div><div><span>${m.lepiej ? "najlepiej" : "max"}</span><b>${lb(naj, m.dz || 0)}</b></div><div><span>${m.lepiej ? "najsłabiej" : "min"}</span><b>${lb(najg, m.dz || 0)}</b></div><div><span>dni z danymi</span><b>${vals.length}</b></div></div></div>`;
+    <div class="statsy"><div><span>średnio</span><b>${fm(m, srZ)}</b></div><div><span>${m.lepiej ? "najlepiej" : "max"}</span><b>${fm(m, naj)}</b></div><div><span>${m.lepiej ? "najsłabiej" : "min"}</span><b>${fm(m, najg)}</b></div><div><span>dni z danymi</span><b>${vals.length}</b></div></div></div>`;
   if (klucz === "sen") h += await sekcjaSnu(z, wz, okres);
   // dni tygodnia
   const dt = [1, 2, 3, 4, 5, 6, 0].map(w => srednia(z.filter(d => d.dzien > dzienMinus(ost.dzien, 90) && new Date(d.dzien + "T12:00").getDay() === w).map(d => wartMetryki(m, d))));
@@ -371,10 +438,10 @@ async function pokazMetryke(klucz) {
     ${klucz === "sen" ? `<div class="szary">${(() => { const t = srednia(dt.slice(0, 4).concat(dt[6])), w = srednia([dt[4], dt[5]]); return t && w ? `Przed szkołą (ndz–czw) średnio ${hMin(t)}, w weekend (pt–sob) ${hMin(w)}.` : ""; })()}</div>` : ""}</div>`;
   // porównanie: ostatnie 30 dni vs rok temu
   h += `<div class="karta"><div class="kt">Porównanie</div><table class="tab">
-    <tr><td>Ostatnie 30 dni</td><td><b>${lb(sr30teraz, m.dz || 0)}</b> ${esc(m.jedn)}</td></tr>
-    <tr><td>Te same 30 dni rok temu</td><td><b>${lb(rt, m.dz || 0)}</b> ${esc(m.jedn)} ${delta(m, sr30teraz, rt, "")}</td></tr>
-    <tr><td>Średnia całej historii</td><td><b>${lb(srednia(z.map(d => wartMetryki(m, d))), m.dz || 0)}</b> ${esc(m.jedn)}</td></tr>
-    <tr><td>Rekord</td><td>${(() => { const r = z.reduce((a, d) => a == null || (m.lepiej < 0 ? wartMetryki(m, d) < wartMetryki(m, a) : wartMetryki(m, d) > wartMetryki(m, a)) ? d : a, null); return r ? `<b>${lb(wartMetryki(m, r), m.dz || 0)}</b> ${esc(m.jedn)} <span class="szary">${dataKr(r.dzien)} ${r.dzien.slice(0, 4)}</span>` : "–"; })()}</td></tr></table>
+    <tr><td>Ostatnie 30 dni</td><td><b>${fm(m, sr30teraz)}</b> ${esc(m.jedn)}</td></tr>
+    <tr><td>Te same 30 dni rok temu</td><td><b>${fm(m, rt)}</b> ${esc(m.jedn)} ${delta(m, sr30teraz, rt, "")}</td></tr>
+    <tr><td>Średnia całej historii</td><td><b>${fm(m, srednia(z.map(d => wartMetryki(m, d))))}</b> ${esc(m.jedn)}</td></tr>
+    <tr><td>Rekord</td><td>${(() => { const r = z.reduce((a, d) => a == null || (m.lepiej < 0 ? wartMetryki(m, d) < wartMetryki(m, a) : wartMetryki(m, d) > wartMetryki(m, a)) ? d : a, null); return r ? `<b>${fm(m, wartMetryki(m, r))}</b> ${esc(m.jedn)} <span class="szary">${dataKr(r.dzien)} ${r.dzien.slice(0, 4)}</span>` : "–"; })()}</td></tr></table>
     ${m.opis ? `<div class="szary" style="margin-top:8px">${esc(m.opis)}</div>` : ""}</div>`;
   widok.innerHTML = h;
   widok.querySelectorAll(".zakladki button").forEach(b => b.onclick = () => { zakresM = +b.dataset.z; pokazMetryke(klucz); });
@@ -417,7 +484,7 @@ function rysujNoc() {
     const r = v != null && sr != null ? v - sr : null, ok = r == null || !lepiej ? "" : Math.sign(r) === lepiej ? "lepiej" : "gorzej";
     return `<tr><td>${nazwa}</td><td><b>${fmt(v)}</b></td><td class="${ok}">${r == null ? "" : (r > 0 ? "▲" : r < 0 ? "▼" : "=") + " " + fmt(Math.abs(r))}</td><td class="szary">${fmt(b)}</td></tr>`;
   };
-  const h1 = v => v == null ? "–" : lb(v, 1) + " h", mn = v => v == null ? "–" : Math.round(v * 60) + " min";
+  const h1 = v => v == null ? "–" : hm(v) + " h", mn = v => v == null ? "–" : Math.round(v * 60) + " min";
   el.innerHTML = `<div class="kt">Noc ${dataPL(d.dzien)} <span class="szary">· ${esc(d.sen_od || "?")}–${esc(d.sen_do || "?")}</span></div>
     <div class="fazy-pasek">${fazy.filter(([, v]) => v > 0).map(([f, v]) => `<i style="flex:${v};background:${f[2]}" title="${f[1]}"></i>`).join("")}</div>
     <div class="fazy-et">${fazy.map(([f, v]) => `<span><i style="background:${f[2]}"></i>${f[1]} <b>${mn(v)}</b> <span class="szary">${Math.round(v / razem * 100)}%</span></span>`).join("")}</div>
@@ -572,7 +639,7 @@ async function pokazPlan() {
     if (k === d.dzis) h += `<div id="plan-dzis"></div>` + kartaPropozycji(d.propozycja);
     h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? `Dziś<small>${dataPL(k)}</small>` : dataPL(k)}</div>
       ${pl.map(t => trening(t, zr.some(a => kat(a.typ) === t.sport))).join("")}
-      ${zr.map(a => `<div class="trening zrobiony sport-${kat(a.typ)}">✓ ${esc(a.nazwa)} <span class="szary">${a.min} min${a.km ? " · " + a.km + " km" : ""}${a.obc ? " · obc " + a.obc : ""}</span></div>`).join("")}
+      ${zr.map(a => `<div class="trening zrobiony klik sport-${kat(a.typ)}" onclick="location.hash='#trening/${a.id}'">✓ ${esc(a.nazwa)} <span class="szary">${a.min} min${a.km ? " · " + a.km + " km" : ""}${a.obc ? " · obc " + a.obc : ""}</span></div>`).join("")}
       ${!pl.length && !zr.length ? `<div class="szary">—</div>` : ""}</div>`;
   }
   h += `<div style="height:40vh"></div>`;  // żeby dzisiaj dało się przewinąć na samą górę
@@ -586,7 +653,7 @@ async function pokazPlan() {
 let filtr = "";
 async function pokazTreningi(dalej = false) {
   const lista = await api(`aktywnosci?limit=40&offset=${dalej ? document.querySelectorAll(".lista-akt .trening").length : 0}${filtr ? "&sport=" + filtr : ""}`);
-  const wiersze = lista.map(a => `<div class="trening sport-${kat(a.typ)}" onclick="szczegoly(${a.id}, this)">
+  const wiersze = lista.map(a => `<div class="trening sport-${kat(a.typ)}" onclick="location.hash='#trening/${a.id}'">
     <div><b>${esc(a.nazwa)}</b><div class="szary">${esc(a.start.replace("T", " "))}</div></div>
     <div style="text-align:right" class="szary">${a.min} min${a.km ? "<br>" + a.km + " km" : ""}${a.moc ? "<br>" + a.moc + " W" : ""}${a.tetno ? "<br>♥ " + a.tetno : ""}</div></div>`).join("");
   if (dalej) { $(".lista-akt").insertAdjacentHTML("beforeend", wiersze); return; }
@@ -594,20 +661,59 @@ async function pokazTreningi(dalej = false) {
     `<button class="${filtr === v ? "akt" : ""}" onclick="filtr='${v}';pokazTreningi()">${n}</button>`).join("")}</div>
     <div class="lista-akt">${wiersze}</div><button class="drugi" style="width:100%" onclick="pokazTreningi(true)">Więcej</button>`;
 }
-async function szczegoly(id, el) {
-  if (el.nextElementSibling?.classList.contains("szcz")) { el.nextElementSibling.remove(); return; }
+const POLA_T = [["min", "czas", v => hm(v / 60) + " h"], ["km", "dystans", v => lb(v, 2) + " km"], ["tetno", "tętno śr.", v => v + " bpm"], ["tetno_max", "tętno max", v => v + " bpm"],
+  ["moc", "moc śr.", v => v + " W"], ["moc_np", "moc NP", v => v + " W"], ["moc_max", "moc max", v => v + " W"], ["kmh", "prędkość", v => lb(v, 1) + " km/h"],
+  ["tempo", "tempo", v => v], ["kadencja", "kadencja", v => v + " rpm"], ["przewyzszenie", "przewyższenie", v => v + " m"], ["obc", "obciążenie", v => v],
+  ["te_aer", "efekt tlenowy", v => lb(v, 1)], ["te_anaer", "efekt beztlenowy", v => lb(v, 1)], ["tss", "TSS", v => v], ["if_", "IF", v => lb(v, 2)],
+  ["serie", "serie", v => v], ["kcal", "kcal", v => v]];
+const EFEKT = { RECOVERY: "regeneracja", BASE: "baza", TEMPO: "tempo", LACTATE_THRESHOLD: "próg", THRESHOLD: "próg", VO2MAX: "VO2max",
+  ANAEROBIC_CAPACITY: "beztlenowy", SPRINT: "sprint", AEROBIC_BASE: "baza tlenowa", NO_BENEFIT: "brak efektu" };
+async function pokazTrening(id) {
   const a = await api("aktywnosc/" + id);
-  const pola = [["efekt", "efekt"], ["te_aer", "TE aerob."], ["te_anaer", "TE anaerob."], ["obc", "obciążenie"], ["tetno", "tętno śr."], ["tetno_max", "tętno max"],
-    ["moc", "moc śr."], ["moc_np", "NP"], ["tss", "TSS"], ["if_", "IF"], ["kadencja", "kadencja"], ["kmh", "km/h"], ["tempo", "tempo"], ["przewyzszenie", "przewyższenie"], ["kcal", "kcal"]];
-  el.insertAdjacentHTML("afterend", `<div class="karta szcz">${pola.filter(([k]) => a[k] != null).map(([k, n]) => `<div class="wiersz" style="justify-content:space-between"><span class="szary">${n}</span><b>${esc(a[k])}</b></div>`).join("")}
-    ${a.strefy_min ? `<div class="szary" style="margin-top:6px">Strefy tętna (min): ${a.strefy_min.map((m, i) => `Z${i + 1} ${m}`).join(" · ")}</div>` : ""}
-    ${a.cwiczenia ? `<div style="margin-top:6px">${Object.entries(a.cwiczenia).map(([k, v]) => `<div><b>${esc(k)}</b>: <span class="szary">${esc(v)}</span></div>`).join("")}</div>` : ""}
-    <a class="btn drugi" style="margin-top:8px;display:inline-block" href="#czat" data-szkic="${esc(`Omówmy trening: ${a.nazwa} (${a.start})`)}" onclick="sessionStorage.szkic=this.dataset.szkic">💬 Omów</a></div>`);
+  PROGI = a.progi || {};
+  const godzina = (a.start || "").slice(11, 16);
+  let h = `<div class="karta"><div class="szary">${esc(a.dzien_slownie || "")}${godzina ? " · " + godzina : ""}</div>
+    <h3>${ikSport(kat(a.typ))}${esc(a.nazwa)}</h3>${a.efekt ? `<span class="znaczek">${esc(EFEKT[a.efekt] || a.efekt.toLowerCase().replace(/_/g, " "))}</span>` : ""}
+    <div class="statki">${POLA_T.filter(([k]) => a[k] != null).map(([k, n, f]) => `<div><span>${n}</span><b>${esc(f(a[k]))}</b></div>`).join("")}</div>
+    <button style="margin-top:12px;width:100%" onclick="omowTrening(${a.id}, ${esc(JSON.stringify(a.nazwa + " (" + (a.dzien_slownie || "") + ")"))})">💬 Omów trening</button></div>`;
+  if (a.strefy_min) {
+    const suma = a.strefy_min.reduce((x, y) => x + y, 0) || 1;
+    h += `<div class="karta"><h3>Strefy tętna</h3><div class="strefy">${a.strefy_min.map((m, i) => m ? `<i style="flex:${m};background:${STREFA_KOLOR[i]}" title="Z${i + 1}: ${m} min"></i>` : "").join("")}</div>
+      <div class="strefy-leg">${a.strefy_min.map((m, i) => `<span><i style="background:${STREFA_KOLOR[i]}"></i>Z${i + 1} <b>${m}</b> min <small>${Math.round(m / suma * 100)}%</small></span>`).join("")}</div></div>`;
+  }
+  if (a.cwiczenia) h += `<div class="karta"><h3>Ćwiczenia</h3>${Object.entries(a.cwiczenia).map(([k, v]) => `<div class="cw"><b>${esc(k)}</b><span class="szary">${esc(v)}</span></div>`).join("")}</div>`;
+  if (kat(a.typ) !== "silka") h += `<div class="karta"><h3>Przebieg</h3><div id="przebieg"><div class="szary">Pobieram przebieg z Garmina…</div></div></div><div id="okrazenia"></div>`;
+  widok.innerHTML = h;
+  if (kat(a.typ) === "silka") return;
+  try {
+    const p = await przebieg(id);
+    const el = $("#przebieg"); if (!el) return;
+    const linie = PROGI.ftp ? [{ kanal: "moc", wartosc: PROGI.ftp, tekst: "FTP" }] : [];
+    el.innerHTML = p.t.length ? wykresyKanalow(p, null, { linie }) : `<div class="szary">Garmin nie ma przebiegu tego treningu.</div>`;
+    rysuj(el);
+    const ok = p.okrazenia || [];
+    if (ok.length > 1) $("#okrazenia").innerHTML = `<div class="karta"><h3>Okrążenia</h3><div style="overflow-x:auto"><table class="tab"><tr><th>#</th><th>czas</th><th>km</th><th>♥ śr</th><th>♥ max</th>${ok.some(o => o.moc) ? "<th>W</th><th>NP</th>" : ""}<th>km/h</th></tr>
+      ${ok.map(o => `<tr><td>${o.nr}</td><td>${mmss(o.s)}</td><td>${lb(o.km, 2)}</td><td>${o.tetno ?? "–"}</td><td>${o.tetno_max ?? "–"}</td>${ok.some(q => q.moc) ? `<td>${o.moc ?? "–"}</td><td>${o.moc_np ?? "–"}</td>` : ""}<td>${lb(o.kmh, 1)}</td></tr>`).join("")}</table></div></div>`;
+  } catch (e) { if (!(e instanceof Anulowano)) { const el = $("#przebieg"); if (el) el.innerHTML = `<div class="szary">Nie udało się pobrać przebiegu (${esc(e.message)})</div>`; } }
+}
+function omowTrening(id, opis) { sessionStorage.omow = JSON.stringify({ id, tekst: `Omów trening: ${opis}` }); location.hash = "#czat"; }
+
+async function pokazZaplanowany(id) {
+  const t = await api("plan/" + id);
+  PROGI = t.progi || {};
+  const kroki = (t.kroki || []).map(k => k.rodzaj === "powtorz" ? `<li>${k.razy}× [${(k.kroki || []).map(opisKroku).join(" → ")}]</li>` : `<li>${opisKroku(k)}</li>`).join("");
+  const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka na wysłanie", blad: "⚠️ błąd", w_apce: "tylko w apce" }[t.stan] ?? t.stan;
+  widok.innerHTML = `<div class="karta"><div class="szary">${esc(t.dzien_slownie || t.dzien)}</div><h3>${ikSport(t.sport)}${esc(t.tytul)}</h3>
+    <div class="statki">${t.min ? `<div><span>czas</span><b>${hm(t.min / 60)} h</b></div>` : ""}${st ? `<div><span>stan</span><b>${esc(st)}</b></div>` : ""}</div>
+    ${wykresTreningu(t)}${t.opis ? `<div class="tresc" style="margin-top:10px">${esc(t.opis)}</div>` : ""}</div>
+    ${kroki ? `<div class="karta"><h3>Kroki</h3><ul class="kroki">${kroki}</ul></div>` : ""}
+    <div class="karta"><button class="drugi" style="width:100%" onclick="sessionStorage.szkic=${esc(JSON.stringify(`Pytanie o trening ${t.tytul} (${t.dzien_slownie || t.dzien}): `))};location.hash='#czat'">💬 Zapytaj trenera o ten trening</button></div>`;
 }
 
 // ------------------------------------------------------------------ Czat
 async function pokazCzat(analizaId) {
   const msgs = await api("czat");
+  WYK_CZAT = [];
   widok.innerHTML = `<div class="czat" id="czat">${msgs.map(m => msg(m)).join("") || `<div class="szary">Napisz, do czego trenujesz, kiedy masz czas i co chcesz zmienić. Możesz pytać o dowolne dane z całej historii.</div>`}</div>
     <div style="height:70px"></div>
     <div class="pisz"><textarea id="tekst" placeholder="${analizaId ? "Omów analizę…" : "Napisz do trenera…"}"></textarea><button id="wyslij">➤</button></div>`;
@@ -615,17 +721,28 @@ async function pokazCzat(analizaId) {
   if (sessionStorage.szkic) { t.value = sessionStorage.szkic; delete sessionStorage.szkic; }
   $("#wyslij").onclick = () => wyslij(analizaId);
   t.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !/iPhone|iPad/.test(navigator.userAgent)) { e.preventDefault(); wyslij(analizaId); } });
+  // wykresy: ostatnie 6 od razu, starsze dopiero gdy się je przewinie
+  const wk = [...document.querySelectorAll(".wyk-czat")];
+  const laduj = el => { if (el._z) return; el._z = 1; wykresCzatu(el, WYK_CZAT[+el.dataset.n]); };
+  wk.slice(-6).forEach(laduj);
+  if (wk.length > 6 && "IntersectionObserver" in window) { const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); laduj(e.target); } })); wk.slice(0, -6).forEach(el => io.observe(el)); }
   window.scrollTo(0, document.body.scrollHeight);
+  if (sessionStorage.omow) {
+    const o = JSON.parse(sessionStorage.omow); delete sessionStorage.omow;
+    t.value = o.tekst; wyslij(analizaId, { aktywnosc_id: o.id, omow: true });
+  }
 }
-const msg = m => `<div class="msg ${m.kto}">${esc(m.tresc)}${m.akcje && m.akcje.length ? `<div class="akcje">${m.akcje.map(esc).join(" · ")}</div>` : ""}</div>`;
-async function wyslij(analizaId) {
+let WYK_CZAT = [];
+const msg = m => `<div class="msg ${m.kto}">${esc(m.tresc)}${m.akcje && m.akcje.length ? `<div class="akcje">${m.akcje.map(esc).join(" · ")}</div>` : ""}</div>` +
+  (m.wykresy || []).map(w => { WYK_CZAT.push(w); return `<div class="msg-wyk">${w.tytul ? `<div class="msg-wyk-t">${esc(w.tytul)}</div>` : ""}<div class="wyk-czat" data-n="${WYK_CZAT.length - 1}"><div class="szary">wykres…</div></div></div>`; }).join("");
+async function wyslij(analizaId, dod = {}) {
   const t = $("#tekst"), tresc = t.value.trim();
   if (!tresc) return;
   t.value = ""; $("#wyslij").disabled = true;
   $("#czat").insertAdjacentHTML("beforeend", msg({ kto: "ja", tresc }) + `<div class="msg trener mysli" id="mysli">Trener myśli</div>`);
   window.scrollTo(0, document.body.scrollHeight);
   try {
-    const zid = await api("czat", { tresc, analiza_id: analizaId ? +analizaId : null });
+    const zid = await api("czat", { tresc, analiza_id: analizaId ? +analizaId : null, ...dod });
     await czekaj(zid, i => { const m = $("#mysli"); if (i === 25 && m) m.textContent = "Trener układa plan i wysyła na zegarek"; });
   } catch (e) { alert("Błąd: " + e.message); }
   if (location.hash.startsWith("#czat")) pokazCzat(analizaId);
@@ -1189,12 +1306,12 @@ async function route() {
   if (czekaUpdate) { location.reload(); return; }
   const nr = ++nawNr;
   const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
-  const zak = t === "analiza" || t === "jedzenie" || t === "waga" ? "dzis" : t === "metryka" ? "dane" : t;
+  const zak = t === "analiza" || t === "jedzenie" || t === "waga" ? "dzis" : t === "metryka" ? "dane" : t === "trening" ? "treningi" : t === "zaplanowany" ? "plan" : t;
   const i = ZAKLADKI.indexOf(zak), nav = $("nav");
   nav.querySelectorAll("a").forEach(a => a.classList.toggle("akt", a.dataset.t === zak));
   if (i >= 0) nav.style.setProperty("--i", i);
   nav.classList.toggle("bez-zak", i < 0);
-  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga" }[t] || "Trener";
+  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga", trening: "Trening", zaplanowany: "Zaplanowany trening" }[t] || "Trener";
   const pusto = !widok.firstElementChild;
   wejscie = i < 0 || ostatniaZak < 0 || i === ostatniaZak ? 0 : Math.sign(i - ostatniaZak);
   ostatniaZak = i;
@@ -1207,7 +1324,7 @@ async function route() {
   WYK.clear();
   zamknijArkusz();
   try {
-    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: () => pokazMetryke(arg), jedzenie: () => pokazJedzenie(arg), waga: pokazWage }[t] || pokazDzis)();
+    await ({ dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: () => pokazCzat(arg), analiza: () => pokazAnalize(arg), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: () => pokazMetryke(arg), jedzenie: () => pokazJedzenie(arg), waga: pokazWage, trening: () => pokazTrening(arg), zaplanowany: () => pokazZaplanowany(arg) }[t] || pokazDzis)();
   } catch (e) {
     if (e instanceof Anulowano || nr !== nawNr) return;
     if (!/nie jest zapamiętane/.test(e.message)) widok.innerHTML = `<div class="karta zle">Błąd: ${esc(e.message)}</div>`;

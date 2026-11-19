@@ -20,7 +20,8 @@ SYSTEM = (
     "Nie wymyślaj danych, których nie dostałeś; gdy czegoś brakuje, powiedz to. "
     "Dni nazywaj słowami, nie datami (Antka mylą daty): „dziś”, „jutro”, „wczoraj”, „w czwartek”, „w przyszłą "
     "sobotę”, „w ostatni wtorek”. Daty (np. 19.11) tylko przy terminach dalej niż 2 tygodnie (zawody, koniec fazy) "
-    "i wtedy z dniem tygodnia.")
+    "i wtedy z dniem tygodnia. Czas trwania (sen, trening, fazy snu) zawsze w godzinach:minutach — „7:34 h” albo "
+    "„7 h 34 min” — nigdy ułamkiem godziny („7,57 h”); krótkie odcinki w minutach („45 min”).")
 
 
 class BladAI(Exception):

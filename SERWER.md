@@ -645,6 +645,10 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - Projekt `~/trener/` (kopia w repo `trener/`, opis w `trener/README.md`). Webapka PWA przez `tailscale serve` (HTTPS,
   tylko tailnet) → Flask 127.0.0.1:8095 (`trener-web`); `trener-cykl.timer` co 15 min (a `trener-szybki.timer` co minutę sprawdza 5 ostatnich aktywności; nowa → od razu cykl, blokada `cykl.lock`): sync Garmin → strefy → analiza
   po treningu / poranna / tygodniowa (Claude) → uzupełnienie planu → treningi na zegarek automatycznie.
+- Ekran treningu `#trening/<id>` (statystyki, strefy, przebieg z `GET /api/aktywnosc/<id>/przebieg?od&do&n`, okrążenia)
+  i `#zaplanowany/<id>` (`GET /api/plan/<id>`). Przebieg pobierany z Garmina przy pierwszym otwarciu (`przebieg.py`,
+  tabela `przebiegi`). Czat: `POST /api/czat` przyjmuje `aktywnosc_id` i `omow`; odpowiedź może mieć `wykresy`
+  (trening: kanały, `od_s`/`do_s`, znaczniki, linie; dni: metryki, od/do), zapisane w kolumnie `czat.wykresy`.
 - Decyzje Antka 17.11: Claude analizuje i planuje (zniesione „Claude nie dotyka Garmina” dla tej apki), push + Linphone,
   apka zastępuje RestOrTrain, zapis na zegarek automatyczny z powiadomieniem. Usuwa tylko treningi ze znacznikiem
   `auto: trener`.

@@ -5,14 +5,35 @@ import logging
 import threading
 from datetime import datetime, timedelta
 
-from . import ai, baza, cel, config, kontekst
+from . import ai, baza, cel, config, kontekst, przebieg
 
 log = logging.getLogger(__name__)
+
+METRYKI = {"hrv": "HRV", "sen_h": "sen", "sen_wynik": "wynik snu", "tetno_spocz": "tętno spocz.", "bb_rano": "Body Battery rano",
+           "gotowosc": "gotowość", "stres": "stres", "obc_ostre": "obciążenie ostre", "acwr": "stosunek obciążeń",
+           "kroki": "kroki", "vo2_rower": "VO2max rower", "sen_gleboki_h": "sen głęboki", "sen_tetno": "tętno w nocy",
+           "kcal_akt": "kcal aktywne"}
 
 SCHEMAT = {"type": "object", "properties": {
     "odpowiedz": {"type": "string"},
     "potrzebne_dane": {"type": "object", "description": "gdy do odpowiedzi potrzebujesz szczegółów z historii",
                        "properties": {"od": {"type": "string"}, "do": {"type": "string"}}},
+    "przebieg_id": {"type": "integer", "description": "id aktywności, której przebiegu (sekunda po sekundzie) potrzebujesz,"
+                    " a nie ma go w kontekście — dostaniesz go w drugiej rundzie"},
+    "wykresy": {"type": "array", "description": "0–3 wykresy pod odpowiedzią", "items": {"type": "object", "properties": {
+        "tytul": {"type": "string"},
+        "rodzaj": {"type": "string", "enum": ["trening", "dni"]},
+        "aktywnosc_id": {"type": "integer"},
+        "kanaly": {"type": "array", "items": {"type": "string", "enum": ["tetno", "moc", "predkosc", "kadencja", "wysokosc"]}},
+        "od_s": {"type": "number"}, "do_s": {"type": "number"},
+        "metryki": {"type": "array", "items": {"type": "string", "enum": list(METRYKI)}},
+        "od": {"type": "string"}, "do": {"type": "string"},
+        "znaczniki": {"type": "array", "items": {"type": "object", "properties": {
+            "s": {"type": "number"}, "dzien": {"type": "string"}, "tekst": {"type": "string"}}, "required": ["tekst"]}},
+        "linie": {"type": "array", "items": {"type": "object", "properties": {
+            "kanal": {"type": "string"}, "wartosc": {"type": "number"}, "tekst": {"type": "string"}},
+            "required": ["kanal", "wartosc"]}}},
+        "required": ["rodzaj"]}},
     "zmienic_plan": {"type": "boolean"},
     "przebuduj_makrocykl": {"type": "boolean", "description": "nowy/zmieniony cel, termin zawodów albo duża zmiana sytuacji"},
     "prosba_do_planu": {"type": "string"},
@@ -34,6 +55,15 @@ INSTRUKCJA = """Rozmawiasz z Antkiem w apce Trener. Odpowiadaj konkretnie (zwykl
 - Gdy w kontekście jest CZEKA NA DECYZJĘ ANTKA, a Antek odpowiada (np. „słabo się czuję, zmień” / „czuję się
   dobrze, zostaw”) → decyzja_propozycji = zmien / zostaw. Inaczej „brak”.
 - Trwałe fakty (kontuzja, nie lubi biegać, ma zawody 12.04) — zapamietaj.
+- WYKRESY: gdy coś łatwiej pokazać, niż opisać (albo Antek prosi), dodaj wykresy (max 3, zwykle 1):
+  • rodzaj "trening": aktywnosc_id, kanaly (tetno/moc/predkosc/kadencja/wysokosc; każdy kanał to osobny wykres
+    z tą samą osią czasu), opcjonalnie od_s/do_s (sekundy od startu — przybliż fragment, o którym mówisz),
+    znaczniki [{s, tekst}] w miejscach, o których piszesz (np. {s: 3422, tekst: "833 W"}), linie [{kanal, wartosc,
+    tekst}] np. górna granica Z2 mocy. Czas w PRZEBIEGU jest m:ss / h:mm:ss — przelicz na sekundy (57:02 → 3422).
+  • rodzaj "dni": metryki (np. hrv, sen_h, tetno_spocz), od/do RRRR-MM-DD, znaczniki [{dzien, tekst}].
+  W tekście odwołuj się do wykresu („na wykresie widać…”). Nie wymyślaj aktywnosc_id — tylko id z kontekstu.
+- Gdy pytanie dotyczy przebiegu treningu (tętno/moc w danym momencie, interwały, strzały mocy), a nie masz jego
+  PRZEBIEGU w kontekście — podaj przebieg_id (id aktywności), odpowiedz krótko „sprawdzam”; dostaniesz przebieg.
 - Gdy pyta o konkretny okres z historii, a nie masz szczegółów — podaj potrzebne_dane {od, do} (RRRR-MM-DD), a
   odpowiedz krótko „sprawdzam”; dostaniesz dane w drugiej rundzie."""
 
@@ -51,14 +81,21 @@ def _dane_okresu(db, od, do):
     return ("DNI:\n" + "\n".join(dni) + "\n\nAKTYWNOŚCI:\n" + "\n".join(json.dumps(a, ensure_ascii=False) for a in akt[:300]))
 
 
-def odpowiedz(tresc, analiza_id=None):
+OMOW = """TRYB „OMÓW TRENING”: Antek kliknął Omów przy treningu (OMAWIANY TRENING). Daj KRÓTKIE podsumowanie (do ~90 słów,
+3–5 punktów): co widać w danych — jak poszło względem planu/celu, przebieg tętna i mocy, coś ciekawego (strzały,
+dryf, strefy), jedna rada. Dołącz 1 wykres przebiegu z znacznikami najważniejszych miejsc. Nie zmieniaj planu, nie
+zadawaj listy pytań — Antek sam dopyta."""
+
+
+def odpowiedz(tresc, analiza_id=None, aktywnosc_id=None, omow=False):
     """zapisuje wiadomość Antka, pyta Claude, stosuje akcje; -> dict odpowiedzi.
     Gdy skończył się limit Claude: pytanie czeka i trener odpowiada sam po odnowieniu (timer + cykl co 20 min)."""
     db = baza.polacz()
-    db.execute("INSERT INTO czat (kto, tresc, czas, analiza_id) VALUES ('ja',?,?,?)", (tresc, baza.teraz(), analiza_id))
+    db.execute("INSERT INTO czat (kto, tresc, czas, analiza_id, aktywnosc_id) VALUES ('ja',?,?,?,?)",
+               (tresc, baza.teraz(), analiza_id, aktywnosc_id))
     db.commit()
     try:
-        return _odpowiedz(db, tresc, analiza_id)
+        return _odpowiedz(db, tresc, analiza_id, aktywnosc_id, omow)
     except ai.BrakTokenow as ex:
         return _odloz(db, tresc, analiza_id, ex.reset)
 
@@ -120,8 +157,57 @@ def dokoncz_czekajace():
         _blokada.release()
 
 
-def _odpowiedz(db, tresc, analiza_id):
+def _omawiany(db, aktywnosc_id):
+    """trening z przycisku Omów albo z niedawnej rozmowy (ostatnie 10 wiadomości, max 12 h)"""
+    if aktywnosc_id:
+        return aktywnosc_id
+    od = (datetime.now() - timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%S")
+    for r in db.execute("SELECT aktywnosc_id, czas FROM czat ORDER BY id DESC LIMIT 10"):
+        if r[0] and r[1] >= od:
+            return r[0]
+    return None
+
+
+def _trening_tekst(db, aid):
+    r = db.execute("SELECT dane, szczegoly, typ FROM aktywnosci WHERE id=?", (aid,)).fetchone()
+    if not r:
+        return None
+    s = kontekst.dane.streszczenie_aktywnosci(baza.rozpakuj(r[0]))
+    if r[2] == "strength_training" and r[1]:
+        s["cwiczenia"] = kontekst.cwiczenia_silki(baza.rozpakuj(r[1]))
+    try:
+        p = przebieg.dla_ai(przebieg.pobierz(db, aid))
+    except Exception as ex:
+        log.exception("przebieg %s", aid)
+        p = f"przebieg niedostępny ({type(ex).__name__})"
+    return f"(id {aid}, {kontekst.slownie(s.get('start', '')[:10])}) " + json.dumps(s, ensure_ascii=False) + "\n" + p
+
+
+def _wykresy(db, w):
+    """zostaw tylko poprawne wykresy (istniejące aktywności, znane kanały/metryki)"""
+    wyn = []
+    for x in (w.get("wykresy") or [])[:3]:
+        if x.get("rodzaj") == "trening":
+            if not x.get("aktywnosc_id") or not db.execute("SELECT 1 FROM aktywnosci WHERE id=?", (x["aktywnosc_id"],)).fetchone():
+                continue
+            x["kanaly"] = [k for k in x.get("kanaly") or ["tetno"] if k in przebieg.NAZWY] or ["tetno"]
+        elif x.get("rodzaj") == "dni":
+            x["metryki"] = [k for k in x.get("metryki") or [] if k in METRYKI]
+            if not x["metryki"]:
+                continue
+        else:
+            continue
+        wyn.append(x)
+    return wyn
+
+
+def _odpowiedz(db, tresc, analiza_id, aktywnosc_id=None, omow=False):
     cz = ["BAZA WIEDZY:\n" + cel.wiedza(config.ustawienia()["sporty"]), kontekst.pelny(db)]
+    aid = _omawiany(db, aktywnosc_id)
+    if aid:
+        t = _trening_tekst(db, aid)
+        if t:
+            cz.append("OMAWIANY TRENING " + t)
     if analiza_id:
         r = db.execute("SELECT * FROM analizy WHERE id=?", (analiza_id,)).fetchone()
         if r:
@@ -129,13 +215,20 @@ def _odpowiedz(db, tresc, analiza_id):
     ostatnie = db.execute("SELECT rodzaj, dzien, tytul FROM analizy ORDER BY id DESC LIMIT 5").fetchall()
     if ostatnie:
         cz.append("OSTATNIE ANALIZY: " + "; ".join(f"{r[1]} {r[0]}: {r[2]}" for r in ostatnie))
-    cz += [INSTRUKCJA, "ROZMOWA:\n" + historia_czatu(db)]
+    cz += [INSTRUKCJA] + ([OMOW] if omow else []) + ["ROZMOWA:\n" + historia_czatu(db)]
     prompt = "\n\n".join(cz)
     w = ai.zapytaj(prompt, SCHEMAT, effort="medium")
     pd = w.get("potrzebne_dane") or {}
+    dod = ""
     if pd.get("od") and pd.get("do"):
-        w = ai.zapytaj(prompt + f"\n\nDANE Z OKRESU {pd['od']}..{pd['do']}:\n" + _dane_okresu(db, pd["od"], pd["do"])
-                       + "\n\nTeraz odpowiedz pełnie (bez potrzebne_dane).", SCHEMAT, effort="medium")
+        dod += f"\n\nDANE Z OKRESU {pd['od']}..{pd['do']}:\n" + _dane_okresu(db, pd["od"], pd["do"])
+    if w.get("przebieg_id") and w["przebieg_id"] != aid:
+        t = _trening_tekst(db, w["przebieg_id"])
+        dod += f"\n\nTRENING {t}" if t else f"\n\n(brak aktywności o id {w['przebieg_id']})"
+        aid = w["przebieg_id"] if t else aid
+    if dod:
+        w = ai.zapytaj(prompt + dod + "\n\nTeraz odpowiedz pełnie (bez potrzebne_dane i przebieg_id).", SCHEMAT, effort="medium")
+    wykresy = _wykresy(db, w)
     akcje = []
     if w.get("ustawienia"):
         config.zapisz_ustawienia({k: v for k, v in w["ustawienia"].items() if v})
@@ -163,8 +256,9 @@ def _odpowiedz(db, tresc, analiza_id):
         akcje.append("nowa periodyzacja")
     if w.get("zmienic_plan") or nowy_makro:
         akcje.append("przeplanowanie")
-    db.execute("INSERT INTO czat (kto, tresc, czas, analiza_id, akcje) VALUES ('trener',?,?,?,?)",
-               (w["odpowiedz"], baza.teraz(), analiza_id, json.dumps(akcje, ensure_ascii=False)))
+    db.execute("INSERT INTO czat (kto, tresc, czas, analiza_id, akcje, wykresy, aktywnosc_id) VALUES ('trener',?,?,?,?,?,?)",
+               (w["odpowiedz"], baza.teraz(), analiza_id, json.dumps(akcje, ensure_ascii=False),
+                json.dumps(wykresy, ensure_ascii=False) if wykresy else None, aid))
     db.commit()
     if nowy_makro:
         m = cel.zbuduj(w.get("prosba_do_planu") or tresc, db)

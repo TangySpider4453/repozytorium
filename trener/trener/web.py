@@ -314,7 +314,44 @@ def api_aktywnosc(aid):
     s = kontekst.dane.streszczenie_aktywnosci(baza.rozpakuj(r["dane"]) or {})
     if r["szczegoly"]:
         s["cwiczenia"] = kontekst.cwiczenia_silki(baza.rozpakuj(r["szczegoly"]))
+    s["dzien_slownie"] = kontekst.slownie(r["dzien"])
+    s["progi"] = _progi_wykres(db())
     return jsonify(s)
+
+
+@app.route("/api/aktywnosc/<int:aid>/przebieg")
+def api_przebieg(aid):
+    """przebieg do wykresów (pobierany z Garmina przy pierwszym otwarciu, potem z bazy)"""
+    from . import przebieg
+    d = db()
+    if not d.execute("SELECT 1 FROM aktywnosci WHERE id=?", (aid,)).fetchone():
+        abort(404)
+    try:
+        p = przebieg.pobierz(d, aid)
+    except Exception as ex:
+        log.exception("przebieg %s", aid)
+        return jsonify({"blad": f"{type(ex).__name__}: {ex}"[:200]}), 502
+    if not p:
+        return jsonify({"t": []})
+    f = lambda k: float(request.args[k]) if request.args.get(k) not in (None, "") else None
+    w = przebieg.wycinek(p, f("od"), f("do"), int(request.args.get("n") or 600))
+    w["okrazenia"] = p.get("okrazenia") or []
+    w["koniec"] = p["t"][-1] if p["t"] else 0
+    return jsonify(w)
+
+
+@app.route("/api/plan/<int:pid>")
+def api_plan_jeden(pid):
+    d = db()
+    r = d.execute("SELECT dzien FROM plan WHERE id=?", (pid,)).fetchone()
+    if not r:
+        abort(404)
+    t = next((x for x in _plan(d, r[0], r[0]) if x["id"] == pid), None)
+    if not t:
+        abort(404)
+    t["dzien_slownie"] = kontekst.slownie(r[0])
+    t["progi"] = _progi_wykres(d)
+    return jsonify(t)
 
 
 @app.route("/api/plan")
@@ -556,13 +593,15 @@ def api_przeczytane(aid):
 def api_czat():
     if request.method == "GET":
         rows = db().execute("SELECT * FROM czat ORDER BY id DESC LIMIT 100").fetchall()[::-1]
-        return jsonify([dict(r, akcje=json.loads(r["akcje"]) if r["akcje"] else []) for r in rows])
+        return jsonify([dict(r, akcje=json.loads(r["akcje"]) if r["akcje"] else [],
+                             wykresy=json.loads(r["wykresy"]) if r["wykresy"] else []) for r in rows])
     b = request.get_json(silent=True) or {}
     t = (b.get("tresc") or "").strip()
     if not t or len(t) > 4000:
         abort(400)
     from .czat import odpowiedz
-    return jsonify(zadanie("czat", odpowiedz, t, b.get("analiza_id")))
+    aid = b.get("aktywnosc_id")
+    return jsonify(zadanie("czat", odpowiedz, t, b.get("analiza_id"), int(aid) if aid else None, bool(b.get("omow"))))
 
 
 # ---------------------------------------------------------------- ustawienia, push

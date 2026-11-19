@@ -2,6 +2,13 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — ekran treningu i wykresy w czacie)**: czas wszędzie jako h:mm (sen 7:34, nie 7,57; też
+  w kontekście dla Claude i w regule SYSTEM). Każdy trening klikalny: zrobiony → `#trening/<id>` (statystyki, strefy,
+  wykres na kanał: tętno, moc ze średnią i max, prędkość, kadencja, wysokość, linia FTP, okrążenia, ćwiczenia siłki);
+  zaplanowany → `#zaplanowany/<id>`. Przebieg sekundowy z Garmina (`przebieg.py`, cache w tabeli `przebiegi`).
+  „💬 Omów trening” wysyła od razu wiadomość z `aktywnosc_id` i `omow` → trener daje krótkie podsumowanie i wykres ze
+  znacznikami (numerki + lista pod wykresem). Czat może dołączać wykresy: przebieg treningu albo metryki dni
+  (HRV, sen, RHR…), sam prosi o przebieg (`przebieg_id`). Test: omówienie dzisiejszego MTB pokazało strzały 833 W i 707 W.
 - **2026-11-19 (chmura, Trener — powiadomienie po treningu)**: `trener-szybki.timer` co minutę pobiera 5 ostatnich aktywności (ok. 2 s); nowa → od razu pełny cykl (analiza + push). Pełny cykl co 15 min (było 20). Blokada `cykl.lock`, przy błędzie Garmina 10 min przerwy (kv `szybki_pauza`). Spóźnienie wynika już tylko z wgrywania do Garmina.
 - **2026-11-18 (chmura, Trener — plan)**: śr i pt tylko jedna sesja, siłki pełne (min. 55 min, zwykle 60–75):
   nowe reguły w kontroli planu (`dni_jedna_sesja`, `silka_min_min`) i w `wymagania`; makrocykl i plan przebudowane.

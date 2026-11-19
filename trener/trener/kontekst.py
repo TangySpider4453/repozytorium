@@ -23,12 +23,20 @@ def _sr(xs, n=1):
     return round(mean(xs), n) if xs else None
 
 
+def hm(h):
+    """7.57 → '7:34' (czas w godzinach:minutach, żeby Claude nie pisał ułamków godzin)"""
+    if h is None:
+        return "?"
+    m = round(h * 60)
+    return f"{m // 60}:{m % 60:02d}"
+
+
 def wiersz_dnia(d):
     w = d
     tr = "; ".join(f"{t['nazwa']} {t['min']}min{(' ' + str(t['km']) + 'km') if t.get('km') else ''} obc{t.get('obc')}"
                    for t in w.get("treningi", []))
     pola = [z_dniem(w["dzien"]),
-            f"sen {w.get('sen_h')}h wynik {w.get('sen_wynik')} (głęb {w.get('sen_gleboki_h')} REM {w.get('sen_rem_h')}) {w.get('sen_od')}-{w.get('sen_do')}" if w.get("sen_h") else "sen brak",
+            f"sen {hm(w.get('sen_h'))} h wynik {w.get('sen_wynik')} (głęb {hm(w.get('sen_gleboki_h'))} REM {hm(w.get('sen_rem_h'))}) {w.get('sen_od')}-{w.get('sen_do')}" if w.get("sen_h") else "sen brak",
             f"HRV {w.get('hrv')} (7d {w.get('hrv_7d')}, {w.get('hrv_status')}, norma {w.get('hrv_norma')})" if w.get("hrv") else "",
             f"tętno spocz {w.get('tetno_spocz')}" if w.get("tetno_spocz") else "",
             f"BB rano {w.get('bb_rano')} max {w.get('bb_max')}" if w.get("bb_max") else "",
@@ -91,9 +99,9 @@ def agregaty(db, okres="tydzien", od=None):
     wyn = []
     for k in sorted(grupy):
         g = grupy[k]
-        sporty = ", ".join(f"{s} {g['n'][s]}× {g['h'][s]:.1f}h" + (f" {g['km'][s]:.0f}km" if g["km"][s] >= 1 else "")
+        sporty = ", ".join(f"{s} {g['n'][s]}× {hm(g['h'][s])} h" + (f" {g['km'][s]:.0f}km" if g["km"][s] >= 1 else "")
                            for s in sorted(g["h"], key=lambda s: -g["h"][s]))
-        wyn.append(f"{k}: {sporty or 'bez treningów'} | obc {g['obc']:.0f} | sen {_sr(g['sen'])}h HRV {_sr(g['hrv'], 0)} "
+        wyn.append(f"{k}: {sporty or 'bez treningów'} | obc {g['obc']:.0f} | sen {hm(_sr(g['sen'], 2))} h HRV {_sr(g['hrv'], 0)} "
                    f"RHR {_sr(g['rhr'], 0)} VO2rower {_sr(g['vo2'])}")
     return wyn
 
