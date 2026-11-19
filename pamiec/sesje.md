@@ -128,3 +128,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-19: zębatka działa jak przełącznik: otwiera Ustawienia (wyrastają z niej), drugi klik zamyka (chowają się do niej).
   Poprawki: plan miał w treści `.ladowanie` (Wcześniejsze), przez co nie było animacji; wczytywanie z góry pobiera duże
   zapytania (dni, agregaty ~2 s) na końcu, bo serwer trenera obsługuje zapytania po kolei i blokowały resztę.
+- 2026-11-19: 3 poprawki animacji: pole czatu wypływa jak kropla z ikony Czat w menu (i do niej wraca); przełącznik
+  Podsumowanie | Treningi stoi w miejscu (przesuwa się tylko treść i pigułka); zakresy 30 dni / 90 dni / rok / wszystko
+  mają przesuwaną pigułkę i przejście treści w stronę zmiany.

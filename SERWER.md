@@ -706,3 +706,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   z klikniętej karty (clip-path); powrót kurczy się do tej karty. Na szczegółach w nagłówku jest ‹ (`#btn-wstecz`).
   Zębatka przełącza Ustawienia; źródło mniejsze niż 80 px (ikona) animuje się skalą z/do punktu zamiast wycinka.
   Duże zapytania (dni, agregaty) wczytują się z góry na końcu: serwer obsługuje zapytania po kolei.
+  Podzakładki (`.podzak`, np. Podsumowanie | Treningi) stoją w miejscu, przesuwa się tylko treść pod nimi. Każdy przełącznik
+  `.zakladki` ma przesuwaną pigułkę (`plynPigulke`); zmiana zakresu (30 dni / 90 dni / rok / wszystko) w Dane robi
+  `pokazZakres`: stara treść pod przełącznikiem odjeżdża i znika, nowa wjeżdża z kierunku zmiany. Pole czatu `.pisz`
+  przenosi się do body i wypływa jak kropla z ikony Czat w menu (`kropla`), a po wyjściu z czatu wraca do niej.

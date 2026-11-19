@@ -1541,7 +1541,11 @@ function pokazZPrzejsciem(v) {
   anim.push(g);
   const sprzataj = x => x.finished.then(() => g.remove(), () => g.remove());
   if (p.typ === "bok") {
-    animuj(widok, [{ transform: `translateX(${p.k * 100}%)` }, { transform: "none" }], o);
+    const stoi = g.firstElementChild?.matches(".podzak") && widok.firstElementChild?.matches(".podzak");   // Podsumowanie | Treningi
+    if (stoi) {
+      g.firstElementChild.style.visibility = "hidden";
+      [...widok.children].slice(1).forEach(c => animuj(c, [{ transform: `translateX(${p.k * 100}%)` }, { transform: "none" }], o));
+    } else animuj(widok, [{ transform: `translateX(${p.k * 100}%)` }, { transform: "none" }], o);
     sprzataj(animuj(g, [{ transform: "none", opacity: 1 }, { transform: `translateX(${-p.k * 100}%)`, opacity: 1 }], o));
   } else if (p.r.width < 80 && (p.typ === "otworz" || p.typ === "zamknij")) {   // ikona (zębatka): wyrasta z niej i do niej wraca
     const el = p.typ === "otworz" ? widok : g, b = el.getBoundingClientRect();
@@ -1566,9 +1570,80 @@ function pokazZPrzejsciem(v) {
     sprzataj(animuj(g, [{ clipPath: "inset(0px 0px 0px 0px round 0px)", opacity: 1 }, { clipPath: ramka(p.r, b), opacity: .7, offset: .85 }, { clipPath: ramka(p.r, b), opacity: 0 }], { duration: 420, easing: SPR }));
   }
 }
+// przełączniki (.zakladki): pigułka przepływa ze starego wyboru na nowy
+function stanZakladek() {
+  return [...widok.querySelectorAll(".zakladki")].map(z => {
+    const a = z.querySelector(".akt"); if (!a) return null;
+    const zr = z.getBoundingClientRect(), ar = a.getBoundingClientRect();
+    return { l: ar.left - zr.left + z.scrollLeft, w: ar.width, klucz: z.textContent };
+  });
+}
+function plynPigulke(z, st) {
+  const a = z.querySelector(".akt"); if (!a || !st || spokojnie.matches) return;
+  const zr = z.getBoundingClientRect(), ar = a.getBoundingClientRect(), l = ar.left - zr.left + z.scrollLeft;
+  if (Math.abs(l - st.l) < 1) return;
+  const p = document.createElement("i");
+  p.className = "pigulka";
+  p.style.cssText = `top:${ar.top - zr.top}px;height:${ar.height}px;left:${l}px;width:${ar.width}px`;
+  z.classList.add("plynie"); z.prepend(p);
+  const x = p.animate([{ left: st.l + "px", width: st.w + "px" }, { left: l + "px", width: ar.width + "px" }], { duration: 440, easing: SPR });
+  const k = () => { p.remove(); z.classList.remove("plynie"); };
+  x.finished.then(k, k);
+}
+// zmiana zakresu (30 dni / 90 dni / rok / wszystko, filtry): treść pod przełącznikiem odpływa w bok, nowa wpływa
+let zmianaZakresu = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("#widok .zakladki:not(.podzak) button");
+  if (!b) return;
+  const z = b.parentElement, bs = [...z.querySelectorAll("button")], k = Math.sign(bs.indexOf(b) - bs.indexOf(z.querySelector(".akt")));
+  zmianaZakresu = k ? { k, i: [...widok.querySelectorAll(".zakladki")].indexOf(z), t: Date.now() } : null;
+}, true);
+const dziecko = (rodzic, el) => { while (el && el.parentElement !== rodzic) el = el.parentElement; return el; };
+function pokazZakres(v, zk) {
+  skonczAnimacje();
+  const g = spokojnie.matches ? null : duch();
+  _ih.set.call(widok, v);
+  if (!g) return;
+  anim.push(g);
+  const zg = dziecko(g, g.querySelectorAll(".zakladki")[zk.i]), zn = dziecko(widok, widok.querySelectorAll(".zakladki")[zk.i]);
+  if (!zg || !zn) { g.remove(); return; }
+  [...g.children].slice(0, [...g.children].indexOf(zg) + 1).forEach(c => c.style.visibility = "hidden");
+  [...widok.children].slice([...widok.children].indexOf(zn) + 1).forEach(c =>
+    animuj(c, [{ transform: `translateX(${zk.k * 56}px)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 440, delay: 150, easing: SPR, fill: "backwards" }));
+  const x = animuj(g, [{ transform: "none", opacity: 1 }, { transform: `translateX(${-zk.k * 40}px)`, opacity: 0 }], { duration: 170, easing: "ease-in", fill: "forwards" });
+  x.finished.then(() => g.remove(), () => g.remove());
+}
+// czat: pole pisania wypływa z dolnego paska jak kropla (i wraca do niego przy wyjściu)
+function kropla(el, wej) {
+  if (spokojnie.matches) { if (!wej) el.remove(); return; }
+  const c = $('nav a[data-t="czat"]').getBoundingClientRect(), r = el.getBoundingClientRect();
+  el.style.transformOrigin = `${c.left + c.width / 2 - r.left}px 50%`;
+  const dy = c.top + c.height / 2 - (r.top + r.height / 2);
+  const kl = [
+    { transform: `translateY(${dy}px) scale(.1, .45)`, borderRadius: "50%", opacity: 0, filter: "blur(3px)", easing: "cubic-bezier(.2,.8,.3,1)" },
+    { transform: `translateY(${dy * .4}px) scale(.14, 1.08)`, borderRadius: "50%", opacity: 1, filter: "blur(0px)", offset: .3, easing: "cubic-bezier(.45,0,.2,1)" },
+    { transform: "translateY(-7px) scale(1.04, .9)", borderRadius: "28px", opacity: 1, filter: "blur(0px)", offset: .66, easing: "ease-in-out" },
+    { transform: "translateY(2px) scale(.985, 1.04)", borderRadius: "28px", opacity: 1, filter: "blur(0px)", offset: .84, easing: "ease-in-out" },
+    { transform: "none", borderRadius: "28px", opacity: 1, filter: "blur(0px)" }];
+  const x = el.animate(wej ? kl : [kl[4], kl[2], kl[1], kl[0]].map(({ offset, easing, ...k }) => k), { duration: wej ? 760 : 380, easing: wej ? "linear" : "cubic-bezier(.5,0,.75,.4)" });
+  [...el.children].forEach(d => d.animate(wej ? [{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0, offset: .3 }, { opacity: 0 }], { duration: wej ? 760 : 380 }));
+  x.finished.then(() => { el.style.transformOrigin = ""; if (!wej) el.remove(); }, () => { if (!wej) el.remove(); });
+}
+function poPokazaniu(stare) {
+  const nowe = [...widok.querySelectorAll(".zakladki")];
+  nowe.forEach((z, i) => { if (stare[i] && stare[i].klucz === z.textContent) plynPigulke(z, stare[i]); });
+  const nowa = widok.querySelector(":scope > .pisz"), stara = document.querySelector("body > .pisz:not(.odplywa)");
+  if (nowa) { if (stara) stara.remove(); document.body.appendChild(nowa); if (!stara) kropla(nowa, true); }
+  else if (stara && !widok.firstElementChild?.matches(".ladowanie")) { stara.classList.add("odplywa"); kropla(stara, false); }
+}
 Object.defineProperty(widok, "innerHTML", { configurable: true, get() { return _ih.get.call(this); }, set(v) {
-  if (przejscie) pokazZPrzejsciem(v); else _ih.set.call(this, v);
+  const stare = stanZakladek();
+  const zk = !przejscie && zmianaZakresu && Date.now() - zmianaZakresu.t < 2000 ? zmianaZakresu : null;
+  zmianaZakresu = null;
+  if (przejscie) pokazZPrzejsciem(v); else if (zk) pokazZakres(v, zk); else _ih.set.call(this, v);
+  try { poPokazaniu(stare); } catch (e) { console.error(e); }   // ozdobniki nie mogą zepsuć ekranu
 } });
+const trwaAnimacja = () => (anim = anim.filter(x => x.playState ? x.playState === "running" : x.isConnected)).length > 0;
 
 const pozycja = (t, zak) => t === "treningi" ? 3.5 : ZAKLADKI.indexOf(zak);
 const EKRANY = { dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: a => pokazCzat(a), analiza: a => pokazAnalize(a), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: a => pokazMetryke(a), jedzenie: a => pokazJedzenie(a), waga: pokazWage, trening: a => pokazTrening(a), zaplanowany: a => pokazZaplanowany(a) };
@@ -1633,7 +1708,7 @@ function przerysujPoCichu() {
   cichyTimer = setTimeout(async () => {
     const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
     if (przejscie || ["czat", "start", "ustawienia"].includes(t) || zajety() || document.body.classList.contains("arkusz-otwarty") ||
-        document.activeElement?.matches("input, textarea, select") || anim.length) return;
+        document.activeElement?.matches("input, textarea, select") || trwaAnimacja()) return;
     const nr = nawNr, y = SKR.scrollTop;
     WYK.clear();
     try { await (EKRANY[t] || pokazDzis)(arg); } catch (_) { return; }
