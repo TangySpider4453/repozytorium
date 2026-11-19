@@ -117,3 +117,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   /api/dzis zwraca zrobione_id (dzień → kategoria → id). Niezrobione dalej otwierają plan treningu.
 - 2026-11-19: --brak nie pomógł (pas to obszar poza oknem, menu się w nim chowało). Prawdziwa przyczyna: WebKit 301108,
   okno krótsze, gdy dokument niższy niż ekran. Poprawka: min-height html w trybie standalone; pomiar z telefonu: 852/852.
+- 2026-11-19: nowe menu: Dziś · Plan · Jedzenie (środek, szybki dostęp do kalorii) · Dane · Czat. Treningi to podzakładka w Dane
+  (Podsumowanie | Treningi). Dane ładują dni i agregaty równolegle (~2× szybciej).

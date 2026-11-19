@@ -572,18 +572,20 @@ function pierscien(v) {   // pierścień gotowości: tor + łuk (status → kolo
 
 // ------------------------------------------------------------------ Dane
 let zakres = 90;
+// Dane: dwie podzakładki — podsumowanie (wykresy, zdrowie) i historia treningów
+const podzakladkiDanych = akt => `<div class="zakladki podzak">${[["dane", "Podsumowanie"], ["treningi", "Treningi"]].map(([h, n]) =>
+  `<a class="${akt === h ? "akt" : ""}" href="#${h}">${n}</a>`).join("")}</div>`;
 async function pokazDane() {
-  const wsz = await wszystkieDni();
   const dzis = new Date().toISOString().slice(0, 10);
   const od = zakres ? dzienMinus(dzis, zakres - 1) : "2000-01-01";
   const okres = zakres && zakres <= 180 ? "tydzien" : "miesiac";
-  const agr = await api("agregaty?okres=" + okres);
+  const [wsz, agr] = await Promise.all([wszystkieDni(), api("agregaty?okres=" + okres)]);   // równolegle: szybciej na telefonie
   const ag = agr.filter(x => x.okres >= od.slice(0, x.okres.length));
   const etX = okres === "miesiac" ? x => x.slice(5, 7) + "." + x.slice(2, 4) : x => x.slice(5);
   const dni = wsz.filter(d => d.dzien >= dzienMinus(dzis, 29));
   const sporty = [["rower", "rower"], ["bieg", "bieg"], ["silka", "siłka"], ["inne", "inne"]];
   const suma = k => ag.reduce((s, x) => s + (x.h[k] || 0), 0);
-  widok.innerHTML = `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]].map(([v, n]) =>
+  widok.innerHTML = podzakladkiDanych("dane") + `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]].map(([v, n]) =>
     `<button class="${zakres === v ? "akt" : ""}" onclick="zakres=${v};pokazDane()">${n}</button>`).join("")}</div>
     <div class="karta"><div class="kt">Godziny treningu <span class="szary">· ${okres === "tydzien" ? "tygodnie" : "miesiące"}</span></div>
       <div class="wiersz suma">${sporty.map(([k, n]) => `<div><span>${n}</span><b>${lb(suma(k))} h</b></div>`).join("")}</div>
@@ -682,7 +684,7 @@ async function pokazTreningi(dalej = false) {
     <div><b>${esc(a.nazwa)}</b><div class="szary">${esc(a.start.replace("T", " "))}</div></div>
     <div style="text-align:right" class="szary">${a.min} min${a.km ? "<br>" + a.km + " km" : ""}${a.moc ? "<br>" + a.moc + " W" : ""}${a.tetno ? "<br>♥ " + a.tetno : ""}</div></div>`).join("");
   if (dalej) { $(".lista-akt").insertAdjacentHTML("beforeend", wiersze); return; }
-  widok.innerHTML = `<div class="zakladki">${[["", "wszystko"], ["rower", "🚴 rower"], ["bieg", "🏃 bieg"], ["silka", "🏋️ siłka"], ["inne", "inne"]].map(([v, n]) =>
+  widok.innerHTML = podzakladkiDanych("treningi") + `<div class="zakladki">${[["", "wszystko"], ["rower", "🚴 rower"], ["bieg", "🏃 bieg"], ["silka", "🏋️ siłka"], ["inne", "inne"]].map(([v, n]) =>
     `<button class="${filtr === v ? "akt" : ""}" onclick="filtr='${v}';pokazTreningi()">${n}</button>`).join("")}</div>
     <div class="lista-akt">${wiersze}</div><button class="drugi" style="width:100%" onclick="pokazTreningi(true)">Więcej</button>`;
 }
@@ -1438,7 +1440,7 @@ function kafelWaga(w) {
 
 // ------------------------------------------------------------------ router
 // przejścia w stylu Liquid Glass: stary ekran mięknie i rozmywa się, nowy wjeżdża ze sprężyną
-const ZAKLADKI = ["dzis", "plan", "dane", "treningi", "czat"];
+const ZAKLADKI = ["dzis", "plan", "jedzenie", "dane", "czat"];
 const _ih = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
 const spokojnie = matchMedia("(prefers-reduced-motion: reduce)");
 let wejscie = null, ladTimer = 0, ostatniaZak = -1;
@@ -1456,12 +1458,12 @@ async function route() {
   if (czekaUpdate) { location.reload(); return; }
   const nr = ++nawNr;
   const [t, arg] = (location.hash.slice(1) || "dzis").split("/");
-  const zak = t === "analiza" || t === "jedzenie" || t === "waga" ? "dzis" : t === "metryka" ? "dane" : t === "trening" ? "treningi" : t === "zaplanowany" ? "plan" : t;
+  const zak = t === "analiza" || t === "waga" ? "dzis" : t === "metryka" || t === "trening" || t === "treningi" ? "dane" : t === "zaplanowany" ? "plan" : t;
   const i = ZAKLADKI.indexOf(zak), nav = $("nav");
   nav.querySelectorAll("a").forEach(a => a.classList.toggle("akt", a.dataset.t === zak));
   if (i >= 0) nav.style.setProperty("--i", i);
   nav.classList.toggle("bez-zak", i < 0);
-  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Treningi", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga", trening: "Trening", zaplanowany: "Zaplanowany trening" }[t] || "Trener";
+  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Dane", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga", trening: "Trening", zaplanowany: "Zaplanowany trening" }[t] || "Trener";
   const pusto = !widok.firstElementChild;
   wejscie = i < 0 || ostatniaZak < 0 || i === ostatniaZak ? 0 : Math.sign(i - ostatniaZak);
   ostatniaZak = i;
