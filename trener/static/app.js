@@ -1,5 +1,6 @@
 "use strict";
 const $ = (s, el = document) => el.querySelector(s);
+const SKR = document.body;     // przewija się body, nie okno (iOS, patrz koniec pliku)
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 // numer nawigacji: odpowiedź, która przyszła po przejściu na inną zakładkę, nie może nadpisać ekranu
 let nawNr = 0;
@@ -668,7 +669,7 @@ async function pokazPlan() {
   h += `<div style="height:40vh"></div>`;  // żeby dzisiaj dało się przewinąć na samą górę
   widok.innerHTML = h;
   const kotwica = $("#plan-dzis");
-  if (kotwica) window.scrollTo(0, kotwica.getBoundingClientRect().top + scrollY - ($("header")?.offsetHeight || 0) - 8);
+  if (kotwica) SKR.scrollTo(0, kotwica.getBoundingClientRect().top + SKR.scrollTop - ($("header")?.offsetHeight || 0) - 8);
 }
 
 
@@ -826,7 +827,7 @@ async function pokazCzat(analizaId) {
   const laduj = el => { if (el._z) return; el._z = 1; wykresCzatu(el, WYK_CZAT[+el.dataset.n]); };
   wk.slice(-6).forEach(laduj);
   if (wk.length > 6 && "IntersectionObserver" in window) { const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); laduj(e.target); } })); wk.slice(0, -6).forEach(el => io.observe(el)); }
-  window.scrollTo(0, document.body.scrollHeight);
+  SKR.scrollTo(0, SKR.scrollHeight);
   if (sessionStorage.omow) {
     const o = JSON.parse(sessionStorage.omow); delete sessionStorage.omow;
     t.value = o.tekst; wyslij(analizaId, { aktywnosc_id: o.id, omow: true });
@@ -840,7 +841,7 @@ async function wyslij(analizaId, dod = {}) {
   if (!tresc) return;
   t.value = ""; $("#wyslij").disabled = true;
   $("#czat").insertAdjacentHTML("beforeend", msg({ kto: "ja", tresc }) + `<div class="msg trener mysli" id="mysli">Trener myśli</div>`);
-  window.scrollTo(0, document.body.scrollHeight);
+  SKR.scrollTo(0, SKR.scrollHeight);
   try {
     const zid = await api("czat", { tresc, analiza_id: analizaId ? +analizaId : null, ...dod });
     await czekaj(zid, i => { const m = $("#mysli"); if (i === 25 && m) m.textContent = "Trener układa plan i wysyła na zegarek"; });
@@ -1409,7 +1410,7 @@ Object.defineProperty(widok, "innerHTML", { configurable: true, get() { return _
   _ih.set.call(this, v);
   if (wejscie === null) return;
   const k = wejscie; wejscie = null; clearTimeout(ladTimer);
-  window.scrollTo(0, 0); widok.classList.remove("wychodzi");
+  SKR.scrollTo(0, 0); widok.classList.remove("wychodzi");
   if (!spokojnie.matches) widok.animate([
     { opacity: 0, transform: `translateX(${k * 22}px) scale(.965)`, filter: "blur(7px)" },
     { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 520, easing: "cubic-bezier(.2, 1.2, .32, 1)" });
@@ -1432,7 +1433,7 @@ async function route() {
   if (pusto) _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`);
   else {
     widok.classList.add("wychodzi");
-    ladTimer = setTimeout(() => { if (nr === nawNr && wejscie !== null) { _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`); widok.classList.remove("wychodzi"); window.scrollTo(0, 0); } }, 450);
+    ladTimer = setTimeout(() => { if (nr === nawNr && wejscie !== null) { _ih.set.call(widok, `<div class="ladowanie">Ładuję…</div>`); widok.classList.remove("wychodzi"); SKR.scrollTo(0, 0); } }, 450);
   }
   WYK.clear();
   zamknijArkusz();
@@ -1525,7 +1526,7 @@ function rysujKrok() {
     if (g.dataset.typ === "jeden") g.querySelectorAll(".chip").forEach(x => x !== b && x.classList.remove("akt"));
     b.classList.toggle("akt");
   }));
-  window.scrollTo(0, 0);
+  SKR.scrollTo(0, 0);
 }
 function zbierz() {
   widok.querySelectorAll(".chipy").forEach(g => {
@@ -1616,20 +1617,18 @@ async function pokazWiedze() {
   widok.innerHTML = h;
 }
 
-// iOS: po schowaniu klawiatury (albo powrocie z aparatu) elementy position:fixed (dolne menu, tło)
-// potrafią zostać tam, gdzie kończył się ekran z klawiaturą. Lekkie przewinięcie wymusza ich przeliczenie.
+// iOS: przewija się body (patrz styl.css), więc okno ma zawsze stać na 0. Klawiatura (albo powrót z aparatu) potrafi
+// je przesunąć i zostawić — wtedy dolne menu, nagłówek i tło wiszą w połowie ekranu. Cofamy okno, gdy nic nie jest wpisywane.
 (() => {
-  const vv = window.visualViewport;
-  let maks = vv ? vv.height : innerHeight;
+  const pisze = () => document.activeElement?.matches("input, textarea, select");
   const napraw = () => requestAnimationFrame(() => {
-    const y = scrollY;
-    window.scrollTo(0, y + 1); window.scrollTo(0, y);
+    if (pisze()) return;
+    if (window.scrollY || window.scrollX || document.documentElement.scrollTop) window.scrollTo(0, 0);
     const n = $("nav"); if (n) { n.style.transform = "translate3d(-50%, 0.01px, 0)"; requestAnimationFrame(() => n.style.transform = ""); }
   });
-  if (vv) vv.addEventListener("resize", () => {
-    if (vv.height >= maks - 40) { maks = Math.max(maks, vv.height); setTimeout(napraw, 60); setTimeout(napraw, 400); }
-  });
-  document.addEventListener("focusout", e => { if (e.target.matches("input, textarea, select")) setTimeout(napraw, 300); });
+  window.addEventListener("scroll", () => { if (!pisze()) napraw(); }, { passive: true });
+  window.visualViewport?.addEventListener("resize", () => { setTimeout(napraw, 60); setTimeout(napraw, 400); });
+  document.addEventListener("focusout", e => { if (e.target.matches("input, textarea, select")) { setTimeout(napraw, 100); setTimeout(napraw, 450); } });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(napraw, 200); });
-  window.addEventListener("orientationchange", () => { maks = 0; });
+  SKR.addEventListener("scroll", () => { if (window.scrollY && !pisze()) napraw(); }, { passive: true });
 })();

@@ -2,6 +2,9 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — menu w połowie ekranu, znowu)**: łatka z „lekkim przewinięciem” nie wystarczała. Teraz
+  okno się nie przewija (`html` overflow hidden, przewija się `body` = `SKR` w app.js), a gdy iOS przesunie okno
+  (klawiatura, aparat), app.js cofa je do 0. Do sprawdzenia na iPhonie.
 - **2026-11-19 (chmura, Trener — produkty: zwykła ilość, całe opakowanie, skan tabelki)**: przy wyborze produktu apka
   podpowiada najczęściej wpisywaną ilość, a chipy to „zwykle”, „całe” i porcja. Nieznany kod (też znany w OFF, ale bez
   makro) otwiera formularz z „📷 Zeskanuj tabelkę”, który włącza aparat i wypełnia makro. Nowa kolumna `masa_g`

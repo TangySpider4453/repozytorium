@@ -17,8 +17,10 @@ html, body { margin: 0; background: var(--tlo); color: var(--tekst); font: 15px/
   -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
 a { color: var(--akcent-t); }
 /* bez powiększania (szczypanie / podwójne stuknięcie) i bez skalowania tekstu przy obrocie */
-html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; overscroll-behavior-y: none; background: var(--tlo); }
-body { background: transparent; overflow-x: clip; }
+/* iOS: okno nigdy się nie przewija (przewija się body). Inaczej po klawiaturze okno zostaje przesunięte i dolne menu,
+   nagłówek i tło (position: fixed/sticky) lądują w połowie ekranu. app.js cofa okno do 0, gdyby iOS je przesunął. */
+html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--tlo); }
+body { background: transparent; height: 100%; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
 /* tło pod szkłem: miękkie poświaty, żeby było co rozmywać */
 body::before { content: ""; position: fixed; inset: -20vh -20vw; z-index: -1; pointer-events: none;
   background: radial-gradient(42% 32% at 12% 8%, rgba(57,135,229,.28), transparent 70%),
