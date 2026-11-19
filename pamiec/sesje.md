@@ -125,3 +125,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-19: apka bez „Ładuję…”: dane wszystkich zakładek pobierane z góry i trzymane w pamięci, a odświeżane w tle.
   Animacje: zmiana zakładki przesuwa ekran w stronę zakładki (karuzela); otwarcie karty rośnie z niej na cały ekran;
   wyjście (‹ w nagłówku albo gest wstecz) kurczy ekran do karty.
+- 2026-11-19: zębatka działa jak przełącznik: otwiera Ustawienia (wyrastają z niej), drugi klik zamyka (chowają się do niej).
+  Poprawki: plan miał w treści `.ladowanie` (Wcześniejsze), przez co nie było animacji; wczytywanie z góry pobiera duże
+  zapytania (dni, agregaty ~2 s) na końcu, bo serwer trenera obsługuje zapytania po kolei i blokowały resztę.

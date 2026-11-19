@@ -1529,7 +1529,7 @@ function animuj(el, kl, opt) { const x = el.animate(kl, opt); anim.push(x); retu
 function pokazZPrzejsciem(v) {
   const p = przejscie; przejscie = null; clearTimeout(ladTimer);
   skonczAnimacje();
-  const g = !spokojnie.matches && p.typ !== "zanik" && widok.firstElementChild && !widok.querySelector(".ladowanie") ? duch() : null;
+  const g = !spokojnie.matches && p.typ !== "zanik" && widok.firstElementChild && !widok.firstElementChild.matches(".ladowanie") ? duch() : null;
   _ih.set.call(widok, v);
   SKR.scrollTo(0, p.y || 0);
   if (spokojnie.matches) return;
@@ -1543,6 +1543,16 @@ function pokazZPrzejsciem(v) {
   if (p.typ === "bok") {
     animuj(widok, [{ transform: `translateX(${p.k * 100}%)` }, { transform: "none" }], o);
     sprzataj(animuj(g, [{ transform: "none", opacity: 1 }, { transform: `translateX(${-p.k * 100}%)`, opacity: 1 }], o));
+  } else if (p.r.width < 80 && (p.typ === "otworz" || p.typ === "zamknij")) {   // ikona (zębatka): wyrasta z niej i do niej wraca
+    const el = p.typ === "otworz" ? widok : g, b = el.getBoundingClientRect();
+    const o = `${p.r.left + p.r.width / 2 - b.left}px ${p.r.top + p.r.height / 2 - b.top}px`;
+    el.classList.add("nad"); el.style.transformOrigin = o;
+    const zw = [{ transform: "scale(.04)", opacity: 0, borderRadius: "40px" }, { transform: "none", opacity: 1, borderRadius: "0px" }];
+    const x = animuj(el, p.typ === "otworz" ? zw : [...zw].reverse(), { duration: p.typ === "otworz" ? 460 : 380, easing: SPR });
+    const inny = p.typ === "otworz" ? g : widok;
+    animuj(inny, p.typ === "otworz" ? [{ transform: "none", opacity: 1 }, { transform: "scale(.94)", opacity: .25 }] : [{ transform: "scale(.94)", opacity: .25 }, { transform: "none", opacity: 1 }], { duration: 460, easing: SPR });
+    const koniec = () => { el.classList.remove("nad"); el.style.transformOrigin = ""; if (el === g) g.remove(); else g.remove(); };
+    x.finished.then(koniec, koniec);
   } else if (p.typ === "otworz") {
     widok.classList.add("nad");
     const b = widok.getBoundingClientRect();
@@ -1637,8 +1647,9 @@ function wczytajZGory(ms) {
   zGoryTimer = setTimeout(async () => {
     const d = new Date(), dz = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const tr = JSON.parse(localStorage.getItem("trasyApi") || "{}");
-    const lista = new Set(["dzis", "dieta", "waga", "plan", "makrocykl", "dieta?dzien=" + dz, "dieta/historia?dni=28", "dni?od=2000-01-01",
-      "agregaty?okres=miesiac", "agregaty?okres=tydzien", "aktywnosci?limit=40&offset=0", "czat", ...Object.values(tr).flat()]);
+    const duze = ["dni?od=2000-01-01", "agregaty?okres=miesiac", "agregaty?okres=tydzien"];   // ~2 s każde: na koniec, żeby nie blokowały reszty
+    const lista = new Set(["dzis", "dieta", "waga", "plan", "makrocykl", "dieta?dzien=" + dz, "czat", "ustawienia", "aktywnosci?limit=40&offset=0",
+      "dieta/historia?dni=28", ...Object.values(tr).flat().filter(p => !duze.includes(p)), ...duze]);
     const doPobrania = [...lista].filter(p => /^dieta\?dzien=/.test(p) ? p === "dieta?dzien=" + dz : true)
       .filter(p => { const w = PAMIEC.get(p); return !w || w.brudne || Date.now() - w.t > 60e3; });
     for (let k = 0; k < doPobrania.length; k += 3)   // po 3 naraz, żeby nie zapchać telefonu
@@ -1680,7 +1691,7 @@ async function sprawdzWersje() {
 document.addEventListener("visibilitychange", () => { if (!document.hidden) sprawdzWersje(); });
 window.addEventListener("pageshow", sprawdzWersje);
 setInterval(sprawdzWersje, 60000);
-$("#btn-ust").onclick = pokazUstawienia;
+$("#btn-ust").onclick = () => location.hash.startsWith("#ustawienia") ? $("#btn-wstecz").onclick() : pokazUstawienia();  // drugi klik zamyka
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 document.addEventListener("focusin", e => { if (e.target.matches(".pisz textarea")) document.body.classList.add("pisze"); });
 document.addEventListener("focusout", e => { if (e.target.matches(".pisz textarea")) setTimeout(() => { if (!document.activeElement?.matches(".pisz textarea")) document.body.classList.remove("pisze"); }, 250); });

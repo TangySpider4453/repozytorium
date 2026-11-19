@@ -704,3 +704,5 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   gdy danych nie ma w pamięci i sieć odpowiada dłużej niż 450 ms. Przejścia robi `pokazZPrzejsciem`: stary ekran przenosi się
   do `.duch`, a potem: zakładka → zakładka to karuzela w stronę klikniętej zakładki; otwarcie szczegółów (`DETALE`) rośnie
   z klikniętej karty (clip-path); powrót kurczy się do tej karty. Na szczegółach w nagłówku jest ‹ (`#btn-wstecz`).
+  Zębatka przełącza Ustawienia; źródło mniejsze niż 80 px (ikona) animuje się skalą z/do punktu zamiast wycinka.
+  Duże zapytania (dni, agregaty) wczytują się z góry na końcu: serwer obsługuje zapytania po kolei.
