@@ -293,13 +293,14 @@ const STATUS = { PRODUCTIVE: "produktywny", MAINTAINING: "utrzymanie", RECOVERY:
   DETRAINING: "roztrenowanie", OVERREACHING: "przeciążenie", PEAKING: "szczyt", STRAINED: "nadwyrężenie" };
 const status = s => s ? (STATUS[String(s).replace(/_\d+$/, "")] || s) : "";
 
-function trening(t, zrobiony) {
+function trening(t, zrobiony, aid) {   // aid: zrobiona aktywność z Garmina → klik otwiera jej dane
   const kroki = (t.kroki || []).map(k => {
     if (k.rodzaj === "powtorz") return `<li>${k.razy}× [${(k.kroki || []).map(opisKroku).join(" → ")}]</li>`;
     return `<li>${opisKroku(k)}</li>`;
   }).join("");
   const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
-  const klik = t.id && t.sport !== "odpoczynek" ? ` klik" onclick="if(!event.target.closest('details,a,button'))location.hash='#zaplanowany/${t.id}'` : "";
+  const cel = aid ? `#trening/${aid}` : t.id && t.sport !== "odpoczynek" ? `#zaplanowany/${t.id}` : "";
+  const klik = cel ? ` klik" onclick="if(!event.target.closest('details,a,button'))location.hash='${cel}'` : "";
   return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}${klik}">
     <b>${ikSport(t.sport)}${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${!zrobiony && t.szac && t.szac.kcal ? `<span class="znaczek">~${t.szac.kcal} kcal</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
     ${wykresTreningu(t)}
@@ -551,8 +552,8 @@ async function pokazDzis() {
   d.plan.forEach(t => (poDniu[t.dzien] = poDniu[t.dzien] || []).push(t));
   if (!d.plan.length) h += `<div class="szary">Brak planu na najbliższe dni.</div>`;
   Object.keys(poDniu).sort().forEach(k => {
-    h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? "Dziś" : dataPL(k)}</div>${(() => { const ile = { ...(d.zrobione_sporty || {})[k] };   // „zrobione” tylko, gdy był trening tego samego rodzaju
-      return poDniu[k].map(t => { const ok = t.sport !== "odpoczynek" && ile[t.sport] > 0; if (ok) ile[t.sport]--; return trening(t, ok); }).join(""); })()}</div>`;
+    h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? "Dziś" : dataPL(k)}</div>${(() => { const ile = JSON.parse(JSON.stringify((d.zrobione_id || {})[k] || {}));   // „zrobione” tylko, gdy był trening tego samego rodzaju
+      return poDniu[k].map(t => { const aid = t.sport !== "odpoczynek" && ile[t.sport]?.length ? ile[t.sport].shift() : null; return trening(t, !!aid, aid); }).join(""); })()}</div>`;
   });
   h += `<div class="szary stopka">Synchronizacja: ${esc((d.ostatni_sync || "–").replace("T", " ").slice(0, 16))}
     · <a href="#" onclick="akcja('sync');return false">odśwież</a></div>`;
@@ -662,7 +663,7 @@ async function pokazPlan() {
     if (!pl.length && !zr.length && k < d.dzis) continue;
     if (k === d.dzis) h += `<div id="plan-dzis"></div>` + kartaPropozycji(d.propozycja);
     h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? `Dziś<small>${dataPL(k)}</small>` : dataPL(k)}</div>
-      ${pl.map(t => trening(t, zr.some(a => kat(a.typ) === t.sport))).join("")}
+      ${(() => { const uz = new Set(); return pl.map(t => { const a = t.sport !== "odpoczynek" && zr.find(a => kat(a.typ) === t.sport && !uz.has(a.id)); if (a) uz.add(a.id); return trening(t, !!a, a?.id); }).join(""); })()}
       ${zr.map(a => `<div class="trening zrobiony klik sport-${kat(a.typ)}" onclick="location.hash='#trening/${a.id}'">✓ ${esc(a.nazwa)} <span class="szary">${a.min} min${a.km ? " · " + a.km + " km" : ""}${a.obc ? " · obc " + a.obc : ""}</span></div>`).join("")}
       ${!pl.length && !zr.length ? `<div class="szary">—</div>` : ""}</div>`;
   }
