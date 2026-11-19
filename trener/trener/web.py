@@ -427,7 +427,8 @@ def api_dieta_wpis():
                     "kod": "".join(c for c in str(p.get("kod") or "") if c.isdigit())[:20] or None,
                     "nazwa": str(p.get("nazwa") or "").strip()[:120] or "produkt", "marka": str(p.get("marka") or "")[:60],
                     "kcal": float(p["kcal"]), "b": float(p.get("b") or 0), "w": float(p.get("w") or 0),
-                    "t": float(p.get("t") or 0), "porcja_g": None, "zrodlo": "reczny"})
+                    "t": float(p.get("t") or 0), "porcja_g": dieta._liczba(p.get("porcja_g")) or None,
+                    "masa_g": dieta._liczba(p.get("masa_g")) or None, "zrodlo": "reczny"})
                 b["kod"] = kod
             dieta.dodaj(b)
     except (ValueError, KeyError, TypeError) as ex:
@@ -449,6 +450,8 @@ def api_produkt(kod):
     from . import dieta
     try:
         p = dieta.produkt(kod)
+    except dieta.BrakMakro as ex:
+        return jsonify({"blad": "Open Food Facts zna ten produkt, ale bez wartości odżywczych", **ex.args[0]}), 404
     except RuntimeError as ex:
         return jsonify({"blad": str(ex)}), 502
     return jsonify(p) if p else (jsonify({"blad": "nie ma tego kodu w Open Food Facts — wpisz ręcznie"}), 404)

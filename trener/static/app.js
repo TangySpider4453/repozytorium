@@ -1022,11 +1022,14 @@ async function szukaj(q) {
 
 function wybierz(kod) {
   const p = PRODUKTY[kod]; if (!p) return;
-  const g0 = p.porcja_g || 100;
+  const g0 = p.czesto_g || p.porcja_g || 100;
+  const zw = p.czesto_g, cale = p.masa_g && Math.round(p.masa_g), por = p.porcja_g && Math.round(p.porcja_g);
+  const chipy = [[zw, "zwykle"], [cale, "całe"], [por, "porcja"], [50], [100], [150], [200], [250]]
+    .filter(([g], i, t) => g && t.findIndex(([h]) => h === g) === i);
   const a = arkusz(`<div class="kt">${esc(p.nazwa)}</div><div class="szary">${esc(p.marka || "")}${p.marka ? " · " : ""}na 100 g: ${lb(p.kcal)} kcal · B ${lb(p.b, 1)} · W ${lb(p.w, 1)} · T ${lb(p.t, 1)}
       · <a href="javascript:void 0" onclick="poprawProdukt('${esc(p.kod)}', () => wybierz('${esc(p.kod)}'))">Popraw</a></div>
     <label>Ile gramów</label><input type="number" id="gram" inputmode="decimal" value="${g0}">
-    <div class="chipy wiersz">${[...new Set([p.porcja_g && Math.round(p.porcja_g), 50, 100, 150, 200, 250].filter(Boolean))].map(g => `<button class="chip" data-g="${g}">${g} g</button>`).join("")}</div>
+    <div class="chipy wiersz">${chipy.map(([g, n]) => `<button class="chip" data-g="${g}">${g} g${n ? ` <span class="szary">· ${n}</span>` : ""}</button>`).join("")}</div>
     <div id="podglad" class="podglad"></div>
     <label>Posiłek</label><select id="posilek">${Object.entries(POSILEK).map(([k, n]) => `<option value="${k}" ${k === posilekDod ? "selected" : ""}>${n}</option>`).join("")}</select>
     <div class="wiersz" style="margin-top:14px"><button id="ok">Dodaj</button><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>`);
@@ -1041,24 +1044,28 @@ function wybierz(kod) {
   };
 }
 
-function formRecznie(kod = "", zdj = null) {
-  const a = arkusz(`<div class="kt">Nowy produkt</div>${kod ? `<div class="szary">Kodu ${esc(kod)} nie ma w Open Food Facts. Przepisz z etykiety (wartości na 100 g); zapamiętam go na następny raz.</div>` : `<div class="szary">Wartości na 100 g (z etykiety). Zapamiętam produkt.</div>`}
-    <label>Nazwa</label><input type="text" id="r-nazwa">
+function formRecznie(kod = "", zdj = null, pod = {}) {
+  const a = arkusz(`<div class="kt">Nowy produkt</div>${kod ? `<div class="szary">${pod.nazwa ? `Open Food Facts zna ${esc(pod.nazwa)}, ale bez wartości odżywczych.` : `Kodu ${esc(kod)} nie ma w Open Food Facts.`} Zeskanuj tabelkę z opakowania, a wpiszę makro sam; zapamiętam produkt na następny raz.</div>
+    <button id="r-skan" style="width:100%;margin-top:10px">📷 Zeskanuj tabelkę</button>` : `<div class="szary">Wartości na 100 g (z etykiety). Zapamiętam produkt.</div>`}
+    <label>Nazwa</label><input type="text" id="r-nazwa" value="${esc([pod.nazwa, pod.marka && !(pod.nazwa || "").includes(pod.marka) ? pod.marka : ""].filter(Boolean).join(" · "))}">
     <div class="pola4"><div><label>kcal</label><input type="number" inputmode="decimal" id="r-kcal"></div><div><label>białko</label><input type="number" inputmode="decimal" id="r-b"></div>
       <div><label>węgle</label><input type="number" inputmode="decimal" id="r-w"></div><div><label>tłuszcz</label><input type="number" inputmode="decimal" id="r-t"></div></div>
-    <div class="wiersz" style="margin-top:8px"><button class="drugi" id="r-zdj">📷 Odczytaj ze zdjęcia</button><span class="szary" id="r-info"></span></div>
-    <label>Ile zjadłeś (g)</label><input type="number" inputmode="decimal" id="r-g" value="100">
+    <div class="wiersz" style="margin-top:8px"><button class="drugi" id="r-zdj">${kod ? "🖼️ Z galerii" : "📷 Odczytaj ze zdjęcia"}</button><span class="szary" id="r-info"></span></div>
+    <div class="pola4"><div><label>Ile zjadłeś (g)</label><input type="number" inputmode="decimal" id="r-g" value="100"></div>
+      <div><label>Całe opakowanie (g)</label><input type="number" inputmode="decimal" id="r-masa" value="${pod.masa_g || ""}" placeholder="opcjonalnie"></div></div>
     <div class="wiersz" style="margin-top:14px"><button id="ok">Dodaj</button><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>`);
   a.querySelector("#r-zdj").onclick = () => wybierzZdjecie(f => czytajTabelke(a, f));
+  const sk = a.querySelector("#r-skan");
+  if (sk) sk.onclick = () => wybierzZdjecie(f => czytajTabelke(a, f), true);
   if (zdj) czytajTabelke(a, zdj);
   a.querySelector("#ok").onclick = async () => {
     const v = id => a.querySelector(id).value.replace(",", ".");
     const nazwa = v("#r-nazwa").trim(), kcal = +v("#r-kcal"), gram = +v("#r-g");
     if (!nazwa || !(kcal >= 0) || v("#r-kcal") === "" || !(gram > 0)) { alert("Podaj nazwę, kcal i gramy"); return; }
-    try { await api("dieta/wpis", { dzien: dietaDzien, posilek: posilekDod, gram, produkt: { kod, nazwa, kcal, b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0 } }); } catch (e) { alert(e.message); return; }
+    try { await api("dieta/wpis", { dzien: dietaDzien, posilek: posilekDod, gram, produkt: { kod, nazwa, kcal, b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0, masa_g: +v("#r-masa") || null } }); } catch (e) { alert(e.message); return; }
     zamknijArkusz(); pokazJedzenie(dietaDzien);
   };
-  if (!zdj) a.querySelector("#r-nazwa").focus();
+  if (!zdj && !kod) a.querySelector("#r-nazwa").focus();
 }
 
 function edytujWpis(id) {
@@ -1073,8 +1080,9 @@ function edytujWpis(id) {
 }
 
 // ---- zdjęcia: tabelka wartości odżywczych i gotowy posiłek (czyta Claude na Pi)
-function wybierzZdjecie(fn) {        // wywołuj prosto z kliknięcia (iOS wymaga gestu); aparat albo galeria
+function wybierzZdjecie(fn, aparat = false) {        // wywołuj prosto z kliknięcia (iOS wymaga gestu); aparat albo galeria
   const i = document.createElement("input"); i.type = "file"; i.accept = "image/*";
+  if (aparat) i.capture = "environment";               // od razu aparat (bez pytania o galerię)
   i.onchange = () => { if (i.files[0]) fn(i.files[0]); };
   i.click();
 }
@@ -1105,6 +1113,8 @@ async function czytajTabelke(a, f) {
     if (w.nazwa && !a.querySelector("#r-nazwa").value) ust("#r-nazwa", w.nazwa);
     ust("#r-kcal", w.kcal); ust("#r-b", w.b); ust("#r-w", w.w); ust("#r-t", w.t);
     if (w.porcja_g && a.querySelector("#r-g")) ust("#r-g", Math.round(w.porcja_g));
+    if (w.porcja_g && a.querySelector("#r-porcja")) ust("#r-porcja", Math.round(w.porcja_g));
+    if (w.masa_g && a.querySelector("#r-masa") && !a.querySelector("#r-masa").value) ust("#r-masa", Math.round(w.masa_g));
     info.textContent = "Odczytane — sprawdź z etykietą." + (w.uwagi ? " " + w.uwagi : "");
     if (!a.querySelector("#r-nazwa").value) a.querySelector("#r-nazwa").focus();
   } catch (e) { if (a.isConnected) info.textContent = "Błąd: " + e.message; }
@@ -1117,7 +1127,8 @@ async function poprawProdukt(kod, wroc) {
     <label>Nazwa</label><input type="text" id="r-nazwa" value="${esc(p.nazwa)}">
     <div class="pola4"><div><label>kcal</label><input type="number" inputmode="decimal" id="r-kcal" value="${p.kcal}"></div><div><label>białko</label><input type="number" inputmode="decimal" id="r-b" value="${p.b}"></div>
       <div><label>węgle</label><input type="number" inputmode="decimal" id="r-w" value="${p.w}"></div><div><label>tłuszcz</label><input type="number" inputmode="decimal" id="r-t" value="${p.t}"></div></div>
-    <label>Porcja (g, opcjonalnie)</label><input type="number" inputmode="decimal" id="r-porcja" value="${p.porcja_g || ""}">
+    <div class="pola4"><div><label>Porcja (g)</label><input type="number" inputmode="decimal" id="r-porcja" value="${p.porcja_g || ""}" placeholder="opcjonalnie"></div>
+      <div><label>Całe opakowanie (g)</label><input type="number" inputmode="decimal" id="r-masa" value="${p.masa_g || ""}" placeholder="opcjonalnie"></div></div>
     <div class="wiersz" style="margin-top:8px"><button class="drugi" id="r-zdj">📷 Odczytaj ze zdjęcia</button><span class="szary" id="r-info"></span></div>
     <div class="wiersz" style="margin-top:14px"><button id="ok">Zapisz</button><button class="drugi" id="wroc">Wróć</button></div>`);
   a.querySelector("#r-zdj").onclick = () => wybierzZdjecie(f => czytajTabelke(a, f));
@@ -1126,7 +1137,7 @@ async function poprawProdukt(kod, wroc) {
     const v = id => a.querySelector(id).value.replace(",", ".");
     if (v("#r-kcal") === "" || !(+v("#r-kcal") >= 0)) { alert("Podaj kcal"); return; }
     let n;
-    try { n = await api("produkt/" + encodeURIComponent(kod), { nazwa: v("#r-nazwa").trim(), kcal: +v("#r-kcal"), b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0, porcja_g: +v("#r-porcja") || null }); }
+    try { n = await api("produkt/" + encodeURIComponent(kod), { nazwa: v("#r-nazwa").trim(), kcal: +v("#r-kcal"), b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0, porcja_g: +v("#r-porcja") || null, masa_g: +v("#r-masa") || null }); }
     catch (e) { alert(e.message); return; }
     PRODUKTY[kod] = n;
     if (location.hash.startsWith("#jedzenie")) await pokazJedzenie(dietaDzien);
@@ -1235,7 +1246,7 @@ async function znalezionyKod(kod) {
   const i = $("#sk-info"); if (i) i.innerHTML = `<span class="mysli">Szukam ${esc(kod)}</span>`;
   const r = await fetch("/api/produkt/" + encodeURIComponent(kod));
   if (r.ok) { const p = await r.json(); PRODUKTY[p.kod] = p; wybierz(p.kod); return; }
-  if (r.status === 404) { formRecznie(kod); return; }
+  if (r.status === 404) { let pod = {}; try { pod = await r.json(); } catch (_) {} formRecznie(kod, null, pod); return; }
   let b = ""; try { b = (await r.json()).blad; } catch (_) {}
   if (i) i.textContent = b || "Błąd " + r.status;
 }

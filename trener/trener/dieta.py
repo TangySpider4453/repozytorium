@@ -32,7 +32,25 @@ UA = "Trener/1.0 (prywatny dziennik jedzenia)"      # bez danych osobowych
 def polacz():
     d = baza.polacz()
     d.executescript(SCHEMAT)
+    if "masa_g" not in {r[1] for r in d.execute("PRAGMA table_info(produkty)")}:
+        d.execute("ALTER TABLE produkty ADD COLUMN masa_g REAL")      # całe opakowanie (g)
+        d.commit()
     return d
+
+
+def _czeste(d, lista):
+    """dopisuje do produktów `czesto_g`: ilość, którą Antek wpisuje najczęściej (przy remisie — ostatnia)"""
+    kody = [p["kod"] for p in lista if p.get("kod")]
+    if not kody:
+        return lista
+    m = {}
+    for r in d.execute(f"SELECT kod, gram, COUNT(*) n, MAX(id) ost FROM jedzenie WHERE gram > 0 AND kod IN "
+                       f"({','.join('?' * len(kody))}) GROUP BY kod, gram ORDER BY n DESC, ost DESC", kody):
+        m.setdefault(r["kod"], r["gram"])
+    for p in lista:
+        if p.get("kod") in m:
+            p["czesto_g"] = round(m[p["kod"]])
+    return lista
 
 
 # ---------------------------------------------------------------- produkty
@@ -50,12 +68,19 @@ def _z_off(p, kod=None):
     if kcal is None and _liczba(n.get("energy_100g")) is not None:
         kcal = round(float(n["energy_100g"]) / 4.184, 1)          # kJ -> kcal
     nazwa = (p.get("product_name_pl") or p.get("product_name") or "").strip()
-    if not nazwa or kcal is None:
+    if not nazwa or kcal is None or not n:
         return None
     return {"kod": kod or p.get("code"), "nazwa": nazwa[:120], "marka": _marka(p.get("brands")),
             "kcal": round(kcal, 1), "b": round(_liczba(n.get("proteins_100g")) or 0, 1),
             "w": round(_liczba(n.get("carbohydrates_100g")) or 0, 1), "t": round(_liczba(n.get("fat_100g")) or 0, 1),
-            "porcja_g": _liczba(p.get("serving_quantity")), "zrodlo": "off"}
+            "porcja_g": _liczba(p.get("serving_quantity")), "masa_g": _masa_off(p), "zrodlo": "off"}
+
+
+def _masa_off(p):
+    """masa całego opakowania z OFF (tylko g / ml)"""
+    v = _liczba(p.get("product_quantity"))
+    jedn = str(p.get("product_quantity_unit") or "g").lower()
+    return round(v) if v and jedn in ("g", "ml") and v <= 5000 else None
 
 
 def _pobierz(url, limit=8):
@@ -69,7 +94,7 @@ def _marka(b):
     return b.split(",")[0].strip()[:60]
 
 
-POLA = "code,product_name,product_name_pl,brands,nutriments,serving_quantity"
+POLA = "code,product_name,product_name_pl,brands,nutriments,serving_quantity,product_quantity,product_quantity_unit"
 
 
 def produkt(kod):
@@ -77,13 +102,13 @@ def produkt(kod):
     d = polacz()
     r = d.execute("SELECT * FROM produkty WHERE kod=?", ("".join(c for c in str(kod) if c.isalnum())[:20],)).fetchone()
     if r:                                                     # też ręczne (kod "r…")
-        return dict(r)
+        return _czeste(d, [dict(r)])[0]
     kod = "".join(c for c in str(kod) if c.isdigit())[:20]
     if not kod:
         return None
     r = d.execute("SELECT * FROM produkty WHERE kod=?", (kod,)).fetchone()
     if r:
-        return dict(r)
+        return _czeste(d, [dict(r)])[0]
     try:
         j = _pobierz(f"{OFF}/api/v2/product/{kod}.json?fields={POLA}")
     except urllib.error.HTTPError as ex:
@@ -97,7 +122,15 @@ def produkt(kod):
     p = _z_off(j.get("product") or {}, kod) if j.get("status") == 1 else None
     if p:
         zapisz_produkt(d, p)
+    elif j.get("status") == 1:                                # OFF zna kod, ale bez wartości odżywczych
+        x = j.get("product") or {}
+        raise BrakMakro({"nazwa": (x.get("product_name_pl") or x.get("product_name") or "").strip()[:120],
+                         "marka": _marka(x.get("brands")), "masa_g": _masa_off(x)})
     return p
+
+
+class BrakMakro(Exception):
+    """produkt jest w OFF, ale bez kcal/makro — apka prosi o zdjęcie tabelki (args[0] = podpowiedzi)"""
 
 
 def szukaj(tekst):
@@ -105,7 +138,7 @@ def szukaj(tekst):
     tekst = (tekst or "").strip()[:60]
     d = polacz()
     if not tekst:
-        return [dict(r) for r in d.execute("SELECT * FROM produkty ORDER BY uzyto DESC LIMIT 25")]
+        return _czeste(d, [dict(r) for r in d.execute("SELECT * FROM produkty ORDER BY uzyto DESC LIMIT 25")])
     moje = [dict(r) for r in d.execute("SELECT * FROM produkty WHERE nazwa LIKE ? OR marka LIKE ? ORDER BY ile DESC LIMIT 15",
                                        (f"%{tekst}%", f"%{tekst}%"))]
     obce = []
@@ -119,16 +152,16 @@ def szukaj(tekst):
         obce = [p for p in (_z_off(x) for x in j.get("hits") or []) if p and p["kod"] not in kody]
     except Exception as ex:
         log.warning("OFF szukaj: %s", ex)
-    return moje + obce[:20]
+    return _czeste(d, moje) + obce[:20]
 
 
 def zapisz_produkt(d, p):
     kod = p.get("kod") or f"r{int(time.time() * 1000)}"     # ręczny bez kodu kreskowego
-    d.execute("INSERT OR REPLACE INTO produkty (kod, nazwa, marka, kcal, b, w, t, porcja_g, zrodlo, dodano, uzyto, ile) "
-              "VALUES (?,?,?,?,?,?,?,?,?,?, (SELECT uzyto FROM produkty WHERE kod=?), "
+    d.execute("INSERT OR REPLACE INTO produkty (kod, nazwa, marka, kcal, b, w, t, porcja_g, masa_g, zrodlo, dodano, uzyto, ile) "
+              "VALUES (?,?,?,?,?,?,?,?,?,?,?, (SELECT uzyto FROM produkty WHERE kod=?), "
               "COALESCE((SELECT ile FROM produkty WHERE kod=?), 0))",
               (kod, p["nazwa"], p.get("marka") or "", p["kcal"], p.get("b") or 0, p.get("w") or 0, p.get("t") or 0,
-               p.get("porcja_g"), p.get("zrodlo") or "reczny", baza.teraz(), kod, kod))
+               p.get("porcja_g"), p.get("masa_g"), p.get("zrodlo") or "reczny", baza.teraz(), kod, kod))
     d.commit()
     return kod
 
@@ -189,9 +222,10 @@ def popraw_produkt(kod, p):
         raise ValueError("kcal na 100 g: 0–1000")
     nowy = {"nazwa": str(p.get("nazwa") or r["nazwa"]).strip()[:120] or r["nazwa"], "kcal": kcal,
             **{k: min(_liczba(p.get(k)) or 0, 100) for k in ("b", "w", "t")},
-            "porcja_g": _liczba(p.get("porcja_g")) or None}
-    d.execute("UPDATE produkty SET nazwa=?, kcal=?, b=?, w=?, t=?, porcja_g=?, zrodlo='poprawiony' WHERE kod=?",
-              (nowy["nazwa"], nowy["kcal"], nowy["b"], nowy["w"], nowy["t"], nowy["porcja_g"], r["kod"]))
+            "porcja_g": _liczba(p.get("porcja_g")) or None,
+            "masa_g": (_liczba(p.get("masa_g")) or None) if "masa_g" in p else r["masa_g"]}
+    d.execute("UPDATE produkty SET nazwa=?, kcal=?, b=?, w=?, t=?, porcja_g=?, masa_g=?, zrodlo='poprawiony' WHERE kod=?",
+              (nowy["nazwa"], nowy["kcal"], nowy["b"], nowy["w"], nowy["t"], nowy["porcja_g"], nowy["masa_g"], r["kod"]))
     n = 0
     for w in d.execute("SELECT id, gram FROM jedzenie WHERE kod=? AND gram > 0", (r["kod"],)).fetchall():
         k = w["gram"] / 100
@@ -206,7 +240,8 @@ def popraw_produkt(kod, p):
 _LICZBA = {"type": "number", "minimum": 0}
 ETYKIETA = {"type": "object", "additionalProperties": False, "required": ["czytelne", "nazwa", "kcal", "b", "w", "t"],
             "properties": {"czytelne": {"type": "boolean"}, "nazwa": {"type": "string"}, "kcal": _LICZBA,
-                           "b": _LICZBA, "w": _LICZBA, "t": _LICZBA, "porcja_g": _LICZBA, "uwagi": {"type": "string"}}}
+                           "b": _LICZBA, "w": _LICZBA, "t": _LICZBA, "porcja_g": _LICZBA, "masa_g": _LICZBA,
+                           "uwagi": {"type": "string"}}}
 
 
 def z_etykiety(jpg):
@@ -216,14 +251,15 @@ def z_etykiety(jpg):
         "Przeczytaj plik etykieta.jpg: zdjęcie tabeli wartości odżywczych produktu spożywczego. Podaj wartości "
         "NA 100 g (albo 100 ml): kcal (jeśli jest tylko kJ, przelicz /4,184), białko b, węglowodany w (ogółem, nie "
         "„w tym cukry”), tłuszcz t (ogółem, nie „w tym nasycone”), w gramach. Jeśli tabela podaje tylko porcję, "
-        "przelicz na 100 g i wpisz porcja_g. nazwa: nazwa produktu, jeśli widać na zdjęciu, inaczej pusty tekst. "
+        "przelicz na 100 g i wpisz porcja_g. masa_g: masa netto całego opakowania (g/ml), jeśli widać na zdjęciu. nazwa: nazwa produktu, jeśli widać na zdjęciu, inaczej pusty tekst. "
         "Nie zgaduj: gdy tabela jest nieczytelna albo to nie tabela wartości odżywczych, czytelne=false i opisz w "
         "uwagi. uwagi: krótko po polsku, tylko jeśli coś niepewne.",
         schemat=ETYKIETA, effort="low", limit_s=120, pliki={"etykieta.jpg": jpg})
     if not w.get("czytelne"):
         raise ValueError(w.get("uwagi") or "nie widzę tabeli wartości odżywczych — zrób ostrzejsze zdjęcie")
     return {k: round(float(w.get(k) or 0), 1) for k in ("kcal", "b", "w", "t")} | {
-        "nazwa": (w.get("nazwa") or "").strip()[:120], "porcja_g": w.get("porcja_g") or None, "uwagi": w.get("uwagi") or ""}
+        "nazwa": (w.get("nazwa") or "").strip()[:120], "porcja_g": w.get("porcja_g") or None,
+        "masa_g": round(w["masa_g"]) if w.get("masa_g") else None, "uwagi": w.get("uwagi") or ""}
 
 
 POSILEK = {"type": "object", "additionalProperties": False, "required": ["pozycje", "komentarz", "pewnosc"],

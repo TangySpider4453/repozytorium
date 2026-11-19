@@ -2,6 +2,10 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — produkty: zwykła ilość, całe opakowanie, skan tabelki)**: przy wyborze produktu apka
+  podpowiada najczęściej wpisywaną ilość, a chipy to „zwykle”, „całe” i porcja. Nieznany kod (też znany w OFF, ale bez
+  makro) otwiera formularz z „📷 Zeskanuj tabelkę”, który włącza aparat i wypełnia makro. Nowa kolumna `masa_g`
+  uzupełniona z OFF dla 7 produktów.
 - **2026-11-19 (chmura, Trener — kcal, szacunek planu, pełne statystyki)**: nowy wzór wydatku (BMR Garmina 1998 + ruch
   dnia 390 + treningi; dziś 3180 zamiast 3650, cel przeliczony: 2940 kcal). Zaplanowane treningi: ~kcal, ♥, W, NP, TSS,
   km (`szacunek.py`). Zrobione: wszystkie statystyki w grupach, krzywa mocy, strefy mocy, przebieg z przybliżaniem
