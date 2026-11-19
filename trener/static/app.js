@@ -536,7 +536,8 @@ async function pokazDzis() {
   d.plan.forEach(t => (poDniu[t.dzien] = poDniu[t.dzien] || []).push(t));
   if (!d.plan.length) h += `<div class="szary">Brak planu na najbliższe dni.</div>`;
   Object.keys(poDniu).sort().forEach(k => {
-    h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? "Dziś" : dataPL(k)}</div>${poDniu[k].map(t => trening(t, d.zrobione_dni.includes(k) && t.sport !== "odpoczynek")).join("")}</div>`;
+    h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? "Dziś" : dataPL(k)}</div>${(() => { const ile = { ...(d.zrobione_sporty || {})[k] };   // „zrobione” tylko, gdy był trening tego samego rodzaju
+      return poDniu[k].map(t => { const ok = t.sport !== "odpoczynek" && ile[t.sport] > 0; if (ok) ile[t.sport]--; return trening(t, ok); }).join(""); })()}</div>`;
   });
   h += `<div class="szary stopka">Synchronizacja: ${esc((d.ostatni_sync || "–").replace("T", " ").slice(0, 16))}
     · <a href="#" onclick="akcja('sync');return false">odśwież</a></div>`;

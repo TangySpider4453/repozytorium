@@ -246,14 +246,17 @@ def api_dzis():
     dzis = date.today()
     dni = baza.dni_zakres(d, (dzis - timedelta(days=29)).isoformat(), dzis.isoformat())
     ost = d.execute("SELECT id, rodzaj, dzien, utworzono, tytul, dane, przeczytano FROM analizy ORDER BY id DESC LIMIT 1").fetchone()
-    zrobione = {r[0] for r in d.execute("SELECT DISTINCT dzien FROM aktywnosci WHERE dzien >= ?",
-                                        ((dzis - timedelta(days=7)).isoformat(),))}
+    zrobione, sporty = set(), {}            # sporty: dzień → {rower: 1, silka: 2…} (ile aktywności danej kategorii)
+    for dz, typ in d.execute("SELECT dzien, typ FROM aktywnosci WHERE dzien >= ?", ((dzis - timedelta(days=7)).isoformat(),)):
+        zrobione.add(dz)
+        k = kontekst.kategoria(typ)
+        sporty.setdefault(dz, {})[k] = sporty.get(dz, {}).get(k, 0) + 1
     return jsonify({
         "dzis": dzis.isoformat(), "dni": dni,
         "analiza": dict(ost, dane=json.loads(ost["dane"])) if ost else None,
         "plan": _plan(d, dzis.isoformat(), (dzis + timedelta(days=2)).isoformat()), "progi": _progi_wykres(d),
         "propozycja": plan.propozycja(d),
-        "zrobione_dni": sorted(zrobione),
+        "zrobione_dni": sorted(zrobione), "zrobione_sporty": sporty,
         "ostatni_sync": baza.kv(d, "ostatni_sync"), "historia": baza.kv(d, "historia_postep"),
         "ustawienia_puste": not config.ustawienia().get("start_gotowy")})
 

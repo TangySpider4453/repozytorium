@@ -2,6 +2,8 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — fałszywe „zrobione”)**: ekran Dziś oznaczał wszystkie treningi dnia jako zrobione,
+  gdy była jakakolwiek aktywność (MTB → siłka też ✓). Teraz `/api/dzis` zwraca `zrobione_sporty` i liczy się rodzaj.
 - **2026-11-19 (chmura, Trener — przybliżanie wykresów)**: trener sam przybliża wykres w czacie (`od_s`/`do_s`) na
   moment, o którym mówi (np. strzał mocy ±2 min); oś wtedy w m:ss, nad wykresem „🔍 55:00–59:00”, znaczniki spoza
   zakresu ukryte, przycisk „cały przebieg” / „🔍 przybliżenie”. Zakres < 30 s poszerzany do 30 s.
