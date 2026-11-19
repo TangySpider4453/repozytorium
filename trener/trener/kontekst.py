@@ -180,5 +180,6 @@ def pelny(db, dni=14, akt_dni=28, tygodnie=16, cel=None):
         cz.append("CZEKA NA DECYZJĘ ANTKA (propozycja po ocenie snu, jeszcze NIE wprowadzona — nie wprowadzaj jej sam): "
                   + prop.get("komentarz", "") + " | " + "; ".join(prop.get("zmiany", [])))
     pl = plan_tekst(db, (dzis - timedelta(days=7)).isoformat(), (dzis + timedelta(days=14)).isoformat())
-    cz.append("\nPLAN (ostatni tydzień i następne 2 tygodnie):\n" + ("\n".join(pl) if pl else "(brak planu)"))
+    cz.append("\nPLAN (ostatni tydzień i następne 2 tygodnie) — JEDYNE źródło tego, co faktycznie jest zaplanowane; "
+              "wzór tygodnia, fazy i zasady to szablony, nie plan:\n" + ("\n".join(pl) if pl else "(brak planu)"))
     return "\n".join(cz)

@@ -133,3 +133,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   mają przesuwaną pigułkę i przejście treści w stronę zmiany.
 - 2026-11-19: baner: w Ustawieniach logo zamiast ‹ (zamyka zębatka); ciemne szkło przeniesione do header::before,
   żeby tytuł i ikony były ostre na iPhonie (headless Chromium nie rysuje rozmycia, więc sprawdzić na telefonie).
+- 2026-11-19: czat trenera upierał się, że w niedzielę jest bieg (brał to ze wzoru tygodnia i opisu fazy F1, nie z planu)
+  i odmawiał zamiany Full Upper na bieg („bez wyjątków”). Poprawka: sekcja PLAN to jedyne źródło tego, co zaplanowane,
+  a Antek decyduje o swoim czasie: trener robi zmianę albo proponuje 1–2 układy pod dostępność, bez przekonywania.

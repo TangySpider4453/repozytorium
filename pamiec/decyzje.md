@@ -64,3 +64,5 @@
 - Trener, menu (19.11, Antek): Dziś · Plan · Jedzenie · Dane · Czat; historia treningów w Dane jako podzakładka.
 - Tierlista ćwiczeń (19.11): trener wybiera siłkę wg tierlisty Antka z Ustawień (S/A najczęściej, wykluczonych nigdy); nowe ćwiczenia Antek ocenia po treningu.
 - Animacje apki (19.11): zakładki = karuzela w stronę klikniętej zakładki, szczegóły rosną z karty i kurczą się do niej. Dane z pamięci + odświeżanie w tle, zamiast „Ładuję…”.
+- 2026-11-19: trener w czacie się nie kłóci: Antek decyduje o swoim czasie; przy prośbie o zmianę trener ją robi albo
+  proponuje 1–2 układy tygodnia pod dostępność (koszt w jednym zdaniu). O tym, co zaplanowane, mówi tylko na podstawie planu.
