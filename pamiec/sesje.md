@@ -110,3 +110,4 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   poprawione pole daty w Wadze na iOS.
 - 2026-11-19: Jedzenie: przy nazwie posiłku suma B/W/T jako kolorowe liczby (kolory jak paski makro: niebieski B,
   żółty W, fioletowy T) obok kcal.
+- 2026-11-19: czarny pasek na dole w PWA (body height:100% w trybie standalone było niższe o pasek statusu) → body position:fixed; inset:0.
