@@ -681,7 +681,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   albo wpisane). Produkty z bazy dostają `czesto_g`, czyli najczęstszą ilość z `jedzenie` (przy remisie ostatnią). Arkusz
   „Ile gramów” podpowiada ją od razu, a chipy to: zwykle, całe, porcja, 50–250. Nieznany kod, albo kod znany OFF bez
   wartości (`dieta.BrakMakro`: 404 z `nazwa`, `marka`, `masa_g`), otwiera formularz z przyciskiem „📷 Zeskanuj
-  tabelkę”, który od razu włącza aparat (`capture`).
+  tabelkę”, który od razu włącza aparat (`capture`). Ręcznie można wpisać wartości „na 100 g” albo „na całe
+  opakowanie” (apka przelicza na 100 g z masy). Auto-aktualizacja czeka, gdy otwarty jest arkusz.
 - Cel jedzenia a Garmin (17.11): cykl co 15 min woła `dieta.aktualizuj`. Gdy dziś przyjdzie nowy trening, trener liczy
   cel od nowa. Co godzinę porównuje aktywne kcal z Garmina ze średnim ruchem dnia + zrobionymi treningami. Nadwyżkę
   ≥ 100 kcal dolicza do celu (do węgli, kv `ruch_ekstra`), tylko w górę.

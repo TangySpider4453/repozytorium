@@ -991,6 +991,7 @@ function arkusz(html) {
 function zamknijArkusz() {
   stopSkaner();
   document.querySelectorAll(".arkusz-tlo").forEach(x => x.remove());
+  document.querySelectorAll("input[data-zdj]").forEach(x => x.remove());
   document.body.classList.remove("arkusz-otwarty");
 }
 
@@ -1049,21 +1050,47 @@ function formRecznie(kod = "", zdj = null, pod = {}) {
   const a = arkusz(`<div class="kt">Nowy produkt</div>${kod ? `<div class="szary">${pod.nazwa ? `Open Food Facts zna ${esc(pod.nazwa)}, ale bez wartości odżywczych.` : `Kodu ${esc(kod)} nie ma w Open Food Facts.`} Zeskanuj tabelkę z opakowania, a wpiszę makro sam; zapamiętam produkt na następny raz.</div>
     <button id="r-skan" style="width:100%;margin-top:10px">📷 Zeskanuj tabelkę</button>` : `<div class="szary">Wartości na 100 g (z etykiety). Zapamiętam produkt.</div>`}
     <label>Nazwa</label><input type="text" id="r-nazwa" value="${esc([pod.nazwa, pod.marka && !(pod.nazwa || "").includes(pod.marka) ? pod.marka : ""].filter(Boolean).join(" · "))}">
+    <label>Wpisuję wartości</label><div class="chipy wiersz"><button class="chip akt" data-tryb="100">na 100 g</button><button class="chip" data-tryb="cale">na całe opakowanie</button></div>
     <div class="pola4"><div><label>kcal</label><input type="number" inputmode="decimal" id="r-kcal"></div><div><label>białko</label><input type="number" inputmode="decimal" id="r-b"></div>
       <div><label>węgle</label><input type="number" inputmode="decimal" id="r-w"></div><div><label>tłuszcz</label><input type="number" inputmode="decimal" id="r-t"></div></div>
+    <div class="szary" id="r-przel" style="margin-top:4px"></div>
     <div class="wiersz" style="margin-top:8px"><button class="drugi" id="r-zdj">${kod ? "🖼️ Z galerii" : "📷 Odczytaj ze zdjęcia"}</button><span class="szary" id="r-info"></span></div>
     <div class="pola4"><div><label>Ile zjadłeś (g)</label><input type="number" inputmode="decimal" id="r-g" value="100"></div>
-      <div><label>Całe opakowanie (g)</label><input type="number" inputmode="decimal" id="r-masa" value="${pod.masa_g || ""}" placeholder="opcjonalnie"></div></div>
+      <div><label id="r-masa-l">Całe opakowanie (g)</label><input type="number" inputmode="decimal" id="r-masa" value="${pod.masa_g || ""}" placeholder="opcjonalnie"></div></div>
     <div class="wiersz" style="margin-top:14px"><button id="ok">Dodaj</button><button class="drugi" onclick="dodajJedzenie(posilekDod)">Wróć</button></div>`);
   a.querySelector("#r-zdj").onclick = () => wybierzZdjecie(f => czytajTabelke(a, f));
   const sk = a.querySelector("#r-skan");
   if (sk) sk.onclick = () => wybierzZdjecie(f => czytajTabelke(a, f), true);
   if (zdj) czytajTabelke(a, zdj);
+  const v = id => a.querySelector(id).value.replace(",", ".");
+  // „na całe opakowanie”: wartości z przodu paczki → przeliczamy na 100 g z masy opakowania
+  const tryb = () => a.querySelector("[data-tryb].akt").dataset.tryb;
+  const na100 = x => tryb() === "cale" ? (+v("#r-masa") > 0 ? Math.round(x * 1000 / +v("#r-masa")) / 10 : NaN) : x;
+  const przel = () => {
+    const m = +v("#r-masa"), e = a.querySelector("#r-przel");
+    a.querySelector("#r-masa").placeholder = tryb() === "cale" ? "wymagane" : "opcjonalnie";
+    if (tryb() !== "cale") { e.textContent = "Tak jak w tabelce, kolumna „100 g”."; return; }
+    if (!(m > 0)) { e.textContent = "Wpisz niżej, ile waży całe opakowanie — przeliczę na 100 g."; return; }
+    e.textContent = v("#r-kcal") === "" ? `Przeliczę na 100 g (opakowanie ${m} g).` :
+      `Na 100 g: ${lb(na100(+v("#r-kcal")))} kcal · B ${lb(na100(+v("#r-b") || 0), 1)} · W ${lb(na100(+v("#r-w") || 0), 1)} · T ${lb(na100(+v("#r-t") || 0), 1)}`;
+  };
+  a.querySelectorAll("[data-tryb]").forEach(b => b.onclick = () => {
+    a.querySelectorAll("[data-tryb]").forEach(x => x.classList.toggle("akt", x === b));
+    const g = a.querySelector("#r-g");
+    if (b.dataset.tryb === "cale" && +v("#r-masa") > 0 && g.value === "100") g.value = v("#r-masa");
+    if (b.dataset.tryb === "cale" && !(+v("#r-masa") > 0)) a.querySelector("#r-masa").focus();
+    przel();
+  });
+  ["#r-kcal", "#r-b", "#r-w", "#r-t", "#r-masa"].forEach(id => a.querySelector(id).addEventListener("input", przel));
+  let gRecznie = false; a.querySelector("#r-g").addEventListener("input", () => gRecznie = true);
+  a.querySelector("#r-masa").addEventListener("input", () => { if (tryb() === "cale" && !gRecznie && +v("#r-masa") > 0) a.querySelector("#r-g").value = v("#r-masa"); });
+  a._na100 = () => a.querySelector('[data-tryb="100"]').click();      // tabelka ze zdjęcia jest zawsze na 100 g
+  przel();
   a.querySelector("#ok").onclick = async () => {
-    const v = id => a.querySelector(id).value.replace(",", ".");
-    const nazwa = v("#r-nazwa").trim(), kcal = +v("#r-kcal"), gram = +v("#r-g");
+    const nazwa = v("#r-nazwa").trim(), kcal = na100(+v("#r-kcal")), gram = +v("#r-g");
+    if (tryb() === "cale" && !(+v("#r-masa") > 0)) { alert("Podaj, ile waży całe opakowanie (g)"); a.querySelector("#r-masa").focus(); return; }
     if (!nazwa || !(kcal >= 0) || v("#r-kcal") === "" || !(gram > 0)) { alert("Podaj nazwę, kcal i gramy"); return; }
-    try { await api("dieta/wpis", { dzien: dietaDzien, posilek: posilekDod, gram, produkt: { kod, nazwa, kcal, b: +v("#r-b") || 0, w: +v("#r-w") || 0, t: +v("#r-t") || 0, masa_g: +v("#r-masa") || null } }); } catch (e) { alert(e.message); return; }
+    try { await api("dieta/wpis", { dzien: dietaDzien, posilek: posilekDod, gram, produkt: { kod, nazwa, kcal, b: na100(+v("#r-b") || 0), w: na100(+v("#r-w") || 0), t: na100(+v("#r-t") || 0), masa_g: +v("#r-masa") || null } }); } catch (e) { alert(e.message); return; }
     zamknijArkusz(); pokazJedzenie(dietaDzien);
   };
   if (!zdj && !kod) a.querySelector("#r-nazwa").focus();
@@ -1083,8 +1110,14 @@ function edytujWpis(id) {
 // ---- zdjęcia: tabelka wartości odżywczych i gotowy posiłek (czyta Claude na Pi)
 function wybierzZdjecie(fn, aparat = false) {        // wywołuj prosto z kliknięcia (iOS wymaga gestu); aparat albo galeria
   const i = document.createElement("input"); i.type = "file"; i.accept = "image/*";
-  if (aparat) i.capture = "environment";               // od razu aparat (bez pytania o galerię)
-  i.onchange = () => { if (i.files[0]) fn(i.files[0]); };
+  if (aparat) i.setAttribute("capture", "environment");              // od razu aparat (bez pytania o galerię)
+  // iOS gubi zdarzenie change, gdy pole nie jest w dokumencie — wpinamy je niewidoczne i sprzątamy po wyborze
+  i.style.cssText = "position:fixed;left:-1000px;top:0;width:1px;height:1px;opacity:0";
+  document.querySelectorAll("input[data-zdj]").forEach(x => x.remove());
+  i.dataset.zdj = 1; document.body.appendChild(i);
+  let raz = false;
+  const wez = () => { if (raz || !i.files || !i.files[0]) return; raz = true; const f = i.files[0]; setTimeout(() => i.remove(), 1000); fn(f); };
+  i.addEventListener("change", wez); i.addEventListener("input", wez);
   i.click();
 }
 async function naJpg(f, max = 1600) {
@@ -1112,10 +1145,12 @@ async function czytajTabelke(a, f) {
     if (!a.isConnected) return;
     const ust = (id, v) => { const e = a.querySelector(id); if (e && v != null && v !== "") e.value = v; };
     if (w.nazwa && !a.querySelector("#r-nazwa").value) ust("#r-nazwa", w.nazwa);
+    if (a._na100) a._na100();
     ust("#r-kcal", w.kcal); ust("#r-b", w.b); ust("#r-w", w.w); ust("#r-t", w.t);
     if (w.porcja_g && a.querySelector("#r-g")) ust("#r-g", Math.round(w.porcja_g));
     if (w.porcja_g && a.querySelector("#r-porcja")) ust("#r-porcja", Math.round(w.porcja_g));
     if (w.masa_g && a.querySelector("#r-masa") && !a.querySelector("#r-masa").value) ust("#r-masa", Math.round(w.masa_g));
+    a.querySelector("#r-kcal")?.dispatchEvent(new Event("input"));
     info.textContent = "Odczytane — sprawdź z etykietą." + (w.uwagi ? " " + w.uwagi : "");
     if (!a.querySelector("#r-nazwa").value) a.querySelector("#r-nazwa").focus();
   } catch (e) { if (a.isConnected) info.textContent = "Błąd: " + e.message; }
@@ -1455,7 +1490,7 @@ window.addEventListener("unhandledrejection", e => { if (e.reason instanceof Anu
 // Pi podaje wersję plików; gdy się zmieni, apka przeładowuje się sama (nie trzeba jej zamykać)
 const WERSJA = document.querySelector('meta[name="wersja"]')?.content;
 let czekaUpdate = false;
-const zajety = () => !!(document.getElementById("postep") || location.hash.startsWith("#start") ||
+const zajety = () => !!(document.getElementById("postep") || location.hash.startsWith("#start") || document.querySelector(".arkusz-tlo, input[data-zdj]") ||
   [...document.querySelectorAll("textarea, input[type=text], input[type=number]")].some(x => x.value && x.closest(".pisz, #widok") && document.activeElement === x) ||
   ($(".pisz textarea")?.value || "").trim());
 async function sprawdzWersje() {

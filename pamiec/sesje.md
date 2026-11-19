@@ -2,6 +2,11 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — skan tabelki nie działał)**: przyczyny: auto-aktualizacja przeładowała apkę przy
+  powrocie z aparatu (teraz otwarty arkusz = „zajęta”) i iOS gubi `change` z pola pliku spoza DOM (teraz wpięte w body,
+  `capture` przez atrybut). Formularz: przełącznik „na 100 g / na całe opakowanie” (przelicza z masy opakowania).
+  Test na Pi: tabelka → 468 kcal, B 10, W 62, T 19 (Haiku). Test z logowaniem Claude: `sudo systemd-run --uid=tonyg
+  -p EnvironmentFile=/etc/serwerek-bot/claude.env …` (unit `trener-test`, potem stop).
 - **2026-11-19 (chmura, Trener — menu w połowie ekranu, znowu)**: łatka z „lekkim przewinięciem” nie wystarczała. Teraz
   okno się nie przewija (`html` overflow hidden, przewija się `body` = `SKR` w app.js), a gdy iOS przesunie okno
   (klawiatura, aparat), app.js cofa je do 0. Do sprawdzenia na iPhonie.
