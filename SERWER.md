@@ -693,6 +693,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `krzywa_mocy` z `maxAvgPower_*`, `strefy_mocy` z `powerTimeInZone_*`); bez pól z imieniem i zdjęciem profilu.
   Przebieg na ekranie treningu: przybliżanie dwoma palcami albo przyciski − + ‹ › „cały” (min. 30 s, dociąga
   dokładniejszy wycinek `?od&do`), celownik zsynchronizowany na wszystkich kanałach (`syncKanaly`).
+- Tierlista ćwiczeń siłowych (19.11): `trener/tierlista.py`, ustawienia `tierlista` (S/A/B/C/X, X = wykluczone) i
+  `zasady_silka`, edycja w Ustawieniach (pole na tier, jedno ćwiczenie na linię). Plan dostaje ją w prompcie, kontrola
+  planu odrzuca ćwiczenia z X. Po zsynchronizowanej siłce (`cykl.py`) push „Oceń nowe ćwiczenia” dla ćwiczeń z planu
+  tego dnia spoza listy (każde raz, kv `tier_zgloszone`); karta z S/A/B/C/✕/pomiń na Dziś (`do_oceny` w `/api/dzis`,
+  `POST /api/tierlista`). „Pomiń” → kv `tier_pominiete`. Dopasowanie nazw: aliasy z `cwiczenia_antka.json` + słowa po kolei.
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

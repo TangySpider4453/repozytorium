@@ -119,3 +119,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   okno krótsze, gdy dokument niższy niż ekran. Poprawka: min-height html w trybie standalone; pomiar z telefonu: 852/852.
 - 2026-11-19: nowe menu: Dziś · Plan · Jedzenie (środek, szybki dostęp do kalorii) · Dane · Czat. Treningi to podzakładka w Dane
   (Podsumowanie | Treningi). Dane ładują dni i agregaty równolegle (~2× szybciej).
+- 2026-11-19: tierlista ćwiczeń siłowych od Antka (S/A/B/C/wykluczone + 10 zasad układania siłki) w Ustawieniach.
+  Plan układa siłkę głównie z S/A, kontrola odrzuca wykluczone. Po siłce z nowym ćwiczeniem: push + karta na Dziś
+  z ocenami S/A/B/C/✕/pomiń, ocena dopisuje się do tierlisty.

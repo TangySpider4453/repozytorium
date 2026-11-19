@@ -537,7 +537,7 @@ async function pokazDzis() {
       ${st ? `<span class="status ${st[0]}"><i></i>${st[1]}</span>` : ""}</div>
       ${pierscien(got)}</div>
       <div class="szary" style="margin-top:8px">${[poz && esc(POZIOM[String(poz).toUpperCase()] || String(poz).toLowerCase()), dz.regeneracja_h != null && `regeneracja ${lb(dz.regeneracja_h)} h`, dz.gotowosc_uwaga && esc(UWAGA_G[dz.gotowosc_uwaga] || String(dz.gotowosc_uwaga).toLowerCase().replace(/_/g, " "))].filter(Boolean).join(" · ")}</div></a>`;
-  h += kartaPropozycji(d.propozycja);
+  h += kartaPropozycji(d.propozycja) + kartaOceny(d.do_oceny);
   if (d.analiza) {
     const a = d.analiza, oc = { dobrze: "dobrze", uwaga: "uwaga", zle: "zle" }[a.dane.ocena] || "";
     h += `<div class="karta"><div class="szary">${esc({ rano: "Analiza poranna", trening: "Po treningu", tydzien: "Tydzień" }[a.rodzaj] || a.rodzaj)} · ${esc(a.utworzono.slice(5, 16).replace("T", " "))}</div>
@@ -642,6 +642,24 @@ async function kartaMakro() {
     <details><summary>dlaczego tak (zasady, ocena formy)</summary><div class="tresc szary">${esc(mk.ocena_wyjsciowa)}\n\n${esc(mk.uzasadnienie)}\n\n${(mk.zasady_indywidualne || []).map(x => "• " + esc(x)).join("\n")}</div></details>
     ${u ? `<details><summary>uzasadnienie bieżącego planu</summary><div class="tresc szary">${esc(u.tekst)}${(u.uwagi || []).length ? "\n\n⚠️ Kontrola: " + u.uwagi.map(esc).join("; ") : ""}</div></details>` : ""}
     <div class="wiersz" style="margin-top:8px"><a class="btn drugi" href="#wiedza">📚 Źródła trenera</a><button class="drugi" onclick="if(confirm('Ułożyć periodyzację od nowa i przeplanować?'))akcja('makrocykl')">🔁 Przebuduj periodyzację</button></div></div></details>`;
+}
+
+// ---- tierlista ćwiczeń: ocena nowych po treningu (S/A/B/C, ✕ = wykluczone)
+const TIERY = [["S", "S: priorytet, najbardziej lubiane"], ["A", "A: bardzo dobre, regularnie"], ["B", "B: zamienniki, uzupełnienie"],
+  ["C", "C: tylko gdy trening/sprzęt wymaga"], ["X", "Wykluczone / niepreferowane"]];
+function kartaOceny(l) {
+  if (!l || !l.length) return "";
+  return `<div class="karta" id="ocena-cw"><h3>🏋️ Oceń nowe ćwiczenia</h3><div class="szary">Były na ostatniej siłce, a nie ma ich w tierliście. Ocena trafia do tierlisty w Ustawieniach.</div>
+    ${l.map(n => `<div class="ocena-cw" data-n="${esc(n)}"><div>${esc(n)}</div><div class="wiersz chipy">${TIERY.map(([t]) =>
+      `<button class="chip" onclick="ocenCw(this,'${t}')">${t === "X" ? "✕" : t}</button>`).join("")}<button class="chip szary" onclick="ocenCw(this,'pomin')">pomiń</button></div></div>`).join("")}</div>`;
+}
+async function ocenCw(b, t) {
+  const w = b.closest(".ocena-cw");
+  w.querySelectorAll("button").forEach(x => x.disabled = true);
+  try { await api("tierlista", { nazwa: w.dataset.n, tier: t }); } catch (e) { w.querySelectorAll("button").forEach(x => x.disabled = false); return alert("Nie zapisało się: " + e.message); }
+  w.remove();
+  const k = document.getElementById("ocena-cw");
+  if (k && !k.querySelector(".ocena-cw")) k.remove();
 }
 
 function kartaPropozycji(p) {
@@ -873,6 +891,9 @@ async function ekranUstawien() {
     <div class="wiersz" style="margin-top:8px"><button onclick="wlaczPush()">🔔 Włącz powiadomienia</button><button class="drugi" onclick="testPush(this)">Test za 10 s</button></div></div>
     <div class="karta"><h3>🔐 Zapamiętane urządzenia</h3><div id="urz" class="szary">…</div>
       <button class="drugi" style="margin-top:8px" onclick="if(confirm('Wylogować wszystkie inne urządzenia?'))api('urzadzenia',{}).then(ekranUstawien)">Wyloguj inne urządzenia</button></div>
+    <div class="karta"><h3>🏋️ Tierlista ćwiczeń siłowych</h3><div class="szary">Jedno ćwiczenie na linię. Trener układa siłkę głównie z S i A; wykluczonych nie daje. Nowe ćwiczenia oceniasz po treningu na ekranie Dziś.</div>
+      ${TIERY.map(([t, n]) => `<label>${esc(n)}</label><textarea id="u-tier-${t}" rows="${Math.min(10, Math.max(2, ((u.tierlista || {})[t] || []).length + 1))}">${esc(((u.tierlista || {})[t] || []).join("\n"))}</textarea>`).join("")}
+      <label>Zasady układania treningów</label><textarea id="u-zasady_silka" rows="6">${esc(u.zasady_silka || "")}</textarea></div>
     <div class="karta"><h3>Pamięć trenera</h3><div class="szary">Ustalenia z rozmów (jedno na linię)</div><textarea id="u-pamiec" rows="5">${esc((u.pamiec || []).join("\n"))}</textarea></div>
     <div class="wiersz"><button onclick="zapiszUst()">💾 Zapisz</button><button class="drugi" onclick="akcja('analiza')">📊 Analiza teraz</button><button class="drugi" onclick="akcja('sync')">🔄 Synchronizuj</button></div>`;
   urzadzenia();
@@ -884,7 +905,8 @@ async function urzadzenia() {
 }
 async function zapiszUst() {
   const u = { cele: $("#u-cele").value, dostepnosc: $("#u-dostepnosc").value, sprzet: $("#u-sprzet").value, plan_dni: +$("#u-plan_dni").value,
-    sporty: [...document.querySelectorAll(".sport:checked")].map(x => x.value), pamiec: $("#u-pamiec").value.split("\n").map(s => s.trim()).filter(Boolean) };
+    sporty: [...document.querySelectorAll(".sport:checked")].map(x => x.value),
+    tierlista: Object.fromEntries(TIERY.map(([t]) => [t, $("#u-tier-" + t).value.split("\n").map(s => s.trim()).filter(Boolean)])), zasady_silka: $("#u-zasady_silka").value.trim(), pamiec: $("#u-pamiec").value.split("\n").map(s => s.trim()).filter(Boolean) };
   ["auto_zegarek", "analiza_rano", "push", "linphone"].forEach(k => u[k] = $("#u-" + k).checked);
   await api("ustawienia", u);
   if (confirm("Zapisane. Przeplanować teraz według nowych ustawień?")) { location.hash = "#plan"; setTimeout(() => akcja("plan"), 300); }

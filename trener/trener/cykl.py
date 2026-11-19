@@ -103,6 +103,12 @@ def cykl():
                 przeplanuj("analiza treningu", a.get("prosba_do_planu", ""), pytaj=True)
         except Exception:
             log.exception("analiza treningu")
+        if any(a.get("activityType", {}).get("typeKey") == "strength_training" for a in w["nowe_aktywnosci"]):
+            try:
+                from . import tierlista
+                tierlista.zapytaj_po_treningu(db)
+            except Exception:
+                log.exception("tierlista")
     # 1b) cel jedzenia: nowy trening → przelicz; co godzinę nowe aktywne kcal z Garmina
     try:
         from . import dieta

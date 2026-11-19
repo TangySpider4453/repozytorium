@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 
 from flask import Flask, abort, jsonify, request, send_from_directory
 
-from . import baza, budowa, config, dane, kontekst, plan, powiadom, szacunek
+from . import baza, budowa, config, dane, kontekst, plan, powiadom, szacunek, tierlista
 
 log = logging.getLogger(__name__)
 app = Flask(__name__, static_folder=None)
@@ -269,7 +269,7 @@ def api_dzis():
         "dzis": dzis.isoformat(), "dni": dni,
         "analiza": dict(ost, dane=json.loads(ost["dane"])) if ost else None,
         "plan": _plan(d, dzis.isoformat(), (dzis + timedelta(days=2)).isoformat()), "progi": _progi_wykres(d),
-        "propozycja": plan.propozycja(d),
+        "propozycja": plan.propozycja(d), "do_oceny": tierlista.do_oceny(d),
         "zrobione_dni": sorted(zrobione), "zrobione_sporty": sporty, "zrobione_id": ids,
         "ostatni_sync": baza.kv(d, "ostatni_sync"), "historia": baza.kv(d, "historia_postep"),
         "ustawienia_puste": not config.ustawienia().get("start_gotowy")})
@@ -634,6 +634,21 @@ def api_ustawienia():
         baza.ustaw_kv(d, "pamiec_trenera", (request.get_json(silent=True) or {}).get("pamiec", baza.kv(d, "pamiec_trenera", [])))
         return jsonify(u)
     return jsonify(dict(config.ustawienia(), pamiec=baza.kv(db(), "pamiec_trenera", [])))
+
+
+@app.route("/api/tierlista", methods=["GET", "POST"])
+def api_tierlista():
+    """GET: ćwiczenia do oceny; POST {nazwa, tier: S/A/B/C/X/pomin}"""
+    d = db()
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        if not (b.get("nazwa") or "").strip():
+            return jsonify({"blad": "brak nazwy"}), 400
+        try:
+            tierlista.ocen(d, b["nazwa"].strip()[:80], b.get("tier"))
+        except ValueError as e:
+            return jsonify({"blad": str(e)}), 400
+    return jsonify({"do_oceny": tierlista.do_oceny(d)})
 
 
 @app.route("/api/start", methods=["GET", "POST"])

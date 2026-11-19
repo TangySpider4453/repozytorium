@@ -62,3 +62,4 @@
   i fixed menu wisiało w połowie ekranu.
 - iOS 26 (apka z ekranu głównego): dokument nie może być niższy niż ekran, bo okno skraca się o pasek statusu (WebKit 301108) → czarny pas. Trzyma to `@media (display-mode: standalone) html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))) }` w styl.css. Nie usuwać.
 - Trener, menu (19.11, Antek): Dziś · Plan · Jedzenie · Dane · Czat; historia treningów w Dane jako podzakładka.
+- Tierlista ćwiczeń (19.11): trener wybiera siłkę wg tierlisty Antka z Ustawień (S/A najczęściej, wykluczonych nigdy); nowe ćwiczenia Antek ocenia po treningu.

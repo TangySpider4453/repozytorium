@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import date, timedelta
 
-from . import ai, baza, budowa, cel, config, kontekst
+from . import ai, baza, budowa, cel, config, kontekst, tierlista
 
 log = logging.getLogger(__name__)
 
@@ -103,6 +103,7 @@ def zaplanuj(powod="", prosba="", dni=None, pytaj=False):
         "BAZA WIEDZY (zasady treningu ze źródeł):\n" + cel.wiedza(u["sporty"]),
         kontekst.pelny(db),
         _lista_cwiczen() if "silka" in u["sporty"] else "",
+        tierlista.tekst_do_planu(u) if "silka" in u["sporty"] else "",
         f"OBECNY PLAN W ZAKRESIE {od}..{do}:\n{ist_txt}",
         ZASADY,
         f"ZADANIE: ułóż plan na dni {od} .. {do} (sporty: {', '.join(u['sporty'])}). Powód: {powod or 'aktualizacja'}."
@@ -391,6 +392,9 @@ def kontrola(db, treningi, ist, faza, ftp):
     for t in silki:
         ks = [k for k in _kroki(t.get("kroki")) if k.get("garmin") or k.get("nazwa")]
         kat = [(k.get("garmin") or "").split("/")[0].upper() for k in ks]
+        for k in ks:
+            if k.get("nazwa") and tierlista.tier_cwiczenia(k["nazwa"], u.get("tierlista") or {}) == "X":
+                p.append(f"{t['dzien']} {t['tytul']}: {k['nazwa']} jest w tierliście Antka jako WYKLUCZONE — zamień")
         if "SHRUG" in kat or any("szrug" in (k.get("nazwa") or "").lower() for k in ks):
             p.append(f"{t['dzien']} {t['tytul']}: szrugsy — Antek ich nie robi (bez celowej pracy na kaptury)")
         if any(a == b == "TRICEPS_EXTENSION" for a, b in zip(kat, kat[1:])):

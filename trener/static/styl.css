@@ -320,3 +320,6 @@ body.arkusz-otwarty { overflow: hidden; }
 .posilek-suma { display: flex; align-items: baseline; gap: 9px; font-variant-numeric: tabular-nums; }
 .posilek-suma b { font-weight: 600; font-size: 15px; }
 .posilek-suma .szary { margin-left: 3px; }
+.ocena-cw { margin-top: 12px; }
+.ocena-cw .chipy { margin-top: 6px; }
+.ocena-cw .chip { min-width: 40px; }
