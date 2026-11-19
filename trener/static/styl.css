@@ -33,7 +33,11 @@ body::before { content: ""; position: fixed; inset: -20vh -20vw; z-index: -1; po
 
 /* nagłówek z logo */
 header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
-  padding: calc(var(--gora) + 10px) 16px 10px; background: rgba(7,8,11,.42); backdrop-filter: var(--rozmyj); -webkit-backdrop-filter: var(--rozmyj);
+  padding: calc(var(--gora) + 10px) 16px 10px; }
+header > * { position: relative; z-index: 1; }
+/* szkło na osobnej warstwie pod napisami: iOS rozmywał tytuł i ikony, gdy backdrop-filter był na samym nagłówku */
+header::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: rgba(7,8,11,.42); backdrop-filter: var(--rozmyj); -webkit-backdrop-filter: var(--rozmyj);
   border-bottom: .5px solid rgba(255,255,255,.07); }
 .logo { width: 30px; height: 30px; border-radius: 10px; background: linear-gradient(140deg, #3987e5, #9085e9); box-shadow: var(--blask), 0 4px 14px rgba(57,135,229,.35); display: grid; place-items: center; flex: none; }
 .logo svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }

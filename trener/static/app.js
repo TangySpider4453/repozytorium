@@ -1659,7 +1659,7 @@ async function route() {
   if (i >= 0) nav.style.setProperty("--i", i);
   nav.classList.toggle("bez-zak", i < 0);
   $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Dane", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga", trening: "Trening", zaplanowany: "Zaplanowany trening" }[t] || "Trener";
-  document.body.classList.toggle("detal", DETALE.has(t));
+  document.body.classList.toggle("detal", DETALE.has(t) && t !== "ustawienia");    // Ustawienia zamyka zębatka, więc zostaje logo
   // rodzaj przejścia
   if (poprz) poprz.y = SKR.scrollTop;                // przewinięcie ekranu, z którego wychodzisz
   const teraz = { t, hash, poz: pozycja(t, zak), y: 0 };

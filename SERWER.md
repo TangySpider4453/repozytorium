@@ -705,6 +705,8 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   do `.duch`, a potem: zakładka → zakładka to karuzela w stronę klikniętej zakładki; otwarcie szczegółów (`DETALE`) rośnie
   z klikniętej karty (clip-path); powrót kurczy się do tej karty. Na szczegółach w nagłówku jest ‹ (`#btn-wstecz`).
   Zębatka przełącza Ustawienia; źródło mniejsze niż 80 px (ikona) animuje się skalą z/do punktu zamiast wycinka.
+  W Ustawieniach nie ma ‹ (zamyka je zębatka), zostaje logo. Szkło nagłówka siedzi w `header::before`, nie na samym
+  `header`, bo iOS rozmywał tytuł i ikony.
   Duże zapytania (dni, agregaty) wczytują się z góry na końcu: serwer obsługuje zapytania po kolei.
   Podzakładki (`.podzak`, np. Podsumowanie | Treningi) stoją w miejscu, przesuwa się tylko treść pod nimi. Każdy przełącznik
   `.zakladki` ma przesuwaną pigułkę (`plynPigulke`); zmiana zakresu (30 dni / 90 dni / rok / wszystko) w Dane robi

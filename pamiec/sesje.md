@@ -131,3 +131,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-19: 3 poprawki animacji: pole czatu wypływa jak kropla z ikony Czat w menu (i do niej wraca); przełącznik
   Podsumowanie | Treningi stoi w miejscu (przesuwa się tylko treść i pigułka); zakresy 30 dni / 90 dni / rok / wszystko
   mają przesuwaną pigułkę i przejście treści w stronę zmiany.
+- 2026-11-19: baner: w Ustawieniach logo zamiast ‹ (zamyka zębatka); ciemne szkło przeniesione do header::before,
+  żeby tytuł i ikony były ostre na iPhonie (headless Chromium nie rysuje rozmycia, więc sprawdzić na telefonie).
