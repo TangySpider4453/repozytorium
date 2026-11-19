@@ -124,6 +124,63 @@ def streszczenie_aktywnosci(j):
     return {k: v for k, v in w.items() if v not in (None, 0, [], "")}
 
 
+def statystyki_pelne(j):
+    """wszystko, co ciekawe z podsumowania Garmina — do ekranu treningu (grupy [nazwa, [[etykieta, wartość], …]])"""
+    def mm(s):
+        s = round(s or 0)
+        return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60}:{s % 60:02d}"
+    def r(k, n=0, mn=1):
+        v = j.get(k)
+        return None if v in (None, 0) else (round(v * mn) if n == 0 else round(v * mn, n))
+    typ = (j.get("activityType") or {}).get("typeKey") or ""
+    bieg = "run" in typ or typ == "walking"
+    g = [
+        ["Czas", [["całkowity", mm(j.get("elapsedDuration")) if j.get("elapsedDuration") else None],
+                  ["w ruchu", mm(j.get("movingDuration")) if j.get("movingDuration") else None],
+                  ["na stojąco", mm(j.get("standingTime")) if j.get("standingTime") else None]]],
+        ["Tętno", [["średnie", r("averageHR")], ["max", r("maxHR")], ["min", r("minHR")]]],
+        ["Moc", [["średnia", r("avgPower")], ["NP", r("normPower")], ["max", r("maxPower")],
+                 ["max 20 min", r("max20MinPower")], ["IF", r("intensityFactor", 2)], ["TSS", r("trainingStressScore")],
+                 ["praca kJ", round((j.get("avgPower") or 0) * (j.get("duration") or 0) / 1000) or None],
+                 ["balans L/P", f"{j['avgLeftBalance']:.0f}/{100 - j['avgLeftBalance']:.0f}" if j.get("avgLeftBalance") else None],
+                 ["śr. siedząc", r("avgSeatedPower")], ["śr. na stojąco", r("avgStandingPower")]]],
+        ["Prędkość", [["średnia", (f"{1000 / j['averageSpeed'] // 60:.0f}:{1000 / j['averageSpeed'] % 60:02.0f}/km" if bieg
+                                    else f"{j['averageSpeed'] * 3.6:.1f} km/h") if j.get("averageSpeed") else None],
+                      ["max", f"{j['maxSpeed'] * 3.6:.1f} km/h" if j.get("maxSpeed") else None],
+                      ["dystans", f"{j['distance'] / 1000:.2f} km" if j.get("distance") else None]]],
+        ["Kadencja", [["średnia", r("averageBikingCadenceInRevPerMinute") or r("averageRunningCadenceInStepsPerMinute")],
+                      ["max", r("maxBikingCadenceInRevPerMinute") or r("maxRunningCadenceInStepsPerMinute")],
+                      ["długość kroku", f"{j['avgStrideLength'] / 100:.2f} m" if j.get("avgStrideLength") else None],
+                      ["kontakt z podłożem", f"{j['avgGroundContactTime']:.0f} ms" if j.get("avgGroundContactTime") else None],
+                      ["oscylacja pionowa", f"{j['avgVerticalOscillation']:.1f} cm" if j.get("avgVerticalOscillation") else None]]],
+        ["Teren", [["przewyższenie", r("elevationGain")], ["spadek", r("elevationLoss")],
+                   ["wysokość min–max", f"{j['minElevation']:.0f}–{j['maxElevation']:.0f} m" if j.get("maxElevation") else None],
+                   ["temperatura", f"{j['minTemperature']:.0f}–{j['maxTemperature']:.0f} °C" if j.get("maxTemperature") is not None and j.get("minTemperature") is not None else None],
+                   ["grit (MTB)", r("grit", 1)], ["flow (MTB)", r("avgFlow", 1)], ["skoki", r("jumpCount")]]],
+        ["Efekt", [["tlenowy", r("aerobicTrainingEffect", 1)], ["beztlenowy", r("anaerobicTrainingEffect", 1)],
+                   ["obciążenie", r("activityTrainingLoad")], ["VO2max", r("vO2MaxValue")],
+                   ["Body Battery", f"{j['differenceBodyBattery']:+d}" if j.get("differenceBodyBattery") else None],
+                   ["min. intensywne", (j.get("moderateIntensityMinutes") or 0) + 2 * (j.get("vigorousIntensityMinutes") or 0) or None]]],
+        ["Ciało", [["kcal", r("calories")], ["w tym spoczynkowe", r("bmrCalories")], ["pot (szac.)", f"{j['waterEstimated']:.0f} ml" if j.get("waterEstimated") else None],
+                   ["oddech śr.", f"{j['avgRespirationRate']:.0f}/min" if j.get("avgRespirationRate") else None],
+                   ["oddech max", f"{j['maxRespirationRate']:.0f}/min" if j.get("maxRespirationRate") else None]]],
+        ["Siłka", [["serie", r("totalSets")], ["powtórzenia", r("totalReps")]]],
+    ]
+    jedn = {"Tętno": " bpm", "Moc": " W", "Teren": " m", "Kadencja": " rpm"}
+    wyn = []
+    for nazwa, pola in g:
+        p = [[e, str(v) if isinstance(v, str) or e in ("IF", "TSS", "praca kJ", "balans L/P", "wysokość min–max", "temperatura",
+                                                   "grit (MTB)", "flow (MTB)", "skoki")
+              else f"{v}{jedn.get(nazwa, '')}"] for e, v in pola if v not in (None, "", 0)]
+        p = [[e, v.replace(".", ",")] for e, v in p]          # polski przecinek dziesiętny
+        if p:
+            wyn.append([nazwa, p])
+    krzywa = [[s, j[f"maxAvgPower_{s}"]] for s in (1, 2, 5, 10, 20, 30, 60, 120, 300, 600, 1200, 1800, 3600, 5400, 7200)
+              if j.get(f"maxAvgPower_{s}")]
+    strefy_mocy = [round((j.get(f"powerTimeInZone_{i}") or 0) / 60, 1) for i in range(1, 8)]
+    return {"grupy": wyn, "krzywa_mocy": krzywa, "strefy_mocy": strefy_mocy if any(strefy_mocy) else None}
+
+
 def tempo(mps):
     if not mps:
         return None

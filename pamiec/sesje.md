@@ -2,6 +2,10 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — kcal, szacunek planu, pełne statystyki)**: nowy wzór wydatku (BMR Garmina 1998 + ruch
+  dnia 390 + treningi; dziś 3180 zamiast 3650, cel przeliczony: 2940 kcal). Zaplanowane treningi: ~kcal, ♥, W, NP, TSS,
+  km (`szacunek.py`). Zrobione: wszystkie statystyki w grupach, krzywa mocy, strefy mocy, przebieg z przybliżaniem
+  (szczypanie / − + ‹ › cały) i celownikiem na wszystkich kanałach. Szczypania nie sprawdziłem na prawdziwym iPhonie.
 - **2026-11-19 (chmura, Trener — fałszywe „zrobione”)**: ekran Dziś oznaczał wszystkie treningi dnia jako zrobione,
   gdy była jakakolwiek aktywność (MTB → siłka też ✓). Teraz `/api/dzis` zwraca `zrobione_sporty` i liczy się rodzaj.
 - **2026-11-19 (chmura, Trener — przybliżanie wykresów)**: trener sam przybliża wykres w czacie (`od_s`/`do_s`) na

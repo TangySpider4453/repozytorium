@@ -666,7 +666,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   kreskowe skanuje ZXing w przeglądarce (`static/zxing.min.js`, działa w Safari). Produkty pobiera z Open Food Facts:
   kod przez `api/v2/product`, a wyszukiwanie przez `search.openfoodfacts.org` (stare `cgi/search.pl` daje 503).
   Pobrane produkty zostają w cache. Nieznany kod otwiera ręczny formularz i zostaje zapamiętany. Cel kcal/makro na
-  dzień: najpierw wzór (`wzor`: Cunningham + trening z planu i Garmina, deficyt ≤ 500 kcal i ≤ 20%, EA ≥ 35 kcal/kg
+  dzień: najpierw wzór (`wzor`: wydatek = średnie spoczynkowe z Garmina (BMR, 28 dni) + mediana ruchu w ciągu dnia poza
+  treningami + treningi aktywne: zrobione z Garmina (kcal − bmrCalories), niezrobione z `szacunek.py`; Cunningham tylko
+  gdy brak danych; deficyt ≤ 500 kcal i ≤ 20%, EA ≥ 35 kcal/kg
   FFM, białko ~2 g/kg), potem Haiku z wiedzą `07_odzywianie.md`, przycinany do progów, w kv `makro_cel_<dzień>`.
   Liczy się sam przy pierwszym otwarciu dnia; „Przelicz” liczy od nowa. Ekran Waga to dane Progresu z portalu przez
   proxy `/api/waga*` (wpisy, zdjęcia, pliki); film i porównania zostają na portalu.
@@ -676,8 +678,15 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   nie zgadza się ze zdjęciem; lista jest do poprawienia przed „Dodaj wszystko”. „Popraw” (`POST /api/produkt/<kod>`)
   zmienia wartości produktu na 100 g i przelicza jego wpisy. Zdjęcia nie są zapisywane (tylko w katalogu tymczasowym).
 - Cel jedzenia a Garmin (17.11): cykl co 15 min woła `dieta.aktualizuj`. Gdy dziś przyjdzie nowy trening, trener liczy
-  cel od nowa. Co godzinę porównuje aktywne kcal z Garmina z założonym ruchem (RMR × 0,45 + zrobione treningi). Nadwyżkę
-  ≥ 100 kcal dolicza do celu (do węgli, kv `ruch_ekstra`), tylko w górę. Model jest hojny, więc dolicza rzadko.
+  cel od nowa. Co godzinę porównuje aktywne kcal z Garmina ze średnim ruchem dnia + zrobionymi treningami. Nadwyżkę
+  ≥ 100 kcal dolicza do celu (do węgli, kv `ruch_ekstra`), tylko w górę.
+- Szacunek zaplanowanego treningu (19.11): `trener/szacunek.py`, `szac` w `/api/plan` i `/api/plan/<id>`: min, ~kcal
+  (jak pokaże Garmin, z BMR) i `kcal_akt`, ♥ śr./max, moc śr./NP, TSS, km, tempo. Kalibracja z 120 dni (cache 1 h):
+  tętno vs %FTP i vs % tempa progowego (regresja), siłka: mediana kcal/min i tętna. Rower: kJ ≈ kcal aktywne.
+- Pełne statystyki zrobionego treningu (19.11): `dane.statystyki_pelne` → `wiecej` w `/api/aktywnosc/<id>` (grupy,
+  `krzywa_mocy` z `maxAvgPower_*`, `strefy_mocy` z `powerTimeInZone_*`); bez pól z imieniem i zdjęciem profilu.
+  Przebieg na ekranie treningu: przybliżanie dwoma palcami albo przyciski − + ‹ › „cały” (min. 30 s, dociąga
+  dokładniejszy wycinek `?od&do`), celownik zsynchronizowany na wszystkich kanałach (`syncKanaly`).
 
 ## Zdrowie serwera (od 2026-10-22)
 - **Dioda** na każdej stronie HTML portalu i `/strony/*`: `app.py` dokleja `<script src="/strony/zdrowie/dioda.js">`

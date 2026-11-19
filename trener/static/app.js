@@ -146,10 +146,17 @@ function rysujLinie(el, s, W, H) {
   g += konce.map(([x, y, v]) => `<text x="${x}" y="${y}" class="koniec">${v}</text>`).join("");
   el.innerHTML = `<svg width="${W}" height="${H}">${g}<g class="celownik" style="display:none"><line y1="${T}" y2="${H - B}"/>${serie.map(q => `<circle r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`).join("")}</g></svg><div class="dymek"></div>`;
   const svg = el.firstChild, cel = svg.lastChild, dym = el.lastChild;
+  const ukryj = () => { cel.style.display = "none"; dym.style.display = "none"; };
   const pokaz = e => {
+    if (e.isPrimary === false) return;                       // drugi palec = szczypanie, nie celownik
     const r = svg.getBoundingClientRect(), px = e.clientX - r.left;
     let i = Math.round((px - x0) / ((x1 - x0) / Math.max(1, n - 1))); i = Math.max(0, Math.min(n - 1, i));
-    if (serie.every(q => q.y[i] == null)) { cel.style.display = "none"; dym.style.display = "none"; return; }
+    pokazI(i, e);
+    if (s.sync) s.sync(s.x[i], el);
+    if (s.dotyk) s.dotyk(s.x[i]);
+  };
+  const pokazI = (i, e) => {
+    if (serie.every(q => q.y[i] == null)) { ukryj(); return; }
     cel.style.display = ""; cel.firstChild.setAttribute("x1", X(i)); cel.firstChild.setAttribute("x2", X(i));
     serie.forEach((q, k) => { const c = cel.children[k + 1]; if (q.y[i] == null) c.style.display = "none"; else { c.style.display = ""; c.setAttribute("cx", X(i)); c.setAttribute("cy", Y(q.y[i])); } });
     dym.innerHTML = `<div class="dt">${esc(s.etDymek ? s.etDymek(s.x[i]) : s.x[i])}</div>` + serie.map(q => q.y[i] == null ? "" :
@@ -157,10 +164,12 @@ function rysujLinie(el, s, W, H) {
       (s.pasmo && s.pasmo[i] && s.pasmo[i][0] != null ? `<div class="sz">norma ${fmt(s.pasmo[i][0])}–${fmt(s.pasmo[i][1])}</div>` : "");
     dym.style.display = "block";
     const dw = dym.offsetWidth; dym.style.left = Math.max(0, Math.min(W - dw, X(i) - dw / 2)) + "px";
-    if (s.klik && e.type === "pointerup") s.klik(s.x[i], i);
+    if (s.klik && e && e.type === "pointerup") s.klik(s.x[i], i);
   };
+  el._os = { x0, x1, xs: s.x };
+  el._celownik = x => x == null ? ukryj() : pokazI(najblizszy(s.x, x));     // sterowanie z innego wykresu (wspólna oś czasu)
   svg.addEventListener("pointermove", pokaz); svg.addEventListener("pointerdown", pokaz); svg.addEventListener("pointerup", pokaz);
-  svg.addEventListener("pointerleave", () => { cel.style.display = "none"; dym.style.display = "none"; });
+  svg.addEventListener("pointerleave", () => { ukryj(); if (s.sync) s.sync(null, el); });
 }
 
 function rysujSlupki(el, s, W, H) {   // s: {x:[], serie:[{nazwa,y:[],kolor}], jedn, dz, zaznacz}
@@ -220,7 +229,7 @@ async function przebieg(id, od, doS) {
 }
 const najblizszy = (xs, v) => { let b = -1, bd = Infinity; xs.forEach((x, i) => { const d = Math.abs(x - v); if (d < bd) { bd = d; b = i; } }); return b; };
 // wykres na każdy kanał (jedna oś Y na wykres), wspólna oś czasu; znaczniki [{s, tekst}], linie [{kanal, wartosc, tekst}]
-function wykresyKanalow(p, kanaly, { znaczniki = [], linie = [], h = 150 } = {}) {
+function wykresyKanalow(p, kanaly, { znaczniki = [], linie = [], h = 150, dotyk } = {}) {
   const ks = (kanaly || Object.keys(KANAL)).filter(k => KANAL[k] && (p[k] || []).some(v => v != null));
   if (!ks.length) return `<div class="szary">Brak przebiegu w danych z zegarka.</div>`;
   const t0 = p.t[0] ?? 0, t1 = p.t[p.t.length - 1] ?? 0;
@@ -232,9 +241,14 @@ function wykresyKanalow(p, kanaly, { znaczniki = [], linie = [], h = 150 } = {})
     const serie = [{ nazwa: k === "moc" && p.moc_max ? "średnia" : nazwa, y: p[k], kolor }];
     if (k === "moc" && p.moc_max) serie.push({ nazwa: "max", y: p.moc_max, kolor: kolor + "55" });
     return `<div class="kanal"><div class="kanal-t">${nazwa} <span class="szary">${jedn}</span></div>${wyk({ typ: "linia", x: p.t, serie, jedn, h,
-      dz: 0, min: k === "wysokosc" || k === "tetno" ? undefined : 0, etykietaKonca: false, etX, etDymek: mmss, znaczniki: zn,
+      dz: 0, min: k === "wysokosc" || k === "tetno" ? undefined : 0, etykietaKonca: false, etX, etDymek: mmss, znaczniki: zn, sync: syncKanaly, dotyk,
       linie: linie.filter(l => l.kanal === k).map(l => ({ y: l.wartosc, tekst: l.tekst })) })}</div>`;
   }).join("") + legZnacz(zs);
+}
+// celownik na jednym kanale pokazuje ten sam moment na pozostałych wykresach z tej samej grupy
+function syncKanaly(x, el) {
+  const grupa = el.closest(".kanaly, .wyk-czat, .karta"); if (!grupa) return;
+  grupa.querySelectorAll(".kanal .wyk").forEach(w => { if (w !== el && w._celownik) w._celownik(x); });
 }
 const legZnacz = zs => zs.length ? `<ol class="znacz-leg">${zs.map(z => `<li>${esc(z.tekst)}</li>`).join("")}</ol>` : "";
 const METRYKI_CZAT = { hrv: ["HRV", "ms", KOLOR.fiolet], sen_h: ["Sen", "h", KOLOR.niebieski, hm], sen_wynik: ["Wynik snu", "", KOLOR.niebieski],
@@ -286,7 +300,7 @@ function trening(t, zrobiony) {
   const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
   const klik = t.id && t.sport !== "odpoczynek" ? ` klik" onclick="if(!event.target.closest('details,a,button'))location.hash='#zaplanowany/${t.id}'` : "";
   return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}${klik}">
-    <b>${ikSport(t.sport)}${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
+    <b>${ikSport(t.sport)}${esc(t.tytul)}</b>${t.min ? `<span class="znaczek">~${t.min} min</span>` : ""}${!zrobiony && t.szac && t.szac.kcal ? `<span class="znaczek">~${t.szac.kcal} kcal</span>` : ""}${st ? `<span class="znaczek">${st}</span>` : ""}${zrobiony ? `<span class="znaczek ok">✓ zrobione</span>` : ""}
     ${wykresTreningu(t)}
     ${t.opis ? `<div class="szary tresc">${esc(t.opis)}</div>` : ""}
     ${kroki ? `<details><summary>kroki</summary><ul class="kroki">${kroki}</ul></details>` : ""}
@@ -683,37 +697,114 @@ async function pokazTrening(id) {
   const godzina = (a.start || "").slice(11, 16);
   let h = `<div class="karta"><div class="szary">${esc(a.dzien_slownie || "")}${godzina ? " · " + godzina : ""}</div>
     <h3>${ikSport(kat(a.typ))}${esc(a.nazwa)}</h3>${a.efekt ? `<span class="znaczek">${esc(EFEKT[a.efekt] || a.efekt.toLowerCase().replace(/_/g, " "))}</span>` : ""}
-    <div class="statki">${POLA_T.filter(([k]) => a[k] != null).map(([k, n, f]) => `<div><span>${n}</span><b>${esc(f(a[k]))}</b></div>`).join("")}</div>
+    <div class="statki">${POLA_T.filter(([k]) => a[k] != null && (!a.wiecej || GLOWNE.includes(k))).map(([k, n, f]) => `<div><span>${n}</span><b>${esc(f(a[k]))}</b></div>`).join("")}</div>
     <button style="margin-top:12px;width:100%" onclick="omowTrening(${a.id}, ${esc(JSON.stringify(a.nazwa + " (" + (a.dzien_slownie || "") + ")"))})">💬 Omów trening</button></div>`;
   if (a.strefy_min) {
     const suma = a.strefy_min.reduce((x, y) => x + y, 0) || 1;
     h += `<div class="karta"><h3>Strefy tętna</h3><div class="strefy">${a.strefy_min.map((m, i) => m ? `<i style="flex:${m};background:${STREFA_KOLOR[i]}" title="Z${i + 1}: ${m} min"></i>` : "").join("")}</div>
       <div class="strefy-leg">${a.strefy_min.map((m, i) => `<span><i style="background:${STREFA_KOLOR[i]}"></i>Z${i + 1} <b>${m}</b> min <small>${Math.round(m / suma * 100)}%</small></span>`).join("")}</div></div>`;
   }
+  const w = a.wiecej || {};
+  if (w.strefy_mocy) {
+    const suma = w.strefy_mocy.reduce((x, y) => x + y, 0) || 1;
+    h += `<div class="karta"><h3>Strefy mocy</h3><div class="strefy">${w.strefy_mocy.map((m, i) => m ? `<i style="flex:${m};background:${STREFA_MOCY[i]}"></i>` : "").join("")}</div>
+      <div class="strefy-leg">${w.strefy_mocy.map((m, i) => `<span><i style="background:${STREFA_MOCY[i]}"></i>Z${i + 1} <b>${lb(m, m < 10 ? 1 : 0)}</b> min <small>${Math.round(m / suma * 100)}%</small></span>`).join("")}</div></div>`;
+  }
+  if ((w.krzywa_mocy || []).length > 2) {
+    const k = w.krzywa_mocy;
+    h += `<div class="karta"><h3>Krzywa mocy <span class="szary maly">najlepsza średnia z okna</span></h3>${wyk({ typ: "linia", x: k.map(q => q[0]), h: 170,
+      serie: [{ nazwa: "moc", y: k.map(q => q[1]), kolor: KOLOR.fiolet }], jedn: "W", dz: 0, min: 0, etykietaKonca: false, etX: okno, etDymek: s => "najlepsze " + okno(s),
+      linie: PROGI.ftp ? [{ y: PROGI.ftp, tekst: "FTP" }] : [] })}</div>`;
+  }
+  if ((w.grupy || []).length) h += `<div class="karta"><h3>Wszystkie statystyki</h3>${w.grupy.map(([g, pola]) =>
+    `<div class="grupa-t">${esc(g)}</div><div class="statki">${pola.map(([n, v]) => `<div><span>${esc(n)}</span><b>${esc(v)}</b></div>`).join("")}</div>`).join("")}</div>`;
   if (a.cwiczenia) h += `<div class="karta"><h3>Ćwiczenia</h3>${Object.entries(a.cwiczenia).map(([k, v]) => `<div class="cw"><b>${esc(k)}</b><span class="szary">${esc(v)}</span></div>`).join("")}</div>`;
-  if (kat(a.typ) !== "silka") h += `<div class="karta"><h3>Przebieg</h3><div id="przebieg"><div class="szary">Pobieram przebieg z Garmina…</div></div></div><div id="okrazenia"></div>`;
+  if (kat(a.typ) !== "silka") h += `<div class="karta"><h3>Przebieg</h3><div class="zoom-pasek" style="display:none"><span class="zakres"></span>
+      <span class="zoom-przyc"><button data-z="-">−</button><button data-z="+">+</button><button data-z="<">‹</button><button data-z=">">›</button><button data-z="0">cały</button></span></div>
+      <div id="przebieg" class="kanaly"><div class="szary">Pobieram przebieg z Garmina…</div></div>
+      <div class="szary maly zoom-pod" style="display:none">Dotknij wykresu, żeby zobaczyć wartości. Rozsuń dwa palce albo użyj +, żeby przybliżyć.</div></div><div id="okrazenia"></div>`;
   widok.innerHTML = h;
+  rysuj(widok);
   if (kat(a.typ) === "silka") return;
   try {
     const p = await przebieg(id);
     const el = $("#przebieg"); if (!el) return;
-    const linie = PROGI.ftp ? [{ kanal: "moc", wartosc: PROGI.ftp, tekst: "FTP" }] : [];
-    el.innerHTML = p.t.length ? wykresyKanalow(p, null, { linie }) : `<div class="szary">Garmin nie ma przebiegu tego treningu.</div>`;
-    rysuj(el);
+    if (!p.t.length) { el.innerHTML = `<div class="szary">Garmin nie ma przebiegu tego treningu.</div>`; return; }
+    przyblizanie(el, id, p);
     const ok = p.okrazenia || [];
     if (ok.length > 1) $("#okrazenia").innerHTML = `<div class="karta"><h3>Okrążenia</h3><div style="overflow-x:auto"><table class="tab"><tr><th>#</th><th>czas</th><th>km</th><th>♥ śr</th><th>♥ max</th>${ok.some(o => o.moc) ? "<th>W</th><th>NP</th>" : ""}<th>km/h</th></tr>
       ${ok.map(o => `<tr><td>${o.nr}</td><td>${mmss(o.s)}</td><td>${lb(o.km, 2)}</td><td>${o.tetno ?? "–"}</td><td>${o.tetno_max ?? "–"}</td>${ok.some(q => q.moc) ? `<td>${o.moc ?? "–"}</td><td>${o.moc_np ?? "–"}</td>` : ""}<td>${lb(o.kmh, 1)}</td></tr>`).join("")}</table></div></div>`;
   } catch (e) { if (!(e instanceof Anulowano)) { const el = $("#przebieg"); if (el) el.innerHTML = `<div class="szary">Nie udało się pobrać przebiegu (${esc(e.message)})</div>`; } }
 }
+const GLOWNE = ["min", "km", "tetno", "moc", "moc_np", "tss", "kmh", "tempo", "serie", "kcal", "obc"];
+const STREFA_MOCY = ["#8e8e93", "#0a84ff", "#30d158", "#ffd60a", "#ff9f0a", "#ff453a", "#bf5af2"];
+const okno = s => s < 60 ? s + " s" : s < 3600 ? s / 60 + " min" : lb(s / 3600, s % 3600 ? 1 : 0) + " h";
+// przebieg z przybliżaniem: szczypanie dwoma palcami albo przyciski; po zmianie zakresu dociągamy dokładniejszy wycinek z serwera
+function przyblizanie(el, id, pelny) {
+  const karta = el.closest(".karta"), pasek = karta.querySelector(".zoom-pasek"), napis = karta.querySelector(".zakres");
+  const koniec = pelny.koniec || pelny.t[pelny.t.length - 1], linie = PROGI.ftp ? [{ kanal: "moc", wartosc: PROGI.ftp, tekst: "FTP" }] : [];
+  const Z = { od: 0, do: koniec, punkt: null, nr: 0 };
+  pasek.style.display = ""; karta.querySelector(".zoom-pod").style.display = "";
+  const rysujZakres = async () => {
+    const nr = ++Z.nr, caly = Z.od <= 0 && Z.do >= koniec;
+    const p = caly ? pelny : await przebieg(id, Math.round(Z.od), Math.round(Z.do)).catch(() => null);
+    if (nr !== Z.nr || !p || !p.t.length) return;
+    el.innerHTML = wykresyKanalow(p, null, { linie, dotyk: x => { Z.punkt = x; } });
+    rysuj(el);
+    napis.textContent = caly ? "cały przebieg" : `🔍 ${mmss(Z.od)}–${mmss(Z.do)}`;
+    karta.querySelector('[data-z="0"]').disabled = caly;
+  };
+  const ustaw = (od, doS) => {
+    let dl = Math.max(30, Math.min(koniec, doS - od));
+    od = Math.max(0, Math.min(koniec - dl, od)); Z.od = od; Z.do = od + dl; rysujZakres();
+  };
+  const zoom = (k, srodek) => { const dl = (Z.do - Z.od) * k, c = srodek ?? Z.punkt ?? (Z.od + Z.do) / 2; ustaw(c - dl * (c - Z.od) / (Z.do - Z.od), c - dl * (c - Z.od) / (Z.do - Z.od) + dl); };
+  pasek.onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const dl = Z.do - Z.od;
+    ({ "+": () => zoom(.5), "-": () => zoom(2), "<": () => ustaw(Z.od - dl / 2, Z.do - dl / 2), ">": () => ustaw(Z.od + dl / 2, Z.do + dl / 2), "0": () => ustaw(0, koniec) })[b.dataset.z]();
+  };
+  // szczypanie: podgląd przez skalowanie SVG, przeliczenie po puszczeniu palców
+  const palce = new Map(); let start = null;
+  const czasX = px => { const w = el.querySelector(".kanal .wyk"); if (!w || !w._os) return null;
+    const { x0, x1, xs } = w._os, r = w.getBoundingClientRect(); return xs[0] + (px - r.left - x0) / (x1 - x0) * (xs[xs.length - 1] - xs[0]); };
+  const svgi = () => el.querySelectorAll(".kanal svg");
+  el.addEventListener("pointerdown", e => { palce.set(e.pointerId, e.clientX);
+    if (palce.size === 2) { const [a, b] = [...palce.values()]; start = { d: Math.abs(a - b) || 1, m: (a + b) / 2, k: 1 }; } });
+  el.addEventListener("pointermove", e => {
+    if (!palce.has(e.pointerId)) return; palce.set(e.pointerId, e.clientX);
+    if (palce.size !== 2 || !start) return;
+    const [a, b] = [...palce.values()]; start.k = Math.max(.2, Math.min(20, Math.abs(a - b) / start.d));
+    svgi().forEach(s => { const r = s.getBoundingClientRect(); s.style.transformOrigin = `${start.m - r.left}px 50%`; s.style.transform = `scaleX(${start.k})`; });
+    napis.textContent = `🔍 ×${lb(start.k, 1)}`;
+  });
+  const koniecPalca = e => {
+    palce.delete(e.pointerId);
+    if (!start || palce.size) return;
+    const { k, m } = start; start = null;
+    svgi().forEach(s => { s.style.transform = ""; });
+    const c = czasX(m);
+    if (Math.abs(k - 1) > .08 && c != null) zoom(1 / k, c); else rysujZakres();
+  };
+  el.addEventListener("pointerup", koniecPalca); el.addEventListener("pointercancel", koniecPalca);
+  rysujZakres();
+}
 function omowTrening(id, opis) { sessionStorage.omow = JSON.stringify({ id, tekst: `Omów trening: ${opis}` }); location.hash = "#czat"; }
 
+function szacStatki(z) {
+  if (!z) return "";
+  const p = [["kcal", "~kcal", v => "~" + v], ["tetno", "♥ śr.", v => `~${v} ±5`], ["tetno_max", "♥ max", v => "~" + v], ["moc", "moc śr.", v => `~${v} W`],
+    ["moc_np", "moc NP", v => `~${v} W`], ["tss", "TSS", v => "~" + v], ["km", "dystans", v => `~${lb(v, 1)} km`], ["tempo", "tempo", v => "~" + v]];
+  return p.filter(([k]) => z[k] != null).map(([k, n, f]) => `<div><span>${n}</span><b>${esc(f(z[k]))}</b></div>`).join("");
+}
 async function pokazZaplanowany(id) {
   const t = await api("plan/" + id);
   PROGI = t.progi || {};
   const kroki = (t.kroki || []).map(k => k.rodzaj === "powtorz" ? `<li>${k.razy}× [${(k.kroki || []).map(opisKroku).join(" → ")}]</li>` : `<li>${opisKroku(k)}</li>`).join("");
   const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka na wysłanie", blad: "⚠️ błąd", w_apce: "tylko w apce" }[t.stan] ?? t.stan;
   widok.innerHTML = `<div class="karta"><div class="szary">${esc(t.dzien_slownie || t.dzien)}</div><h3>${ikSport(t.sport)}${esc(t.tytul)}</h3>
-    <div class="statki">${t.min ? `<div><span>czas</span><b>${hm(t.min / 60)} h</b></div>` : ""}${st ? `<div><span>stan</span><b>${esc(st)}</b></div>` : ""}</div>
+    <div class="statki">${t.min ? `<div><span>czas</span><b>${hm(t.min / 60)} h</b></div>` : ""}${szacStatki(t.szac)}${st ? `<div><span>stan</span><b>${esc(st)}</b></div>` : ""}</div>
+    ${t.szac && t.szac.kcal ? `<div class="szary maly" style="margin-top:6px">~ to szacunek z Twoich progów i poprzednich treningów; Garmin policzy dokładnie po treningu.</div>` : ""}
     ${wykresTreningu(t)}${t.opis ? `<div class="tresc" style="margin-top:10px">${esc(t.opis)}</div>` : ""}</div>
     ${kroki ? `<div class="karta"><h3>Kroki</h3><ul class="kroki">${kroki}</ul></div>` : ""}
     <div class="karta"><button class="drugi" style="width:100%" onclick="sessionStorage.szkic=${esc(JSON.stringify(`Pytanie o trening ${t.tytul} (${t.dzien_slownie || t.dzien}): `))};location.hash='#czat'">💬 Zapytaj trenera o ten trening</button></div>`;
@@ -846,7 +937,9 @@ async function pokazJedzenie(dzien) {
     ${c.liczy ? `<div class="szary"><span class="mysli">Trener liczy cel pod dzisiejszy trening</span></div>` : ""}
     ${dietaDzien > dzis ? `<div class="szary">Wstępnie z planu treningu. Trener policzy dokładny cel jutro rano (sen, Garmin).</div>` : ""}
     ${c.komentarz ? `<div>${esc(c.komentarz)}</div>` : ""}${c.pory ? `<div class="szary" style="margin-top:6px">${esc(c.pory)}</div>` : ""}
-    <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.trening_kcal ? `trening ~${lb(c.trening_kcal)} kcal` : "dzień bez treningu", c.ruch_ekstra && `dodatkowy ruch z Garmina +${lb(c.ruch_ekstra)} kcal`].filter(Boolean).join(" · ")}</div>
+    <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.spocz && `spoczynkowe ${lb(c.spocz)}`, c.ruch_dnia && `ruch w ciągu dnia ~${lb(c.ruch_dnia)}`,
+      c.trening_kcal ? `treningi ~${lb(c.trening_kcal)}${c.trening_zrobione && c.trening_zrobione < c.trening_kcal ? ` (zrobione ${lb(c.trening_zrobione)} + plan ~${lb(c.trening_kcal - c.trening_zrobione)})` : c.trening_zrobione ? " (zrobione)" : " (plan)"}` : "dzień bez treningu",
+      c.ruch_ekstra && `dodatkowy ruch dziś +${lb(c.ruch_ekstra)}`].filter(Boolean).join(" · ")}</div>
     ${dietaDzien > dzis ? "" : `<div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div>`}</div>`;
   d.posilki.forEach(p => {
     const w = d.wpisy.filter(x => x.posilek === p), sk = w.reduce((a, x) => a + x.kcal, 0);

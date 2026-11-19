@@ -12,6 +12,8 @@
 - [ ] Antek: sparować iPhone kodem (`python -m trener kod` na Pi; Claude daje kod w czacie).
 - [ ] Antek: otworzyć apkę na iPhonie, Add to Home Screen, włączyć push, wypełnić **ankietę startową** (karta „Zacznijmy” → 7 kroków + dopytanie). Bez niej apka nie planuje.
 - [x] Stary most RestOrTrain usunięty (18.11): 8 jego treningów „Siłka …” skasowanych z Garmina, usługi i projekt usunięte.
+- [ ] Antek: sprawdzić na iPhonie przybliżanie przebiegu dwoma palcami (ekran treningu). Gdy nie działa, zostają
+  przyciski − + ‹ › „cały”.
 - [ ] Portal: usunąć martwe resztki mostu (`/api/garmin`, `/api/garmin/silownia`, moduł `garmin` na Automatycznych, strona
   Siłownia). Wymaga restartu portalu: zapytać Antka.
 - [ ] Sprawdzić, czy `trener-historia` (pobieranie od 2021) skończył: `kv.historia_postep == "gotowe"`.

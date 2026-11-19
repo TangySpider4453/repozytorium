@@ -332,40 +332,60 @@ KCAL_MIN = {"rower": 9.0, "bieg": 11.0, "silka": 6.0, "inne": 7.0}
 
 
 def _trening_kcal(d, dzien_, masa):
-    """wydatek na trening: zrobione (Garmin) + zaplanowane, jeszcze niezrobione (szacunek)"""
-    from . import budowa, kontekst
-    zrobione, kat_zrob = 0, set()
+    """wydatek na trening PONAD spoczynkowe: zrobione (Garmin: kcal − BMR w czasie treningu) + zaplanowane,
+    jeszcze niezrobione (szacunek z kroków i danych Antka). -> (suma, opis, zrobione)"""
+    from . import budowa, kontekst, szacunek
+    zrobione, ile = 0, {}
     for r in d.execute("SELECT typ, dane FROM aktywnosci WHERE dzien=?", (dzien_,)):
         j = baza.rozpakuj(r[1]) or {}
-        zrobione += j.get("calories") or 0
-        kat_zrob.add(kontekst.kategoria(r[0]))
+        zrobione += max(0, (j.get("calories") or 0) - (j.get("bmrCalories") or 0))
+        k = kontekst.kategoria(r[0])
+        ile[k] = ile.get(k, 0) + 1
     plan, opis = 0, []
-    ftp = ((baza.kv(d, "strefy", {}) or {}).get("ftp") or {}).get("functionalThresholdPower")
-    for r in d.execute("SELECT * FROM plan WHERE dzien=? AND stan NOT IN ('usuniety','do_usuniecia')", (dzien_,)):
+    for r in d.execute("SELECT * FROM plan WHERE dzien=? AND stan NOT IN ('usuniety','do_usuniecia') ORDER BY id", (dzien_,)):
         t = dict(r)
         if t["sport"] == "odpoczynek":
             continue
         t["kroki"] = json.loads(t["kroki"] or "[]")
         mn = budowa.czas_min(t) or 0
         opis.append(f"{t['sport']} {mn} min: {t['tytul']}")
-        if t["sport"] in kat_zrob:
+        if ile.get(t["sport"], 0) > 0:          # już zrobiony (ten sam rodzaj) — liczy się wartość z Garmina
+            ile[t["sport"]] -= 1
             continue
-        if t["sport"] == "rower" and ftp:
-            plan += mn * 60 * ftp * 0.62 / 1000                 # ~kJ ≈ kcal przy sprawności ~24%
-        elif t["sport"] == "bieg" and masa:
-            plan += mn * masa * 0.16
-        else:
-            plan += mn * KCAL_MIN.get(t["sport"], 7)
+        plan += szacunek.trening(d, t, masa).get("kcal_akt") or mn * KCAL_MIN.get(t["sport"], 7) * .85
     return round(zrobione + plan), opis, round(zrobione)
 
 
-NEAT = 0.45          # ruch poza treningiem w modelu: RMR × 1,45
+def baza_dnia(d, dzien_):
+    """średni wydatek bez treningów z Garmina (28 pełnych dni przed dniem): spoczynkowe (BMR) + ruch w ciągu dnia
+    (aktywne kcal minus aktywne kcal treningów). -> (spocz, ruch, ile_dni) albo None"""
+    from datetime import date as _d
+    koniec = _d.fromisoformat(dzien_)
+    spocz, ruch = [], []
+    for i in range(1, 29):
+        dz = (koniec - timedelta(days=i)).isoformat()
+        u = baza.surowe(d, "sum", dz) or {}
+        if not u.get("bmrKilocalories") or u.get("activeKilocalories") is None or (u.get("totalSteps") or 0) < 1500:
+            continue                              # niepełny dzień (zegarek nienoszony / nie zsynchronizowany)
+        tr = 0
+        for (dane,) in d.execute("SELECT dane FROM aktywnosci WHERE dzien=?", (dz,)):
+            j = baza.rozpakuj(dane) or {}
+            tr += max(0, (j.get("calories") or 0) - (j.get("bmrCalories") or 0))
+        spocz.append(u["bmrKilocalories"])
+        ruch.append(max(0, u["activeKilocalories"] - tr))
+    if len(spocz) < 5:
+        return None
+    from statistics import mean, median
+    return round(mean(spocz)), round(median(ruch)), len(spocz)
 
 
-def ruch_garmin(d, dzien_, rmr, zrobione):
-    """aktywne kcal z Garmina ponad to, co model już zakłada (ruch poza treningiem + zrobione treningi); tylko w górę"""
+NEAT = 0.45          # zapas, gdy brak danych z Garmina: ruch poza treningiem = RMR × 0,45
+
+
+def ruch_garmin(d, dzien_, ruch_sr, zrobione):
+    """dzisiejszy ruch poza treningami ponad średnią (np. dużo chodzenia); tylko w górę"""
     kcal_akt = (baza.dzien(d, dzien_) or {}).get("kcal_akt") or 0
-    nad = kcal_akt - NEAT * rmr - zrobione
+    nad = kcal_akt - ruch_sr - zrobione
     return round(nad) if nad >= 100 else 0, round(kcal_akt)
 
 
@@ -375,10 +395,15 @@ def wzor(d, dzien_):
     masa = s["masa"] or 70.0
     fat = s["fat"] if s["fat"] and 5 <= s["fat"] <= 50 else None
     ffm = masa * (1 - (fat if fat else 18) / 100)
-    rmr = 500 + 22 * ffm
+    bd = baza_dnia(d, dzien_)
+    if bd:
+        spocz, ruch, _ = bd
+    else:                                          # za mało danych z Garmina → wzór Cunninghama
+        spocz = round(500 + 22 * ffm)
+        ruch = round(NEAT * spocz)
     trening, opis, zrobione = _trening_kcal(d, dzien_, masa)
-    ekstra, kcal_akt = ruch_garmin(d, dzien_, rmr, zrobione)
-    tdee = rmr * (1 + NEAT) + trening + ekstra
+    ekstra, kcal_akt = ruch_garmin(d, dzien_, ruch, zrobione)
+    tdee = spocz + ruch + trening + ekstra
     deficyt = min(500, 0.2 * tdee)
     kcal = tdee - deficyt
     kcal = max(kcal, 35 * ffm + trening + ekstra)              # dostępność energii — RED-S
@@ -387,7 +412,8 @@ def wzor(d, dzien_):
     w = max((kcal - 4 * b - 9 * t) / 4, 3 * masa if trening > 300 else 2.5 * masa)
     kcal = 4 * b + 4 * w + 9 * t
     return {"kcal": round(kcal, -1), "b": round(b), "w": round(w), "t": round(t), "tdee": round(tdee, -1),
-            "trening_kcal": trening, "trening": opis, "ruch_ekstra": ekstra, "kcal_akt_garmin": kcal_akt, "masa": s["masa"], "fat": s["fat"], "ffm": round(ffm, 1),
+            "trening_kcal": trening, "trening": opis, "ruch_ekstra": ekstra,
+            "spocz": spocz, "ruch_dnia": ruch, "zrodlo_bazy": "garmin" if bd else "wzor", "trening_zrobione": zrobione, "kcal_akt_garmin": kcal_akt, "masa": s["masa"], "fat": s["fat"], "ffm": round(ffm, 1),
             "trend_kg_tydz": s["trend_kg_tydz"], "zrodlo": "wzor"}
 
 
@@ -433,6 +459,8 @@ def przelicz(dzien_=None):
             f"MAKROCYKL:\n{celm.tekst(celm.makrocykl(d))}",
             "SKŁAD CIAŁA: " + json.dumps({k: w[k] for k in ("masa", "fat", "ffm", "trend_kg_tydz")}, ensure_ascii=False),
             "TRENING TEGO DNIA: " + ("; ".join(w["trening"]) or "wolne") + f" (szac. wydatek {w['trening_kcal']} kcal)",
+            f"WYDATEK: spoczynkowe {w['spocz']} + ruch w ciągu dnia {w['ruch_dnia']} (średnie z Garmina) + trening "
+            f"{w['trening_kcal']} (zrobione z Garmina {w['trening_zrobione']}, reszta to szacunek planu) = {w['tdee']}",
             f"GARMIN DZIŚ: aktywne kcal {w['kcal_akt_garmin']}, ponad założony ruch i treningi: {w['ruch_ekstra']} kcal "
             "(już doliczone do wydatku i wzoru)",
             "JEDZENIE OSTATNICH DNI (suma z dziennika / cel): " + json.dumps(ost, ensure_ascii=False),

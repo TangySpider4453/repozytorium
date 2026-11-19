@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 
 from flask import Flask, abort, jsonify, request, send_from_directory
 
-from . import baza, budowa, config, kontekst, plan, powiadom
+from . import baza, budowa, config, dane, kontekst, plan, powiadom, szacunek
 
 log = logging.getLogger(__name__)
 app = Flask(__name__, static_folder=None)
@@ -229,6 +229,14 @@ def api_akcja():
 
 
 # ---------------------------------------------------------------- dane
+def _masa():
+    try:
+        from . import dieta
+        return dieta.sklad_ciala().get("masa")
+    except Exception:
+        return None
+
+
 def _plan(d, od, do):
     wyn = []
     for r in d.execute("SELECT * FROM plan WHERE dzien BETWEEN ? AND ? AND stan NOT IN ('usuniety','do_usuniecia') "
@@ -236,6 +244,10 @@ def _plan(d, od, do):
         t = dict(r)
         t["kroki"] = json.loads(t["kroki"] or "[]")
         t["min"] = budowa.czas_min(t) if t["sport"] != "odpoczynek" else 0
+        try:
+            t["szac"] = szacunek.trening(d, t, _masa())
+        except Exception:
+            log.exception("szacunek planu %s", t.get("id"))
         wyn.append(t)
     return wyn
 
@@ -319,6 +331,7 @@ def api_aktywnosc(aid):
         s["cwiczenia"] = kontekst.cwiczenia_silki(baza.rozpakuj(r["szczegoly"]))
     s["dzien_slownie"] = kontekst.slownie(r["dzien"])
     s["progi"] = _progi_wykres(db())
+    s["wiecej"] = dane.statystyki_pelne(baza.rozpakuj(r["dane"]) or {})
     return jsonify(s)
 
 
