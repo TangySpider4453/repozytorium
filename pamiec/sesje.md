@@ -111,3 +111,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-19: Jedzenie: przy nazwie posiłku suma B/W/T jako kolorowe liczby (kolory jak paski makro: niebieski B,
   żółty W, fioletowy T) obok kcal.
 - 2026-11-19: czarny pasek na dole w PWA (body height:100% w trybie standalone było niższe o pasek statusu) → body position:fixed; inset:0.
+- 2026-11-19: czarny pas na dole to błąd iOS 26 w apce z ekranu głównego: innerHeight 793 z 852 (krótsze o pasek statusu 59).
+  Poprawka: JS mierzy 100lvh − innerHeight → --brak; body, nav, .pisz, .arkusz-tlo schodzą o --brak. Potwierdzone pomiarem z telefonu.

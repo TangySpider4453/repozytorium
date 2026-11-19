@@ -1667,3 +1667,14 @@ async function pokazWiedze() {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(napraw, 200); });
   SKR.addEventListener("scroll", () => { if (window.scrollY && !pisze()) napraw(); }, { passive: true });
 })();
+// iOS 26, apka z ekranu głównego: okno układu (innerHeight) jest niższe od ekranu o pasek statusu (np. 793 z 852),
+// a wszystko „fixed” liczy się od niego → pod spodem czarny pas. Mierzymy różnicę (100lvh − innerHeight) i rozciągamy w dół.
+(() => {
+  const p = document.createElement("div"); p.style.cssText = "position:fixed;left:0;top:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none";
+  const licz = () => {
+    if (!navigator.standalone || document.activeElement?.matches("input, textarea, select")) return;
+    document.body.append(p); const b = Math.max(0, Math.min(120, p.offsetHeight - innerHeight)); p.remove();
+    document.documentElement.style.setProperty("--brak", b + "px");
+  };
+  licz(); addEventListener("resize", () => setTimeout(licz, 100)); addEventListener("orientationchange", () => setTimeout(licz, 400));
+})();
