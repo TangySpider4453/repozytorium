@@ -1,0 +1,13 @@
+[Unit]
+Description=Trener - co minutę: czy w Garminie jest nowy trening (wtedy pełny cykl)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=tonyg
+WorkingDirectory=/home/tonyg/trener
+EnvironmentFile=/etc/serwerek-bot/claude.env
+Environment=HOME=/home/tonyg PYTHONUNBUFFERED=1
+ExecStart=/home/tonyg/trener/.venv/bin/python -m trener szybki
+TimeoutStartSec=1800
+Nice=10

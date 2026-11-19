@@ -2,6 +2,7 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — powiadomienie po treningu)**: `trener-szybki.timer` co minutę pobiera 5 ostatnich aktywności (ok. 2 s); nowa → od razu pełny cykl (analiza + push). Pełny cykl co 15 min (było 20). Blokada `cykl.lock`, przy błędzie Garmina 10 min przerwy (kv `szybki_pauza`). Spóźnienie wynika już tylko z wgrywania do Garmina.
 - **2026-11-18 (chmura, Trener — plan)**: śr i pt tylko jedna sesja, siłki pełne (min. 55 min, zwykle 60–75):
   nowe reguły w kontroli planu (`dni_jedna_sesja`, `silka_min_min`) i w `wymagania`; makrocykl i plan przebudowane.
   Potem: dwie sesje dozwolone tylko w czw i w jeden dzień weekendu (`weekend_dwie_max`).

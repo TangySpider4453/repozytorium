@@ -643,7 +643,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 
 ## Trener — własny RestOrTrain (od 2026-11-17)
 - Projekt `~/trener/` (kopia w repo `trener/`, opis w `trener/README.md`). Webapka PWA przez `tailscale serve` (HTTPS,
-  tylko tailnet) → Flask 127.0.0.1:8095 (`trener-web`); `trener-cykl.timer` co 20 min: sync Garmin → strefy → analiza
+  tylko tailnet) → Flask 127.0.0.1:8095 (`trener-web`); `trener-cykl.timer` co 15 min (a `trener-szybki.timer` co minutę sprawdza 5 ostatnich aktywności; nowa → od razu cykl, blokada `cykl.lock`): sync Garmin → strefy → analiza
   po treningu / poranna / tygodniowa (Claude) → uzupełnienie planu → treningi na zegarek automatycznie.
 - Decyzje Antka 17.11: Claude analizuje i planuje (zniesione „Claude nie dotyka Garmina” dla tej apki), push + Linphone,
   apka zastępuje RestOrTrain, zapis na zegarek automatyczny z powiadomieniem. Usuwa tylko treningi ze znacznikiem
@@ -671,7 +671,7 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   (`/api/dieta/posilek`, zdjęcie i/lub opis, Sonnet) zwraca składniki z gramami i makro, a w komentarzu pisze, co z opisu
   nie zgadza się ze zdjęciem; lista jest do poprawienia przed „Dodaj wszystko”. „Popraw” (`POST /api/produkt/<kod>`)
   zmienia wartości produktu na 100 g i przelicza jego wpisy. Zdjęcia nie są zapisywane (tylko w katalogu tymczasowym).
-- Cel jedzenia a Garmin (17.11): cykl co 20 min woła `dieta.aktualizuj`. Gdy dziś przyjdzie nowy trening, trener liczy
+- Cel jedzenia a Garmin (17.11): cykl co 15 min woła `dieta.aktualizuj`. Gdy dziś przyjdzie nowy trening, trener liczy
   cel od nowa. Co godzinę porównuje aktywne kcal z Garmina z założonym ruchem (RMR × 0,45 + zrobione treningi). Nadwyżkę
   ≥ 100 kcal dolicza do celu (do węgli, kv `ruch_ekstra`), tylko w górę. Model jest hojny, więc dolicza rzadko.
 

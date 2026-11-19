@@ -1,12 +1,12 @@
-"""Cykl co 20 min (timer): sync → strefy (raz dziennie) → analiza po treningu → analiza poranna (gdy jest sen) →
+"""Cykl co 15 min (timer; `szybki` co minutę odpala go wcześniej, gdy w Garminie pojawi się nowy trening): sync → strefy (raz dziennie) → analiza po treningu → analiza poranna (gdy jest sen) →
 tygodniowa (poniedziałek) → uzupełnienie/korekta planu → wysłanie zmian na zegarek."""
 import json
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from . import analiza, baza, cel, config, plan, powiadom, zegarek
 from .garmin import BrakLogowania, polacz, wywolaj
-from .sync import sync
+from .sync import _zablokuj, sync
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,31 @@ def przeplanuj(powod, prosba="", powiadamiaj=True, pytaj=False):
     return wyn
 
 
+def szybki():
+    """co minutę (timer): tylko 5 ostatnich aktywności z Garmina; nowa → od razu pełny cykl (analiza + push)"""
+    db = baza.polacz()
+    pauza = baza.kv(db, "szybki_pauza")
+    if pauza and pauza > baza.teraz():
+        return
+    try:
+        lista = wywolaj(polacz().get_activities, 0, 5) or []
+    except BrakLogowania:
+        return                                # zgłasza pełny cykl
+    except Exception as ex:                   # np. 429 po ponowieniach → 10 min przerwy
+        log.warning("szybki: %s", str(ex)[:120])
+        baza.ustaw_kv(db, "szybki_pauza", (datetime.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S"))
+        return
+    nowe = [a for a in lista if not db.execute("SELECT 1 FROM aktywnosci WHERE id=?", (a["activityId"],)).fetchone()]
+    if nowe:
+        log.info("szybki: nowa aktywność %s → cykl", ", ".join(str(a.get("activityName")) for a in nowe))
+        cykl()
+
+
 def cykl():
+    blok = _zablokuj("cykl")                  # cykl z timera i ze `szybki` nigdy naraz
+    if not blok:
+        log.info("cykl już trwa")
+        return
     db = baza.polacz()
     u = config.ustawienia()
     try:                                      # 0) pytanie z czatu odłożone przez limit Claude

@@ -1,9 +1,9 @@
 [Unit]
-Description=Trener - cykl co 20 min
+Description=Trener - cykl co 15 min
 
 [Timer]
 OnBootSec=5min
-OnUnitActiveSec=20min
+OnUnitActiveSec=15min
 Persistent=true
 
 [Install]

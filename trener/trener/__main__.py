@@ -1,4 +1,4 @@
-"""python -m trener <polecenie>: sync | historia | dzien RRRR-MM-DD | serwer | analiza [rano|tydzien] | plan | cykl | kod | login"""
+"""python -m trener <polecenie>: sync | historia | dzien RRRR-MM-DD | serwer | analiza [rano|tydzien] | plan | cykl | szybki | kod | login"""
 import json
 import logging
 import sys
@@ -20,6 +20,9 @@ def main():
     elif a[0] == "cykl":
         from .cykl import cykl
         cykl()
+    elif a[0] == "szybki":
+        from .cykl import szybki
+        szybki()
     elif a[0] == "analiza":
         from .analiza import analizuj
         print(analizuj(a[1] if len(a) > 1 else "rano", wymus=True))

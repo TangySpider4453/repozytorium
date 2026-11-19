@@ -20,11 +20,11 @@ siłownia dla kolarza, bieg, HRV/sen, młody sportowiec — z linkami do badań)
 | wysyłanie / usuwanie (TYLKO ze znacznikiem `auto: trener` w opisie) | `trener/zegarek.py` |
 | czat (akcje: przeplanuj, zapamiętaj, ustawienia, dane z dowolnego okresu) | `trener/czat.py` |
 | push (VAPID w `dane/vapid.json`) + kolejka bota | `trener/powiadom.py` |
-| cykl co 20 min | `trener/cykl.py`, `systemd/trener-cykl.*` |
+| cykl co 15 min + szybki co 1 min | `trener/cykl.py`, `systemd/trener-cykl.*` |
 | webapka (Flask 127.0.0.1:8095) + PWA | `trener/web.py`, `static/` |
 
 ## Uruchamianie
-- `trener-web.service` (Flask) i `trener-cykl.timer` (co 20 min), oba z `EnvironmentFile=/etc/serwerek-bot/claude.env`.
+- `trener-web.service` (Flask) i `trener-cykl.timer` (co 15 min), `trener-szybki.timer` (co minutę; nowy trening → cykl), oba z `EnvironmentFile=/etc/serwerek-bot/claude.env`.
 - Na zewnątrz tylko w tailnecie: `sudo tailscale serve --bg --https=443 http://127.0.0.1:8095` (certyfikat Let's Encrypt
   od Tailscale). Adres apki: `https://<nazwa Pi w tailnecie>/` (zapisany też w bazie, `kv.adres_apki`; nie w repo).
 - Ręcznie: `.venv/bin/python -m trener sync | historia | dzien RRRR-MM-DD | cykl | analiza rano | plan "prośba"`.
