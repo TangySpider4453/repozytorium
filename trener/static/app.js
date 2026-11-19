@@ -223,14 +223,16 @@ const najblizszy = (xs, v) => { let b = -1, bd = Infinity; xs.forEach((x, i) => 
 function wykresyKanalow(p, kanaly, { znaczniki = [], linie = [], h = 150 } = {}) {
   const ks = (kanaly || Object.keys(KANAL)).filter(k => KANAL[k] && (p[k] || []).some(v => v != null));
   if (!ks.length) return `<div class="szary">Brak przebiegu w danych z zegarka.</div>`;
-  const zs = znaczniki.filter(z => z.s != null).sort((a, b) => a.s - b.s);
+  const t0 = p.t[0] ?? 0, t1 = p.t[p.t.length - 1] ?? 0;
+  const zs = znaczniki.filter(z => z.s != null && z.s >= t0 - 5 && z.s <= t1 + 5).sort((a, b) => a.s - b.s);
+  const etX = t1 - t0 <= 1200 ? mmss : etCzasu;           // przybliżenie: oś w m:ss
   const zn = zs.map((z, k) => ({ i: najblizszy(p.t, z.s), tekst: k + 1 }));
   return ks.map(k => {
     const [nazwa, jedn, kolor] = KANAL[k];
     const serie = [{ nazwa: k === "moc" && p.moc_max ? "średnia" : nazwa, y: p[k], kolor }];
     if (k === "moc" && p.moc_max) serie.push({ nazwa: "max", y: p.moc_max, kolor: kolor + "55" });
     return `<div class="kanal"><div class="kanal-t">${nazwa} <span class="szary">${jedn}</span></div>${wyk({ typ: "linia", x: p.t, serie, jedn, h,
-      dz: 0, min: k === "wysokosc" || k === "tetno" ? undefined : 0, etykietaKonca: false, etX: etCzasu, etDymek: mmss, znaczniki: zn,
+      dz: 0, min: k === "wysokosc" || k === "tetno" ? undefined : 0, etykietaKonca: false, etX, etDymek: mmss, znaczniki: zn,
       linie: linie.filter(l => l.kanal === k).map(l => ({ y: l.wartosc, tekst: l.tekst })) })}</div>`;
   }).join("") + legZnacz(zs);
 }
@@ -253,12 +255,18 @@ async function wykresDni(w) {
       linie: (w.linie || []).filter(l => l.kanal === k).map(l => ({ y: l.wartosc, tekst: l.tekst })) })}</div>`;
   }).join("") + legZnacz(zs) || `<div class="szary">brak danych</div>`;
 }
-async function wykresCzatu(el, w) {
+async function wykresCzatu(el, w, caly = false) {
   try {
-    el.innerHTML = w.rodzaj === "trening"
-      ? wykresyKanalow(await przebieg(w.aktywnosc_id, w.od_s, w.do_s), w.kanaly, { znaczniki: w.znaczniki || [], linie: w.linie || [], h: 130 })
-        + `<a class="szary maly" href="#trening/${w.aktywnosc_id}">cały trening ›</a>`
-      : await wykresDni(w);
+    if (w.rodzaj === "trening") {
+      const zoom = w.od_s != null || w.do_s != null;
+      const p = await przebieg(w.aktywnosc_id, caly ? null : w.od_s, caly ? null : w.do_s);
+      const zakres = zoom && !caly && p.t.length ? `<span class="zakres">🔍 ${mmss(p.t[0])}–${mmss(p.t[p.t.length - 1])}</span>` : "";
+      el.innerHTML = zakres + wykresyKanalow(p, w.kanaly, { znaczniki: w.znaczniki || [], linie: w.linie || [], h: 130 })
+        + `<div class="wyk-dol">${zoom ? `<button class="link maly przel">${caly ? "🔍 przybliżenie" : "cały przebieg"}</button>` : ""}`
+        + `<a class="szary maly" href="#trening/${w.aktywnosc_id}">otwórz trening ›</a></div>`;
+      const b = el.querySelector(".przel");
+      if (b) b.onclick = () => { el.innerHTML = `<div class="szary">wykres…</div>`; wykresCzatu(el, w, !caly); };
+    } else el.innerHTML = await wykresDni(w);
     rysuj(el);
   } catch (e) { if (!(e instanceof Anulowano)) el.innerHTML = `<div class="szary">Nie udało się pobrać wykresu (${esc(e.message)})</div>`; }
 }

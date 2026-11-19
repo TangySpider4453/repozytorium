@@ -60,6 +60,11 @@ INSTRUKCJA = """Rozmawiasz z Antkiem w apce Trener. Odpowiadaj konkretnie (zwykl
     z tą samą osią czasu), opcjonalnie od_s/do_s (sekundy od startu — przybliż fragment, o którym mówisz),
     znaczniki [{s, tekst}] w miejscach, o których piszesz (np. {s: 3422, tekst: "833 W"}), linie [{kanal, wartosc,
     tekst}] np. górna granica Z2 mocy. Czas w PRZEBIEGU jest m:ss / h:mm:ss — przelicz na sekundy (57:02 → 3422).
+    PRZYBLIŻANIE: gdy mówisz o konkretnym momencie (strzał mocy, interwał, podjazd, skok tętna), ustaw od_s/do_s
+    tak, żeby ten fragment wypełniał wykres — zwykle 1–3 min przed i po (strzał 833 W @ 57:02 → od_s 3300, do_s 3540;
+    interwał 5 min → cały interwał + 2 min zapasu). Cały trening tylko, gdy chodzi o ogólny przebieg (dryf, strefy).
+    Możesz dać dwa wykresy: cały trening + przybliżenie. Znaczniki spoza zakresu nie będą widoczne. Antek może
+    w apce przełączyć na cały przebieg.
   • rodzaj "dni": metryki (np. hrv, sen_h, tetno_spocz), od/do RRRR-MM-DD, znaczniki [{dzien, tekst}].
   W tekście odwołuj się do wykresu („na wykresie widać…”). Nie wymyślaj aktywnosc_id — tylko id z kontekstu.
 - Gdy pytanie dotyczy przebiegu treningu (tętno/moc w danym momencie, interwały, strzały mocy), a nie masz jego
@@ -84,7 +89,8 @@ def _dane_okresu(db, od, do):
 OMOW = """TRYB „OMÓW TRENING”: Antek kliknął Omów przy treningu (OMAWIANY TRENING). Daj KRÓTKIE podsumowanie (do ~90 słów,
 3–5 punktów): co widać w danych — jak poszło względem planu/celu, przebieg tętna i mocy, coś ciekawego (strzały,
 dryf, strefy), jedna rada. Dołącz 1 wykres przebiegu z znacznikami najważniejszych miejsc. Nie zmieniaj planu, nie
-zadawaj listy pytań — Antek sam dopyta."""
+zadawaj listy pytań — Antek sam dopyta. Jeśli najciekawsza rzecz to krótki moment (np. strzał mocy), przybliż
+wykres na nią (od_s/do_s)."""
 
 
 def odpowiedz(tresc, analiza_id=None, aktywnosc_id=None, omow=False):
@@ -191,6 +197,13 @@ def _wykresy(db, w):
             if not x.get("aktywnosc_id") or not db.execute("SELECT 1 FROM aktywnosci WHERE id=?", (x["aktywnosc_id"],)).fetchone():
                 continue
             x["kanaly"] = [k for k in x.get("kanaly") or ["tetno"] if k in przebieg.NAZWY] or ["tetno"]
+            od, do = x.get("od_s"), x.get("do_s")
+            od = max(0, od) if isinstance(od, (int, float)) else None
+            do = do if isinstance(do, (int, float)) and do > 0 else None
+            if od is not None and do is not None and do - od < 30:      # za wąsko → co najmniej 30 s wokół środka
+                sr = (od + do) / 2
+                od, do = max(0, sr - 15), sr + 15
+            x["od_s"], x["do_s"] = od, do
         elif x.get("rodzaj") == "dni":
             x["metryki"] = [k for k in x.get("metryki") or [] if k in METRYKI]
             if not x["metryki"]:

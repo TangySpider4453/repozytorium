@@ -2,6 +2,9 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-19 (chmura, Trener — przybliżanie wykresów)**: trener sam przybliża wykres w czacie (`od_s`/`do_s`) na
+  moment, o którym mówi (np. strzał mocy ±2 min); oś wtedy w m:ss, nad wykresem „🔍 55:00–59:00”, znaczniki spoza
+  zakresu ukryte, przycisk „cały przebieg” / „🔍 przybliżenie”. Zakres < 30 s poszerzany do 30 s.
 - **2026-11-19 (chmura, Trener — ekran treningu i wykresy w czacie)**: czas wszędzie jako h:mm (sen 7:34, nie 7,57; też
   w kontekście dla Claude i w regule SYSTEM). Każdy trening klikalny: zrobiony → `#trening/<id>` (statystyki, strefy,
   wykres na kanał: tętno, moc ze średnią i max, prędkość, kadencja, wysokość, linia FTP, okrążenia, ćwiczenia siłki);
