@@ -148,3 +148,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-19: czat trenera upierał się, że w niedzielę jest bieg (brał to ze wzoru tygodnia i opisu fazy F1, nie z planu)
   i odmawiał zamiany Full Upper na bieg („bez wyjątków”). Poprawka: sekcja PLAN to jedyne źródło tego, co zaplanowane,
   a Antek decyduje o swoim czasie: trener robi zmianę albo proponuje 1–2 układy pod dostępność, bez przekonywania.
+- 2026-11-21: fēnix 7 pokazywał w supersecie barków 2× „wznosy bokiem” z tą samą animacją (BENT_OVER_LATERAL_RAISE nie ma
+  własnej na zegarku). Każda seria siłowa ma teraz w opisie kroku polską nazwę ćwiczenia (`budowa._seria`). Wysłany
+  test „Test – tylne barki” z 7 kandydatami do sprawdzenia na zegarku.

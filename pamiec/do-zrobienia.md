@@ -22,6 +22,9 @@
 - [ ] Za 2–3 tygodnie: sprawdzić, czy tempo spadku masy (średnia 7 dni na ekranie Waga) mieści się w 0,5–0,7%/tydz.
   i czy cel kcal od trenera ma sens (Antek wpisuje jedzenie?).
 - [ ] Antek: po najbliższej siłce sprawdzić kartę „Oceń nowe ćwiczenia” na Dziś (pierwsze do oceny: rozpiętki na wyciągu).
+- [ ] Antek: przejrzeć na fēniksie 7 trening „Test – tylne barki” (21.11; ćwiczenia A–G) i powiedzieć, które mają
+  własną nazwę i animację. Potem: zmienić mapowanie „odwodzenie ramion w opadzie” w `cwiczenia_antka.json`
+  (teraz BENT_OVER_LATERAL_RAISE, na zegarku wygląda jak zwykłe wznosy bokiem) i usunąć test (id w `~/trener/kopie/test-tylne-barki.id`).
 - [ ] Antek: zakończyć stary plan Garmin Coach w Garmin Connect (53 jego treningi blokują limit na zegarku; API ich nie usunie).
 - [ ] Antek: dać znać, czy po synchronizacji zegarek pobrał wszystkie treningi i czy usunięte z Connect schodzą z zegarka.
 - [ ] Pomysły: porównanie plan vs wykonanie w analizach, rekordy mocy (power curve), FTP z testu, pływanie/inne sporty.

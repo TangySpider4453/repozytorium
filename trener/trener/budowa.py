@@ -126,7 +126,7 @@ class Budowniczy:
         kat, cw = dopasuj(k.get("nazwa"), k.get("garmin", ""))
         na_czas = bool(k.get("czas_s"))
         opis = ", ".join(x for x in (
-            None if kat else k.get("nazwa"), f"{k['kg']:g} kg" if k.get("kg") else None, k.get("opis")) if x)
+            k.get("nazwa"), f"{k['kg']:g} kg" if k.get("kg") else None, k.get("opis")) if x)
         kroki = [self.krok("interval", "time" if na_czas else "reps", k["czas_s"] if na_czas else (k.get("powt") or 10),
                            opis=opis, category=kat, exerciseName=cw,
                            weightValue=float(k["kg"]) * 1000 if k.get("kg") else None,
