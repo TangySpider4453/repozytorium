@@ -149,7 +149,7 @@ def cykl():
     # 5) zaległe zmiany planu (np. błąd sieci)
     if u["auto_zegarek"] and db.execute("SELECT 1 FROM plan WHERE stan IN ('nowy','do_usuniecia')").fetchone():
         zegarek.synchronizuj_plan(g, db)
-    # 6) zrobione / minione treningi schodzą z zegarka (limit treningów na zegarku)
+    # 6) treningi 2 dni po terminie schodzą z zegarka (limit treningów), brakujące zaplanowane idą ponownie
     try:
         zegarek.sprzataj(g, db)
     except Exception:

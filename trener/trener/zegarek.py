@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import date
 
-from . import baza, budowa, config, kontekst
+from . import baza, budowa, config
 from .garmin import api, wywolaj
 
 log = logging.getLogger(__name__)
@@ -68,16 +68,17 @@ def synchronizuj_plan(g, db):
     return zm
 
 
+
 def sprzataj(g, db):
-    """Zrobione albo miniony trening schodzi z Garmina (zegarek ma limit treningów: „przekroczono limit…”).
-    Tylko treningi ze znacznikiem apki; w apce zostaje jako 'zdjety' (historia planu). -> lista opisów"""
-    dzis = date.today().isoformat()
-    zrobione = {kontekst.kategoria(r[0]) for r in db.execute("SELECT typ FROM aktywnosci WHERE dzien=?", (dzis,))}
+    """Treningi apki schodzą z Garmina 2 dni po swoim dniu (zegarek ma limit treningów: „przekroczono limit…”);
+    w apce zostają jako 'zdjety'. Do tego pilnuje, żeby każdy zaplanowany trening był w Garmin Connect — zniknięty
+    (usunięty ręcznie albo przez Garmina) idzie ponownie. -> lista opisów"""
+    from datetime import timedelta
+    dzis = date.today()
+    granica = (dzis - timedelta(days=2)).isoformat()
     zm = []
     for r in db.execute("SELECT * FROM plan WHERE stan='na_zegarku' AND workout_id IS NOT NULL AND dzien<=? ORDER BY dzien",
-                        (dzis,)).fetchall():
-        if r["dzien"] == dzis and r["sport"] not in zrobione:
-            continue                                  # dzisiejszy jeszcze przed Tobą
+                        (granica,)).fetchall():
         try:
             if usun(g, r["workout_id"]):
                 db.execute("UPDATE plan SET stan='zdjety', zmieniono=? WHERE id=?", (baza.teraz(), r["id"]))
@@ -85,6 +86,18 @@ def sprzataj(g, db):
                 zm.append(f"zdjęty z zegarka: {r['dzien']} {r['tytul']}")
         except Exception:
             log.exception("sprzątanie %s", r["workout_id"])
+    przyszle = db.execute("SELECT id, workout_id FROM plan WHERE stan='na_zegarku' AND dzien>=?", (dzis.isoformat(),)).fetchall()
+    if przyszle and config.ustawienia()["auto_zegarek"]:
+        lista = wywolaj(g.get_workouts, 0, 500)
+        if lista:                                     # pusta odpowiedź = błąd Garmina, nie „wszystko zniknęło”
+            sa = {x.get("workoutId") for x in lista}
+            braki = [r["id"] for r in przyszle if r["workout_id"] not in sa]
+            for pid in braki:
+                db.execute("UPDATE plan SET stan='nowy', workout_id=NULL, kalendarz_id=NULL WHERE id=?", (pid,))
+            db.commit()
+            if braki:
+                log.warning("w Garmin Connect brakuje %d zaplanowanych treningów — wysyłam ponownie", len(braki))
+                zm += synchronizuj_plan(g, db)
     if zm:
         log.info("%s", zm)
     return zm

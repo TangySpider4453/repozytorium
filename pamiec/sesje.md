@@ -2,6 +2,10 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-21 (chmura, Trener — sprzątanie Garmina, ciąg dalszy)**: za zgodą Antka usunięte stare treningi spoza
+  apki: 10 poszło, 53 należą do planu Garmin Coach (API odmawia, trzeba zakończyć plan w Garmin Connect). 6 treningów
+  trenera zniknęło z Connect (nie przez skrypt: nie było ich w kopii) → wysłane ponownie, jest 7/7. `sprzataj` teraz:
+  zdejmuje 2 dni po dniu treningu i co cykl dosyła brakujące zaplanowane.
 - **2026-11-21 (chmura, Trener — limit treningów na zegarku)**: zegarek zgłosił „przekroczono limit treningów”.
   W Garmin Connect jest 73 treningów, tylko 10 od trenera. Nowe `zegarek.sprzataj` w cyklu zdejmuje zrobione/minione
   treningi apki (od razu zdjęło 3). 63 stare treningi bez znacznika zostały: decyzja Antka.

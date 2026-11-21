@@ -713,8 +713,11 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `pokazZakres`: stara treść pod przełącznikiem odjeżdża i znika, nowa wjeżdża z kierunku zmiany. Pole czatu `.pisz`
   przenosi się do body i wypływa jak kropla z ikony Czat w menu (`kropla`), a po wyjściu z czatu wraca do niej.
 - Sprzątanie zegarka (21.11): `zegarek.sprzataj` (koniec `cykl`, co ~15 min) usuwa z Garmina treningi apki (znacznik)
-  z minionych dni i dzisiejsze, gdy jest już aktywność tego sportu; w planie stan `zdjety`. Powód: limit treningów na
-  zegarku („przekroczono limit treningów”). Treningów bez znacznika (63 stare z lat 2023–2026) nie rusza.
+  2 dni po ich dniu; w planie stan `zdjety`. Pilnuje też, żeby zaplanowane treningi (`na_zegarku`, od dziś) były w
+  Garmin Connect: brakujące wracają do `nowy` i idą ponownie. Powód: limit treningów na zegarku. Stare treningi spoza
+  apki usunięte 21.11 za zgodą Antka (kopia JSON: `~/trener/kopie/garmin-stare-treningi-20261121.json`, tylko Pi).
+  53 z nich należą do planu Garmin Coach (API: „Deleting workout with ATP plan id is not possible”) — znikną dopiero po
+  zakończeniu tego planu w Garmin Connect.
 - Odświeżanie na żywo (21.11): `GET /api/wersja` → `{czat: max id, dane: odcisk, trwa: zadania w toku}` (odcisk = plan
   od dziś−14, max id aktywności i analiz, jedzenie, kv bez `postep`/`historia_postep`/`parowanie`/`adres_apki`; ~20 ms).
   `sprawdzDane()` w app.js pyta co 60 s, co 3 s gdy trwa zadanie, i po powrocie do apki. Zmiana odcisku → pamięć
