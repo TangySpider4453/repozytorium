@@ -712,6 +712,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `.zakladki` ma przesuwaną pigułkę (`plynPigulke`); zmiana zakresu (30 dni / 90 dni / rok / wszystko) w Dane robi
   `pokazZakres`: stara treść pod przełącznikiem odjeżdża i znika, nowa wjeżdża z kierunku zmiany. Pole czatu `.pisz`
   przenosi się do body i wypływa jak kropla z ikony Czat w menu (`kropla`), a po wyjściu z czatu wraca do niej.
+- Sprzątanie zegarka (21.11): `zegarek.sprzataj` (koniec `cykl`, co ~15 min) usuwa z Garmina treningi apki (znacznik)
+  z minionych dni i dzisiejsze, gdy jest już aktywność tego sportu; w planie stan `zdjety`. Powód: limit treningów na
+  zegarku („przekroczono limit treningów”). Treningów bez znacznika (63 stare z lat 2023–2026) nie rusza.
 - Odświeżanie na żywo (21.11): `GET /api/wersja` → `{czat: max id, dane: odcisk, trwa: zadania w toku}` (odcisk = plan
   od dziś−14, max id aktywności i analiz, jedzenie, kv bez `postep`/`historia_postep`/`parowanie`/`adres_apki`; ~20 ms).
   `sprawdzDane()` w app.js pyta co 60 s, co 3 s gdy trwa zadanie, i po powrocie do apki. Zmiana odcisku → pamięć

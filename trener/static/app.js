@@ -334,7 +334,7 @@ function trening(t, zrobiony, aid) {   // aid: zrobiona aktywność z Garmina �
     if (k.rodzaj === "powtorz") return `<li>${k.razy}× [${(k.kroki || []).map(opisKroku).join(" → ")}]</li>`;
     return `<li>${opisKroku(k)}</li>`;
   }).join("");
-  const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
+  const st = { na_zegarku: "⌚ na zegarku", zdjety: "", nowy: "czeka", blad: "⚠️ błąd", w_apce: "" }[t.stan] ?? t.stan;
   const cel = aid ? `#trening/${aid}` : t.id && t.sport !== "odpoczynek" ? `#zaplanowany/${t.id}` : "";
   const klik = cel ? ` klik" onclick="if(!event.target.closest('details,a,button'))location.hash='${cel}'` : "";
   return `<div class="trening sport-${t.sport}${zrobiony ? " zrobiony" : ""}${klik}">
@@ -860,7 +860,7 @@ async function pokazZaplanowany(id) {
   const t = await api("plan/" + id);
   PROGI = t.progi || {};
   const kroki = (t.kroki || []).map(k => k.rodzaj === "powtorz" ? `<li>${k.razy}× [${(k.kroki || []).map(opisKroku).join(" → ")}]</li>` : `<li>${opisKroku(k)}</li>`).join("");
-  const st = { na_zegarku: "⌚ na zegarku", nowy: "czeka na wysłanie", blad: "⚠️ błąd", w_apce: "tylko w apce" }[t.stan] ?? t.stan;
+  const st = { na_zegarku: "⌚ na zegarku", zdjety: "✓ zdjęty z zegarka", nowy: "czeka na wysłanie", blad: "⚠️ błąd", w_apce: "tylko w apce" }[t.stan] ?? t.stan;
   widok.innerHTML = `<div class="karta"><div class="szary">${esc(t.dzien_slownie || t.dzien)}</div><h3>${ikSport(t.sport)}${esc(t.tytul)}</h3>
     <div class="statki">${t.min ? `<div><span>czas</span><b>${hm(t.min / 60)} h</b></div>` : ""}${szacStatki(t.szac)}${st ? `<div><span>stan</span><b>${esc(st)}</b></div>` : ""}</div>
     ${t.szac && t.szac.kcal ? `<div class="szary maly" style="margin-top:6px">~ to szacunek z Twoich progów i poprzednich treningów; Garmin policzy dokładnie po treningu.</div>` : ""}

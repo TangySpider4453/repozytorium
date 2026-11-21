@@ -1,8 +1,9 @@
 """Zapis planu do Garmin Connect: tworzenie treningu + wpis w kalendarzu; usuwanie TYLKO treningów ze znacznikiem."""
 import json
 import logging
+from datetime import date
 
-from . import baza, budowa, config
+from . import baza, budowa, config, kontekst
 from .garmin import api, wywolaj
 
 log = logging.getLogger(__name__)
@@ -64,4 +65,26 @@ def synchronizuj_plan(g, db):
             db.execute("UPDATE plan SET stan='blad', zmieniono=?, zrodlo=? WHERE id=?",
                        (baza.teraz(), f"błąd: {str(ex)[:200]}", r["id"]))
         db.commit()
+    return zm
+
+
+def sprzataj(g, db):
+    """Zrobione albo miniony trening schodzi z Garmina (zegarek ma limit treningów: „przekroczono limit…”).
+    Tylko treningi ze znacznikiem apki; w apce zostaje jako 'zdjety' (historia planu). -> lista opisów"""
+    dzis = date.today().isoformat()
+    zrobione = {kontekst.kategoria(r[0]) for r in db.execute("SELECT typ FROM aktywnosci WHERE dzien=?", (dzis,))}
+    zm = []
+    for r in db.execute("SELECT * FROM plan WHERE stan='na_zegarku' AND workout_id IS NOT NULL AND dzien<=? ORDER BY dzien",
+                        (dzis,)).fetchall():
+        if r["dzien"] == dzis and r["sport"] not in zrobione:
+            continue                                  # dzisiejszy jeszcze przed Tobą
+        try:
+            if usun(g, r["workout_id"]):
+                db.execute("UPDATE plan SET stan='zdjety', zmieniono=? WHERE id=?", (baza.teraz(), r["id"]))
+                db.commit()
+                zm.append(f"zdjęty z zegarka: {r['dzien']} {r['tytul']}")
+        except Exception:
+            log.exception("sprzątanie %s", r["workout_id"])
+    if zm:
+        log.info("%s", zm)
     return zm

@@ -2,6 +2,9 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-21 (chmura, Trener — limit treningów na zegarku)**: zegarek zgłosił „przekroczono limit treningów”.
+  W Garmin Connect jest 73 treningów, tylko 10 od trenera. Nowe `zegarek.sprzataj` w cyklu zdejmuje zrobione/minione
+  treningi apki (od razu zdjęło 3). 63 stare treningi bez znacznika zostały: decyzja Antka.
 - **2026-11-21 (chmura, Trener — czat na żywo, szybsze planowanie)**: odpowiedź trenera nie pokazywała się bez zmiany
   zakładki (czat pobierany z pamięci 2,5 s po wysłaniu, zanim była odpowiedź, i czekanie na całe przeplanowanie).
   Teraz `/api/wersja` + `sprawdzDane` (co 60 s, co 3 s w trakcie pracy trenera): odpowiedź dopisuje się od razu, dymek
