@@ -151,3 +151,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-21: fēnix 7 pokazywał w supersecie barków 2× „wznosy bokiem” z tą samą animacją (BENT_OVER_LATERAL_RAISE nie ma
   własnej na zegarku). Każda seria siłowa ma teraz w opisie kroku polską nazwę ćwiczenia (`budowa._seria`). Wysłany
   test „Test – tylne barki” z 7 kandydatami do sprawdzenia na zegarku.
+- 2026-11-21: w superseriach/obwodach ćwiczenie bez własnej przerwy dostaje 10 s przerwy (`budowa.PRZERWA_W_SERII`):
+  bez kroku przerwy Garmin nie pozwala poprawić ćwiczenia/ciężaru, a jest czas na przejście. 5 przyszłych siłek
+  (22–27.11) wysłanych ponownie z nazwami i przerwami.

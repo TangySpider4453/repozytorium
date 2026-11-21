@@ -57,6 +57,9 @@ def dopasuj(nazwa, garmin=""):
     return None, None
 
 
+PRZERWA_W_SERII = 10                                  # s, między ćwiczeniami superserii/obwodu
+
+
 class Budowniczy:
     def __init__(self, sport):
         self.sport = sport
@@ -154,8 +157,10 @@ class Budowniczy:
             przyg = self.krok("rest", "lap.button", opis="Przygotuj: " + " + ".join(
                 f"{x.get('nazwa')} {self._ile(dict(x, serie=None))}" for x in cw if x.get("rodzaj") == "cwiczenie")
                 + f" ({k.get('razy') or 1} rundy)")
+            # ćwiczenie bez przerwy dostaje 10 s: bez kroku przerwy w Garminie nie da się poprawić ciężaru/ćwiczenia
             return [przyg, self.petla(int(k.get("razy") or 1), lambda: [
-                s for x in cw for s in (self._seria(x) if x.get("rodzaj") == "cwiczenie" else [self.wytrzymalosc(x)])])]
+                s for x in cw for s in (self._seria(x if x.get("przerwa_s") else dict(x, przerwa_s=PRZERWA_W_SERII))
+                                        if x.get("rodzaj") == "cwiczenie" else [self.wytrzymalosc(x)])])]
         return [self.wytrzymalosc(k)]
 
 
