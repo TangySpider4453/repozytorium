@@ -9,7 +9,7 @@ class Anulowano extends Error {}
 // ekran, gdy coś się zmieniło). Po każdej zmianie (POST) wpisy są „brudne”: przejście na zakładkę dalej pokazuje je
 // od razu, ale przerysowanie po akcji (np. dodany produkt) czeka na świeże dane z sieci.
 const PAMIEC = new Map(), W_LOCIE = new Map();
-const bezPamieci = p => /^(zadanie|push|produkt|start)/.test(p);
+const bezPamieci = p => /^(zadanie|push|produkt|start|wersja)/.test(p);
 let nawigacja = false, uzyte = new Set();
 async function siec(p, opt) {
   const r = await fetch("/api/" + p, opt && { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(opt) });
@@ -873,38 +873,92 @@ async function pokazZaplanowany(id) {
 async function pokazCzat(analizaId) {
   const msgs = await api("czat");
   WYK_CZAT = [];
-  widok.innerHTML = `<div class="czat" id="czat">${msgs.map(m => msg(m)).join("") || `<div class="szary">Napisz, do czego trenujesz, kiedy masz czas i co chcesz zmienić. Możesz pytać o dowolne dane z całej historii.</div>`}</div>
+  widok.innerHTML = `<div class="czat" id="czat" data-ostatni="${Math.max(0, ...msgs.map(m => m.id || 0))}">${msgs.map(m => msg(m)).join("") || `<div class="szary">Napisz, do czego trenujesz, kiedy masz czas i co chcesz zmienić. Możesz pytać o dowolne dane z całej historii.</div>`}</div>
     <div style="height:70px"></div>
     <div class="pisz"><textarea id="tekst" placeholder="${analizaId ? "Omów analizę…" : "Napisz do trenera…"}"></textarea><button id="wyslij">➤</button></div>`;
   const t = $("#tekst");
   if (sessionStorage.szkic) { t.value = sessionStorage.szkic; delete sessionStorage.szkic; }
   $("#wyslij").onclick = () => wyslij(analizaId);
+  $("#wyslij").disabled = !!czatZadanie;
   t.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !/iPhone|iPad/.test(navigator.userAgent)) { e.preventDefault(); wyslij(analizaId); } });
   // wykresy: ostatnie 6 od razu, starsze dopiero gdy się je przewinie
   const wk = [...document.querySelectorAll(".wyk-czat")];
   const laduj = el => { if (el._z) return; el._z = 1; wykresCzatu(el, WYK_CZAT[+el.dataset.n]); };
   wk.slice(-6).forEach(laduj);
   if (wk.length > 6 && "IntersectionObserver" in window) { const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); laduj(e.target); } })); wk.slice(0, -6).forEach(el => io.observe(el)); }
+  pokazMysli($("#czat"));
   SKR.scrollTo(0, SKR.scrollHeight);
+  dociagnijCzat();                     // z pamięci mogło przyjść coś starego: dociągnij to, co trener dopisał w międzyczasie
+  if (!czatZadanie && sessionStorage.czatZadanie) sledzCzat(+sessionStorage.czatZadanie);   // apka przeładowana w trakcie
   if (sessionStorage.omow) {
     const o = JSON.parse(sessionStorage.omow); delete sessionStorage.omow;
     t.value = o.tekst; wyslij(analizaId, { aktywnosc_id: o.id, omow: true });
   }
 }
 let WYK_CZAT = [];
-const msg = m => `<div class="msg ${m.kto}">${esc(m.tresc)}${m.akcje && m.akcje.length ? `<div class="akcje">${m.akcje.map(esc).join(" · ")}</div>` : ""}</div>` +
+const msg = m => `<div class="msg ${m.kto}"${m.id ? ` data-id="${m.id}"` : ""}>${esc(m.tresc)}${m.akcje && m.akcje.length ? `<div class="akcje">${m.akcje.map(esc).join(" · ")}</div>` : ""}</div>` +
   (m.wykresy || []).map(w => { WYK_CZAT.push(w); return `<div class="msg-wyk">${w.tytul ? `<div class="msg-wyk-t">${esc(w.tytul)}</div>` : ""}<div class="wyk-czat" data-n="${WYK_CZAT.length - 1}"><div class="szary">wykres…</div></div></div>`; }).join("");
 async function wyslij(analizaId, dod = {}) {
   const t = $("#tekst"), tresc = t.value.trim();
-  if (!tresc) return;
+  if (!tresc || czatZadanie) return;
   t.value = ""; $("#wyslij").disabled = true;
-  $("#czat").insertAdjacentHTML("beforeend", msg({ kto: "ja", tresc }) + `<div class="msg trener mysli" id="mysli">Trener myśli</div>`);
+  $("#czat").insertAdjacentHTML("beforeend", msg({ kto: "ja lokalna", tresc }));
+  czatZadanie = -1; pokazMysli($("#czat"));
   SKR.scrollTo(0, SKR.scrollHeight);
-  try {
-    const zid = await api("czat", { tresc, analiza_id: analizaId ? +analizaId : null, ...dod });
-    await czekaj(zid, i => { const m = $("#mysli"); if (i === 25 && m) m.textContent = "Trener układa plan i wysyła na zegarek"; });
-  } catch (e) { alert("Błąd: " + e.message); }
-  if (location.hash.startsWith("#czat")) pokazCzat(analizaId);
+  let zid;
+  try { zid = await api("czat", { tresc, analiza_id: analizaId ? +analizaId : null, ...dod }); }
+  catch (e) { czatZadanie = 0; alert("Błąd: " + e.message); t.value = tresc; $("#czat .lokalna")?.remove(); pokazMysli($("#czat")); $("#wyslij").disabled = false; return; }
+  sledzCzat(zid);
+}
+// zadanie czatu w tle: odpowiedź trenera pokazuje się od razu, gdy jest w bazie (nie czeka na układanie planu);
+// dymek „układa plan” wisi do końca zadania. Działa też po przejściu na inną zakładkę i powrocie (i po przeładowaniu).
+let czatZadanie = 0;
+async function sledzCzat(zid) {
+  czatZadanie = zid; sessionStorage.czatZadanie = zid;
+  const el = $("#czat"); if (el) { pokazMysli(el); $("#wyslij") && ($("#wyslij").disabled = true); }
+  try { await czekaj(zid, () => sprawdzDane()); }
+  catch (e) { if (!/^\d|404/.test(e.message)) alert("Błąd: " + e.message); }
+  czatZadanie = 0; delete sessionStorage.czatZadanie;
+  const b = $("#wyslij"); if (b) b.disabled = false;
+  await sprawdzDane();
+  await dociagnijCzat();
+  const c = $("#czat"); if (c) pokazMysli(c);
+}
+function pokazMysli(el) {
+  if (!el) return;
+  el.querySelector("#mysli")?.remove();
+  if (!czatZadanie) return;
+  const ost = [...el.querySelectorAll(".msg")].pop();
+  const planuje = ost && ost.classList.contains("trener") && /przeplanowanie|nowa periodyzacja/.test(ost.querySelector(".akcje")?.textContent || "");
+  el.insertAdjacentHTML("beforeend", `<div class="msg trener mysli" id="mysli">${planuje ? "Trener układa plan i wysyła na zegarek" : "Trener myśli"}</div>`);
+}
+// dopisz nowe wiadomości bez przerysowania ekranu (tekst w polu pisania zostaje)
+let czatDociaga = null;
+function dociagnijCzat() {
+  if (!czatDociaga) czatDociaga = (async () => {
+    const el = $("#czat");
+    if (!el || !location.hash.startsWith("#czat")) return;
+    let s; try { s = await siec("czat"); } catch (_) { return; }
+    PAMIEC.set("czat", { s, t: Date.now() });
+    if ($("#czat") !== el) return;
+    const msgs = JSON.parse(s), ids = new Set(msgs.map(m => m.id));
+    const blisko = SKR.scrollHeight - SKR.scrollTop - SKR.clientHeight < 250;
+    const byly = new Set(el.querySelectorAll(".wyk-czat"));
+    if ([...el.querySelectorAll(".msg[data-id]")].some(x => !ids.has(+x.dataset.id))) {   // coś usunięte (np. notka „czekam”)
+      el.innerHTML = msgs.map(m => msg(m)).join("");
+    } else {
+      const nowe = msgs.filter(m => m.id > +(el.dataset.ostatni || 0));
+      if (!nowe.length) { pokazMysli(el); return; }
+      if (nowe.some(m => m.kto === "ja")) el.querySelectorAll(".lokalna").forEach(x => x.remove());
+      el.querySelectorAll("#mysli, :scope > .szary").forEach(x => x.remove());
+      el.insertAdjacentHTML("beforeend", nowe.map(m => msg(m)).join(""));
+    }
+    el.dataset.ostatni = Math.max(0, ...msgs.map(m => m.id || 0));
+    el.querySelectorAll(".wyk-czat").forEach(w => { if (!byly.has(w) && !w._z) { w._z = 1; wykresCzatu(w, WYK_CZAT[+w.dataset.n]); } });
+    pokazMysli(el);
+    if (blisko) SKR.scrollTo({ top: SKR.scrollHeight, behavior: "smooth" });
+  })().finally(() => { czatDociaga = null; });
+  return czatDociaga;
 }
 
 // ------------------------------------------------------------------ Ustawienia
@@ -1737,6 +1791,29 @@ document.addEventListener("visibilitychange", () => {   // powrót do apki: odś
   uzyte.forEach(odswiezWTle);
   wczytajZGory(1500);
 });
+// odświeżanie na żywo: tani odcisk danych z Pi co minutę (co ~3 s, gdy trener coś robi). Gdy trener zmieni plan,
+// kalendarz, cele itp. — pamięć idzie do odświeżenia, a widoczna zakładka przerysowuje się po cichu.
+let ODCISK = null, sprTimer = 0, sprTrwa = null;
+function sprawdzDane() {
+  if (!sprTrwa) sprTrwa = (async () => {
+    clearTimeout(sprTimer);
+    let w = null;
+    if (!document.hidden) try { w = JSON.parse(await siec("wersja")); } catch (_) {}
+    if (w) {
+      if (ODCISK && w.dane !== ODCISK.dane) {
+        PAMIEC.forEach(x => x.brudne = true);
+        uzyte.forEach(odswiezWTle);
+        wczytajZGory(800);
+      }
+      if (ODCISK && w.czat !== ODCISK.czat) { const c = PAMIEC.get("czat"); if (c) c.brudne = true; dociagnijCzat(); }
+      ODCISK = w;
+    }
+    sprTimer = setTimeout(sprawdzDane, czatZadanie || (w && w.trwa) ? 3000 : 60000);
+  })().finally(() => { sprTrwa = null; });
+  return sprTrwa;
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) sprawdzDane(); });
+setTimeout(sprawdzDane, 1500);
 // ‹ w nagłówku na ekranach szczegółów: wraca tam, skąd przyszedłeś (z animacją zmniejszania)
 $("#btn-wstecz").onclick = () => {
   const z = ZRODLA.get(location.hash.slice(1));

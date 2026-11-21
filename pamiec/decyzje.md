@@ -56,6 +56,7 @@
   (zrobione z Garmina, zaplanowane z szacunku). Sam BMR + treningi dawałby za mało jedzenia, więc ruch dnia zostaje.
 - 2026-11-19: czas trwania (sen, trening) zawsze h:mm, nigdy ułamek godzin — w UI, kontekście i odpowiedziach Claude.
 - Wykresy w czacie: Claude zwraca specyfikację (`wykresy` w schemacie czatu), apka sama pobiera dane i rysuje — Claude nie
+- Przeplanowanie z czatu (21.11) idzie na effort medium i zmienia tylko to, czego dotyczy prośba (reszta `zostaw_id`): Antek czeka na ekranie. Planowanie automatyczne (rano, po treningu, z Plan) zostaje na high. Apka odświeża dane przez `/api/wersja` co 60 s (co 3 s, gdy trener pracuje), bez websocketów: serwer obsługuje zapytania po kolei, a odcisk kosztuje ~20 ms.
   generuje obrazków. Jeden kanał = jeden wykres (bez dwóch osi Y); znaczniki jako numery z listą opisów pod spodem.
 - Trener (PWA): okno strony nigdy się nie przewija, przewija się `body` (`SKR` w app.js). Do przewijania używaj
   `SKR.scrollTo`/`SKR.scrollTop`, nie `window.scrollTo`/`scrollY`. Powód: iOS po klawiaturze zostawiał przesunięte okno

@@ -78,7 +78,7 @@ def zrobione_dzis(db):
     return [r[0] for r in db.execute("SELECT typ FROM aktywnosci WHERE dzien=?", (date.today().isoformat(),))]
 
 
-def zaplanuj(powod="", prosba="", dni=None, pytaj=False):
+def zaplanuj(powod="", prosba="", dni=None, pytaj=False, szybko=False):
     """-> dict(komentarz, zmiany) albo None (plan już się liczy)"""
     config.DANE.mkdir(parents=True, exist_ok=True)
     f = open(config.DANE / "plan.lock", "w")
@@ -115,14 +115,18 @@ def zaplanuj(powod="", prosba="", dni=None, pytaj=False):
            "resztę zostaw przez zostaw_id. Drobne zmiany (krócej, lżej, inna strefa, mniej serii) wchodzą od razu. "
            "Usunięcie albo dodanie jednostki wymaga zgody Antka — wtedy w 'komentarz' napisz wprost dlaczego "
            "(np. słaby sen, niski HRV) i co proponujesz zamiast. Nie usuwaj z ostrożności, gdy dane są w normie."
-           if pytaj else "")] if x)
-    w = ai.zapytaj(prompt, SCHEMAT, effort="high", limit_s=600, ciezki=True)
+           if pytaj else "")
+        + ("\nTRYB PROŚBY Z CZATU: zmień tylko to, czego dotyczy prośba, plus to, co musi się przesunąć, żeby "
+           "tydzień dalej miał sens (odpoczynek, cele tygodnia). Wszystkie pozostałe treningi zostaw przez zostaw_id — "
+           "nie przepisuj ich od nowa." if szybko else "")] if x)
+    effort = "medium" if szybko else "high"     # z czatu: Antek czeka na ekranie, więc szybciej
+    w = ai.zapytaj(prompt, SCHEMAT, effort=effort, limit_s=600, ciezki=True)
     problemy = kontrola(db, w.get("treningi") or [], ist, cel.faza_teraz(m), cel.ftp(db))
     if problemy:                              # jedna poprawka: Claude dostaje konkretne zarzuty
         log.info("kontrola planu: %s", problemy)
         w = ai.zapytaj(prompt + "\n\nTWÓJ PIERWSZY PLAN:\n" + json.dumps(w, ensure_ascii=False) +
                        "\n\nKONTROLA WYKRYŁA PROBLEMY:\n- " + "\n- ".join(problemy) +
-                       "\nPopraw plan (albo uzasadnij w 'uzasadnienie', dlaczego to celowe).", SCHEMAT, effort="high", limit_s=600, ciezki=True)
+                       "\nPopraw plan (albo uzasadnij w 'uzasadnienie', dlaczego to celowe).", SCHEMAT, effort=effort, limit_s=600, ciezki=True)
         problemy = kontrola(db, w.get("treningi") or [], ist, cel.faza_teraz(m), cel.ftp(db))
     wstrzymaj = dni_duzych_zmian(w.get("treningi") or [], ist) if pytaj else set()
     zmiany, prop = zastosuj(db, w.get("treningi") or [], od, do, ist, powod, wstrzymaj)

@@ -2,6 +2,11 @@
 
 Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 
+- **2026-11-21 (chmura, Trener — czat na żywo, szybsze planowanie)**: odpowiedź trenera nie pokazywała się bez zmiany
+  zakładki (czat pobierany z pamięci 2,5 s po wysłaniu, zanim była odpowiedź, i czekanie na całe przeplanowanie).
+  Teraz `/api/wersja` + `sprawdzDane` (co 60 s, co 3 s w trakcie pracy trenera): odpowiedź dopisuje się od razu, dymek
+  „układa plan” do końca, zakładki (np. kalendarz) odświeżają się same po zmianach. Przeplanowanie z czatu: effort
+  medium i zmiana tylko tego, czego dotyczy prośba. Do sprawdzenia: realny czas planowania z czatu na iPhonie.
 - **2026-11-19 (chmura, Trener — skan tabelki nie działał)**: przyczyny: auto-aktualizacja przeładowała apkę przy
   powrocie z aparatu (teraz otwarty arkusz = „zajęta”) i iOS gubi `change` z pola pliku spoza DOM (teraz wpięte w body,
   `capture` przez atrybut). Formularz: przełącznik „na 100 g / na całe opakowanie” (przelicza z masy opakowania).

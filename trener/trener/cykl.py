@@ -24,8 +24,8 @@ def odswiez_strefy(g, db):
     baza.ustaw_kv(db, "strefy_dzien", date.today().isoformat())
 
 
-def przeplanuj(powod, prosba="", powiadamiaj=True, pytaj=False):
-    wyn = plan.zaplanuj(powod, prosba, pytaj=pytaj)
+def przeplanuj(powod, prosba="", powiadamiaj=True, pytaj=False, szybko=False):
+    wyn = plan.zaplanuj(powod, prosba, pytaj=pytaj, szybko=szybko)
     if not wyn:
         return None
     db = baza.polacz()

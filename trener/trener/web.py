@@ -191,6 +191,28 @@ def api_zadanie(zid):
                     "postep": (baza.kv(db(), "postep") or {}).get("tekst", "")})
 
 
+@app.route("/api/wersja")
+def api_wersja():
+    """Tani odcisk danych: apka odpytuje co minutę (częściej, gdy trener pracuje) i odświeża tylko, gdy coś się zmieniło."""
+    d = db()
+    od = (date.today() - timedelta(days=14)).isoformat()
+    h = hashlib.sha1()
+    for q, a in [("SELECT group_concat(id||':'||ifnull(stan,'')||':'||ifnull(hash,'')||':'||ifnull(zmieniono,''), ',') "
+                  "FROM (SELECT * FROM plan WHERE dzien>=? ORDER BY id)", (od,)),
+                 ("SELECT max(id) FROM aktywnosci", ()), ("SELECT max(id) FROM analizy", ()),
+                 ("SELECT count(*)||':'||ifnull(max(id),0)||':'||ifnull(sum(gram),0) FROM jedzenie WHERE dzien>=?", (od,)),
+                 ("SELECT group_concat(klucz||'='||wartosc, '|') FROM (SELECT * FROM kv WHERE klucz NOT IN "
+                  "('postep','historia_postep','parowanie','adres_apki') ORDER BY klucz)", ())]:
+        try:
+            h.update(str(d.execute(q, a).fetchone()[0]).encode())
+        except Exception:                       # np. brak tabeli jedzenia na świeżej bazie
+            pass
+    return jsonify({"czat": d.execute("SELECT ifnull(max(id),0) FROM czat").fetchone()[0],
+                    "dane": h.hexdigest()[:16],
+                    "trwa": d.execute("SELECT count(*) FROM zadania WHERE stan='trwa' AND utworzono>=?",
+                                      ((datetime.now() - timedelta(minutes=20)).strftime("%Y-%m-%dT%H:%M:%S"),)).fetchone()[0]})
+
+
 @app.route("/api/akcja", methods=["POST"])
 def api_akcja():
     b = request.get_json(silent=True) or {}

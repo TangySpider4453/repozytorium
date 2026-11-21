@@ -290,7 +290,7 @@ def _odpowiedz(db, tresc, analiza_id, aktywnosc_id=None, omow=False):
         db.commit()
     if w.get("zmienic_plan") or nowy_makro:
         from .cykl import przeplanuj
-        wyn = przeplanuj("prośba w czacie", w.get("prosba_do_planu") or tresc, powiadamiaj=False)
+        wyn = przeplanuj("prośba w czacie", w.get("prosba_do_planu") or tresc, powiadamiaj=False, szybko=True)
         if wyn:
             db.execute("INSERT INTO czat (kto, tresc, czas, akcje) VALUES ('trener',?,?,?)",
                        ("📅 Plan zmieniony. " + wyn["komentarz"] + "\n" + "\n".join(wyn["zmiany"]), baza.teraz(), "[]"))
