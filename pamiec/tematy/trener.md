@@ -24,6 +24,8 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 - Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-22 (7): Progres: linia ciągła = każdy pomiar, przerywana = średnia 7 dni (masa, tłuszcz, mięśnie); w dymku i legendzie
+  kreski w stylu linii zamiast kropek, kropka średniej pusta w środku.
 - 2026-11-22 (6): Skład ciała na dwóch osiach (tłuszcz lewa, mięśnie prawa, każda na całą wysokość); `wyk` linia obsługuje `os: "prawa"`.
 - 2026-11-22 (5): wykresy wagi i składu: przełącznik Każdy pomiar / Średnia tyg. / Średnia mies. (zapamiętany).
 - 2026-11-22 (4): dotknięcie zdjęcia w podglądzie otwiera pełny ekran z przybliżaniem (szczypanie, przesuwanie, podwójne stuknięcie).

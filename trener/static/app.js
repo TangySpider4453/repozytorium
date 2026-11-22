@@ -213,18 +213,18 @@ function rysujLinie(el, s, W, H) {
     });
     zamknij();
     if (a) g += `<path d="${a}" fill="${q.kolor}" opacity=".10"/>`;
-    g += `<path d="${d}" fill="none" stroke="${q.kolor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${q.przerywana ? ' stroke-dasharray="1 5"' : ""}/>`;
+    g += `<path d="${d}" fill="none" stroke="${q.kolor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${q.przerywana ? ' stroke-dasharray="6 5" stroke-linecap="butt"' : ""}/>`;
     // pojedyncze punkty (otoczone przerwami) jako kropki
     q.y.forEach((v, i) => { if (v != null && q.y[i - 1] == null && q.y[i + 1] == null) g += `<circle cx="${X(i)}" cy="${Y(v)}" r="2" fill="${q.kolor}"/>`; });
     const ost = q.y.map((v, i) => [i, v]).filter(([, v]) => v != null).pop();
     if (ost) {
-      g += `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`;
+      g += q.przerywana ? `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4" fill="var(--pierscien)" stroke="${q.kolor}" stroke-width="2.5"/>` : `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`;
       if (s.etykietaKonca !== false) konce.push([X(ost[0]) + 8, Y(ost[1]) + 4, fmt(ost[1])]);
     }
   });
   konce.sort((p, q) => p[1] - q[1]).forEach((k, i, t) => { if (i && k[1] - t[i - 1][1] < 13) k[1] = t[i - 1][1] + 13; });
   g += konce.map(([x, y, v]) => `<text x="${x}" y="${y}" class="koniec">${v}</text>`).join("");
-  el.innerHTML = `<svg width="${W}" height="${H}">${g}<g class="celownik" style="display:none"><line y1="${T}" y2="${H - B}"/>${serie.map(q => `<circle r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`).join("")}</g></svg><div class="dymek"></div>`;
+  el.innerHTML = `<svg width="${W}" height="${H}">${g}<g class="celownik" style="display:none"><line y1="${T}" y2="${H - B}"/>${serie.map(q => q.przerywana ? `<circle r="4" fill="var(--pierscien)" stroke="${q.kolor}" stroke-width="2.5"/>` : `<circle r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`).join("")}</g></svg><div class="dymek"></div>`;
   const svg = el.firstChild, cel = svg.lastChild, dym = el.lastChild;
   const ukryj = () => { cel.style.display = "none"; dym.style.display = "none"; };
   const pokaz = e => {
@@ -240,7 +240,7 @@ function rysujLinie(el, s, W, H) {
     cel.style.display = ""; cel.firstChild.setAttribute("x1", X(i)); cel.firstChild.setAttribute("x2", X(i));
     serie.forEach((q, k) => { const c = cel.children[k + 1]; if (q.y[i] == null) c.style.display = "none"; else { c.style.display = ""; c.setAttribute("cx", X(i)); c.setAttribute("cy", Yq(q)(q.y[i])); } });
     dym.innerHTML = `<div class="dt">${esc(s.etDymek ? s.etDymek(s.x[i]) : s.x[i])}</div>` + serie.map(q => q.y[i] == null ? "" :
-      `<div><i style="background:${q.kolor}"></i>${serie.length > 1 ? esc(q.nazwa) + " " : ""}<b>${fmt(q.y[i])}</b>${s.jedn ? " " + esc(s.jedn) : ""}</div>`).join("") +
+      `<div>${znakSerii(q, serie)}${serie.length > 1 ? esc(q.nazwa) + " " : ""}<b>${fmt(q.y[i])}</b>${s.jedn ? " " + esc(s.jedn) : ""}</div>`).join("") +
       (s.pasmo && s.pasmo[i] && s.pasmo[i][0] != null ? `<div class="sz">norma ${fmt(s.pasmo[i][0])}–${fmt(s.pasmo[i][1])}</div>` : "");
     dym.style.display = "block";
     const dw = dym.offsetWidth; dym.style.left = Math.max(0, Math.min(W - dw, X(i) - dw / 2)) + "px";
@@ -286,7 +286,7 @@ function rysujSlupki(el, s, W, H) {   // s: {x:[], serie:[{nazwa,y:[],kolor}], j
     const r = svg.getBoundingClientRect(); const i = Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left - x0) / slot)));
     pod.style.display = ""; pod.setAttribute("x", x0 + slot * i);
     dym.innerHTML = `<div class="dt">${esc(s.etDymek ? s.etDymek(s.x[i]) : s.x[i])}</div>` + serie.filter(q => q.y[i]).map(q =>
-      `<div><i style="background:${q.kolor}"></i>${serie.length > 1 ? esc(q.nazwa) + " " : ""}<b>${fmt(q.y[i])}</b>${s.jedn ? " " + esc(s.jedn) : ""}</div>`).join("") +
+      `<div>${znakSerii(q, serie)}${serie.length > 1 ? esc(q.nazwa) + " " : ""}<b>${fmt(q.y[i])}</b>${s.jedn ? " " + esc(s.jedn) : ""}</div>`).join("") +
       (serie.length > 1 ? `<div class="sz">razem ${fmt(sumy[i])}${s.jedn ? " " + esc(s.jedn) : ""}</div>` : "") + (sumy[i] ? "" : `<div class="sz">brak</div>`);
     dym.style.display = "block";
     const dw = dym.offsetWidth; dym.style.left = Math.max(0, Math.min(W - dw, x0 + slot * (i + .5) - dw / 2)) + "px";
@@ -365,7 +365,9 @@ async function wykresCzatu(el, w, caly = false) {
   } catch (e) { if (!(e instanceof Anulowano)) el.innerHTML = `<div class="szary">Nie udało się pobrać wykresu (${esc(e.message)})</div>`; }
 }
 
-const legenda = serie => serie.length < 2 ? "" : `<div class="legenda">${serie.map(q => `<span><i style="background:${q.kolor}"></i>${esc(q.nazwa)}</span>`).join("")}</div>`;
+// znak serii w dymku i legendzie: gdy wykres ma linię przerywaną (średnia), znak to kreska w stylu linii, inaczej kwadracik koloru
+const znakSerii = (q, serie) => serie.some(z => z.przerywana) ? `<i class="kr${q.przerywana ? " p" : ""}" style="color:${q.kolor}"></i>` : `<i style="background:${q.kolor}"></i>`;
+const legenda = serie => serie.length < 2 ? "" : `<div class="legenda">${serie.map(q => `<span>${znakSerii(q, serie)}${esc(q.nazwa)}</span>`).join("")}</div>`;
 
 // ------------------------------------------------------------------ Dziś
 const STATUS = { PRODUCTIVE: "produktywny", MAINTAINING: "utrzymanie", RECOVERY: "regeneracja", UNPRODUCTIVE: "nieproduktywny",
@@ -1607,17 +1609,21 @@ async function pokazWage() {
   h += sr ? `<div class="karta"><div class="kt">Masa <span class="szary">· kg, ${nazwaSr}</span></div>
     ${wyk({ typ: "linia", x: gM.map(x => x.dzien), serie: [{ nazwa: nazwaSr, y: gM.map(x => x.masa), kolor: KOLOR.niebieski }], dz: 1, jedn: "kg", etX: etG, etDymek: dymG })}
     ${zmianaSr(gM, wagaSr)}${tempoTekst(zM)}</div>` : `<div class="karta"><div class="kt">Masa <span class="szary">· kg</span></div>
-    ${wyk({ typ: "linia", x: zM.map(x => x.dzien), serie: [{ nazwa: "ważenie", y: zM.map(x => x.masa), kolor: KOLOR.niebieski, przerywana: true }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski }], dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
-    <div class="legenda"><span><i class="kropki-l"></i>ważenie</span><span><i style="background:${KOLOR.niebieski}"></i>średnia 7 dni</span></div>
+    ${wyk({ typ: "linia", x: zM.map(x => x.dzien), serie: [{ nazwa: "ważenie", y: zM.map(x => x.masa), kolor: KOLOR.niebieski }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski, przerywana: true }], dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
+    ${legenda([{ nazwa: "ważenie", kolor: KOLOR.niebieski }, { nazwa: "średnia 7 dni", kolor: KOLOR.niebieski, przerywana: true }])}
     ${tempoTekst(zM)}</div>`;
   const zS = (sr ? G : wz).filter(x => x.fat != null || x.muscle != null);
   if (zS.length) {
     const kg = wagaPokaz === "kg";
     const y = (x, k) => x[k] == null ? null : kg ? (sr ? x[k + "Kg"] : x.masa != null ? +(x.masa * x[k] / 100).toFixed(1) : null) : x[k];
+    // średnia krocząca 7 dni (tylko „Każdy pomiar”; przy średnich tyg./mies. linia już jest średnią)
+    const sr7 = k => zS.map(x => { const v = srednia(zS.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => y(q, k)).filter(v => v != null)); return v == null ? null : +v.toFixed(2); });
+    const sS = [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski, os: "prawa" }];
+    if (!sr) sS.push({ nazwa: "tłuszcz, średnia 7 dni", y: sr7("fat"), kolor: KOLOR.zolty, przerywana: true }, { nazwa: "mięśnie, średnia 7 dni", y: sr7("muscle"), kolor: KOLOR.morski, os: "prawa", przerywana: true });
     h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Skład ciała${sr ? ` <span class="szary">· ${nazwaSr}</span>` : ""}</span>
       <span class="zakladki mini"><button class="${kg ? "" : "akt"}" data-wp="masa">%</button><button class="${kg ? "akt" : ""}" data-wp="kg">kg</button></span></div>
-      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski, os: "prawa" }], h: 200, dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
-      ${legenda([{ nazwa: "tłuszcz", kolor: KOLOR.zolty }, { nazwa: "mięśnie", kolor: KOLOR.morski }])}</div>`;
+      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: sS, h: 200, dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
+      ${legenda(sr ? sS : [sS[0], sS[1], { nazwa: "średnia 7 dni", kolor: "var(--tekst2)", przerywana: true }])}</div>`;
   }
   h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
       <div class="szary">${[x.fat != null && `tłuszcz ${lb(x.fat, 1)}%`, x.muscle != null && `mięśnie ${lb(x.muscle, 1)}%`, ileZd[x.dzien] && `📷 ${ileZd[x.dzien]}`, x.notatka && esc(x.notatka)].filter(Boolean).join(" · ")}</div></div><b>${x.masa != null ? lb(x.masa, 1) + " kg" : ""}</b></div>`).join("") : `<div class="szary">Brak wpisów.</div>`}${wp.length > 10 ? `<button class="drugi dodaj" id="w-wiecej" style="margin-top:10px">Pokaż wszystkie (${wp.length})</button>` : ""}</div>`;

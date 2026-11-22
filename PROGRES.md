@@ -134,3 +134,4 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 - Wykresy masy i składu w Trenerze: przełącznik **Każdy pomiar / Średnia tyg. / Średnia mies.** (tydzień od poniedziałku; kg składników uśredniane z każdego pomiaru; pod wykresem zmiana vs poprzedni okres).
 - Wykres **Skład ciała** w Trenerze ma dwie osie: tłuszcz po lewej, mięśnie po prawej, każda seria na całą wysokość (wspólna siatka, nazwy osi z kropką koloru nad wykresem).
 - Portal, Historia: trzy osobne wykresy (**Masa**, **Tłuszcz**, **Mięśnie**), każdy z własną skalą; zakres, suwak i „Pokaż” (średnie) działają na wszystkie trzy.
+- Wykresy w Trenerze (Każdy pomiar): linia ciągła = każdy pomiar, przerywana = średnia 7 dni, także dla tłuszczu i mięśni; dymek i legenda pokazują styl linii, kropka średniej jest pusta w środku.
