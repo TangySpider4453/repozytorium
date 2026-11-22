@@ -374,8 +374,9 @@ function rysujWykresy(){
   const wnetrze = el("div");
   const rysujSame = () => { wnetrze.replaceChildren(
     W_("Masa ciała (kg)", [{nazwa:"masa", kolor:s1, pkt:ser("masa")}], " kg"),
-    kg ? W_("Skład ciała (kg)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fatKg")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscleKg")}], " kg")
-       : W_("Skład ciała (%)", [{nazwa:"tłuszcz", kolor:s1, pkt:ser("fat")}, {nazwa:"mięśnie", kolor:s2, pkt:ser("muscle")}], "%")); };
+    // tłuszcz i mięśnie osobno: każdy ma własną skalę, więc zmiany są widoczne (na wspólnej osi 7–46% byłyby płaskie)
+    W_(`Tłuszcz (${kg ? "kg" : "%"})`, [{nazwa:"tłuszcz", kolor:s1, pkt:ser(kg ? "fatKg" : "fat")}], kg ? " kg" : "%"),
+    W_(`Mięśnie (${kg ? "kg" : "%"})`, [{nazwa:"mięśnie", kolor:s2, pkt:ser(kg ? "muscleKg" : "muscle")}], kg ? " kg" : "%")); };
   // skład ciała: procent z wagi albo przeliczona masa tłuszczu i mięśni (kg); zapamiętywane w tej przeglądarce
   const skladChips = el("div", {class:"chips"}, ...[["proc", "% (z wagi)"], ["kg", "kg (masa składnika)"]].map(([k, n]) =>
     el("button", {"aria-pressed":String(WYK.sklad === k || (k === "proc" && WYK.sklad !== "kg")), text:n, onclick:() => { WYK.sklad = k; zapiszWYK(); rysujWykresy(); }})));
@@ -384,7 +385,7 @@ function rysujWykresy(){
     el("div", {class:"f", style:"margin-bottom:8px"}, "Pokaż", srChips),
     el("div", {class:"f", style:"margin-bottom:8px"}, "Skład ciała w", skladChips), wnetrze);
   rysujSame();
-  // suwak od dołu: przesuwa okno w czasie co godzinę (płynnie), wspólny dla obu wykresów
+  // suwak od dołu: przesuwa okno w czasie co godzinę (płynnie), wspólny dla wszystkich trzech wykresów
   if(okno){
     const opisZak = () => `${krotko(iso(new Date(zak.x0)))} – ${krotko(iso(new Date(zak.x1)))}`;
     const sw = el("input", {type:"range", min:0, max:Math.max(1, Math.round((dmax - kmin) / GODZ)), step:1, value:Math.round((zak.x1 - kmin) / GODZ), "aria-label":"Przesuń zakres wykresu"});

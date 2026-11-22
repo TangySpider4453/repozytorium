@@ -6,6 +6,8 @@ Czytaj, gdy: pomiary, zdjęcia sylwetki, wykresy progresu. Pełny opis: `PROGRES
 - Zdjęcia prywatne: tylko Pi i NAS, **nigdy repo**.
 
 ## Dziennik
+- 2026-11-22 (3): Historia: skład rozbity na dwa wykresy, Tłuszcz i Mięśnie, każdy z własną skalą; zakres, suwak i średnie
+  działają na wszystkie trzy (na wspólnej osi 7–46% zmiany były niewidoczne). app.js?v=18.
 - 2026-11-22 (2): strona w stylu Liquid Glass (ciemne tło z plamami, szklane karty, kapsułka zakładek), bez Google Fonts;
   w Trenerze zakładka Progres na pasku.
 - 2026-11-22: średnie w słupkach przy „Całość” na wspólnej osi obu wykresów; puste miejsca zamiast szacunków
