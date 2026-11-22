@@ -434,3 +434,14 @@ body.ultra main, body.ultra nav, body.ultra .pisz, body.ultra header { text-shad
 .h2-link { display: flex; align-items: baseline; justify-content: space-between; color: inherit; text-decoration: none; }
 .h2-link span { font-size: 13px; color: var(--akcent); display: inline-flex; align-items: center; gap: 2px; margin-right: 2px; }
 .h2-link .strz { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* Progres: podzakładki i kolejka zdjęć w „Nowy pomiar” */
+.pod-w > button { flex: 1; }
+.kolejka { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kolejka:empty { display: none; }
+.kol-el { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.kol-el img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 14px; display: block; }
+.kol-el select { font-size: 12px; padding: 6px 8px; min-height: 0; }
+.kol-x { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; min-height: 0; padding: 0; border-radius: 50%;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 16px; line-height: 1; box-shadow: none; }
+.mini-btn { padding: 6px 12px; min-height: 0; font-size: 13px; }

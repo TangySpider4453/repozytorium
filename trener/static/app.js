@@ -1544,7 +1544,7 @@ async function znalezionyKod(kod) {
 
 // ------------------------------------------------------------------ Waga: masa, skład ciała, zdjęcia (dziennik Progres z portalu)
 const TYPY_ZDJ = { przod: "przód", bok: "bok", biceps: "biceps", tyl: "tył", tylbiceps: "tył biceps", inne: "inne" };
-let WAGA = null, zakresW = 90, wagaPokaz = "masa";
+let WAGA = null, zakresW = 90, wagaPokaz = "masa", wagaPod = localStorage.getItem("wagaPod") || "pomiary";
 async function pokazWage() {
   const d = WAGA = await api("waga");
   const wp = Object.entries(d.wpisy || {}).sort(([a], [b]) => a < b ? -1 : 1).map(([dzien, v]) => ({ dzien, ...v }));
@@ -1554,7 +1554,11 @@ async function pokazWage() {
   const przed = (k, n) => { if (!ost(k)) return null; const gr = dzienMinus(ost(k).dzien, n); const x = wp.filter(q => q[k] != null && q.dzien <= gr).slice(-1)[0]; return x ? x[k] : null; };
   const dlt = (k, n, lepiej, jedn) => { const a = ost(k), b = przed(k, n); if (!a || b == null) return ""; const r = a[k] - b; if (Math.abs(r) < 0.05) return `<span class="delta">= ${n} dni temu</span>`;
     return `<span class="delta ${Math.sign(r) === lepiej ? "lepiej" : "gorzej"}">${r > 0 ? "▲" : "▼"} ${lb(Math.abs(r), 1)} ${jedn} vs ${n} dni temu</span>`; };
-  let h = `<div class="karta hero"><div class="szary">${om ? (om.dzien === dzis ? "Dziś" : dataPL(om.dzien)) : "Brak pomiarów"}</div>
+  const zd = (d.zdjecia || []).slice().sort((a, b) => a.data < b.data ? 1 : a.data > b.data ? -1 : (a.dodano || "") < (b.dodano || "") ? -1 : 1);
+  const ileZd = {}; zd.forEach(z => ileZd[z.data] = (ileZd[z.data] || 0) + 1);
+  let h = `<div class="zakladki pod-w"><button class="${wagaPod === "pomiary" ? "akt" : ""}" data-pod="pomiary">Pomiary</button><button class="${wagaPod === "zdjecia" ? "akt" : ""}" data-pod="zdjecia">Zdjęcia <span class="szary">${zd.length}</span></button></div>`;
+  if (wagaPod === "zdjecia") { widok.innerHTML = h + galeriaPomiarow(zd, d.wpisy || {}); podpiszWage(); return; }
+  h += `<div class="karta hero"><div class="szary">${om ? (om.dzien === dzis ? "Dziś" : dataPL(om.dzien)) : "Brak pomiarów"}</div>
     <div class="duzy">${om ? lb(om.masa, 1) : "–"}<small>kg</small></div>
     <div class="wiersz delty">${dlt("masa", 7, -1, "kg")}${dlt("masa", 30, -1, "kg")}</div>
     <div class="wiersz suma">${of ? `<div><span>tłuszcz</span><b>${lb(of.fat, 1)}%</b>${dlt("fat", 30, -1, "pp")}</div>` : ""}
@@ -1564,6 +1568,9 @@ async function pokazWage() {
     <div class="pola4"><div><label>Data</label><input type="date" id="w-data" value="${dzis}"></div><div><label>Masa (kg)</label><input type="number" inputmode="decimal" id="w-masa" step="0.1"></div>
       <div><label>Tłuszcz %</label><input type="number" inputmode="decimal" id="w-fat" step="0.1"></div><div><label>Mięśnie %</label><input type="number" inputmode="decimal" id="w-muscle" step="0.1"></div></div>
     <label>Notatka</label><input type="text" id="w-nota" placeholder="opcjonalnie">
+    <label>Zdjęcia</label><div class="kolejka" id="w-kolejka"></div>
+    <label class="btn drugi" style="margin:6px 0 0">📷 Dodaj zdjęcia<input type="file" accept="image/*" multiple id="w-zdj" hidden></label>
+    <div id="z-info" class="szary"></div>
     <div class="wiersz" style="margin-top:12px"><button id="w-zapisz">Zapisz</button><span class="szary">Waż się rano, po toalecie, przed jedzeniem.</span></div></div>`;
   const od = zakresW ? dzienMinus(dzis, zakresW - 1) : "0000";
   const wz = wp.filter(x => x.dzien >= od);
@@ -1584,24 +1591,71 @@ async function pokazWage() {
       ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski }], dz: 1, jedn: kg ? "kg" : "%", etX: dataKr, etDymek: dataPL })}
       ${legenda([{ nazwa: "tłuszcz", kolor: KOLOR.zolty }, { nazwa: "mięśnie", kolor: KOLOR.morski }])}</div>`;
   }
-  const zd = (d.zdjecia || []).slice().sort((a, b) => a.data < b.data ? 1 : -1);
-  h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Zdjęcia</span><span class="szary">${zd.length}</span></div>
-    <div class="wiersz"><select id="z-typ" style="flex:1">${Object.entries(TYPY_ZDJ).map(([k, n]) => `<option value="${k}">${n}</option>`).join("")}</select>
-      <label class="btn" style="margin:0">Dodaj zdjęcie<input type="file" accept="image/*" id="z-plik" hidden></label></div>
-    <div id="z-info" class="szary"></div>
-    <div class="galeria">${zd.slice(0, 24).map(z => `<a class="miniatura" href="#" data-zid="${z.id}"><img loading="lazy" src="/api/waga/plik/${z.id}_m.jpg" alt=""><span>${dataKr(z.data)} · ${TYPY_ZDJ[z.typ] || z.typ}</span></a>`).join("")}</div>
-    <div class="szary" style="margin-top:8px">Film z sylwetki i porównania „przed / po” są w <a href="${adresPanelu()}strony/progres/" target="_blank" rel="noopener">Progres na portalu</a>.</div></div>`;
   h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
-      <div class="szary">${[x.fat != null && `tłuszcz ${lb(x.fat, 1)}%`, x.muscle != null && `mięśnie ${lb(x.muscle, 1)}%`, x.notatka && esc(x.notatka)].filter(Boolean).join(" · ")}</div></div><b>${x.masa != null ? lb(x.masa, 1) + " kg" : ""}</b></div>`).join("") : `<div class="szary">Brak wpisów.</div>`}${wp.length > 10 ? `<button class="drugi dodaj" id="w-wiecej" style="margin-top:10px">Pokaż wszystkie (${wp.length})</button>` : ""}</div>`;
+      <div class="szary">${[x.fat != null && `tłuszcz ${lb(x.fat, 1)}%`, x.muscle != null && `mięśnie ${lb(x.muscle, 1)}%`, ileZd[x.dzien] && `📷 ${ileZd[x.dzien]}`, x.notatka && esc(x.notatka)].filter(Boolean).join(" · ")}</div></div><b>${x.masa != null ? lb(x.masa, 1) + " kg" : ""}</b></div>`).join("") : `<div class="szary">Brak wpisów.</div>`}${wp.length > 10 ? `<button class="drugi dodaj" id="w-wiecej" style="margin-top:10px">Pokaż wszystkie (${wp.length})</button>` : ""}</div>`;
   widok.innerHTML = h;
   const wi = $("#w-wiecej"); if (wi) wi.onclick = () => { widok.querySelectorAll(".pozycja.ukryty").forEach(x => x.classList.remove("ukryty")); wi.remove(); };
   rysuj(widok);
   widok.querySelectorAll("[data-zw]").forEach(b => b.onclick = () => { zakresW = +b.dataset.zw; pokazWage(); });
   widok.querySelectorAll("[data-wp]").forEach(b => b.onclick = () => { wagaPokaz = b.dataset.wp; pokazWage(); });
   widok.querySelectorAll("[data-wd]").forEach(el => el.onclick = () => edytujPomiar(el.dataset.wd));
-  widok.querySelectorAll("[data-zid]").forEach(el => el.onclick = e => { e.preventDefault(); pokazZdjecie(el.dataset.zid); });
+  podpiszWage();
+  KOLEJKA = [];
+  $("#w-zdj").onchange = e => { dodajDoKolejki(e.target.files, $("#w-kolejka")); e.target.value = ""; };
   $("#w-zapisz").onclick = zapiszPomiar;
-  $("#z-plik").onchange = e => wyslijZdjecie(e.target.files[0]);
+}
+
+// wspólne dla obu podzakładek
+function podpiszWage() {
+  widok.querySelectorAll("[data-pod]").forEach(b => b.onclick = () => { wagaPod = b.dataset.pod; localStorage.setItem("wagaPod", wagaPod); pokazWage(); });
+  widok.querySelectorAll("[data-zid]").forEach(el => el.onclick = e => { e.preventDefault(); pokazZdjecie(el.dataset.zid); });
+  widok.querySelectorAll("[data-zdod]").forEach(el => el.onclick = () => dodajZdjeciaDo(el.dataset.zdod));
+}
+
+// Zdjęcia pogrupowane po pomiarze (dniu), najnowsze na górze
+function galeriaPomiarow(zd, wpisy) {
+  if (!zd.length) return `<div class="karta szary">Brak zdjęć. Dodasz je w zakładce Pomiary, w „Nowy pomiar”.</div>`;
+  const grupy = []; zd.forEach(z => { const g = grupy[grupy.length - 1]; if (g && g.dzien === z.data) g.z.push(z); else grupy.push({ dzien: z.data, z: [z] }); });
+  return grupy.map(g => { const w = wpisy[g.dzien] || {};
+    const opis = [w.masa != null && `${lb(w.masa, 1)} kg`, w.fat != null && `tłuszcz ${lb(w.fat, 1)}%`, w.muscle != null && `mięśnie ${lb(w.muscle, 1)}%`].filter(Boolean).join(" · ");
+    return `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>${dataPL(g.dzien)} ${g.dzien.slice(0, 4)}</span>
+      <button class="drugi mini-btn" data-zdod="${g.dzien}">+ zdjęcie</button></div>
+      ${opis ? `<div class="szary">${opis}</div>` : ""}${w.notatka ? `<div class="szary">${esc(w.notatka)}</div>` : ""}
+      <div class="galeria">${g.z.map(z => `<a class="miniatura" href="#" data-zid="${z.id}"><img loading="lazy" src="/api/waga/plik/${z.id}_m.jpg" alt=""><span>${TYPY_ZDJ[z.typ] || z.typ}</span></a>`).join("")}</div></div>`; }).join("")
+    + `<div class="szary" style="margin:4px 4px 12px">Film z sylwetki i porównania „przed / po” są w <a href="${adresPanelu()}strony/progres/" target="_blank" rel="noopener">Progres na portalu</a>.</div>`;
+}
+
+// kolejka zdjęć przed wysłaniem: miniatura + wybór strony
+let KOLEJKA = [];
+const KOL_TYPY = ["przod", "bok", "tyl", "biceps", "tylbiceps", "inne"];
+function dodajDoKolejki(pliki, el) {
+  [...pliki].forEach(f => KOLEJKA.push({ f, url: URL.createObjectURL(f), typ: KOL_TYPY[Math.min(KOLEJKA.length, KOL_TYPY.length - 1)] }));
+  rysujKolejke(el);
+}
+function rysujKolejke(el) {
+  el.innerHTML = KOLEJKA.map((k, i) => `<div class="kol-el"><img src="${k.url}" alt=""><button class="kol-x" data-kx="${i}" aria-label="Usuń">×</button>
+    <select data-kt="${i}">${Object.entries(TYPY_ZDJ).map(([t, n]) => `<option value="${t}" ${t === k.typ ? "selected" : ""}>${n}</option>`).join("")}</select></div>`).join("");
+  el.querySelectorAll("[data-kt]").forEach(s => s.onchange = () => KOLEJKA[+s.dataset.kt].typ = s.value);
+  el.querySelectorAll("[data-kx]").forEach(b => b.onclick = () => { URL.revokeObjectURL(KOLEJKA[+b.dataset.kx].url); KOLEJKA.splice(+b.dataset.kx, 1); rysujKolejke(el); });
+}
+async function wyslijKolejke(data, info) {
+  for (let i = 0; i < KOLEJKA.length; i++) {
+    info.innerHTML = `<span class="mysli">Wysyłam zdjęcie ${i + 1} z ${KOLEJKA.length}</span>`;
+    await wyslijZdjecie(KOLEJKA[i].f, data, KOLEJKA[i].typ);
+  }
+  KOLEJKA.forEach(k => URL.revokeObjectURL(k.url)); KOLEJKA = [];
+}
+function dodajZdjeciaDo(dzien) {
+  KOLEJKA = [];
+  const a = arkusz(`<div class="kt">Zdjęcia · ${dataPL(dzien)} ${dzien.slice(0, 4)}</div><div class="kolejka" id="a-kolejka"></div>
+    <label class="btn drugi" style="margin:6px 0 0">📷 Wybierz zdjęcia<input type="file" accept="image/*" multiple id="a-zdj" hidden></label>
+    <div id="a-info" class="szary"></div><div class="wiersz" style="margin-top:12px"><button id="ok">Zapisz</button></div>`);
+  a.querySelector("#a-zdj").onchange = e => { dodajDoKolejki(e.target.files, a.querySelector("#a-kolejka")); e.target.value = ""; };
+  a.querySelector("#ok").onclick = async () => {
+    if (!KOLEJKA.length) { alert("Wybierz zdjęcia."); return; }
+    try { await wyslijKolejke(dzien, a.querySelector("#a-info")); } catch (e) { a.querySelector("#a-info").textContent = "Błąd: " + e.message; return; }
+    zamknijArkusz(); pokazWage();
+  };
 }
 
 function tempoTekst(zM) {   // tempo z trendu: ostatnie 3 tygodnie średniej
@@ -1618,10 +1672,17 @@ function tempoTekst(zM) {   // tempo z trendu: ostatnie 3 tygodnie średniej
 async function zapiszPomiar() {
   const v = id => { const s = $(id).value.replace(",", "."); return s === "" ? null : +s; };
   const b = { data: $("#w-data").value, masa: v("#w-masa"), fat: v("#w-fat"), muscle: v("#w-muscle"), notatka: $("#w-nota").value.trim() || null };
-  if (b.masa == null && b.fat == null && b.muscle == null) { alert("Wpisz masę albo skład."); return; }
-  const stary = (WAGA.wpisy || {})[b.data] || {};
-  Object.keys(b).forEach(k => { if (b[k] == null && k !== "data") b[k] = stary[k] ?? undefined; });
-  try { await api("waga/wpis", JSON.parse(JSON.stringify(b))); } catch (e) { alert("Błąd: " + e.message); return; }
+  const sa = b.masa != null || b.fat != null || b.muscle != null || b.notatka;
+  if (!sa && !KOLEJKA.length) { alert("Wpisz masę albo skład, albo dodaj zdjęcia."); return; }
+  const btn = $("#w-zapisz"); btn.disabled = true;
+  try {
+    if (sa) {
+      const stary = (WAGA.wpisy || {})[b.data] || {};
+      Object.keys(b).forEach(k => { if (b[k] == null && k !== "data") b[k] = stary[k] ?? undefined; });
+      await api("waga/wpis", JSON.parse(JSON.stringify(b)));
+    }
+    if (KOLEJKA.length) await wyslijKolejke(b.data || dzisISO(), $("#z-info"));
+  } catch (e) { btn.disabled = false; $("#z-info").textContent = "Błąd: " + e.message; return; }
   pokazWage();
 }
 function edytujPomiar(dzien) {
@@ -1651,21 +1712,16 @@ function zmniejsz(img, max, jakosc) {   // przez canvas: mniejszy plik i bez EXI
   c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
   return new Promise(ok => c.toBlob(ok, "image/jpeg", jakosc));
 }
-async function wyslijZdjecie(f) {
-  if (!f) return;
-  const info = $("#z-info"); info.innerHTML = `<span class="mysli">Wysyłam</span>`;
-  try {
-    const url = URL.createObjectURL(f), img = new Image();
-    await new Promise((ok, zle) => { img.onload = ok; img.onerror = () => zle(new Error("to nie jest zdjęcie")); img.src = url; });
-    const [duze, male] = [await zmniejsz(img, 1800, .88), await zmniejsz(img, 480, .8)];
-    URL.revokeObjectURL(url);
-    const fd = new FormData();
-    fd.append("plik", duze, "z.jpg"); fd.append("miniatura", male, "m.jpg");
-    fd.append("data", $("#w-data").value || dzisISO()); fd.append("typ", $("#z-typ").value);
-    const r = await fetch("/api/waga/zdjecie", { method: "POST", body: fd });
-    if (!r.ok) throw new Error("serwer: " + r.status);
-    pokazWage();
-  } catch (e) { info.textContent = "Błąd: " + e.message; }
+async function wyslijZdjecie(f, data, typ) {   // rzuca błędem; odświeżenie robi wywołujący
+  const url = URL.createObjectURL(f), img = new Image();
+  try { await new Promise((ok, zle) => { img.onload = ok; img.onerror = () => zle(new Error("to nie jest zdjęcie")); img.src = url; }); }
+  finally { URL.revokeObjectURL(url); }
+  const [duze, male] = [await zmniejsz(img, 1800, .88), await zmniejsz(img, 480, .8)];
+  const fd = new FormData();
+  fd.append("plik", duze, "z.jpg"); fd.append("miniatura", male, "m.jpg");
+  fd.append("data", data); fd.append("typ", typ);
+  const r = await fetch("/api/waga/zdjecie", { method: "POST", body: fd });
+  if (!r.ok) throw new Error("serwer: " + r.status);
 }
 
 // kafle na Dziś

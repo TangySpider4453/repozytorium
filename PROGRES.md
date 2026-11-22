@@ -127,3 +127,6 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   i pola, czcionki systemowe (bez Google Fonts). Styl to blok „Liquid Glass” na końcu `<style>` w `index.html`.
 - Trener ma na dolnym pasku zakładkę **Progres** (`#progres`, dawny ekran Waga): wpis wagi i składu, wykres, link do tej strony
   (zdjęcia, Film, porównania).
+- Zakładka Progres w Trenerze ma podzakładki **Pomiary** i **Zdjęcia**. W „Nowy pomiar” dodaje się kilka zdjęć naraz (każde z wyborem
+  strony; zapisują się z datą pomiaru, można zapisać same zdjęcia). „Zdjęcia” grupują je po dniu pomiaru (masa i skład w nagłówku,
+  „+ zdjęcie” dokłada do danego dnia). Sylwetkę na zdjęciach z Trenera rozpoznaje potem strona portalu.
