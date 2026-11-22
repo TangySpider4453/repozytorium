@@ -162,3 +162,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
   (przez tunel do Pi); rozmycie sprawdzić na iPhonie.
 - 2026-11-22: Trener: Ustawienia → karta „🎨 Tło”: kolorowe plamy (domyślne) albo własna tapeta z suwakiem
   przyciemnienia. Zdjęcie zmniejszone do 1600 px, trzymane tylko w IndexedDB telefonu (nie na serwerze, nie w repo).
+- 2026-11-22: Trener czat: „Omów” przy analizie (Dziś i ekran analizy) od razu wysyła „Omów analizę: …” z analiza_id
+  (wcześniej tylko otwierał czat). Czat zawsze od samego dołu: `trzymajDol()` przez 2 s dociąga na dół przy każdym
+  urośnięciu (wykresy, dymek), przerywa dotyk/scroll palcem.

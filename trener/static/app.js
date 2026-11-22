@@ -579,7 +579,7 @@ async function pokazDzis() {
     const a = d.analiza, oc = { dobrze: "dobrze", uwaga: "uwaga", zle: "zle" }[a.dane.ocena] || "";
     h += `<div class="karta"><div class="szary">${esc({ rano: "Analiza poranna", trening: "Po treningu", tydzien: "Tydzień" }[a.rodzaj] || a.rodzaj)} · ${esc(a.utworzono.slice(5, 16).replace("T", " "))}</div>
       <h3>${oc ? `<span class="kropka ${oc}"></span>` : ""}${esc(a.tytul)}</h3><div>${esc(a.dane.krotko)}</div>
-      <div class="wiersz" style="margin-top:10px"><a class="btn" href="#analiza/${a.id}">Czytaj</a><a class="btn drugi" href="#czat/${a.id}">Omów</a></div></div>`;
+      <div class="wiersz" style="margin-top:10px"><a class="btn" href="#analiza/${a.id}">Czytaj</a><button class="drugi" onclick="omowAnalize(${a.id}, ${esc(JSON.stringify(a.tytul))})">Omów</button></div></div>`;
   }
   h += `<div class="kafle">${kafelM("sen", dni, d.dzis)}${kafelM("hrv", dni, d.dzis)}${kafelM("tetno", dni, d.dzis)}${kafelM("bb", dni, d.dzis)}
     ${kafelM("obciazenie", dni, d.dzis, { podpis: esc(status(dz.status || wcz.status)) })}${kafelM("stres", dni, d.dzis)}
@@ -654,7 +654,7 @@ async function pokazAnalize(id) {
   widok.innerHTML = `<div class="karta"><div class="szary">${esc(a.utworzono.replace("T", " ").slice(0, 16))}</div><h3>${esc(a.tytul)}</h3>
     <div class="tresc">${esc(a.tresc)}</div>
     ${a.dane.zmienic_plan ? `<div class="szary" style="margin-top:8px">📅 Zmiana planu: ${esc(a.dane.prosba_do_planu || "")}</div>` : ""}
-    <div class="wiersz" style="margin-top:12px"><a class="btn" href="#czat/${a.id}">💬 Omów z trenerem</a></div></div>
+    <div class="wiersz" style="margin-top:12px"><button onclick="omowAnalize(${a.id}, ${esc(JSON.stringify(a.tytul))})">💬 Omów z trenerem</button></div></div>
     <h2>Wcześniejsze</h2><div id="wczesniejsze" class="ladowanie">…</div>`;
   const l = await api("analizy?limit=30");
   $("#wczesniejsze").outerHTML = l.filter(x => x.id != id).map(x => `<a href="#analiza/${x.id}" style="text-decoration:none;color:inherit"><div class="trening">
@@ -849,6 +849,7 @@ function przyblizanie(el, id, pelny) {
   rysujZakres();
 }
 function omowTrening(id, opis) { sessionStorage.omow = JSON.stringify({ id, tekst: `Omów trening: ${opis}` }); location.hash = "#czat"; }
+function omowAnalize(id, tytul) { sessionStorage.omow = JSON.stringify({ analiza: id, tekst: `Omów analizę: ${tytul}` }); location.hash = "#czat/" + id; }
 
 function szacStatki(z) {
   if (!z) return "";
@@ -887,15 +888,30 @@ async function pokazCzat(analizaId) {
   wk.slice(-6).forEach(laduj);
   if (wk.length > 6 && "IntersectionObserver" in window) { const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); laduj(e.target); } })); wk.slice(0, -6).forEach(el => io.observe(el)); }
   pokazMysli($("#czat"));
-  SKR.scrollTo(0, SKR.scrollHeight);
+  trzymajDol();
   dociagnijCzat();                     // z pamięci mogło przyjść coś starego: dociągnij to, co trener dopisał w międzyczasie
   if (!czatZadanie && sessionStorage.czatZadanie) sledzCzat(+sessionStorage.czatZadanie);   // apka przeładowana w trakcie
   if (sessionStorage.omow) {
     const o = JSON.parse(sessionStorage.omow); delete sessionStorage.omow;
-    t.value = o.tekst; wyslij(analizaId, { aktywnosc_id: o.id, omow: true });
+    t.value = o.tekst; wyslij(o.analiza || analizaId, o.analiza ? {} : { aktywnosc_id: o.id, omow: true });
   }
 }
 let WYK_CZAT = [];
+// czat zawsze od samego dołu: przez 2 s po wejściu/wysłaniu każde urośnięcie czatu (wykresy, dymek) dociąga na dół,
+// chyba że sam przewiniesz palcem
+let dolStop = null;
+function trzymajDol() {
+  dolStop?.();
+  const el = $("#czat"); if (!el) return;
+  const dol = () => SKR.scrollTo(0, SKR.scrollHeight);
+  dol(); requestAnimationFrame(dol);
+  const ro = "ResizeObserver" in window ? new ResizeObserver(dol) : null; ro?.observe(el);
+  const t = setInterval(dol, 150);
+  const stop = () => { ro?.disconnect(); clearInterval(t); clearTimeout(k); ["touchstart", "wheel"].forEach(z => SKR.removeEventListener(z, stop)); if (dolStop === stop) dolStop = null; };
+  const k = setTimeout(stop, 2000);
+  ["touchstart", "wheel"].forEach(z => SKR.addEventListener(z, stop, { passive: true, once: true }));
+  dolStop = stop;
+}
 const msg = m => `<div class="msg ${m.kto}"${m.id ? ` data-id="${m.id}"` : ""}>${esc(m.tresc)}${m.akcje && m.akcje.length ? `<div class="akcje">${m.akcje.map(esc).join(" · ")}</div>` : ""}</div>` +
   (m.wykresy || []).map(w => { WYK_CZAT.push(w); return `<div class="msg-wyk">${w.tytul ? `<div class="msg-wyk-t">${esc(w.tytul)}</div>` : ""}<div class="wyk-czat" data-n="${WYK_CZAT.length - 1}"><div class="szary">wykres…</div></div></div>`; }).join("");
 async function wyslij(analizaId, dod = {}) {
@@ -904,7 +920,7 @@ async function wyslij(analizaId, dod = {}) {
   t.value = ""; $("#wyslij").disabled = true;
   $("#czat").insertAdjacentHTML("beforeend", msg({ kto: "ja lokalna", tresc }));
   czatZadanie = -1; pokazMysli($("#czat"));
-  SKR.scrollTo(0, SKR.scrollHeight);
+  trzymajDol();
   let zid;
   try { zid = await api("czat", { tresc, analiza_id: analizaId ? +analizaId : null, ...dod }); }
   catch (e) { czatZadanie = 0; alert("Błąd: " + e.message); t.value = tresc; $("#czat .lokalna")?.remove(); pokazMysli($("#czat")); $("#wyslij").disabled = false; return; }
@@ -956,7 +972,7 @@ function dociagnijCzat() {
     el.dataset.ostatni = Math.max(0, ...msgs.map(m => m.id || 0));
     el.querySelectorAll(".wyk-czat").forEach(w => { if (!byly.has(w) && !w._z) { w._z = 1; wykresCzatu(w, WYK_CZAT[+w.dataset.n]); } });
     pokazMysli(el);
-    if (blisko) SKR.scrollTo({ top: SKR.scrollHeight, behavior: "smooth" });
+    if (blisko) trzymajDol();
   })().finally(() => { czatDociaga = null; });
   return czatDociaga;
 }
