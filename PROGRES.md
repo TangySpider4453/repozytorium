@@ -136,3 +136,4 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 - Portal, Historia: trzy osobne wykresy (**Masa**, **Tłuszcz**, **Mięśnie**), każdy z własną skalą; zakres, suwak i „Pokaż” (średnie) działają na wszystkie trzy.
 - Wykresy w Trenerze (Każdy pomiar): linia ciągła = każdy pomiar, przerywana = średnia 7 dni, także dla tłuszczu i mięśni; dymek i legenda pokazują styl linii, kropka średniej jest pusta w środku.
 - Wykresy masy i składu w Trenerze mają wspólną oś dat (te same daty od–do); gdzie brak pomiaru tłuszczu/mięśni, wykres jest pusty.
+- Trener, Progres: przełącznik **Średnia 7 dni** (Wł./Wył., widoczny przy „Każdy pomiar”) i **Skład** (Razem = jeden wykres z dwiema osiami, Osobno = osobne wykresy Tłuszcz i Mięśnie); wybór zapamiętuje telefon.

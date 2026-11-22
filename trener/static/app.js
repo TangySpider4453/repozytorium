@@ -1567,6 +1567,7 @@ async function znalezionyKod(kod) {
 // ------------------------------------------------------------------ Waga: masa, skład ciała, zdjęcia (dziennik Progres z portalu)
 const TYPY_ZDJ = { przod: "przód", bok: "bok", biceps: "biceps", tyl: "tył", tylbiceps: "tył biceps", inne: "inne" };
 let WAGA = null, zakresW = 90, wagaPokaz = "masa", wagaPod = localStorage.getItem("wagaPod") || "pomiary", wagaSr = localStorage.getItem("wagaSr") || "dzien";
+let wagaTrend = localStorage.getItem("wagaTrend") !== "0", wagaSklad = localStorage.getItem("wagaSklad") || "razem";   // linie średniej 7 dni; skład na jednym albo dwóch wykresach
 async function pokazWage() {
   const d = WAGA = await api("waga");
   const wp = Object.entries(d.wpisy || {}).sort(([a], [b]) => a < b ? -1 : 1).map(([dzien, v]) => ({ dzien, ...v }));
@@ -1597,7 +1598,9 @@ async function pokazWage() {
   const od = zakresW ? dzienMinus(dzis, zakresW - 1) : "0000";
   const wz = wp.filter(x => x.dzien >= od);
   h += `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]].map(([n, t]) => `<button class="${zakresW === n ? "akt" : ""}" data-zw="${n}">${t}</button>`).join("")}</div>
-    <div class="zakladki">${[["dzien", "Każdy pomiar"], ["tydzien", "Średnia tyg."], ["miesiac", "Średnia mies."]].map(([k, t]) => `<button class="${wagaSr === k ? "akt" : ""}" data-sr="${k}">${t}</button>`).join("")}</div>`;
+    <div class="zakladki">${[["dzien", "Każdy pomiar"], ["tydzien", "Średnia tyg."], ["miesiac", "Średnia mies."]].map(([k, t]) => `<button class="${wagaSr === k ? "akt" : ""}" data-sr="${k}">${t}</button>`).join("")}</div>
+    <div class="wiersz opcje-w">${wagaSr === "dzien" ? `<span class="opcja"><span class="szary">Średnia 7 dni</span><span class="zakladki mini"><button class="${wagaTrend ? "akt" : ""}" data-wt="1">Wł.</button><button class="${wagaTrend ? "" : "akt"}" data-wt="0">Wył.</button></span></span>` : ""}
+      <span class="opcja"><span class="szary">Skład</span><span class="zakladki mini"><button class="${wagaSklad === "razem" ? "akt" : ""}" data-ws="razem">Razem</button><button class="${wagaSklad === "osobno" ? "akt" : ""}" data-ws="osobno">Osobno</button></span></span></div>`;
   const zM = wz.filter(x => x.masa != null);
   const sr = wagaSr !== "dzien", G = sr ? grupujWage(wz, wagaSr) : null;
   // wspólna oś dat dla masy i składu: te same daty od–do na obu wykresach; brak wartości = puste miejsce (linia zaczyna się od 1. pomiaru)
@@ -1611,8 +1614,8 @@ async function pokazWage() {
   h += sr ? `<div class="karta"><div class="kt">Masa <span class="szary">· kg, ${nazwaSr}</span></div>
     ${wyk({ typ: "linia", x: xW, serie: [{ nazwa: nazwaSr, y: osW.map(x => x.masa), kolor: KOLOR.niebieski, lacz: true }], dz: 1, jedn: "kg", etX: etG, etDymek: dymG })}
     ${zmianaSr(gM, wagaSr)}${tempoTekst(zM)}</div>` : `<div class="karta"><div class="kt">Masa <span class="szary">· kg</span></div>
-    ${wyk({ typ: "linia", x: xW, serie: [{ nazwa: "ważenie", y: osW.map(x => x.masa), kolor: KOLOR.niebieski, lacz: true }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski, przerywana: true, lacz: true }], dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
-    ${legenda([{ nazwa: "ważenie", kolor: KOLOR.niebieski }, { nazwa: "średnia 7 dni", kolor: KOLOR.niebieski, przerywana: true }])}
+    ${wyk({ typ: "linia", x: xW, serie: [{ nazwa: "ważenie", y: osW.map(x => x.masa), kolor: KOLOR.niebieski, lacz: true }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski, przerywana: true, lacz: true }].slice(0, wagaTrend ? 2 : 1), dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
+    ${legenda([{ nazwa: "ważenie", kolor: KOLOR.niebieski }, { nazwa: "średnia 7 dni", kolor: KOLOR.niebieski, przerywana: true }].slice(0, wagaTrend ? 2 : 1))}
     ${tempoTekst(zM)}</div>`;
   const zS = (sr ? G : wz).filter(x => x.fat != null || x.muscle != null);
   if (zS.length) {
@@ -1620,12 +1623,24 @@ async function pokazWage() {
     const y = (x, k) => x[k] == null ? null : kg ? (sr ? x[k + "Kg"] : x.masa != null ? +(x.masa * x[k] / 100).toFixed(1) : null) : x[k];
     // średnia krocząca 7 dni (tylko „Każdy pomiar”; przy średnich tyg./mies. linia już jest średnią)
     const sr7 = k => osW.map(x => { const v = srednia(zS.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => y(q, k)).filter(v => v != null)); return v == null ? null : +v.toFixed(2); });
-    const sS = [{ nazwa: "tłuszcz", y: osW.map(x => y(x, "fat")), kolor: KOLOR.zolty, lacz: true }, { nazwa: "mięśnie", y: osW.map(x => y(x, "muscle")), kolor: KOLOR.morski, os: "prawa", lacz: true }];
-    if (!sr) sS.push({ nazwa: "tłuszcz, średnia 7 dni", y: sr7("fat"), kolor: KOLOR.zolty, przerywana: true, lacz: true }, { nazwa: "mięśnie, średnia 7 dni", y: sr7("muscle"), kolor: KOLOR.morski, os: "prawa", przerywana: true, lacz: true });
-    h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Skład ciała${sr ? ` <span class="szary">· ${nazwaSr}</span>` : ""}</span>
-      <span class="zakladki mini"><button class="${kg ? "" : "akt"}" data-wp="masa">%</button><button class="${kg ? "akt" : ""}" data-wp="kg">kg</button></span></div>
-      ${wyk({ typ: "linia", x: xW, serie: sS, h: 200, dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
-      ${legenda(sr ? sS : [sS[0], sS[1], { nazwa: "średnia 7 dni", kolor: "var(--tekst2)", przerywana: true }])}</div>`;
+    const fat = { nazwa: "tłuszcz", y: osW.map(x => y(x, "fat")), kolor: KOLOR.zolty, lacz: true }, mus = { nazwa: "mięśnie", y: osW.map(x => y(x, "muscle")), kolor: KOLOR.morski, os: "prawa", lacz: true };
+    const tr = !sr && wagaTrend;   // linie średniej 7 dni
+    const fatT = tr && { nazwa: "tłuszcz, średnia 7 dni", y: sr7("fat"), kolor: KOLOR.zolty, przerywana: true, lacz: true };
+    const musT = tr && { nazwa: "mięśnie, średnia 7 dni", y: sr7("muscle"), kolor: KOLOR.morski, os: "prawa", przerywana: true, lacz: true };
+    const jd = kg ? "kg" : "%", przel = `<span class="zakladki mini"><button class="${kg ? "" : "akt"}" data-wp="masa">%</button><button class="${kg ? "akt" : ""}" data-wp="kg">kg</button></span>`;
+    const opcje = { typ: "linia", x: xW, dz: 1, jedn: jd, etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL };
+    const naglowek = t => `<div class="kt wiersz" style="justify-content:space-between"><span>${t}${sr ? ` <span class="szary">· ${nazwaSr}</span>` : ""}</span>${przel}</div>`;
+    if (wagaSklad === "osobno") {   // dwa wykresy, każdy z jedną osią na całą wysokość; ta sama oś dat co masa
+      [[fat, fatT, "Tłuszcz"], [mus, musT, "Mięśnie"]].forEach(([a, b, t]) => {
+        const se = [Object.assign({}, a, { os: null }), b && Object.assign({}, b, { os: null, nazwa: "średnia 7 dni" })].filter(Boolean);
+        if (se[0].y.every(v => v == null)) return;
+        h += `<div class="karta">${naglowek(t + ` <span class="szary">· ${jd}</span>`)}${wyk(Object.assign({ serie: se }, opcje))}${legenda([Object.assign({}, se[0], { nazwa: "pomiar" }), se[1]].filter(Boolean))}</div>`;
+      });
+    } else {
+      const sS = [fat, mus, fatT, musT].filter(Boolean);
+      h += `<div class="karta">${naglowek("Skład ciała")}${wyk(Object.assign({ serie: sS, h: 200 }, opcje))}
+      ${legenda(tr ? [fat, mus, { nazwa: "średnia 7 dni", kolor: "var(--tekst2)", przerywana: true }] : [fat, mus])}</div>`;
+    }
   }
   h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
       <div class="szary">${[x.fat != null && `tłuszcz ${lb(x.fat, 1)}%`, x.muscle != null && `mięśnie ${lb(x.muscle, 1)}%`, ileZd[x.dzien] && `📷 ${ileZd[x.dzien]}`, x.notatka && esc(x.notatka)].filter(Boolean).join(" · ")}</div></div><b>${x.masa != null ? lb(x.masa, 1) + " kg" : ""}</b></div>`).join("") : `<div class="szary">Brak wpisów.</div>`}${wp.length > 10 ? `<button class="drugi dodaj" id="w-wiecej" style="margin-top:10px">Pokaż wszystkie (${wp.length})</button>` : ""}</div>`;
@@ -1634,6 +1649,8 @@ async function pokazWage() {
   rysuj(widok);
   widok.querySelectorAll("[data-zw]").forEach(b => b.onclick = () => { zakresW = +b.dataset.zw; pokazWage(); });
   widok.querySelectorAll("[data-wp]").forEach(b => b.onclick = () => { wagaPokaz = b.dataset.wp; pokazWage(); });
+  widok.querySelectorAll("[data-wt]").forEach(b => b.onclick = () => { wagaTrend = b.dataset.wt === "1"; localStorage.setItem("wagaTrend", b.dataset.wt); pokazWage(); });
+  widok.querySelectorAll("[data-ws]").forEach(b => b.onclick = () => { wagaSklad = b.dataset.ws; localStorage.setItem("wagaSklad", wagaSklad); pokazWage(); });
   widok.querySelectorAll("[data-sr]").forEach(b => b.onclick = () => { wagaSr = b.dataset.sr; localStorage.setItem("wagaSr", wagaSr); pokazWage(); });
   widok.querySelectorAll("[data-wd]").forEach(el => el.onclick = () => edytujPomiar(el.dataset.wd));
   podpiszWage();
