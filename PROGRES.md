@@ -131,3 +131,4 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   strony; zapisują się z datą pomiaru, można zapisać same zdjęcia). „Zdjęcia” grupują je po dniu pomiaru (masa i skład w nagłówku,
   „+ zdjęcie” dokłada do danego dnia). Sylwetkę na zdjęciach z Trenera rozpoznaje potem strona portalu.
 - Podgląd zdjęcia w Trenerze: dotknięcie otwiera pełny ekran; dwa palce przybliżają (do 6×), jeden przesuwa, podwójne stuknięcie 2,5× / z powrotem, stuknięcie w tło zamyka.
+- Wykresy masy i składu w Trenerze: przełącznik **Każdy pomiar / Średnia tyg. / Średnia mies.** (tydzień od poniedziałku; kg składników uśredniane z każdego pomiaru; pod wykresem zmiana vs poprzedni okres).

@@ -1544,7 +1544,7 @@ async function znalezionyKod(kod) {
 
 // ------------------------------------------------------------------ Waga: masa, skład ciała, zdjęcia (dziennik Progres z portalu)
 const TYPY_ZDJ = { przod: "przód", bok: "bok", biceps: "biceps", tyl: "tył", tylbiceps: "tył biceps", inne: "inne" };
-let WAGA = null, zakresW = 90, wagaPokaz = "masa", wagaPod = localStorage.getItem("wagaPod") || "pomiary";
+let WAGA = null, zakresW = 90, wagaPokaz = "masa", wagaPod = localStorage.getItem("wagaPod") || "pomiary", wagaSr = localStorage.getItem("wagaSr") || "dzien";
 async function pokazWage() {
   const d = WAGA = await api("waga");
   const wp = Object.entries(d.wpisy || {}).sort(([a], [b]) => a < b ? -1 : 1).map(([dzien, v]) => ({ dzien, ...v }));
@@ -1574,21 +1574,29 @@ async function pokazWage() {
     <div class="wiersz" style="margin-top:12px"><button id="w-zapisz">Zapisz</button><span class="szary">Waż się rano, po toalecie, przed jedzeniem.</span></div></div>`;
   const od = zakresW ? dzienMinus(dzis, zakresW - 1) : "0000";
   const wz = wp.filter(x => x.dzien >= od);
-  h += `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]].map(([n, t]) => `<button class="${zakresW === n ? "akt" : ""}" data-zw="${n}">${t}</button>`).join("")}</div>`;
+  h += `<div class="zakladki">${[[30, "30 dni"], [90, "90 dni"], [365, "rok"], [0, "wszystko"]].map(([n, t]) => `<button class="${zakresW === n ? "akt" : ""}" data-zw="${n}">${t}</button>`).join("")}</div>
+    <div class="zakladki">${[["dzien", "Każdy pomiar"], ["tydzien", "Średnia tyg."], ["miesiac", "Średnia mies."]].map(([k, t]) => `<button class="${wagaSr === k ? "akt" : ""}" data-sr="${k}">${t}</button>`).join("")}</div>`;
   const zM = wz.filter(x => x.masa != null);
+  const sr = wagaSr !== "dzien", G = sr ? grupujWage(wz, wagaSr) : null;
+  const etG = wagaSr === "tydzien" ? dataKr : k => `${MIES[+k.slice(5, 7) - 1]} ${k.slice(2, 4)}`;
+  const dymG = k => { const g = G.find(q => q.dzien === k); return (wagaSr === "tydzien" ? `tydzień od ${dataKr(k)}` : `${MIES[+k.slice(5, 7) - 1]} ${k.slice(0, 4)}`) + ` · ${g.n} ${g.n === 1 ? "pomiar" : g.n < 5 ? "pomiary" : "pomiarów"}`; };
+  const nazwaSr = wagaSr === "tydzien" ? "średnia tygodniowa" : "średnia miesięczna";
   // średnia krocząca 7 dni = prawdziwy trend (pojedyncze ważenie skacze o ±1 kg od wody)
   const trend = zM.map(x => srednia(zM.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => q.masa)));
-  h += `<div class="karta"><div class="kt">Masa <span class="szary">· kg</span></div>
+  const gM = sr && G.filter(x => x.masa != null);
+  h += sr ? `<div class="karta"><div class="kt">Masa <span class="szary">· kg, ${nazwaSr}</span></div>
+    ${wyk({ typ: "linia", x: gM.map(x => x.dzien), serie: [{ nazwa: nazwaSr, y: gM.map(x => x.masa), kolor: KOLOR.niebieski }], dz: 1, jedn: "kg", etX: etG, etDymek: dymG })}
+    ${zmianaSr(gM, wagaSr)}${tempoTekst(zM)}</div>` : `<div class="karta"><div class="kt">Masa <span class="szary">· kg</span></div>
     ${wyk({ typ: "linia", x: zM.map(x => x.dzien), serie: [{ nazwa: "ważenie", y: zM.map(x => x.masa), kolor: KOLOR.niebieski, przerywana: true }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski }], dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
     <div class="legenda"><span><i class="kropki-l"></i>ważenie</span><span><i style="background:${KOLOR.niebieski}"></i>średnia 7 dni</span></div>
     ${tempoTekst(zM)}</div>`;
-  const zS = wz.filter(x => x.fat != null || x.muscle != null);
+  const zS = (sr ? G : wz).filter(x => x.fat != null || x.muscle != null);
   if (zS.length) {
     const kg = wagaPokaz === "kg";
-    const y = (x, k) => x[k] == null ? null : kg ? (x.masa != null ? +(x.masa * x[k] / 100).toFixed(1) : null) : x[k];
-    h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Skład ciała</span>
+    const y = (x, k) => x[k] == null ? null : kg ? (sr ? x[k + "Kg"] : x.masa != null ? +(x.masa * x[k] / 100).toFixed(1) : null) : x[k];
+    h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Skład ciała${sr ? ` <span class="szary">· ${nazwaSr}</span>` : ""}</span>
       <span class="zakladki mini"><button class="${kg ? "" : "akt"}" data-wp="masa">%</button><button class="${kg ? "akt" : ""}" data-wp="kg">kg</button></span></div>
-      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski }], dz: 1, jedn: kg ? "kg" : "%", etX: dataKr, etDymek: dataPL })}
+      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski }], dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
       ${legenda([{ nazwa: "tłuszcz", kolor: KOLOR.zolty }, { nazwa: "mięśnie", kolor: KOLOR.morski }])}</div>`;
   }
   h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
@@ -1598,6 +1606,7 @@ async function pokazWage() {
   rysuj(widok);
   widok.querySelectorAll("[data-zw]").forEach(b => b.onclick = () => { zakresW = +b.dataset.zw; pokazWage(); });
   widok.querySelectorAll("[data-wp]").forEach(b => b.onclick = () => { wagaPokaz = b.dataset.wp; pokazWage(); });
+  widok.querySelectorAll("[data-sr]").forEach(b => b.onclick = () => { wagaSr = b.dataset.sr; localStorage.setItem("wagaSr", wagaSr); pokazWage(); });
   widok.querySelectorAll("[data-wd]").forEach(el => el.onclick = () => edytujPomiar(el.dataset.wd));
   podpiszWage();
   KOLEJKA = [];
@@ -1656,6 +1665,23 @@ function dodajZdjeciaDo(dzien) {
     try { await wyslijKolejke(dzien, a.querySelector("#a-info")); } catch (e) { a.querySelector("#a-info").textContent = "Błąd: " + e.message; return; }
     zamknijArkusz(); pokazWage();
   };
+}
+
+// średnie tygodniowe (od poniedziałku) albo miesięczne; kg składników liczone z każdego pomiaru osobno
+function grupujWage(wz, tryb) {
+  const klucz = d => { if (tryb === "miesiac") return d.slice(0, 7) + "-01"; const x = new Date(d + "T12:00"); return dzienMinus(d, (x.getDay() + 6) % 7); };
+  const m = new Map();
+  wz.forEach(x => { const k = klucz(x.dzien); if (!m.has(k)) m.set(k, []); m.get(k).push(x); });
+  const zaok = v => v == null ? null : +v.toFixed(2);
+  return [...m].sort(([a], [b]) => a < b ? -1 : 1).map(([dzien, t]) => ({ dzien, n: t.length,
+    masa: zaok(srednia(t.map(x => x.masa))), fat: zaok(srednia(t.map(x => x.fat))), muscle: zaok(srednia(t.map(x => x.muscle))),
+    fatKg: zaok(srednia(t.map(x => x.masa != null && x.fat != null ? x.masa * x.fat / 100 : null))),
+    muscleKg: zaok(srednia(t.map(x => x.masa != null && x.muscle != null ? x.masa * x.muscle / 100 : null))) }));
+}
+function zmianaSr(g, tryb) {   // zmiana ostatniej średniej względem poprzedniej
+  if (g.length < 2) return "";
+  const r = g[g.length - 1].masa - g[g.length - 2].masa;
+  return `<div class="szary" style="margin-top:8px">${r <= 0 ? "▼" : "▲"} ${lb(Math.abs(r), 1)} kg vs poprzedni ${tryb === "tydzien" ? "tydzień" : "miesiąc"}${g[g.length - 1].dzien === grupujWage([{ dzien: dzisISO() }], tryb)[0].dzien ? ` (bieżący ${tryb === "tydzien" ? "tydzień" : "miesiąc"} jeszcze trwa)` : ""}</div>`;
 }
 
 function tempoTekst(zM) {   // tempo z trendu: ostatnie 3 tygodnie średniej
