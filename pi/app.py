@@ -754,7 +754,8 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 <script>
 const PAGE="%%PAGE%%", PORT=%%PORT%%, TERMINAL_PORT=%%TPORT%%, VNC_WS_PORT=%%VPORT%%;
 document.querySelectorAll('nav a').forEach(a=>{if(a.dataset.p===PAGE)a.classList.add('on')});
-fetch('/api/dostep').then(r=>r.json()).then(d=>{if(d.siec==='domowa'){const a=document.createElement('a');a.href='/wyloguj';a.innerHTML='<span class="ik" aria-hidden="true">🚪</span>Wyloguj';a.title='Zapomnij to urządzenie (wejście z sieci domowej)';document.querySelector('nav').append(a)}}).catch(()=>{});
+{const a=document.createElement('a');a.href='/trener';a.innerHTML='<span class="ik" aria-hidden="true">🏋️</span>Trener';a.title='Apka Trener (bez ponownego logowania)';document.querySelector('nav')?.append(a)}
+fetch('/api/dostep').then(r=>r.json()).then(d=>{if(d.siec!=='tailscale'){const a=document.createElement('a');a.href='/wyloguj';a.innerHTML='<span class="ik" aria-hidden="true">🚪</span>Wyloguj';a.title='Zapomnij to urządzenie (wejście z sieci domowej)';document.querySelector('nav').append(a)}}).catch(()=>{});
 function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v] of Object.entries(attrs||{})){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v)}for(const k of kids.flat(9)){if(k==null||k===false)continue;e.append(k instanceof Node?k:document.createTextNode(String(k)))}return e}
 const main=document.getElementById('main');
 function dur(s){if(s==null)return'–';s=Math.floor(s);const d=Math.floor(s/86400),g=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);if(d)return d+' d '+g+' h';if(g)return g+' h '+m+' min';if(m)return m+' min';return s+' s'}
@@ -1019,7 +1020,7 @@ WEJSCIA = BASE / "dane" / "wejscia.jsonl"      # dla bota Telegram: kazde zapyta
 
 def wejscie_zapisz(rodzaj, **dane):
     from flask import request
-    rek = {"czas": time.strftime("%Y-%m-%dT%H:%M:%S"), "rodzaj": rodzaj, "ip": request.remote_addr,
+    rek = {"czas": time.strftime("%Y-%m-%dT%H:%M:%S"), "rodzaj": rodzaj, "ip": klient_ip(),
            "ua": (request.user_agent.string or "")[:200], **dane}
     try:
         with open(WEJSCIA, "a", encoding="utf-8") as f:
@@ -1032,9 +1033,25 @@ def dostep_dane():
     return cached("dostep", 5, lambda: json.loads(DOSTEP.read_text(encoding="utf-8")) if DOSTEP.exists() else None)
 
 
-def przez_tailscale():
-    """Tailscale (100.64.0.0/10; nftables Tailscale odrzuca takie adresy spoza tailscale0) albo samo Pi"""
+def z_funnela():
+    """z internetu przez Tailscale Funnel (port 8443 -> 127.0.0.1:80): naglowek dokłada tailscaled, klient go nie usunie"""
     from flask import request
+    return bool(request.headers.get("Tailscale-Funnel-Request"))
+
+
+def klient_ip():
+    from flask import request
+    if z_funnela():         # przez Funnel adres to 127.0.0.1; prawdziwy klient w X-Forwarded-For od tailscaled
+        return (request.headers.get("X-Forwarded-For") or "").split(",")[-1].strip() or "funnel"
+    return request.remote_addr or "?"
+
+
+def przez_tailscale():
+    """Tailscale (100.64.0.0/10; nftables Tailscale odrzuca takie adresy spoza tailscale0) albo samo Pi.
+    Z Funnela (internet) nigdy, mimo adresu 127.0.0.1."""
+    from flask import request
+    if z_funnela():
+        return False
     try:
         ip = ipaddress.ip_address(request.remote_addr or "")
     except ValueError:
@@ -1048,17 +1065,36 @@ def sesja_podpis():
     return URLSafeTimedSerializer(d["klucz"], salt="portal-sesja") if d else None
 
 
+TRENER_BAZA = Path.home() / "trener" / "dane" / "trener.db"
+
+
+def trener_zapamietany():
+    """ciasteczko apki Trener (ten sam adres w Funnelu, inny port: przeglądarka wysyła je też tutaj) = zalogowany"""
+    from flask import request
+    import hashlib
+    import sqlite3
+    k = request.cookies.get("trener_klucz")
+    if not k or len(k) > 100:
+        return False
+    try:
+        with sqlite3.connect(f"file:{TRENER_BAZA}?mode=ro", uri=True, timeout=2) as c:
+            return c.execute("SELECT 1 FROM urzadzenia WHERE hash=?", (hashlib.sha256(k.encode()).hexdigest(),)).fetchone() is not None
+    except sqlite3.Error:
+        return False
+
+
 def zalogowany():
     from flask import request
     from itsdangerous import BadData
     s, d = sesja_podpis(), dostep_dane()
     tok = request.cookies.get(SESJA)
-    if not (s and tok):
-        return False
-    try:
-        return s.loads(tok, max_age=SESJA_DNI * 86400).get("w") == d.get("wersja", 1)
-    except BadData:
-        return False
+    if s and tok:
+        try:
+            if s.loads(tok, max_age=SESJA_DNI * 86400).get("w") == d.get("wersja", 1):
+                return True
+        except BadData:
+            pass
+    return trener_zapamietany()
 
 
 @app.before_request
@@ -1066,7 +1102,7 @@ def wymagaj_hasla():
     from flask import request
     if przez_tailscale():
         return None
-    if request.path in ("/logowanie", "/wyloguj") or zalogowany():
+    if request.path in ("/logowanie", "/wyloguj", "/trener") or zalogowany():
         return None
     if request.path.startswith("/api/"):
         return jsonify({"blad": "zaloguj się", "logowanie": "/logowanie"}), 401
@@ -1099,7 +1135,7 @@ small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
 </style></head><body>
 <form method="post" action="/logowanie" id="logowanie" name="logowanie" autocomplete="on">
   <h1>Serwerek domowy</h1>
-  <p>Wejście z sieci domowej. Hasło wpisujesz raz: to urządzenie zostanie zapamiętane na rok.</p>
+  <p>Wejście spoza Tailscale. Hasło wpisujesz raz: to urządzenie zostanie zapamiętane na rok.</p>
   <input type="hidden" name="nast" value="%%NAST%%">
   <label for="u">Użytkownik</label>
   <input id="u" type="text" name="username" value="serwerek" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-bottom:14px">
@@ -1108,7 +1144,7 @@ small{display:block;margin-top:14px;color:var(--muted);font-size:13.5px}
     <button type="button" id="pokaz" aria-controls="h" aria-pressed="false">Pokaż</button></div>
   <button type="submit">Wejdź</button>
   %%BLAD%%
-  <small>Przez Tailscale hasło nie jest potrzebne.</small>
+  <small>Przez Tailscale hasło nie jest potrzebne. <a href="/trener" style="color:var(--acc)">Przejdź do apki Trener</a></small>
 </form>
 <script>
 const h = document.getElementById("h"), b = document.getElementById("pokaz");
@@ -1140,7 +1176,7 @@ def logowanie():
     if request.method == "GET":
         wejscie_zapisz("panel_logowania")
         return logowanie_strona(nast=nast)
-    ip, teraz = request.remote_addr or "?", time.time()
+    ip, teraz = klient_ip(), time.time()
     with LOGOWANIE_LOCK:
         proby = [t for t in LOGOWANIE_PROBY.get(ip, []) if t > teraz - 300]
         LOGOWANIE_PROBY[ip] = proby
@@ -1183,7 +1219,7 @@ def logowanie():
 def wejscia_sciezka(resp):
     """kazde zapytanie (sciezka, metoda, wynik) do sladu wizyt w bocie Telegram; z Tailscale tylko zapis, bez powiadomien"""
     from flask import request
-    if not (request.remote_addr or "").startswith("127."):      # bot i skrypty na samym Pi pomijamy
+    if z_funnela() or not (request.remote_addr or "").startswith("127."):      # bot i skrypty na samym Pi pomijamy
         ts = przez_tailscale()
         wejscie_zapisz("zapytanie", metoda=request.method, sciezka=request.full_path.rstrip("?")[:200], wynik=resp.status_code,
                        zalogowany=ts or zalogowany() or SESJA in resp.headers.get("Set-Cookie", ""), tailscale=ts)
@@ -1199,7 +1235,18 @@ def wyloguj():
 
 @app.route("/api/dostep")
 def api_dostep():
-    return jsonify({"siec": "tailscale" if przez_tailscale() else "domowa"})
+    from flask import request
+    return jsonify({"siec": "tailscale" if przez_tailscale() else "internet" if z_funnela() else "domowa"})
+
+
+@app.route("/trener")
+def do_trenera():
+    """przełącznik do apki Trener: ta sama nazwa *.ts.net, port 443 (Trener) zamiast 8443 (portal przez Funnel)"""
+    from flask import request
+    host = request.host.split(":")[0]
+    if not host.endswith(".ts.net"):
+        host = (tailscale_info().get("dns") or "").rstrip(".")
+    return redirect(f"https://{host}/" if host else "/")
 
 
 @app.route("/")

@@ -71,19 +71,42 @@ async function czekaj(zid, co) {
   throw new Error("za długo");
 }
 
-function niezapamietane() {
-  widok.innerHTML = `<div class="karta"><h3>🔐 Zapamiętaj to urządzenie</h3>
-    <div>Apka jest dostępna z internetu, ale wpuszcza tylko Twoje urządzenia. Wpisz jednorazowy kod parowania
-    (dostaniesz go od Claude albo na Pi: <code>python -m trener kod</code>, ważny 15 min).</div>
-    <div class="wiersz" style="margin-top:10px"><input id="kod" type="text" placeholder="KOD" autocomplete="one-time-code" autocapitalize="characters"
-      style="flex:1;min-width:0;font-size:18px;letter-spacing:.15em;text-transform:uppercase">
-    <button id="paruj">Połącz</button></div><div id="paruj-info" class="szary" style="margin-top:6px"></div></div>`;
+// Adres panelu serwera: ten sam host *.ts.net, port 8443 (portal przez Funnel). Lokalnie/LAN: portal na porcie 80.
+const adresPanelu = () => location.protocol === "https:" ? `https://${location.hostname}:8443/` : `http://${location.hostname}/`;
+
+function niezapamietane(cel = "trener") {
+  const panel = cel === "panel";
+  widok.innerHTML = `<div class="karta"><h3>🔐 Logowanie</h3>
+    <div class="zakladki" role="tablist" style="margin-bottom:10px">
+      <button type="button" role="tab" class="${panel ? "" : "akt"}" aria-selected="${!panel}" data-cel="trener">Trener</button>
+      <button type="button" role="tab" class="${panel ? "akt" : ""}" aria-selected="${panel}" data-cel="panel">Zaloguj do panelu</button></div>
+    <div class="szary">${panel ? "Panel serwera (stan Pi, Minecraft, NAS, zdrowie). To samo hasło, potem przełączasz się bez logowania."
+      : "Apka wpuszcza z internetu tylko Ciebie. Hasło wpisujesz raz: urządzenie zostanie zapamiętane."}</div>
+    <form id="log-form" autocomplete="on" style="margin-top:10px">
+      <input type="text" name="username" value="serwerek" autocomplete="username" hidden>
+      <div class="wiersz"><input id="haslo" name="password" type="password" placeholder="Hasło" autocomplete="current-password"
+        autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:0;font-size:18px" required>
+      <button id="zaloguj" type="submit">Wejdź</button></div></form>
+    <div id="log-info" class="szary" style="margin-top:6px"></div>
+    <details style="margin-top:12px"><summary class="szary">Mam kod parowania</summary>
+      <div class="wiersz" style="margin-top:8px"><input id="kod" type="text" placeholder="KOD" autocomplete="one-time-code" autocapitalize="characters"
+        style="flex:1;min-width:0;font-size:18px;letter-spacing:.15em;text-transform:uppercase">
+      <button id="paruj" class="drugi">Połącz</button></div><div id="paruj-info" class="szary" style="margin-top:6px"></div></details></div>`;
+  widok.querySelectorAll("[data-cel]").forEach(b => b.onclick = () => niezapamietane(b.dataset.cel));
+  $("#log-form").onsubmit = async e => {
+    e.preventDefault();
+    const info = $("#log-info"); info.textContent = "Sprawdzam…";
+    const r = await fetch("/api/logowanie", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ haslo: $("#haslo").value }) });
+    if (r.ok) { info.textContent = "✅ Zalogowano"; setTimeout(() => panel ? location.assign(adresPanelu()) : location.reload(), 400); }
+    else { info.textContent = (await r.json().catch(() => ({}))).blad || "Błąd " + r.status; $("#haslo").select(); }
+  };
   $("#paruj").onclick = async () => {
     const info = $("#paruj-info"); info.textContent = "Sprawdzam…";
     const r = await fetch("/api/paruj", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kod: $("#kod").value }) });
     if (r.ok) { info.textContent = "✅ Zapamiętane"; setTimeout(() => location.reload(), 500); }
     else info.textContent = (await r.json().catch(() => ({}))).blad || "Błąd " + r.status;
   };
+  $("#haslo").focus();
 }
 
 // ------------------------------------------------------------------ wykresy (SVG, mierzone do szerokości, z dotykiem)
@@ -997,6 +1020,8 @@ async function ekranUstawien() {
     <div class="wiersz" style="margin-top:10px"><span class="szary">Push: ${pushStan}</span></div>
     <div class="wiersz" style="margin-top:8px"><button onclick="wlaczPush()">🔔 Włącz powiadomienia</button><button class="drugi" onclick="testPush(this)">Test za 10 s</button></div></div>
     <div class="karta" id="karta-tlo"></div>
+    <div class="karta"><h3>🖥️ Panel serwera</h3><div class="szary">Stan Pi, Minecraft, NAS, zdrowie. Bez ponownego logowania.</div>
+      <a class="btn" id="do-panelu" style="margin-top:8px;display:inline-block;text-decoration:none">Przejdź do panelu</a></div>
     <div class="karta"><h3>🔐 Zapamiętane urządzenia</h3><div id="urz" class="szary">…</div>
       <button class="drugi" style="margin-top:8px" onclick="if(confirm('Wylogować wszystkie inne urządzenia?'))api('urzadzenia',{}).then(ekranUstawien)">Wyloguj inne urządzenia</button></div>
     <div class="karta"><h3>🏋️ Tierlista ćwiczeń siłowych</h3><div class="szary">Jedno ćwiczenie na linię. Trener układa siłkę głównie z S i A; wykluczonych nie daje. Nowe ćwiczenia oceniasz po treningu na ekranie Dziś.</div>
@@ -1004,6 +1029,7 @@ async function ekranUstawien() {
       <label>Zasady układania treningów</label><textarea id="u-zasady_silka" rows="6">${esc(u.zasady_silka || "")}</textarea></div>
     <div class="karta"><h3>Pamięć trenera</h3><div class="szary">Ustalenia z rozmów (jedno na linię)</div><textarea id="u-pamiec" rows="5">${esc((u.pamiec || []).join("\n"))}</textarea></div>
     <div class="wiersz"><button onclick="zapiszUst()">💾 Zapisz</button><button class="drugi" onclick="akcja('analiza')">📊 Analiza teraz</button><button class="drugi" onclick="akcja('sync')">🔄 Synchronizuj</button></div>`;
+  $("#do-panelu").href = adresPanelu();
   urzadzenia();
   kartaTla();
 }

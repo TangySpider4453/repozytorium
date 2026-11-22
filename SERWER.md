@@ -78,6 +78,12 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   ciasteczko; w menu portalu link „Wyloguj” pojawia się tylko z sieci domowej (`/api/dostep`).
 - `portal-haslo` (`/usr/local/bin`, repo `pi/portal-haslo`) zmienia hasło i podbija `wersja` (wylogowuje wszystkie
   urządzenia). Hasła nie ma w repozytorium.
+- **Z internetu przez Funnel (od 2026-11-22):** `sudo tailscale funnel --bg --https=8443 http://127.0.0.1:80` (ten
+  sam adres ts.net co Trener, port 8443; wyłączenie `sudo tailscale funnel --https=8443 off`). Funnel łączy się z
+  127.0.0.1, więc `przez_tailscale()` zwraca False przy nagłówku `Tailscale-Funnel-Request` (`z_funnela()`), a IP do
+  blokady i dziennika bierze z `X-Forwarded-For` (`klient_ip()`). Terminal i VNC dalej tylko Tailscale.
+  Zalogowany = `portal_sesja` albo ważne ciasteczko Trenera `trener_klucz` (odczyt `~/trener/dane/trener.db`, tylko
+  do odczytu). `/trener` przekierowuje do apki (port 443). Hasło to samo co w Trenerze.
 - Ciasteczko jest przypisane do adresu: `172.23.0.20` (eth0) i `172.23.0.24` (wlan0) to osobne logowania; używaj `.20`.
   `/terminal` z sieci domowej pokazuje tylko informację (terminal na porcie 7681 słucha wyłącznie na Tailscale).
   Panel Minecraft `pi-dashboard` (8090) był i jest dostępny w sieci domowej bez hasła (osobna usługa).

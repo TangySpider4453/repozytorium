@@ -7,7 +7,8 @@
 | `serwerek-telefon` | rozmowy głosowe Linphone (pjsua2), `~/glos/telefon.py` | ✅ (problem: nie słyszy Antka) |
 | `glos-whisper` | rozpoznawanie mowy whisper.cpp | ✅ |
 | `ollama` | modele lokalne (qwen2.5:1.5b zapas rozmów, qwen2.5:3b Garmin, moondream — stary model wizji; testowe usunięte 17.11) | ✅ |
-| `trener-web` + `trener-cykl.timer` (15 min) + `trener-szybki.timer` (1 min: nowy trening → cykl) | apka **Trener** (`~/trener/`), HTTPS przez **Tailscale Funnel** :443 → 127.0.0.1:8095 (publicznie; `/api` tylko z zapamiętanym urządzeniem) | ✅ od 17.11 |
+| `trener-web` + `trener-cykl.timer` (15 min) + `trener-szybki.timer` (1 min: nowy trening → cykl) | apka **Trener** (`~/trener/`), HTTPS przez **Tailscale Funnel** :443 → 127.0.0.1:8095 (publicznie; `/api` tylko z zapamiętanym urządzeniem albo po haśle) | ✅ od 17.11 |
+| portal przez **Funnel :8443** → 127.0.0.1:80 | panel z internetu, tylko po haśle (to samo co Trener) | ✅ od 22.11 |
 | `playit`, `pi-dashboard` | tunel i panel Minecrafta | ✅ |
 | `powernukkitx` | serwer Minecraft | ⏸️ wyłączony **celowo** (włączany ręcznie) |
 | `airplay` | głośnik AirPlay 2 | ⏸️ inactive — nie ruszać bez zgody |

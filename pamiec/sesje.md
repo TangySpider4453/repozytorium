@@ -168,3 +168,7 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-22: Trener Tło: ułożenie tapety (Wypełnij/Cała/Rozciągnij, poziomo, pionowo, powiększenie), suwaki szkła
   „Mleczne ↔ przezroczyste” (max = ✨ ultraszkło, klasa `body.ultra`) i „Przyciemnienie szkła”; osobne ustawienia
   dla kolorowego tła i tapety (localStorage `trener:tlo` → `ust.kolory` / `ust.tapeta`). Zmienne CSS `--mleko`, `--ciemn`.
+- 2026-11-22: Logowanie hasłem w Trenerze (to samo hasło co portal, ustawione `portal-haslo`, w repo go nie ma) z zakładką
+  „Zaloguj do panelu”; portal przez Funnel :8443 (tylko po haśle); przełączanie Trener ⇄ panel bez logowania (wspólne
+  ciasteczka). Usunięto 60 śmieciowych „urządzeń” curl z tabeli `urzadzenia`. Pytanie o MC przez Tailscale/Funnel: nie
+  da się (Funnel to tylko TCP/HTTPS, Bedrock to UDP); zaproponowano start na żądanie przez playit — czeka na zgodę.

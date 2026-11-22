@@ -68,3 +68,5 @@
 - Animacje apki (19.11): zakładki = karuzela w stronę klikniętej zakładki, szczegóły rosną z karty i kurczą się do niej. Dane z pamięci + odświeżanie w tle, zamiast „Ładuję…”.
 - 2026-11-19: trener w czacie się nie kłóci: Antek decyduje o swoim czasie; przy prośbie o zmianę trener ją robi albo
   proponuje 1–2 układy tygodnia pod dostępność (koszt w jednym zdaniu). O tym, co zaplanowane, mówi tylko na podstawie planu.
+- 2026-11-22: Jedno hasło do Trenera i portalu (skrót tylko w `~/portal/dane/dostep.json`). Portal z internetu przez
+  Funnel :8443, a ciasteczka `trener_klucz` / `portal_sesja` są przyjmowane w obie strony (ten sam host ts.net).

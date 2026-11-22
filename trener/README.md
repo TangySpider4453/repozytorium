@@ -41,6 +41,12 @@ siłownia dla kolarza, bieg, HRV/sen, młody sportowiec — z linkami do badań)
   otwarciu apki przez tailnet. ⚙️ → „Wyloguj inne urządzenia”.
 - Parowanie bez Tailscale: `python -m trener kod` na Pi → 8 znaków, jednorazowy, 15 min, 5 prób → wpisać na ekranie
   „Zapamiętaj to urządzenie”. (iPhone z włączonym Tailscale i tak łączył się przez Funnel, więc auto-zapamiętanie nie działało.)
+- **Hasło (od 22.11):** ekran logowania ma zakładki „Trener” i „Zaloguj do panelu”; hasło to samo co do portalu
+  (skrót tylko w `~/portal/dane/dostep.json`, zmiana: `portal-haslo`, w repo go nie ma). `POST /api/logowanie` daje
+  `trener_klucz` i `portal_sesja` (5 złych = 5 min blokady na adres z `X-Forwarded-For`). Trener przyjmuje też samo
+  `portal_sesja`, a portal samo `trener_klucz` (ten sam host ts.net, ciasteczka nie zależą od portu) → przełączanie
+  bez logowania: ⚙️ „Przejdź do panelu” → `:8443`, w portalu link „🏋️ Trener” (`/trener`). Kod parowania nadal działa
+  (ukryty pod „Mam kod parowania”).
 - Push działa bez Tailscale (idzie przez serwery Apple); Tailscale/Funnel potrzebny tylko do otwarcia apki.
 
 ## iPhone

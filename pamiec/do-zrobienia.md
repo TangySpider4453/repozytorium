@@ -46,3 +46,5 @@
 - Łazik: iPhone 14 Pro LiDAR przez Record3D jako kamera głębi; nowy OLED; radio DX-LR03 na UART.
 - Planer nauki bez modelu: gotowy patch `niewdrozone_planer_i_lokalny_zapas.patch` w kopiach na Pi.
 - Interaktywna wersja tej mapy jako strona na portalu.
+- [ ] Sprawdzić z internetu (bez Tailscale) panel na :8443 i przełączniki Trener ⇄ panel (z kontenera Claude port 8443 zablokowany).
+- [ ] MC na żądanie (bramka na adresie playit: start przy pierwszym pingu, uśpienie po 15 min bez graczy) — czeka na zgodę Antka.

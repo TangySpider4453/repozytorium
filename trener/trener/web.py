@@ -69,6 +69,73 @@ def _zapamietaj(r):
     r.set_cookie(CIASTKO, k, max_age=ROK, secure=True, httponly=True, samesite="Lax", path="/")
 
 
+# Hasło: to samo co do portalu (skrót tylko w ~/portal/dane/dostep.json, zmiana komendą portal-haslo). Logowanie tu
+# daje też ciasteczko portalu (portal_sesja) — ten sam adres *.ts.net, port 8443 to portal przez Funnel — a portal
+# przyjmuje trener_klucz, więc przełączanie apka <-> panel jest bez ponownego logowania.
+PROBY = {}
+PROBY_LOCK = threading.Lock()
+
+
+def _portal_dostep():
+    from pathlib import Path
+    try:
+        return json.loads((Path.home() / "portal" / "dane" / "dostep.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _portal_podpis(d):
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(d["klucz"], salt="portal-sesja")
+
+
+def _portal_sesja():
+    from itsdangerous import BadData
+    tok, d = request.cookies.get("portal_sesja"), None
+    if not tok or not (d := _portal_dostep()):
+        return False
+    try:
+        return _portal_podpis(d).loads(tok, max_age=365 * 86400).get("w") == d.get("wersja", 1)
+    except BadData:
+        return False
+
+
+def _ip():
+    if _z_internetu():
+        return (request.headers.get("X-Forwarded-For") or "").split(",")[-1].strip() or "funnel"
+    return request.remote_addr or "?"
+
+
+@app.route("/api/logowanie", methods=["POST"])
+def api_logowanie():
+    import time
+    import unicodedata
+    from werkzeug.security import check_password_hash
+    d = _portal_dostep()
+    if not d:
+        return jsonify({"blad": "Hasło nie jest ustawione (portal-haslo na Pi)"}), 503
+    ip, t = _ip(), time.time()
+    with PROBY_LOCK:
+        p = PROBY[ip] = [x for x in PROBY.get(ip, []) if x > t - 300]
+        if len(p) >= 5:
+            return jsonify({"blad": f"Za dużo złych haseł. Spróbuj za {int(300 - (t - p[0])) // 60 + 1} min."}), 429
+    haslo = unicodedata.normalize("NFKC", str((request.get_json(silent=True) or {}).get("haslo") or "")).strip()
+    if not (0 < len(haslo) <= 200 and check_password_hash(d["hash"], haslo)):
+        with PROBY_LOCK:
+            PROBY.setdefault(ip, []).append(t)
+        log.warning("logowanie: złe hasło z %s", ip)
+        time.sleep(1)
+        return jsonify({"blad": "Złe hasło"}), 401
+    with PROBY_LOCK:
+        PROBY.pop(ip, None)
+    log.info("logowanie: ok z %s", ip)
+    r = jsonify({"ok": True})
+    _zapamietaj(r)
+    r.set_cookie("portal_sesja", _portal_podpis(d).dumps({"w": d.get("wersja", 1)}), max_age=365 * 86400,
+                 secure=True, httponly=True, samesite="Lax", path="/")
+    return r
+
+
 @app.route("/api/paruj", methods=["POST"])
 def api_paruj():
     d = db()
@@ -88,9 +155,9 @@ def api_paruj():
 
 @app.before_request
 def dostep():
-    if not request.path.startswith("/api/") or request.path == "/api/paruj":
+    if not request.path.startswith("/api/") or request.path in ("/api/paruj", "/api/logowanie"):
         return None                                   # strona/ikony/sw bez danych — publiczne
-    if _z_internetu() and not _sesja():
+    if _z_internetu() and not _sesja() and not _portal_sesja():
         return jsonify({"blad": "niezapamietane"}), 401
     return None
 
@@ -100,7 +167,7 @@ def bez_cache(r):
     if request.path.startswith("/api/"):
         if not request.path.startswith("/api/waga/plik/"):
             r.headers["Cache-Control"] = "no-store"
-        if request.path == "/api/paruj":
+        if request.path in ("/api/paruj", "/api/logowanie"):
             pass
         elif not _z_internetu() and not _sesja():     # tailnet/lokalnie: zapamiętaj urządzenie
             _zapamietaj(r)
