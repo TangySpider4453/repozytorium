@@ -1042,15 +1042,35 @@ async function wlaczPush() {
 }
 
 // ------------------------------------------------------------------ Tło: domyślne kolorowe albo własna tapeta
-// Tapeta zostaje na tym urządzeniu (IndexedDB, zmniejszona do 1600 px), nie idzie na serwer.
-const TLO = { tryb: "kolory", ciemno: 35 };
-try { Object.assign(TLO, JSON.parse(localStorage.getItem("trener:tlo") || "{}")); } catch (e) {}
+// Tapeta zostaje na tym urządzeniu (IndexedDB, zmniejszona do 2000 px), nie idzie na serwer.
+// Każdy tryb (kolory / tapeta) ma własne ustawienia szkła; nowa tapeta zaczyna od środka, szkło zostaje.
+const TLO_DOM = { kolory: { szklo: 50, ciemn: 0 }, tapeta: { szklo: 50, ciemn: 15, ciemno: 35, dop: "cover", x: 50, y: 50, zoom: 100 } };
+const TLO = { tryb: "kolory", ust: {} };
+try { const z = JSON.parse(localStorage.getItem("trener:tlo") || "{}");
+  TLO.tryb = z.tryb || "kolory"; TLO.ust = z.ust || {};
+  if (z.ciemno != null && !TLO.ust.tapeta) TLO.ust.tapeta = { ciemno: z.ciemno };   // stary zapis
+} catch (e) {}
+const tloU = () => { const u = TLO.ust[TLO.tryb] ||= {}; for (const [k, v] of Object.entries(TLO_DOM[TLO.tryb])) u[k] ??= v; return u; };   // ten sam obiekt (suwaki trzymają do niego referencję)
+const tloZapisz = () => localStorage.setItem("trener:tlo", JSON.stringify(TLO));
 const tloBaza = () => new Promise((ok, zle) => { const r = indexedDB.open("trener-tlo", 1); r.onupgradeneeded = () => r.result.createObjectStore("t"); r.onsuccess = () => ok(r.result); r.onerror = () => zle(r.error); });
 async function tloPlik(blob) {
   const db = await tloBaza();
   return new Promise((ok, zle) => { const tx = db.transaction("t", blob === undefined ? "readonly" : "readwrite"), st = tx.objectStore("t");
     const r = blob === undefined ? st.get("tapeta") : blob === null ? st.delete("tapeta") : st.put(blob, "tapeta");
     r.onsuccess = () => ok(r.result); r.onerror = () => zle(r.error); });
+}
+// tylko zmienne CSS i styl #tapeta: szybkie, do podglądu na żywo przy suwakach
+function tloStyl() {
+  const u = tloU(), el = document.getElementById("tapeta"), root = document.documentElement.style;
+  root.setProperty("--mleko", ((100 - u.szklo) / 100).toFixed(2));
+  root.setProperty("--ciemn", (u.ciemn / 100).toFixed(2));
+  document.body.classList.toggle("ultra", u.szklo >= 100);
+  if (!el) return;
+  el.style.setProperty("--ciemno", ((u.ciemno ?? 35) / 100).toFixed(2));
+  el.style.backgroundSize = { cover: "cover", contain: "contain", rozciagnij: "100% 100%" }[u.dop] || "cover";
+  el.style.backgroundPosition = `${u.x ?? 50}% ${u.y ?? 50}%`;
+  el.style.transformOrigin = `${u.x ?? 50}% ${u.y ?? 50}%`;
+  el.style.transform = (u.zoom || 100) > 100 ? `scale(${u.zoom / 100})` : "";
 }
 let tloUrl = null;
 async function zastosujTlo() {
@@ -1059,43 +1079,59 @@ async function zastosujTlo() {
   const blob = TLO.tryb === "tapeta" ? await tloPlik().catch(() => null) : null;
   if (tloUrl) { URL.revokeObjectURL(tloUrl); tloUrl = null; }
   if (blob) { tloUrl = URL.createObjectURL(blob); el.style.backgroundImage = `url("${tloUrl}")`; }
-  el.style.setProperty("--ciemno", (TLO.ciemno / 100).toFixed(2));
   document.body.classList.toggle("tapeta", !!blob);
+  tloStyl();
 }
 async function wgrajTapete(plik) {
   if (!plik) return;
   const img = await createImageBitmap(plik).catch(() => null);
   if (!img) return alert("Nie udało się otworzyć zdjęcia.");
-  const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+  const k = Math.min(1, 2000 / Math.max(img.width, img.height)), c = document.createElement("canvas");
   c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
   c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .86));
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .88));
   await tloPlik(blob);
-  TLO.tryb = "tapeta"; localStorage.setItem("trener:tlo", JSON.stringify(TLO));
+  TLO.tryb = "tapeta"; Object.assign(tloU(), { x: 50, y: 50, zoom: 100 }); tloZapisz();
   await zastosujTlo(); kartaTla();
 }
+const suwak = (id, napis, v, min, max, krok, pokaz) =>
+  `<label class="suwak"><span>${napis}</span><b id="${id}-ile">${pokaz(v)}</b></label><input type="range" id="${id}" min="${min}" max="${max}" step="${krok}" value="${v}">`;
+const pokazSzklo = v => v >= 100 ? "✨ ultraszkło" : v <= 0 ? "mleczne" : v + "%";
 async function kartaTla() {
   const k = document.getElementById("karta-tlo"); if (!k) return;
-  const jest = !!(await tloPlik().catch(() => null));
-  k.innerHTML = `<h3>🎨 Tło</h3><div class="szary">Za szkłem: kolorowe plamy albo Twoja tapeta. Zapamiętane tylko na tym urządzeniu.</div>
+  const jest = !!(await tloPlik().catch(() => null)), u = tloU(), tap = TLO.tryb === "tapeta";
+  k.innerHTML = `<h3>🎨 Tło</h3><div class="szary">Zapamiętane tylko na tym urządzeniu. Każde tło ma swoje ustawienia szkła.</div>
     <div class="chipy wiersz" style="margin-top:10px">
-      <button class="chip ${TLO.tryb === "kolory" ? "akt" : ""}" data-t="kolory">🌈 Kolorowe (domyślne)</button>
-      <button class="chip ${TLO.tryb === "tapeta" ? "akt" : ""}" data-t="tapeta">🖼️ Moja tapeta</button></div>
-    ${TLO.tryb === "tapeta" ? `<label>Przyciemnienie tapety: <b id="tlo-ile">${TLO.ciemno}%</b></label><input type="range" id="tlo-ciemno" min="0" max="80" step="5" value="${TLO.ciemno}" style="width:100%">
-    <div class="wiersz" style="margin-top:10px"><button class="drugi" id="tlo-wybierz">${jest ? "Zmień zdjęcie" : "Wybierz zdjęcie"}</button>${jest ? `<button class="drugi" id="tlo-usun">Usuń tapetę</button>` : ""}</div>
-    <input type="file" id="tlo-plik" accept="image/*" hidden>` : ""}`;
+      <button class="chip ${!tap ? "akt" : ""}" data-t="kolory">🌈 Kolorowe (domyślne)</button>
+      <button class="chip ${tap ? "akt" : ""}" data-t="tapeta">🖼️ Moja tapeta</button></div>
+    ${tap ? `<div class="wiersz" style="margin-top:10px"><button class="drugi" id="tlo-wybierz">${jest ? "Zmień zdjęcie" : "Wybierz zdjęcie"}</button>${jest ? `<button class="drugi" id="tlo-usun">Usuń tapetę</button>` : ""}</div>
+    <input type="file" id="tlo-plik" accept="image/*" hidden>
+    ${jest ? `<div class="grupa-t">Ułożenie tapety</div>
+    <div class="chipy wiersz">${[["cover", "Wypełnij"], ["contain", "Cała"], ["rozciagnij", "Rozciągnij"]].map(([d, n]) => `<button class="chip ${u.dop === d ? "akt" : ""}" data-dop="${d}">${n}</button>`).join("")}</div>
+    ${suwak("tlo-x", "Poziomo", u.x, 0, 100, 1, v => ["⬅︎ lewo", "środek", "prawo ➡︎"][v < 34 ? 0 : v > 66 ? 2 : 1] + ` ${v}%`)}
+    ${suwak("tlo-y", "Pionowo", u.y, 0, 100, 1, v => ["⬆︎ góra", "środek", "dół ⬇︎"][v < 34 ? 0 : v > 66 ? 2 : 1] + ` ${v}%`)}
+    ${suwak("tlo-zoom", "Powiększenie", u.zoom, 100, 300, 5, v => v + "%")}
+    ${suwak("tlo-ciemno", "Przyciemnienie tapety", u.ciemno, 0, 85, 5, v => v + "%")}` : ""}` : ""}
+    <div class="grupa-t">Szkło</div>
+    ${suwak("tlo-szklo", "Mleczne ↔ przezroczyste", u.szklo, 0, 100, 5, pokazSzklo)}
+    ${suwak("tlo-ciemn", "Przyciemnienie szkła", u.ciemn, 0, 100, 5, v => v + "%")}
+    <button class="drugi" id="tlo-reset" style="margin-top:12px">Przywróć domyślne</button>`;
   k.querySelectorAll("[data-t]").forEach(b => b.onclick = async () => {
-    TLO.tryb = b.dataset.t; localStorage.setItem("trener:tlo", JSON.stringify(TLO));
+    TLO.tryb = b.dataset.t; tloZapisz();
     await zastosujTlo(); kartaTla();
     if (TLO.tryb === "tapeta" && !jest) $("#tlo-plik", k)?.click();
   });
-  const pl = $("#tlo-plik", k); if (!pl) return;
-  pl.onchange = () => wgrajTapete(pl.files[0]);
-  $("#tlo-wybierz", k).onclick = () => pl.click();
-  const us = $("#tlo-usun", k); if (us) us.onclick = async () => { await tloPlik(null); TLO.tryb = "kolory"; localStorage.setItem("trener:tlo", JSON.stringify(TLO)); await zastosujTlo(); kartaTla(); };
-  const r = $("#tlo-ciemno", k);
-  r.oninput = () => { TLO.ciemno = +r.value; $("#tlo-ile", k).textContent = r.value + "%"; document.getElementById("tapeta")?.style.setProperty("--ciemno", (TLO.ciemno / 100).toFixed(2)); };
-  r.onchange = () => localStorage.setItem("trener:tlo", JSON.stringify(TLO));
+  k.querySelectorAll("[data-dop]").forEach(b => b.onclick = () => { u.dop = b.dataset.dop; tloZapisz(); tloStyl(); kartaTla(); });
+  const pl = $("#tlo-plik", k);
+  if (pl) { pl.onchange = () => wgrajTapete(pl.files[0]); $("#tlo-wybierz", k).onclick = () => pl.click(); }
+  const us = $("#tlo-usun", k); if (us) us.onclick = async () => { await tloPlik(null); TLO.tryb = "kolory"; tloZapisz(); await zastosujTlo(); kartaTla(); };
+  $("#tlo-reset", k).onclick = () => { const z = TLO.tryb === "tapeta" ? { dop: u.dop, x: u.x, y: u.y, zoom: u.zoom } : {}; for (const k in u) delete u[k]; Object.assign(u, TLO_DOM[TLO.tryb], z); tloZapisz(); tloStyl(); kartaTla(); };
+  [["tlo-x", "x", v => ["⬅︎ lewo", "środek", "prawo ➡︎"][v < 34 ? 0 : v > 66 ? 2 : 1] + ` ${v}%`], ["tlo-y", "y", v => ["⬆︎ góra", "środek", "dół ⬇︎"][v < 34 ? 0 : v > 66 ? 2 : 1] + ` ${v}%`],
+   ["tlo-zoom", "zoom", v => v + "%"], ["tlo-ciemno", "ciemno", v => v + "%"], ["tlo-szklo", "szklo", pokazSzklo], ["tlo-ciemn", "ciemn", v => v + "%"]].forEach(([id, pole, f]) => {
+    const r = $("#" + id, k); if (!r) return;
+    r.oninput = () => { u[pole] = +r.value; $(`#${id}-ile`, k).textContent = f(+r.value); tloStyl(); };
+    r.onchange = tloZapisz;
+  });
 }
 zastosujTlo();
 

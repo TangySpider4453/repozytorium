@@ -404,3 +404,28 @@ header::before { background: linear-gradient(180deg, rgba(7,8,11,.45), rgba(7,8,
 #tapeta::after { content: ""; position: absolute; inset: 0; background: rgba(7,8,11,var(--ciemno, .35)); }
 body.tapeta #tapeta { display: block; }
 body.tapeta::before { display: none; }
+/* ===== szkło z suwaków (Ustawienia → Tło): --mleko 0 = ultraszkło … 1 = mleczne, --ciemn = przyciemnienie szkła =====
+   domyślnie (--mleko .5, --ciemn 0) wygląda jak wyżej */
+:root { --mleko: .5; --ciemn: 0;
+  --mleko-w: linear-gradient(rgba(255,255,255,max(0, calc((var(--mleko) - .45) * .4))), rgba(255,255,255,max(0, calc((var(--mleko) - .45) * .4))));
+  --ciemn-w: linear-gradient(rgba(8,9,12,calc(var(--ciemn) * .8)), rgba(8,9,12,calc(var(--ciemn) * .8)));
+  --rozmyj-karta: blur(calc(2px + var(--mleko) * 32px)) saturate(calc(160% + var(--mleko) * 80%)) brightness(1.1);
+  --rozmyj: blur(calc(4px + var(--mleko) * 44px)) saturate(190%); }
+.karta, .kafel, .trening, .zakladki, .msg-wyk, .msg.trener { background: var(--ciemn-w), var(--mleko-w), var(--szklo-karta); }
+.kafel:hover { background: var(--ciemn-w), var(--mleko-w), var(--szklo-karta); }
+nav, .pisz, .arkusz, .dymek {
+  background: var(--ciemn-w), var(--mleko-w), radial-gradient(120% 90% at 20% 0%, rgba(255,255,255,.16), transparent 55%), linear-gradient(160deg, rgba(48,52,64,calc(.1 + var(--mleko) * .64)), rgba(20,22,28,calc(.1 + var(--mleko) * .56))); }
+.chip, button.drugi, .btn.drugi, .znaczek, .status {
+  background: var(--ciemn-w), radial-gradient(120% 90% at 30% 0%, rgba(255,255,255,.22), transparent 60%), rgba(255,255,255,calc(.03 + var(--mleko) * .08));
+  backdrop-filter: blur(calc(3px + var(--mleko) * 22px)) saturate(190%); -webkit-backdrop-filter: blur(calc(3px + var(--mleko) * 22px)) saturate(190%); }
+.chip.akt { background: radial-gradient(120% 80% at 30% 0%, rgba(255,255,255,.4), transparent 55%), linear-gradient(180deg, rgba(74,149,236,.9), rgba(40,110,205,.9)); }
+/* ultraszkło (suwak na maksa): prawie bez rozmycia, tafla czysta jak szyba, mocna krawędź; tekst dostaje cień, żeby był czytelny */
+body.ultra { --szklo-karta: radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,.14), transparent 50%), linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,0) 45%, rgba(255,255,255,.04));
+  --rozmyj-karta: blur(1.5px) saturate(170%) brightness(1.06) contrast(1.05); --rozmyj: blur(3px) saturate(180%);
+  --szklo-blask: inset 0 2px 0 rgba(255,255,255,.55), inset 0 -1.5px 0 rgba(255,255,255,.2), inset 1.5px 0 0 rgba(255,255,255,.16), inset -1.5px 0 0 rgba(255,255,255,.1), inset 0 0 22px rgba(255,255,255,.12); }
+body.ultra .karta::after, body.ultra .kafel::after, body.ultra .trening::after, body.ultra .msg-wyk::after, body.ultra .msg.trener::after { padding: 2px; filter: brightness(1.3); }
+body.ultra main, body.ultra nav, body.ultra .pisz, body.ultra header { text-shadow: 0 1px 3px rgba(0,0,0,.65), 0 0 12px rgba(0,0,0,.35); }
+#tapeta { background-color: var(--tlo); }
+.suwak { display: flex; justify-content: space-between; margin-top: 10px; font-size: 14px; }
+.suwak b { font-weight: 600; color: var(--tekst2); }
+.suwak + input[type=range] { width: 100%; }

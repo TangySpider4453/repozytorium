@@ -165,3 +165,6 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-22: Trener czat: „Omów” przy analizie (Dziś i ekran analizy) od razu wysyła „Omów analizę: …” z analiza_id
   (wcześniej tylko otwierał czat). Czat zawsze od samego dołu: `trzymajDol()` przez 2 s dociąga na dół przy każdym
   urośnięciu (wykresy, dymek), przerywa dotyk/scroll palcem.
+- 2026-11-22: Trener Tło: ułożenie tapety (Wypełnij/Cała/Rozciągnij, poziomo, pionowo, powiększenie), suwaki szkła
+  „Mleczne ↔ przezroczyste” (max = ✨ ultraszkło, klasa `body.ultra`) i „Przyciemnienie szkła”; osobne ustawienia
+  dla kolorowego tła i tapety (localStorage `trener:tlo` → `ust.kolory` / `ust.tapeta`). Zmienne CSS `--mleko`, `--ciemn`.
