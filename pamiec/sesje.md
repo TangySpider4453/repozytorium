@@ -160,3 +160,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-22: Trener: mocniejszy Liquid Glass (koniec `styl.css`): żywe, wolno płynące plamy tła, karty/kafle/czat
   z rozmytym szkłem, połyskiem i jasną krawędzią, przyciski i czipy jako krople szkła. Zrzuty z headless Chromium
   (przez tunel do Pi); rozmycie sprawdzić na iPhonie.
+- 2026-11-22: Trener: Ustawienia → karta „🎨 Tło”: kolorowe plamy (domyślne) albo własna tapeta z suwakiem
+  przyciemnienia. Zdjęcie zmniejszone do 1600 px, trzymane tylko w IndexedDB telefonu (nie na serwerze, nie w repo).

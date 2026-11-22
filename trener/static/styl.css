@@ -399,3 +399,8 @@ nav, .pisz, .arkusz, .dymek {
   box-shadow: inset 0 1.5px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12), inset 0 0 0 .5px rgba(255,255,255,.22), 0 3px 12px rgba(0,0,0,.3); }
 header::before { background: linear-gradient(180deg, rgba(7,8,11,.45), rgba(7,8,11,.2)); border-bottom-color: rgba(255,255,255,.12);
   box-shadow: inset 0 -1px 0 rgba(255,255,255,.06); }
+/* tło: własna tapeta (Ustawienia → Tło); kolorowe plamy chowają się, ciemna warstwa = suwak „Przyciemnienie” */
+#tapeta { position: fixed; inset: 0; z-index: -1; pointer-events: none; display: none; background: center / cover no-repeat; }
+#tapeta::after { content: ""; position: absolute; inset: 0; background: rgba(7,8,11,var(--ciemno, .35)); }
+body.tapeta #tapeta { display: block; }
+body.tapeta::before { display: none; }

@@ -980,6 +980,7 @@ async function ekranUstawien() {
     <div class="karta"><h3>Automatyka</h3>${pr("auto_zegarek", "Treningi same idą na zegarek")}${pr("analiza_rano", "Analiza poranna po śnie")}${pr("push", "Powiadomienia push")}${pr("linphone", "Kopia na Linphone")}
     <div class="wiersz" style="margin-top:10px"><span class="szary">Push: ${pushStan}</span></div>
     <div class="wiersz" style="margin-top:8px"><button onclick="wlaczPush()">🔔 Włącz powiadomienia</button><button class="drugi" onclick="testPush(this)">Test za 10 s</button></div></div>
+    <div class="karta" id="karta-tlo"></div>
     <div class="karta"><h3>🔐 Zapamiętane urządzenia</h3><div id="urz" class="szary">…</div>
       <button class="drugi" style="margin-top:8px" onclick="if(confirm('Wylogować wszystkie inne urządzenia?'))api('urzadzenia',{}).then(ekranUstawien)">Wyloguj inne urządzenia</button></div>
     <div class="karta"><h3>🏋️ Tierlista ćwiczeń siłowych</h3><div class="szary">Jedno ćwiczenie na linię. Trener układa siłkę głównie z S i A; wykluczonych nie daje. Nowe ćwiczenia oceniasz po treningu na ekranie Dziś.</div>
@@ -988,6 +989,7 @@ async function ekranUstawien() {
     <div class="karta"><h3>Pamięć trenera</h3><div class="szary">Ustalenia z rozmów (jedno na linię)</div><textarea id="u-pamiec" rows="5">${esc((u.pamiec || []).join("\n"))}</textarea></div>
     <div class="wiersz"><button onclick="zapiszUst()">💾 Zapisz</button><button class="drugi" onclick="akcja('analiza')">📊 Analiza teraz</button><button class="drugi" onclick="akcja('sync')">🔄 Synchronizuj</button></div>`;
   urzadzenia();
+  kartaTla();
 }
 async function urzadzenia() {
   const l = await api("urzadzenia");
@@ -1022,6 +1024,64 @@ async function wlaczPush() {
     ekranUstawien();
   } catch (e) { alert("Nie udało się: " + e.message); }
 }
+
+// ------------------------------------------------------------------ Tło: domyślne kolorowe albo własna tapeta
+// Tapeta zostaje na tym urządzeniu (IndexedDB, zmniejszona do 1600 px), nie idzie na serwer.
+const TLO = { tryb: "kolory", ciemno: 35 };
+try { Object.assign(TLO, JSON.parse(localStorage.getItem("trener:tlo") || "{}")); } catch (e) {}
+const tloBaza = () => new Promise((ok, zle) => { const r = indexedDB.open("trener-tlo", 1); r.onupgradeneeded = () => r.result.createObjectStore("t"); r.onsuccess = () => ok(r.result); r.onerror = () => zle(r.error); });
+async function tloPlik(blob) {
+  const db = await tloBaza();
+  return new Promise((ok, zle) => { const tx = db.transaction("t", blob === undefined ? "readonly" : "readwrite"), st = tx.objectStore("t");
+    const r = blob === undefined ? st.get("tapeta") : blob === null ? st.delete("tapeta") : st.put(blob, "tapeta");
+    r.onsuccess = () => ok(r.result); r.onerror = () => zle(r.error); });
+}
+let tloUrl = null;
+async function zastosujTlo() {
+  let el = document.getElementById("tapeta");
+  if (!el) { el = document.createElement("div"); el.id = "tapeta"; document.body.prepend(el); }
+  const blob = TLO.tryb === "tapeta" ? await tloPlik().catch(() => null) : null;
+  if (tloUrl) { URL.revokeObjectURL(tloUrl); tloUrl = null; }
+  if (blob) { tloUrl = URL.createObjectURL(blob); el.style.backgroundImage = `url("${tloUrl}")`; }
+  el.style.setProperty("--ciemno", (TLO.ciemno / 100).toFixed(2));
+  document.body.classList.toggle("tapeta", !!blob);
+}
+async function wgrajTapete(plik) {
+  if (!plik) return;
+  const img = await createImageBitmap(plik).catch(() => null);
+  if (!img) return alert("Nie udało się otworzyć zdjęcia.");
+  const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .86));
+  await tloPlik(blob);
+  TLO.tryb = "tapeta"; localStorage.setItem("trener:tlo", JSON.stringify(TLO));
+  await zastosujTlo(); kartaTla();
+}
+async function kartaTla() {
+  const k = document.getElementById("karta-tlo"); if (!k) return;
+  const jest = !!(await tloPlik().catch(() => null));
+  k.innerHTML = `<h3>🎨 Tło</h3><div class="szary">Za szkłem: kolorowe plamy albo Twoja tapeta. Zapamiętane tylko na tym urządzeniu.</div>
+    <div class="chipy wiersz" style="margin-top:10px">
+      <button class="chip ${TLO.tryb === "kolory" ? "akt" : ""}" data-t="kolory">🌈 Kolorowe (domyślne)</button>
+      <button class="chip ${TLO.tryb === "tapeta" ? "akt" : ""}" data-t="tapeta">🖼️ Moja tapeta</button></div>
+    ${TLO.tryb === "tapeta" ? `<label>Przyciemnienie tapety: <b id="tlo-ile">${TLO.ciemno}%</b></label><input type="range" id="tlo-ciemno" min="0" max="80" step="5" value="${TLO.ciemno}" style="width:100%">
+    <div class="wiersz" style="margin-top:10px"><button class="drugi" id="tlo-wybierz">${jest ? "Zmień zdjęcie" : "Wybierz zdjęcie"}</button>${jest ? `<button class="drugi" id="tlo-usun">Usuń tapetę</button>` : ""}</div>
+    <input type="file" id="tlo-plik" accept="image/*" hidden>` : ""}`;
+  k.querySelectorAll("[data-t]").forEach(b => b.onclick = async () => {
+    TLO.tryb = b.dataset.t; localStorage.setItem("trener:tlo", JSON.stringify(TLO));
+    await zastosujTlo(); kartaTla();
+    if (TLO.tryb === "tapeta" && !jest) $("#tlo-plik", k)?.click();
+  });
+  const pl = $("#tlo-plik", k); if (!pl) return;
+  pl.onchange = () => wgrajTapete(pl.files[0]);
+  $("#tlo-wybierz", k).onclick = () => pl.click();
+  const us = $("#tlo-usun", k); if (us) us.onclick = async () => { await tloPlik(null); TLO.tryb = "kolory"; localStorage.setItem("trener:tlo", JSON.stringify(TLO)); await zastosujTlo(); kartaTla(); };
+  const r = $("#tlo-ciemno", k);
+  r.oninput = () => { TLO.ciemno = +r.value; $("#tlo-ile", k).textContent = r.value + "%"; document.getElementById("tapeta")?.style.setProperty("--ciemno", (TLO.ciemno / 100).toFixed(2)); };
+  r.onchange = () => localStorage.setItem("trener:tlo", JSON.stringify(TLO));
+}
+zastosujTlo();
 
 // ------------------------------------------------------------------ Jedzenie: dziennik kalorii, skaner kodów, cel od trenera
 const POSILEK = { sniadanie: "Śniadanie", drugie: "Drugie śniadanie", obiad: "Obiad", przekaska: "Przekąski", kolacja: "Kolacja" };
