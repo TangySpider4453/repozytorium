@@ -121,3 +121,9 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
 - **2026-10-23**: Tryb „Same ręce”: kadr centruje i przybliża ręce (barki, łokcie, nadgarstki), suwak „Przybliżenie” = ile kadru zajmują ręce (osobne ustawienia `celSr`/`celYr`). `app.js?v=13`.
 - **2026-10-23 (2)**: Kadr na ręce działa dla każdego zdjęcia biceps / tył+biceps (wcześniej tylko z przełącznikiem „same ręce”, który zostaje dla sposobu dopasowania). `app.js?v=14`.
 - **2026-10-26**: Wykresy: wybór „na żywo” albo średnie z tygodnia / miesiąca / roku w słupkach. `app.js?v=15`.
+
+### 2026-11-22: Liquid Glass i zakładka w Trenerze
+- Wygląd jak Trener: ciemne tło z ruchomymi plamami, szklane karty i okna, pływająca kapsułka zakładek, szklane przyciski
+  i pola, czcionki systemowe (bez Google Fonts). Styl to blok „Liquid Glass” na końcu `<style>` w `index.html`.
+- Trener ma na dolnym pasku zakładkę **Progres** (`#progres`, dawny ekran Waga): wpis wagi i składu, wykres, link do tej strony
+  (zdjęcia, Film, porównania).

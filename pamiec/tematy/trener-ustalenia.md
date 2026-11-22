@@ -31,7 +31,7 @@ Czytaj, gdy: zmieniasz planowanie, prompty, dietę, wykresy albo wygląd/JS apki
 - Czas trwania zawsze h:mm.
 
 ## Apka (front)
-- Menu: Dziś · Plan · Jedzenie · Dane · Czat; historia treningów jako podzakładka Dane.
+- Menu: Dziś · Progres · Jedzenie · Dane · Czat; Plan otwierany z Dziś („cały plan” przy nagłówku i przycisk pod dniami), `#waga` → `#progres`; historia treningów jako podzakładka Dane.
 - Przewija się `body` (`SKR.scrollTo`/`SKR.scrollTop`), nie okno. iOS 26 standalone: `html { min-height: min(100lvh,
   calc(100% + env(safe-area-inset-top))) }` w styl.css (WebKit 301108). Nie usuwać.
 - Liquid Glass: zmienne `--szklo`, `--blask`, `--rozmyj`, `--sprezyna`; `--pierscien` do obwódek wykresów.

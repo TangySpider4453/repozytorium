@@ -607,7 +607,7 @@ async function pokazDzis() {
   h += `<div class="kafle">${kafelM("sen", dni, d.dzis)}${kafelM("hrv", dni, d.dzis)}${kafelM("tetno", dni, d.dzis)}${kafelM("bb", dni, d.dzis)}
     ${kafelM("obciazenie", dni, d.dzis, { podpis: esc(status(dz.status || wcz.status)) })}${kafelM("stres", dni, d.dzis)}
     ${kafelJedzenie(jedz)}${kafelWaga(waga)}</div>`;
-  h += `<h2>Plan</h2>`;
+  h += `<a class="h2-link" href="#plan"><h2>Plan</h2><span>cały plan<svg class="strz" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></span></a>`;
   const poDniu = {};
   d.plan.forEach(t => (poDniu[t.dzien] = poDniu[t.dzien] || []).push(t));
   if (!d.plan.length) h += `<div class="szary">Brak planu na najbliższe dni.</div>`;
@@ -615,6 +615,7 @@ async function pokazDzis() {
     h += `<div class="dzien ${k === d.dzis ? "dzis" : ""}"><div class="data">${k === d.dzis ? "Dziś" : dataPL(k)}</div>${(() => { const ile = JSON.parse(JSON.stringify((d.zrobione_id || {})[k] || {}));   // „zrobione” tylko, gdy był trening tego samego rodzaju
       return poDniu[k].map(t => { const aid = t.sport !== "odpoczynek" && ile[t.sport]?.length ? ile[t.sport].shift() : null; return trening(t, !!aid, aid); }).join(""); })()}</div>`;
   });
+  h += `<div class="wiersz" style="margin-top:12px"><a class="btn drugi" href="#plan">📅 Cały plan i periodyzacja</a></div>`;
   h += `<div class="szary stopka">Synchronizacja: ${esc((d.ostatni_sync || "–").replace("T", " ").slice(0, 16))}
     · <a href="#" onclick="akcja('sync');return false">odśwież</a></div>`;
   widok.innerHTML = h;
@@ -1589,7 +1590,7 @@ async function pokazWage() {
       <label class="btn" style="margin:0">Dodaj zdjęcie<input type="file" accept="image/*" id="z-plik" hidden></label></div>
     <div id="z-info" class="szary"></div>
     <div class="galeria">${zd.slice(0, 24).map(z => `<a class="miniatura" href="#" data-zid="${z.id}"><img loading="lazy" src="/api/waga/plik/${z.id}_m.jpg" alt=""><span>${dataKr(z.data)} · ${TYPY_ZDJ[z.typ] || z.typ}</span></a>`).join("")}</div>
-    <div class="szary" style="margin-top:8px">Film z sylwetki i porównania „przed / po” są w <a href="http://${location.hostname}/strony/progres/" target="_blank" rel="noopener">Progres na portalu</a>.</div></div>`;
+    <div class="szary" style="margin-top:8px">Film z sylwetki i porównania „przed / po” są w <a href="${adresPanelu()}strony/progres/" target="_blank" rel="noopener">Progres na portalu</a>.</div></div>`;
   h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
       <div class="szary">${[x.fat != null && `tłuszcz ${lb(x.fat, 1)}%`, x.muscle != null && `mięśnie ${lb(x.muscle, 1)}%`, x.notatka && esc(x.notatka)].filter(Boolean).join(" · ")}</div></div><b>${x.masa != null ? lb(x.masa, 1) + " kg" : ""}</b></div>`).join("") : `<div class="szary">Brak wpisów.</div>`}${wp.length > 10 ? `<button class="drugi dodaj" id="w-wiecej" style="margin-top:10px">Pokaż wszystkie (${wp.length})</button>` : ""}</div>`;
   widok.innerHTML = h;
@@ -1683,7 +1684,7 @@ function kafelWaga(w) {
   const fat = Object.entries(w.wpisy || {}).filter(([, v]) => v.fat != null).sort(([a], [b]) => a < b ? -1 : 1).slice(-1)[0];
   const m = { lepiej: -1, dz: 1 };
   const st = o ? wp.filter(([k]) => k <= dzienMinus(o[0], 7)).slice(-1)[0] : null;
-  return `<a class="kafel" href="#waga"><div class="n">Waga${o && o[0] !== dzisISO() ? `<span class="znaczek">${dataPL(o[0])}</span>` : ""}<svg class="strz" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></div>
+  return `<a class="kafel" href="#progres"><div class="n">Waga${o && o[0] !== dzisISO() ? `<span class="znaczek">${dataPL(o[0])}</span>` : ""}<svg class="strz" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></div>
     <div class="w">${o ? lb(o[1].masa, 1) : "–"}<small>${o ? " kg" : ""}</small></div>
     <div class="d">${st ? delta(m, o[1].masa, st[1].masa, "kg vs tydz.") : fat ? `tłuszcz ${lb(fat[1].fat, 1)}%` : "dotknij, by wpisać"}</div>
     ${wyk({ typ: "spark", y: wp.slice(-14).map(([, v]) => v.masa), kolor: KOLOR.niebieski })}</a>`;
@@ -1692,9 +1693,9 @@ function kafelWaga(w) {
 // ------------------------------------------------------------------ router
 // Przejścia: zakładka → zakładka: ekran przesuwa się w bok (nowy wjeżdża od strony klikniętej zakładki);
 // otwarcie szczegółów: nowy ekran rośnie z dotkniętej karty na cały ekran; wyjście: ekran kurczy się z powrotem do karty.
-const ZAKLADKI = ["dzis", "plan", "jedzenie", "dane", "czat"];
-const DETALE = new Set(["analiza", "metryka", "trening", "zaplanowany", "waga", "ustawienia", "wiedza"]);
-const RODZIC = { analiza: "dzis", waga: "dzis", metryka: "dane", trening: "dane", zaplanowany: "plan", ustawienia: "dzis", wiedza: "dzis" };
+const ZAKLADKI = ["dzis", "progres", "jedzenie", "dane", "czat"];
+const DETALE = new Set(["analiza", "metryka", "trening", "zaplanowany", "plan", "ustawienia", "wiedza"]);   // Plan otwiera się z Dziś
+const RODZIC = { analiza: "dzis", plan: "dzis", metryka: "dane", trening: "dane", zaplanowany: "plan", ustawienia: "dzis", wiedza: "dzis" };
 const _ih = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
 const spokojnie = matchMedia("(prefers-reduced-motion: reduce)");
 const SPR = "cubic-bezier(.32, .72, 0, 1)";            // jak przejścia w iOS
@@ -1838,19 +1839,20 @@ Object.defineProperty(widok, "innerHTML", { configurable: true, get() { return _
 const trwaAnimacja = () => (anim = anim.filter(x => x.playState ? x.playState === "running" : x.isConnected)).length > 0;
 
 const pozycja = (t, zak) => t === "treningi" ? 3.5 : ZAKLADKI.indexOf(zak);
-const EKRANY = { dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: a => pokazCzat(a), analiza: a => pokazAnalize(a), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: a => pokazMetryke(a), jedzenie: a => pokazJedzenie(a), waga: pokazWage, trening: a => pokazTrening(a), zaplanowany: a => pokazZaplanowany(a) };
+const EKRANY = { dzis: pokazDzis, plan: pokazPlan, dane: pokazDane, treningi: () => pokazTreningi(), czat: a => pokazCzat(a), analiza: a => pokazAnalize(a), ustawienia: ekranUstawien, start: pokazStart, wiedza: pokazWiedze, metryka: a => pokazMetryke(a), jedzenie: a => pokazJedzenie(a), progres: pokazWage, trening: a => pokazTrening(a), zaplanowany: a => pokazZaplanowany(a) };
 
 async function route() {
   if (czekaUpdate) { location.reload(); return; }
   const nr = ++nawNr;
   const hash = location.hash.slice(1) || "dzis";
   const [t, arg] = hash.split("/");
-  const zak = t === "analiza" || t === "waga" ? "dzis" : t === "metryka" || t === "trening" || t === "treningi" ? "dane" : t === "zaplanowany" ? "plan" : t;
+  if (t === "waga") { location.replace("#progres"); return; }   // stary adres (powiadomienia, zakładki)
+  const zak = t === "analiza" || t === "plan" || t === "zaplanowany" ? "dzis" : t === "metryka" || t === "trening" || t === "treningi" ? "dane" : t;
   const i = ZAKLADKI.indexOf(zak), nav = $("nav");
   nav.querySelectorAll("a").forEach(a => a.classList.toggle("akt", a.dataset.t === zak));
   if (i >= 0) nav.style.setProperty("--i", i);
   nav.classList.toggle("bez-zak", i < 0);
-  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Dane", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", waga: "Waga", trening: "Trening", zaplanowany: "Zaplanowany trening" }[t] || "Trener";
+  $("#tytul").textContent = { dzis: "Trener", plan: "Plan", dane: "Dane", treningi: "Dane", czat: "Czat z trenerem", analiza: "Analiza", ustawienia: "Ustawienia", start: "Poznajmy się", wiedza: "Źródła trenera", jedzenie: "Jedzenie", progres: "Progres", trening: "Trening", zaplanowany: "Zaplanowany trening" }[t] || "Trener";
   document.body.classList.toggle("detal", DETALE.has(t) && t !== "ustawienia");    // Ustawienia zamyka zębatka, więc zostaje logo
   // rodzaj przejścia
   if (poprz) poprz.y = SKR.scrollTop;                // przewinięcie ekranu, z którego wychodzisz
