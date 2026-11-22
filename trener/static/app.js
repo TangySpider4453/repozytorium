@@ -1699,11 +1699,48 @@ function edytujPomiar(dzien) {
 
 function pokazZdjecie(zid) {
   const z = (WAGA.zdjecia || []).find(q => q.id === zid); if (!z) return;
-  const a = arkusz(`<div class="kt">${dataPL(z.data)} ${z.data.slice(0, 4)} · ${TYPY_ZDJ[z.typ] || z.typ}</div><img class="zdjecie" src="/api/waga/plik/${z.id}.jpg" alt="">
+  const a = arkusz(`<div class="kt">${dataPL(z.data)} ${z.data.slice(0, 4)} · ${TYPY_ZDJ[z.typ] || z.typ}</div><img class="zdjecie" id="zd-duze" src="/api/waga/plik/${z.id}.jpg" alt=""><div class="szary" style="margin-top:6px;text-align:center">Dotknij, żeby przybliżyć</div>
     <div class="wiersz" style="margin-top:12px"><select id="zt" style="flex:1">${Object.entries(TYPY_ZDJ).map(([k, n]) => `<option value="${k}" ${k === z.typ ? "selected" : ""}>${n}</option>`).join("")}</select>
       <button class="drugi zle-t" id="usun">Usuń</button></div>`);
+  a.querySelector("#zd-duze").onclick = () => powiekszZdjecie(`/api/waga/plik/${z.id}.jpg`);
   a.querySelector("#zt").onchange = async e => { await api("waga/zdjecie/" + zid, { typ: e.target.value }); WAGA = await api("waga"); };
   a.querySelector("#usun").onclick = async () => { if (!confirm("Usunąć zdjęcie? (trafi do kosza na NAS)")) return; await api("waga/zdjecie/" + zid, { usun: true }); zamknijArkusz(); pokazWage(); };
+}
+
+// Pełny ekran: dwa palce = przybliż, jeden = przesuń, podwójne stuknięcie = 2,5× / z powrotem, kółko myszy też działa
+function powiekszZdjecie(src) {
+  const t = document.createElement("div"); t.className = "lupa";
+  t.innerHTML = `<img src="${src}" alt="" draggable="false"><button class="lupa-x" aria-label="Zamknij">×</button>`;
+  document.body.appendChild(t);
+  const img = t.querySelector("img"), palce = new Map();
+  let s = 1, x = 0, y = 0, start = null, ostTap = 0, ruch = false;
+  const ogranicz = () => { if (s <= 1) { s = 1; x = 0; y = 0; return; }
+    const w = img.offsetWidth, h = img.offsetHeight;   // rozmiar bez transformacji
+    const mx = Math.max(0, (w * s - innerWidth) / 2), my = Math.max(0, (h * s - innerHeight) / 2);
+    x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y)); };
+  const ustaw = (anim) => { img.style.transition = anim ? "transform .25s ease" : "none"; img.style.transform = `translate(${x}px,${y}px) scale(${s})`; };
+  const zoomDo = (ns, cx, cy) => {   // przybliż wokół punktu (cx, cy) ekranu
+    ns = Math.max(1, Math.min(6, ns)); const ox = cx - innerWidth / 2, oy = cy - innerHeight / 2;
+    x = ox - (ox - x) * ns / s; y = oy - (oy - y) * ns / s; s = ns; ogranicz(); };
+  const zamknij = () => t.remove();
+  t.querySelector(".lupa-x").onclick = zamknij;
+  t.addEventListener("pointerdown", e => { if (e.target.closest(".lupa-x")) return; t.setPointerCapture(e.pointerId); palce.set(e.pointerId, [e.clientX, e.clientY]); ruch = false;
+    const p = [...palce.values()];
+    start = p.length === 2 ? { d: Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]), s, x, y, cx: (p[0][0] + p[1][0]) / 2, cy: (p[0][1] + p[1][1]) / 2 }
+                           : { px: e.clientX, py: e.clientY, x, y }; });
+  t.addEventListener("pointermove", e => { if (!palce.has(e.pointerId)) return; palce.set(e.pointerId, [e.clientX, e.clientY]); const p = [...palce.values()];
+    if (p.length === 2 && start.d) { ruch = true; const d = Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]), cx = (p[0][0] + p[1][0]) / 2, cy = (p[0][1] + p[1][1]) / 2;
+      s = start.s; x = start.x + cx - start.cx; y = start.y + cy - start.cy; zoomDo(start.s * d / start.d, cx, cy); ustaw(); }
+    else if (p.length === 1 && start.px != null) { const dx = e.clientX - start.px, dy = e.clientY - start.py; if (Math.hypot(dx, dy) > 6) ruch = true;
+      if (s > 1) { x = start.x + dx; y = start.y + dy; ogranicz(); ustaw(); } } });
+  const koniec = e => { palce.delete(e.pointerId); const p = [...palce.values()];
+    if (p.length === 1) start = { px: p[0][0], py: p[0][1], x, y };
+    if (palce.size || ruch) return;
+    const teraz = Date.now();
+    if (teraz - ostTap < 300) { if (s > 1) { s = 1; x = 0; y = 0; } else zoomDo(2.5, e.clientX, e.clientY); ustaw(true); ostTap = 0; }
+    else { ostTap = teraz; if (s === 1 && e.target === t) setTimeout(() => { if (ostTap === teraz) zamknij(); }, 300); } };
+  t.addEventListener("pointerup", koniec); t.addEventListener("pointercancel", e => palce.delete(e.pointerId));
+  t.addEventListener("wheel", e => { e.preventDefault(); zoomDo(s * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY); ustaw(); }, { passive: false });
 }
 
 function zmniejsz(img, max, jakosc) {   // przez canvas: mniejszy plik i bez EXIF (GPS)

@@ -24,6 +24,7 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 - Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-22 (4): dotknięcie zdjęcia w podglądzie otwiera pełny ekran z przybliżaniem (szczypanie, przesuwanie, podwójne stuknięcie).
 - 2026-11-22 (3): Progres ma podzakładki Pomiary / Zdjęcia (zdjęcia pogrupowane po dniu pomiaru, „+ zdjęcie” do dnia); w „Nowy pomiar” wiele zdjęć naraz z wyborem strony.
 - 2026-11-22 (2): na pasku Progres (waga, skład, link do zdjęć) zamiast Planu; Plan otwiera się z Dziś jako ekran szczegółów.
 - 2026-11-22: logowanie hasłem (zakładki Trener / Zaloguj do panelu, parowanie w „details”), karta „🖥️ Panel serwera”
