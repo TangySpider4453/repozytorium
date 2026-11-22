@@ -1,68 +1,32 @@
-# 🧠 MAPA — mózg Claude
+# 🧠 MAPA: mózg Claude (czytaj na starcie, potem [zasady.md](zasady.md))
 
-**Start każdej sesji tutaj.** Ta mapa mówi, co istnieje, jak się łączy i gdzie szukać szczegółów.
-Repo jest **publiczne** → zero haseł, kluczy, kodów, publicznego IP domu i nazwisk (zasady: [zasady.md](zasady.md)).
+Na starcie czytasz tylko ten plik i `zasady.md`. Resztę otwieraj **wtedy, gdy zadanie jej dotyczy** (router niżej).
+Repo jest **publiczne**: zero haseł, kluczy, kodów, publicznego IP, adresu tunelu MC, nazwisk, nazwy tailnetu.
 
-## 1. Jak myśleć (pętla każdej sesji)
-1. Przeczytaj tę mapę → [zasady.md](zasady.md) → plik z obszaru, którego dotyczy prośba (tabela w punkcie 3).
-2. Połącz się z Pi ([dostep.md](dostep.md)) i **sprawdź stan, zanim coś zmienisz** (repo bywa nieaktualne).
-3. Zrób zadanie. Przed wgraniem pliku na Pi porównaj md5 kopii z Pi i z gita.
-4. Na koniec: dopisz [sesje.md](sesje.md), popraw [do-zrobienia.md](do-zrobienia.md), nowe ustalenia →
-   [decyzje.md](decyzje.md) / [uzytkownik.md](uzytkownik.md), zmienione fakty → popraw węzeł (nie dopisuj sprzecznych).
+## Sedno o użytkowniku
+Antek, technikum (robotyk). Pisz po polsku, krótko i konkretnie; nazwy przycisków po angielsku. Nikomu nic nie wysyłaj
+bez zgody. Więcej: [tematy/uzytkownik.md](tematy/uzytkownik.md).
 
-## 2. Mapa świata
+## Pętla pracy
+1. Otwórz plik tematu z routera. Połącz się z Pi (`ssh pi hostname`) i **sprawdź stan na Pi**, zanim coś zmienisz.
+2. Przed wgraniem na Pi: md5 kopii z Pi i z gita, kopia do `kopie/`, scp, weryfikacja.
+3. Koniec sesji, w pliku tematu: wpis w „Dziennik” (najnowszy na górze, max ~6; starsze przenieś do `archiwum/`),
+   popraw „Otwarte”, nowe ustalenia do „Ustalenia” (zmienione fakty popraw, nie dopisuj sprzecznych). Commit + push.
 
-```mermaid
-graph LR
-  U(("👤 Antek<br/>iPhone · iPad · PC"))
-  subgraph CHMURA["☁️ Claude Code w chmurze"]
-    C["sesja Claude<br/>(claude-cloud)"]
-    R[("GitHub<br/>TangySpider4453/repozytorium")]
-  end
-  subgraph TS["🔒 Tailscale (tailnet)"]
-    PI4["🖥️ Pi 4B 8 GB<br/>serwer domowy<br/>raspberrypi"]
-    PI5["🤖 Pi 5 + Hailo-8<br/>mózg łazika<br/>rpi-5-1"]
-    Z1["📡 Zero 2W a1<br/>stacja LoRa"]
-    Z2["🛰️ Zero 2W a2<br/>satelita"]
-  end
-  NAS[("💾 NAS Synology<br/>LAN, /mnt/nas")]
-  C -- "ssh pi" --> PI4
-  C -- git --> R
-  U -- "portal, Linphone, Telegram" --> PI4
-  U -- "strona sterowania" --> PI5
-  PI4 -- "SMB: logi, zdjęcia, kopia systemu" --> NAS
-  PI5 -- "kopie przez most SSH" --> PI4
-  Z1 -. LoRa .- Z2
-  Z1 -. LoRa .- PI5
-
-  PI4 --- P1["📚 Nauka"]
-  PI4 --- P2["💪 Progres sylwetki"]
-  PI4 --- P3["🤖 Bot + 📞 telefon"]
-  PI4 --- P4["🏋️ Trener (Garmin, jedzenie)"]
-  PI4 --- P5["🩺 Zdrowie, NAS, kopie"]
-  PI4 --- P6["🎮 Minecraft (znajomi!)"]
-  PI4 --- P7["📅 todo, kalendarz, Mobidziennik, ZTM"]
-  PI5 --- P8["🚗 Łazik: sterowanie, wizja"]
-```
-
-## 3. Gdzie szukać (router)
-
-| Pytanie / zadanie dotyczy… | Węzeł pamięci | Pełna dokumentacja |
+## Router
+| Zadanie dotyczy… | Plik | Pełna dokumentacja |
 |---|---|---|
-| czego nie wolno, zgody | [zasady.md](zasady.md) | — |
-| kim jest użytkownik, styl pracy | [uzytkownik.md](uzytkownik.md) | — |
-| sprzęt, adresy, sieć | [urzadzenia.md](urzadzenia.md) | `SERWER.md` |
-| usługi i timery na Pi 4, co działa teraz | [uslugi.md](uslugi.md) | `SERWER.md` |
-| projekty: stan, pliki, problemy | [projekty.md](projekty.md) | `PLAN.md`, `PROGRES.md`, `lazik/LAZIK.md` |
-| gałęzie repo, co jest gdzie | [repo.md](repo.md) | — |
-| łączenie z Pi, klucze (bez wartości) | [dostep.md](dostep.md) | `PLAN.md` §4 |
-| co zostało do zrobienia | [do-zrobienia.md](do-zrobienia.md) | `PRZEKAZANIE.md` w kopiach |
-| dlaczego coś jest tak, a nie inaczej | [decyzje.md](decyzje.md) | dzienniki w `SERWER.md`, `PLAN.md` §9 |
-| co robiły poprzednie sesje | [sesje.md](sesje.md) | kopie rozmów na Pi (niżej) |
+| łączenie z Pi/Tailscale, sprzęt, adresy, gałęzie repo, mapa świata | [tematy/infrastruktura.md](tematy/infrastruktura.md) | `SERWER.md` |
+| portal, bot, telefon, token Claude, zdrowie, NAS, usługi/timery | [tematy/serwer.md](tematy/serwer.md) | `SERWER.md` |
+| Trener: stan, otwarte, dziennik | [tematy/trener.md](tematy/trener.md) | `trener/README.md` |
+| Trener: reguły planu, dieta, wygląd/iOS (przed zmianą kodu) | [tematy/trener-ustalenia.md](tematy/trener-ustalenia.md) | — |
+| nauka, sprawdziany, Mobidziennik | [tematy/nauka.md](tematy/nauka.md) | `PLAN.md` |
+| progres sylwetki | [tematy/progres.md](tematy/progres.md) | `PROGRES.md` |
+| łazik | [tematy/lazik.md](tematy/lazik.md) | `lazik/LAZIK.md` |
+| Minecraft | [tematy/minecraft.md](tematy/minecraft.md) | `SERWER.md` |
+| stara historia (sesje, decyzje, zadania do 22.11) | `archiwum/` (tylko gdy trzeba) | — |
 
-## 4. Źródła poza repo
-- **Kopie rozmów ze starego konta Claude** (na Pi): `~/Desktop/dla claude kopie zapasowe/`
-  - `Serwerek/` — serwer, nauka, bot, telefon, Garmin (19.10–16.11): `PRZEKAZANIE.md`, `zapis_rozmowy.md` (450 KB).
-  - `Łazik - sterowanie, wizja, kopie (konto 1)/` — łazik (26.10–16.11): `PRZEKAZANIE.md`, `zapis_rozmowy.md`, kod.
-  - `DOSTEP_PRYWATNE.md` w obu = hasła. **Nie czytaj bez potrzeby, nigdy nie kopiuj do repo ani na czat.**
-- Dane na Pi: `~/portal/dane/` (postępy, zdrowie, progres), NAS `Tony-Folder/Raspberry/`.
+## Źródła poza repo
+- Kopie rozmów ze starego konta (na Pi): `~/Desktop/dla claude kopie zapasowe/` (`Serwerek/`, `Łazik …/`:
+  `PRZEKAZANIE.md`, `zapis_rozmowy.md`). `DOSTEP_PRYWATNE.md` = hasła: **nie czytaj bez potrzeby, nigdy do repo ani na czat.**
+- Dane na Pi: `~/portal/dane/`, `~/trener/dane/`; NAS `Tony-Folder/Raspberry/`.

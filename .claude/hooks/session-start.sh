@@ -52,7 +52,7 @@ if ! tailscale status >/dev/null 2>&1; then
 fi
 
 # 5. Wiadomość dla Claude (stdout trafia do kontekstu sesji)
-echo "=== Mózg: zacznij od pamiec/MAPA.md (potem pamiec/zasady.md) ==="
+echo "=== Mózg: przeczytaj pamiec/MAPA.md i pamiec/zasady.md; tematy/ tylko gdy dotyczy ==="
 if tailscale status >/dev/null 2>&1; then
   echo "Tailscale: połączony. Test: ssh pi hostname"
 elif [ -n "${TS_AUTHKEY:-}" ]; then

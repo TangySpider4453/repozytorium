@@ -1,0 +1,32 @@
+# 🏋️ Trener: apka treningowa (Pi 4 `~/trener/`)
+
+Czytaj, gdy: Trener, Garmin, zegarek, plan treningów, jedzenie/kalorie, czat trenera, wygląd apki.
+Kod i opis: `trener/README.md`, `SERWER.md`. Stałe ustalenia (reguły planu, wygląd, iOS): [trener-ustalenia.md](trener-ustalenia.md),
+czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
+
+## Stan
+- Działa od 17.11. Zastąpiła RestOrTrain (stary most usunięty 18.11). Dane Garmina z całej historii, analizy i plany
+  Claude, treningi same idą na zegarek, push, czat, dziennik kalorii, tło per urządzenie.
+- Logowanie: to samo hasło co portal albo parowanie kodem (`python -m trener kod` na Pi). Z internetu przez Funnel.
+- Ustalenia osobiste (profil, strefy, wzór tygodnia) są tylko na Pi: `dane/ustawienia.json` → `wymagania`.
+
+## Otwarte
+- [ ] Antek: przejrzeć na fēniksie 7 trening „Test – tylne barki” (ćwiczenia A–G), które mają własną nazwę i animację.
+  Potem zmienić mapowanie „odwodzenie ramion w opadzie” w `cwiczenia_antka.json` (teraz BENT_OVER_LATERAL_RAISE)
+  i usunąć test (id w `~/trener/kopie/test-tylne-barki.id`).
+- [ ] Antek: zakończyć stary plan Garmin Coach w Garmin Connect (53 treningi blokują limit; API ich nie usunie).
+- [ ] Antek: czy zegarek po synchronizacji pobrał wszystkie treningi i czy usunięte z Connect schodzą z zegarka.
+- [ ] Antek: mapowanie „Rozpiętki” (hantle vs maszyna); karta „Oceń nowe ćwiczenia” po siłce.
+- [ ] Antek: przybliżanie przebiegu dwoma palcami na iPhonie (gdy nie działa, zostają przyciski − + ‹ › „cały”).
+- [ ] Sprawdzić, czy `trener-historia` skończył: `kv.historia_postep == "gotowe"`.
+- [ ] Antek: terminy ferii/egzaminów/zawodów (do periodyzacji).
+- [ ] Ok. 6–13.12: czy spadek masy (średnia 7 dni) mieści się w 0,5–0,7%/tydz. i czy cel kcal ma sens.
+- Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
+
+## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-22: logowanie hasłem (zakładki Trener / Zaloguj do panelu, parowanie w „details”), karta „🖥️ Panel serwera”
+  w Ustawieniach; mocniejszy Liquid Glass; karta „🎨 Tło” (tapeta, ułożenie, suwaki szkła); „Omów” wysyła analizę do czatu.
+- 2026-11-21: superserie: 10 s przerwy między ćwiczeniami bez własnej przerwy; test mapowania tylnych barków na zegarku.
+- 2026-11-19: menu Dziś · Plan · Jedzenie · Dane · Czat, tierlista, animacje, poprawka czarnego pasa iOS 26,
+  trener w czacie mówi tylko na podstawie planu.
+- 2026-11-17: start apki, ankieta, korekta po śnie, dziennik kalorii, Liquid Glass, auto-aktualizacja.

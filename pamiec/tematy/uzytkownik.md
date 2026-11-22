@@ -1,5 +1,7 @@
 # Użytkownik
 
+Czytaj, gdy: pytanie o Antka, szkołę, styl pracy, preferencje (sedno jest też w MAPA.md).
+
 - **Antek**, uczeń technikum, klasa 3 KL, technik robotyk. Dziennik szkolny: Mobidziennik (czytany przez bota), wcześniej zrzuty z Librusa.
 - Pisze **po polsku**; odpowiadaj krótko i konkretnie. Aplikację Claude ma **po angielsku** → przy „co kliknąć”
   podawaj angielskie nazwy przycisków (2026-11-17).
