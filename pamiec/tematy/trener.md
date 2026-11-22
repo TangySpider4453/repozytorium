@@ -24,6 +24,8 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 - Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-22 (8): Masa i skład na wspólnej osi dat (`osW`): ten sam zakres od–do; dni bez wartości puste, seria `lacz: true`
+  łączy punkty ponad brakami w `rysujLinie`.
 - 2026-11-22 (7): Progres: linia ciągła = każdy pomiar, przerywana = średnia 7 dni (masa, tłuszcz, mięśnie); w dymku i legendzie
   kreski w stylu linii zamiast kropek, kropka średniej pusta w środku.
 - 2026-11-22 (6): Skład ciała na dwóch osiach (tłuszcz lewa, mięśnie prawa, każda na całą wysokość); `wyk` linia obsługuje `os: "prawa"`.

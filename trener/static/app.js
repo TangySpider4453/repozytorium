@@ -207,7 +207,7 @@ function rysujLinie(el, s, W, H) {
     let d = "", a = "", seg = [];
     const zamknij = () => { if (seg.length > 1 && serie.length === 1) a += `M${seg[0][0]},${Y(lo)}L${seg.map(p => p.join(",")).join("L")}L${seg[seg.length - 1][0]},${Y(lo)}Z`; seg = []; };
     q.y.forEach((v, i) => {
-      if (v == null) { zamknij(); return; }
+      if (v == null) { if (!q.lacz) zamknij(); return; }
       const p = [X(i).toFixed(1), Y(v).toFixed(1)];
       d += (seg.length ? "L" : "M") + p.join(","); seg.push(p);
     });
@@ -215,7 +215,7 @@ function rysujLinie(el, s, W, H) {
     if (a) g += `<path d="${a}" fill="${q.kolor}" opacity=".10"/>`;
     g += `<path d="${d}" fill="none" stroke="${q.kolor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${q.przerywana ? ' stroke-dasharray="6 5" stroke-linecap="butt"' : ""}/>`;
     // pojedyncze punkty (otoczone przerwami) jako kropki
-    q.y.forEach((v, i) => { if (v != null && q.y[i - 1] == null && q.y[i + 1] == null) g += `<circle cx="${X(i)}" cy="${Y(v)}" r="2" fill="${q.kolor}"/>`; });
+    if (!q.lacz) q.y.forEach((v, i) => { if (v != null && q.y[i - 1] == null && q.y[i + 1] == null) g += `<circle cx="${X(i)}" cy="${Y(v)}" r="2" fill="${q.kolor}"/>`; });
     const ost = q.y.map((v, i) => [i, v]).filter(([, v]) => v != null).pop();
     if (ost) {
       g += q.przerywana ? `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4" fill="var(--pierscien)" stroke="${q.kolor}" stroke-width="2.5"/>` : `<circle cx="${X(ost[0])}" cy="${Y(ost[1])}" r="4.5" fill="${q.kolor}" stroke="var(--pierscien)" stroke-width="2"/>`;
@@ -1600,16 +1600,18 @@ async function pokazWage() {
     <div class="zakladki">${[["dzien", "Każdy pomiar"], ["tydzien", "Średnia tyg."], ["miesiac", "Średnia mies."]].map(([k, t]) => `<button class="${wagaSr === k ? "akt" : ""}" data-sr="${k}">${t}</button>`).join("")}</div>`;
   const zM = wz.filter(x => x.masa != null);
   const sr = wagaSr !== "dzien", G = sr ? grupujWage(wz, wagaSr) : null;
+  // wspólna oś dat dla masy i składu: te same daty od–do na obu wykresach; brak wartości = puste miejsce (linia zaczyna się od 1. pomiaru)
+  const osW = (sr ? G : wz).filter(x => x.masa != null || x.fat != null || x.muscle != null), xW = osW.map(x => x.dzien);
   const etG = wagaSr === "tydzien" ? dataKr : k => `${MIES[+k.slice(5, 7) - 1]} ${k.slice(2, 4)}`;
   const dymG = k => { const g = G.find(q => q.dzien === k); return (wagaSr === "tydzien" ? `tydzień od ${dataKr(k)}` : `${MIES[+k.slice(5, 7) - 1]} ${k.slice(0, 4)}`) + ` · ${g.n} ${g.n === 1 ? "pomiar" : g.n < 5 ? "pomiary" : "pomiarów"}`; };
   const nazwaSr = wagaSr === "tydzien" ? "średnia tygodniowa" : "średnia miesięczna";
   // średnia krocząca 7 dni = prawdziwy trend (pojedyncze ważenie skacze o ±1 kg od wody)
-  const trend = zM.map(x => srednia(zM.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => q.masa)));
+  const trend = osW.map(x => srednia(zM.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => q.masa)));
   const gM = sr && G.filter(x => x.masa != null);
   h += sr ? `<div class="karta"><div class="kt">Masa <span class="szary">· kg, ${nazwaSr}</span></div>
-    ${wyk({ typ: "linia", x: gM.map(x => x.dzien), serie: [{ nazwa: nazwaSr, y: gM.map(x => x.masa), kolor: KOLOR.niebieski }], dz: 1, jedn: "kg", etX: etG, etDymek: dymG })}
+    ${wyk({ typ: "linia", x: xW, serie: [{ nazwa: nazwaSr, y: osW.map(x => x.masa), kolor: KOLOR.niebieski, lacz: true }], dz: 1, jedn: "kg", etX: etG, etDymek: dymG })}
     ${zmianaSr(gM, wagaSr)}${tempoTekst(zM)}</div>` : `<div class="karta"><div class="kt">Masa <span class="szary">· kg</span></div>
-    ${wyk({ typ: "linia", x: zM.map(x => x.dzien), serie: [{ nazwa: "ważenie", y: zM.map(x => x.masa), kolor: KOLOR.niebieski }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski, przerywana: true }], dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
+    ${wyk({ typ: "linia", x: xW, serie: [{ nazwa: "ważenie", y: osW.map(x => x.masa), kolor: KOLOR.niebieski, lacz: true }, { nazwa: "średnia 7 dni", y: trend.map(v => v == null ? null : +v.toFixed(2)), kolor: KOLOR.niebieski, przerywana: true, lacz: true }], dz: 1, jedn: "kg", etX: dataKr, etDymek: dataPL })}
     ${legenda([{ nazwa: "ważenie", kolor: KOLOR.niebieski }, { nazwa: "średnia 7 dni", kolor: KOLOR.niebieski, przerywana: true }])}
     ${tempoTekst(zM)}</div>`;
   const zS = (sr ? G : wz).filter(x => x.fat != null || x.muscle != null);
@@ -1617,12 +1619,12 @@ async function pokazWage() {
     const kg = wagaPokaz === "kg";
     const y = (x, k) => x[k] == null ? null : kg ? (sr ? x[k + "Kg"] : x.masa != null ? +(x.masa * x[k] / 100).toFixed(1) : null) : x[k];
     // średnia krocząca 7 dni (tylko „Każdy pomiar”; przy średnich tyg./mies. linia już jest średnią)
-    const sr7 = k => zS.map(x => { const v = srednia(zS.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => y(q, k)).filter(v => v != null)); return v == null ? null : +v.toFixed(2); });
-    const sS = [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski, os: "prawa" }];
-    if (!sr) sS.push({ nazwa: "tłuszcz, średnia 7 dni", y: sr7("fat"), kolor: KOLOR.zolty, przerywana: true }, { nazwa: "mięśnie, średnia 7 dni", y: sr7("muscle"), kolor: KOLOR.morski, os: "prawa", przerywana: true });
+    const sr7 = k => osW.map(x => { const v = srednia(zS.filter(q => q.dzien <= x.dzien && q.dzien > dzienMinus(x.dzien, 7)).map(q => y(q, k)).filter(v => v != null)); return v == null ? null : +v.toFixed(2); });
+    const sS = [{ nazwa: "tłuszcz", y: osW.map(x => y(x, "fat")), kolor: KOLOR.zolty, lacz: true }, { nazwa: "mięśnie", y: osW.map(x => y(x, "muscle")), kolor: KOLOR.morski, os: "prawa", lacz: true }];
+    if (!sr) sS.push({ nazwa: "tłuszcz, średnia 7 dni", y: sr7("fat"), kolor: KOLOR.zolty, przerywana: true, lacz: true }, { nazwa: "mięśnie, średnia 7 dni", y: sr7("muscle"), kolor: KOLOR.morski, os: "prawa", przerywana: true, lacz: true });
     h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Skład ciała${sr ? ` <span class="szary">· ${nazwaSr}</span>` : ""}</span>
       <span class="zakladki mini"><button class="${kg ? "" : "akt"}" data-wp="masa">%</button><button class="${kg ? "akt" : ""}" data-wp="kg">kg</button></span></div>
-      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: sS, h: 200, dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
+      ${wyk({ typ: "linia", x: xW, serie: sS, h: 200, dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
       ${legenda(sr ? sS : [sS[0], sS[1], { nazwa: "średnia 7 dni", kolor: "var(--tekst2)", przerywana: true }])}</div>`;
   }
   h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
