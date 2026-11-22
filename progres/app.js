@@ -295,18 +295,8 @@ function wykresSlupki(tytul, serie, jedn, zak, sr){
   const all = serie.flatMap(s => s.sl);
   if(all.length && !(zak && zak.calosc)){ x0 = Math.min(...all.map(k => k.od)); x1 = Math.max(...all.map(k => k.dalej)); }
   if(!all.length){ box.append(el("p", {class:"muted small", text:"Brak pomiarów w tym okresie. Przesuń suwak albo wybierz dłuższy zakres."})); return box; }
-  // każdy okres osi ma swoje miejsce; okres bez pomiarów między pomiarami dostaje blady słupek
-  // „szacunek” (liniowo między sąsiednimi średnimi), żeby było widać wszystkie tygodnie/miesiące/lata
+  // każdy okres osi ma swoje miejsce (okres bez pomiarów zostaje pusty)
   const sloty = []; for(let t = x0; t < x1;){ const [od, dalej] = okres(t, sr); sloty.push([od, dalej]); t = dalej; }
-  serie.forEach(s => {
-    const zn = new Map(s.sl.map(k => [k.od, k])), puste = [];
-    sloty.forEach(([od, dalej]) => {
-      if(zn.has(od) || !s.sl.length || od < s.sl[0].od || od > s.sl[s.sl.length - 1].od) return;
-      const a = s.sl.filter(k => k.od < od).pop(), b = s.sl.find(k => k.od > od), sa = (a.od + a.dalej) / 2, sb = (b.od + b.dalej) / 2, sc = (od + dalej) / 2;
-      puste.push({od, dalej, v:a.v + (b.v - a.v) * (sc - sa) / (sb - sa), n:0, szac:true});
-    });
-    s.sl = [...s.sl, ...puste].sort((p, q) => p.od - q.od);
-  });
   const W = Math.max(300, Math.round(($("wykresy").clientWidth || 600) - 34)), H = 190, L = 40, R = 14, T = 18, B = 24;
   const ys = all.map(k => k.v);
   let y0 = Math.min(...ys), y1 = Math.max(...ys); const pad_ = Math.max((y1 - y0) * 0.25, 0.5); y0 = Math.max(0, y0 - pad_ * 2); y1 += pad_;
@@ -326,9 +316,8 @@ function wykresSlupki(tytul, serie, jedn, zak, sr){
   serie.forEach((s, i) => s.sl.forEach(k => {
     const a = X(k.od), b = X(k.dalej), szer = b - a, przerwa = Math.min(szer * 0.15, 6), w = (szer - 2 * przerwa) / n;
     const x = a + przerwa + i * w, y = Y(k.v);
-    g.append(S("rect", Object.assign({x:x.toFixed(1), y:y.toFixed(1), width:Math.max(1, w - (n > 1 ? 1 : 0)).toFixed(1), height:Math.max(1, H - B - y).toFixed(1), rx:Math.min(3, w / 4), fill:s.kolor, opacity:.85},
-      k.szac ? {opacity:.22, stroke:s.kolor, "stroke-width":1, "stroke-dasharray":"3 2"} : {})));
-    if(w >= 30 && !k.szac){ const t = S("text", {x:(x + w / 2).toFixed(1), y:(y - 4).toFixed(1), "text-anchor":"middle", "font-size":11, fill:"var(--ink)", "font-weight":700}); t.textContent = pl(k.v); g.append(t); }
+    g.append(S("rect", {x:x.toFixed(1), y:y.toFixed(1), width:Math.max(1, w - (n > 1 ? 1 : 0)).toFixed(1), height:Math.max(1, H - B - y).toFixed(1), rx:Math.min(3, w / 4), fill:s.kolor, opacity:.85}));
+    if(w >= 30){ const t = S("text", {x:(x + w / 2).toFixed(1), y:(y - 4).toFixed(1), "text-anchor":"middle", "font-size":11, fill:"var(--ink)", "font-weight":700}); t.textContent = pl(k.v); g.append(t); }
   }));
   const wrap = el("div", {class:"chartwrap"}, svg), tip = el("div", {class:"tip", hidden:""}); wrap.append(tip);
   const okresy = sloty.map(([od, dalej]) => ({od, dalej}));
@@ -336,8 +325,8 @@ function wykresSlupki(tytul, serie, jedn, zak, sr){
     const r = svg.getBoundingClientRect(), t = x0 + ((ev.clientX - r.left) / r.width * W - L) / (W - L - R) * (x1 - x0);
     const k = okresy.find(q => t >= q.od && t < q.dalej); if(!k){ tip.hidden = true; return; }
     tip.hidden = false; tip.innerHTML = ""; tip.append(el("b", {text:nazwaOkresu(k.od, k.dalej, sr)}));
-    serie.forEach(s => { const q = s.sl.find(z => z.od === k.od); if(q && q.szac) tip.append(el("div", {class:"muted"}, `${s.nazwa}: brak pomiarów (szacunek ok. ${pl(q.v)}${jedn})`));
-      else if(q) tip.append(el("div", {}, el("span", {style:`display:inline-block;width:10px;height:10px;background:${s.kolor};margin-right:6px;vertical-align:middle;border-radius:2px`}),
+    serie.forEach(s => { const q = s.sl.find(z => z.od === k.od); if(!q) tip.append(el("div", {class:"muted"}, `${s.nazwa}: brak pomiarów`));
+      else tip.append(el("div", {}, el("span", {style:`display:inline-block;width:10px;height:10px;background:${s.kolor};margin-right:6px;vertical-align:middle;border-radius:2px`}),
       `${s.nazwa}: ${pl(q.v)}${jedn} (${q.n} ${q.n === 1 ? "pomiar" : q.n % 10 >= 2 && q.n % 10 <= 4 && (q.n % 100 < 10 || q.n % 100 >= 20) ? "pomiary" : "pomiarów"})`)); });
     const px = (X(k.od) + X(k.dalej)) / 2 / W * r.width; tip.style.left = Math.min(Math.max(px - 80, 0), r.width - 180) + "px"; tip.style.top = "-6px";
   };
