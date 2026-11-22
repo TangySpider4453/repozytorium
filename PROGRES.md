@@ -132,3 +132,4 @@ Pozostałe `/api/*` mają limit 64 KB (hook `limit_malych_zapytan`).
   „+ zdjęcie” dokłada do danego dnia). Sylwetkę na zdjęciach z Trenera rozpoznaje potem strona portalu.
 - Podgląd zdjęcia w Trenerze: dotknięcie otwiera pełny ekran; dwa palce przybliżają (do 6×), jeden przesuwa, podwójne stuknięcie 2,5× / z powrotem, stuknięcie w tło zamyka.
 - Wykresy masy i składu w Trenerze: przełącznik **Każdy pomiar / Średnia tyg. / Średnia mies.** (tydzień od poniedziałku; kg składników uśredniane z każdego pomiaru; pod wykresem zmiana vs poprzedni okres).
+- Wykres **Skład ciała** w Trenerze ma dwie osie: tłuszcz po lewej, mięśnie po prawej, każda seria na całą wysokość (wspólna siatka, nazwy osi z kropką koloru nad wykresem).

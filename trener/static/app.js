@@ -158,15 +158,34 @@ function rysujSpark(el, s, W, H) {
 
 function rysujLinie(el, s, W, H) {
   const n = s.x.length, serie = s.serie;
-  const wart = serie.flatMap(q => q.y).concat(s.pasmo ? s.pasmo.flat() : []).concat(s.ref != null ? [s.ref] : []).concat((s.linie || []).map(l => l.y)).filter(v => v != null);
+  const prawe = serie.filter(q => q.os === "prawa");   // druga oś (np. mięśnie obok tłuszczu): każda seria na całą wysokość
+  const wart = serie.filter(q => q.os !== "prawa").flatMap(q => q.y).concat(s.pasmo ? s.pasmo.flat() : []).concat(s.ref != null ? [s.ref] : []).concat((s.linie || []).map(l => l.y)).filter(v => v != null);
   if (wart.length < 2) { el.innerHTML = `<div class="pusto">za mało danych</div>`; return; }
   const fmt = s.fmt || (v => lb(v, s.dz || 0));
   const t = zaokr(s.min ?? Math.min(...wart), s.max ?? Math.max(...wart), 4, s.krokY);
   const lo = t[0], hi = t[t.length - 1];
-  const L = 6, R = 6, T = (s.znaczniki || []).length ? 24 : 10, B = 22, osL = Math.max(...t.map(v => fmt(v).length)) * 6.5 + 8;
-  const x0 = L + osL, x1 = W - R - (s.etykietaKonca === false ? 0 : 30);
+  // prawa oś: tyle samo kresek co lewa, żeby siatka była wspólna
+  let t2 = null;
+  if (prawe.length) {
+    const w2 = prawe.flatMap(q => q.y).filter(v => v != null), k = t.length - 1;
+    let a2 = Math.min(...w2), b2 = Math.max(...w2); if (a2 === b2) { a2 -= 1; b2 += 1; }
+    const p10 = Math.pow(10, Math.floor(Math.log10((b2 - a2) / k))), kroki = [1, 2, 5, 10, 20].map(m => m * p10);
+    for (const kr of kroki) { const st = Math.floor(a2 / kr) * kr; if (st + kr * k >= b2 - 1e-9) { t2 = t.map((_, j) => +(st + kr * j).toFixed(6)); break; } }
+    if (!t2) { const kr = (b2 - a2) / k; t2 = t.map((_, j) => +(a2 + kr * j).toFixed(6)); }
+  }
+  const dwie = !!t2, T = (s.znaczniki || []).length || dwie ? 24 : 10;
+  const L = 6, R = 6, B = 22, osL = Math.max(...t.map(v => fmt(v).length)) * 6.5 + 8, osP = dwie ? Math.max(...t2.map(v => fmt(v).length)) * 6.5 + 8 : 0;
+  const x0 = L + osL, x1 = W - R - osP - (s.etykietaKonca === false ? 0 : 30);
   const X = i => n === 1 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / (n - 1), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
-  let g = t.map(v => `<line x1="${x0}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" class="siatka"/><text x="${x0 - 6}" y="${Y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`).join("");
+  const Y2 = dwie ? v => T + (H - T - B) * (1 - (v - t2[0]) / (t2[t2.length - 1] - t2[0])) : Y;
+  const Yq = q => q.os === "prawa" ? Y2 : Y;
+  let g = t.map((v, j) => `<line x1="${x0}" x2="${W - R - osP}" y1="${Y(v)}" y2="${Y(v)}" class="siatka"/><text x="${x0 - 6}" y="${Y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`
+    + (dwie ? `<text x="${W - R}" y="${Y(v) + 3.5}" text-anchor="end">${fmt(t2[j])}</text>` : "")).join("");
+  if (dwie) {   // podpisy osi nad wykresem: kropka w kolorze serii + nazwa
+    const lewa = serie.find(q => q.os !== "prawa");
+    g += `<circle cx="${L + 4}" cy="${T - 13}" r="4" fill="${lewa.kolor}"/><text x="${L + 12}" y="${T - 9.5}">${esc(lewa.nazwa)}${s.jedn ? " " + esc(s.jedn) : ""}</text>`
+      + `<text x="${W - R - 12}" y="${T - 9.5}" text-anchor="end">${esc(prawe[0].nazwa)}${s.jedn ? " " + esc(s.jedn) : ""}</text><circle cx="${W - R - 4}" cy="${T - 13}" r="4" fill="${prawe[0].kolor}"/>`;
+  }
   // podpisy osi X: ~4 równo rozłożone
   const ileX = Math.min(n, W < 380 ? 3 : 5);
   for (let k = 0; k < ileX; k++) { const i = ileX === 1 ? 0 : Math.round((n - 1) * k / (ileX - 1)); g += `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === ileX - 1 ? "end" : "middle"}">${esc(s.etX ? s.etX(s.x[i]) : s.x[i])}</text>`; }
@@ -184,6 +203,7 @@ function rysujLinie(el, s, W, H) {
   });
   const konce = [];
   serie.forEach((q, si) => {
+    const Y = Yq(q);
     let d = "", a = "", seg = [];
     const zamknij = () => { if (seg.length > 1 && serie.length === 1) a += `M${seg[0][0]},${Y(lo)}L${seg.map(p => p.join(",")).join("L")}L${seg[seg.length - 1][0]},${Y(lo)}Z`; seg = []; };
     q.y.forEach((v, i) => {
@@ -218,7 +238,7 @@ function rysujLinie(el, s, W, H) {
   const pokazI = (i, e) => {
     if (serie.every(q => q.y[i] == null)) { ukryj(); return; }
     cel.style.display = ""; cel.firstChild.setAttribute("x1", X(i)); cel.firstChild.setAttribute("x2", X(i));
-    serie.forEach((q, k) => { const c = cel.children[k + 1]; if (q.y[i] == null) c.style.display = "none"; else { c.style.display = ""; c.setAttribute("cx", X(i)); c.setAttribute("cy", Y(q.y[i])); } });
+    serie.forEach((q, k) => { const c = cel.children[k + 1]; if (q.y[i] == null) c.style.display = "none"; else { c.style.display = ""; c.setAttribute("cx", X(i)); c.setAttribute("cy", Yq(q)(q.y[i])); } });
     dym.innerHTML = `<div class="dt">${esc(s.etDymek ? s.etDymek(s.x[i]) : s.x[i])}</div>` + serie.map(q => q.y[i] == null ? "" :
       `<div><i style="background:${q.kolor}"></i>${serie.length > 1 ? esc(q.nazwa) + " " : ""}<b>${fmt(q.y[i])}</b>${s.jedn ? " " + esc(s.jedn) : ""}</div>`).join("") +
       (s.pasmo && s.pasmo[i] && s.pasmo[i][0] != null ? `<div class="sz">norma ${fmt(s.pasmo[i][0])}–${fmt(s.pasmo[i][1])}</div>` : "");
@@ -1596,7 +1616,7 @@ async function pokazWage() {
     const y = (x, k) => x[k] == null ? null : kg ? (sr ? x[k + "Kg"] : x.masa != null ? +(x.masa * x[k] / 100).toFixed(1) : null) : x[k];
     h += `<div class="karta"><div class="kt wiersz" style="justify-content:space-between"><span>Skład ciała${sr ? ` <span class="szary">· ${nazwaSr}</span>` : ""}</span>
       <span class="zakladki mini"><button class="${kg ? "" : "akt"}" data-wp="masa">%</button><button class="${kg ? "akt" : ""}" data-wp="kg">kg</button></span></div>
-      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski }], dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
+      ${wyk({ typ: "linia", x: zS.map(x => x.dzien), serie: [{ nazwa: "tłuszcz", y: zS.map(x => y(x, "fat")), kolor: KOLOR.zolty }, { nazwa: "mięśnie", y: zS.map(x => y(x, "muscle")), kolor: KOLOR.morski, os: "prawa" }], h: 200, dz: 1, jedn: kg ? "kg" : "%", etX: sr ? etG : dataKr, etDymek: sr ? dymG : dataPL })}
       ${legenda([{ nazwa: "tłuszcz", kolor: KOLOR.zolty }, { nazwa: "mięśnie", kolor: KOLOR.morski }])}</div>`;
   }
   h += `<h2>Historia</h2><div class="karta">${wp.length ? wp.slice().reverse().map((x, i) => `<div class="pozycja klik${i >= 10 ? " ukryty" : ""}" data-wd="${x.dzien}"><div><div>${dataPL(x.dzien)} ${x.dzien.slice(0, 4)}</div>
