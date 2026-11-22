@@ -40,6 +40,9 @@ Te same dane (pomiary i zdjęcia) są też w apce Trener: kafelek i ekran **Waga
   ≥ 21 dni), z miesiąca (≥ 60 dni), z roku (Całość albo ≥ 730 dni) = `WYK.sr` (`zywo`/`tydzien`/`miesiac`/`rok`,
   localStorage). `wykresSlupki` w `app.js`: średnia ze wszystkich pomiarów okresu, słupek, gdy środek okresu jest
   w oknie, oś obejmuje pełne okresy (miesiąc = 4–5 słupków tygodniowych), dymek z liczbą pomiarów.
+  Przy „Całość” (od 2026-11-22) oba wykresy mają wspólną oś od pierwszego do ostatniego pomiaru i każdy okres ma
+  miejsce; okres bez pomiarów między pomiarami ma blady, przerywany słupek „szacunek” (liniowo między sąsiednimi
+  średnimi, bez liczby; dymek „brak pomiarów”).
 - **Film:** typ zdjęcia, zakres dat, odstęp `FM.krok`: „co ileś dni” (`FM.co`; plan co N dni od początku zakresu,
   z okna ±N/2 wokół planu zdjęcie najbliższe planowi) albo „co miesiąc” (ten sam dzień miesiąca co początek zakresu,
   31 → ostatni dzień krótszego miesiąca; zdjęcie najbliższe planowi, ale tylko z tego miesiąca; miesiąc bez zdjęć

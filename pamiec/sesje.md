@@ -154,3 +154,5 @@ Najnowsze na górze. Format: `RRRR-MM-DD (gdzie)`: co zrobiono; co zostało.
 - 2026-11-21: w superseriach/obwodach ćwiczenie bez własnej przerwy dostaje 10 s przerwy (`budowa.PRZERWA_W_SERII`):
   bez kroku przerwy Garmin nie pozwala poprawić ćwiczenia/ciężaru, a jest czas na przejście. 5 przyszłych siłek
   (22–27.11) wysłanych ponownie z nazwami i przerwami.
+- 2026-11-22: Progres, średnie w słupkach przy „Całość”: wszystkie tygodnie/miesiące/lata na wspólnej osi obu wykresów,
+  puste okresy jako blady słupek-szacunek (app.js?v=16).
