@@ -1199,32 +1199,43 @@ const paskiMakro = (s, c) => `<div class="makra">${MAKRO.map(([k, n, kol]) => `<
   <div class="pasek-pct"><i style="width:${Math.min(100, 100 * (s[k] || 0) / (c[k] || 1))}%;background:${kol}"></i></div></div>`).join("")}</div>`;
 
 // tydzień pon–nd: liczy się średnia, nie każdy dzień z osobna (jednego dnia więcej, drugiego mniej)
+// jedna sekcja tygodnia (kcal albo białko): łączny bilans, słupki, średnia i ile dziennie do niedzieli
+const TYDZ = [
+  { k: "kcal", kc: "cel", jedn: "kcal", nazwa: "Kalorie", kolor: KOLOR.morski, h: 130 },
+  { k: "b", kc: "cel_b", jedn: "g", nazwa: "Białko", kolor: KOLOR.niebieski, h: 110 }
+];
+function tydzienMakro(m, ctx) {
+  const { hist, d, dzien, dzis, dni, po } = ctx, jn = ` ${m.jedn}`;
+  const zj = k => k === dzien ? d.suma[m.k] : po[k] ? po[k][m.k] : null;
+  const cel = k => (k === dzien ? d.cel[m.k] : po[k] && po[k][m.kc]) || d.cel[m.k];
+  // dni zamknięte = przed dzisiaj i z wpisami (dzisiejszy dzień jeszcze trwa, nie zaniża bilansu)
+  const zam = dni.filter(k => k < dzis && zj(k) != null), jestDzis = dni.includes(dzis);
+  const lacznie = v => v >= 0 ? `nadwyżka <b>+${lb(Math.round(v))}${jn}</b>` : `brakło <b>${lb(Math.round(-v))}${jn}</b>`;
+  const bilans = zam.reduce((a, k) => a + zj(k) - cel(k), 0), sredniCel = srednia(dni.filter(k => k <= dzis).map(cel));
+  const zostaloDni = jestDzis ? dni.filter(k => k >= dzis).length : 0;
+  const naDzien = zostaloDni ? Math.round(d.cel[m.k] - bilans / zostaloDni) : null;
+  const ileDni = n => `${n} ${n === 1 ? "dzień" : "dni"}`;
+  const naglowek = zam.length ? `Łącznie: ${lacznie(bilans)} <span class="szary">(${ileDni(zam.length)}${jestDzis ? ", bez dzisiaj" : ""})</span>`
+    : `<span class="szary">${jestDzis ? "Pierwszy dzień tygodnia: bilans od jutra." : "Brak wpisów."}</span>`;
+  const opis = [
+    zam.length && `Średnio <b>${lb(srednia(zam.map(zj)))}</b>${jn}/dzień przy celu ~${lb(sredniCel)}${jn}.`,
+    naDzien != null && zam.length && `Żeby tydzień wyszedł na cel: ~<b>${lb(naDzien)}</b>${jn} dziennie do niedzieli (${ileDni(zostaloDni)}).`
+  ].filter(Boolean).map(t => `<div>${t}</div>`).join("");
+  // poprzedni tydzień (pełny), żeby w poniedziałek też było co zobaczyć
+  const pop = ctx.pop.filter(k => po[k] && po[k][m.k] != null);
+  const bilP = pop.reduce((a, k) => a + po[k][m.k] - cel(k), 0);
+  const opisP = pop.length ? `<div>Poprzedni tydzień: łącznie ${lacznie(bilP)}, średnio ${lb(srednia(pop.map(k => po[k][m.k])))}${jn}/dzień przy celu ~${lb(srednia(pop.map(cel)))}${jn} (${ileDni(pop.length)}).</div>` : "";
+  return `<div class="tydz-sek"><div class="tydz-l"><b>${m.nazwa}</b> · ${naglowek}</div>
+    ${wyk({ typ: "slupki", x: dni, serie: [{ nazwa: m.nazwa.toLowerCase(), y: dni.map(k => k > dzis ? null : zj(k)), kolor: m.kolor }], ref: sredniCel, refNazwa: "cel", jedn: m.jedn, etX: k => DNI[new Date(k + "T12:00").getDay()], etDymek: dataPL, h: m.h })}
+    <div class="szary" style="margin-top:6px">${opis}${opisP}</div></div>`;
+}
 function tydzienKcal(hist, d, dzien, dzis) {
   const pon = dzienMinus(dzien, (new Date(dzien + "T12:00").getDay() + 6) % 7);
   const dni = Array.from({ length: 7 }, (_, i) => dzienMinus(pon, -i)), po = Object.fromEntries(hist.map(q => [q.dzien, q]));
-  const zj = k => k === dzien ? d.suma.kcal : po[k] ? po[k].kcal : null;
-  const cel = k => (k === dzien ? d.cel.kcal : po[k] && po[k].cel) || d.cel.kcal;
-  // dni zamknięte = przed dzisiaj i z wpisami (dzisiejszy dzień jeszcze trwa, nie zaniża średniej)
-  const zam = dni.filter(k => k < dzis && zj(k) != null);
-  if (!zam.length && !dni.includes(dzis)) return "";
-  // poprzedni tydzień (pełny): średnia i bilans, żeby w poniedziałek też było co zobaczyć
-  const pop = Array.from({ length: 7 }, (_, i) => dzienMinus(pon, 7 - i)).filter(k => po[k]);
-  const bilP = pop.reduce((a, k) => a + po[k].kcal - cel(k), 0);
-  const zn = v => `${v >= 0 ? "+" : "−"}${lb(Math.abs(Math.round(v)))}`;
-  const sredniaZj = zam.length ? srednia(zam.map(zj)) : null, sredniCel = srednia(dni.filter(k => k <= dzis).map(cel));
-  const bilans = zam.reduce((a, k) => a + zj(k) - cel(k), 0);
-  const zostaloDni = dni.includes(dzis) ? dni.filter(k => k >= dzis).length : 0;
-  // ile dziennie do niedzieli (od dziś włącznie), żeby tydzień wyszedł na cel
-  const naDzien = zostaloDni ? Math.round(d.cel.kcal - bilans / zostaloDni) : null;
-  const opis = [
-    sredniaZj != null && `Średnio <b>${lb(sredniaZj)}</b> kcal/dzień przy celu ~${lb(sredniCel)} (${zam.length} ${zam.length === 1 ? "dzień" : "dni"} z wpisami${dni.includes(dzis) ? ", bez dzisiaj" : ""}).`,
-    zam.length && `Bilans tygodnia: <b>${zn(bilans)}</b> kcal ${bilans >= 0 ? "ponad cel" : "pod celem"}.`,
-    naDzien != null && zam.length && `Żeby tydzień wyszedł na cel: ~<b>${lb(naDzien)}</b> kcal dziennie do niedzieli (${zostaloDni} ${zostaloDni === 1 ? "dzień" : "dni"}).`
-  ].filter(Boolean).map(t => `<div>${t}</div>`).join("") || (dni.includes(dzis) ? `<div>Pierwszy dzień tygodnia: średnia pojawi się od jutra.</div>` : "");
-  const opisP = pop.length ? `<div style="margin-top:6px">Poprzedni tydzień: średnio <b>${lb(srednia(pop.map(k => po[k].kcal)))}</b> kcal/dzień przy celu ~${lb(srednia(pop.map(cel)))}, bilans <b>${zn(bilP)}</b> kcal (${pop.length} ${pop.length === 1 ? "dzień" : "dni"} z wpisami).</div>` : "";
+  if (!dni.some(k => k < dzis && (k === dzien || po[k])) && !dni.includes(dzis)) return "";
+  const ctx = { hist, d, dzien, dzis, dni, po, pop: Array.from({ length: 7 }, (_, i) => dzienMinus(pon, 7 - i)) };
   return `<div class="karta"><div class="kt">Ten tydzień <span class="szary">· ${dataKr(pon)} – ${dataKr(dni[6])}</span></div>
-    ${wyk({ typ: "slupki", x: dni, serie: [{ nazwa: "zjedzone", y: dni.map(k => k > dzis ? null : zj(k)), kolor: KOLOR.niebieski }], ref: sredniCel, refNazwa: "cel", jedn: "kcal", etX: k => DNI[new Date(k + "T12:00").getDay()], etDymek: dataPL, h: 130 })}
-    <div class="szary" style="margin-top:6px">${opis}${opisP}</div></div>`;
+    ${TYDZ.map(m => tydzienMakro(m, ctx)).join("")}</div>`;
 }
 
 async function pokazJedzenie(dzien) {

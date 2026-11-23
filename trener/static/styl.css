@@ -458,3 +458,5 @@ body.ultra main, body.ultra nav, body.ultra .pisz, body.ultra header { text-shad
 @keyframes lupa-in { from { opacity: 0; } }
 .opcje-w { gap: 8px 16px; flex-wrap: wrap; margin: -4px 0 12px; }
 .opcje-w .opcja { display: inline-flex; align-items: center; gap: 8px; }
+.tydz-sek + .tydz-sek { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--linia); }
+.tydz-l { margin-bottom: 6px; }

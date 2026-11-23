@@ -324,10 +324,11 @@ def historia(dni=30):
     cele = {}
     for r in d.execute("SELECT klucz, wartosc FROM kv WHERE klucz >= ? AND klucz LIKE 'makro_cel_%'", ("makro_cel_" + od,)):
         try:
-            cele[r[0][10:]] = json.loads(r[1]).get("kcal")
+            j = json.loads(r[1])
+            cele[r[0][10:]] = (j.get("kcal"), j.get("b"))
         except (ValueError, AttributeError):
             pass
-    return [{**sumy[k], "cel": cele.get(k)} for k in sorted(sumy)]
+    return [{**sumy[k], "cel": cele.get(k, (None, None))[0], "cel_b": cele.get(k, (None, None))[1]} for k in sorted(sumy)]
 
 
 # ---------------------------------------------------------------- masa ciała (Progres na portalu)
