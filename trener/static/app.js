@@ -1251,15 +1251,6 @@ async function pokazJedzenie(dzien) {
       <div class="duzy">${lb(Math.abs(zostalo))}<small>kcal</small></div>
       <div class="szary">zjedzone ${lb(s.kcal)} z ${lb(c.kcal)} kcal</div></div>${kolko(s.kcal, c.kcal)}</div>
     ${paskiMakro(s, c)}</div>`;
-  h += tydzienKcal(hist, d, dietaDzien, dzis);
-  h += `<div class="karta" id="cel-trenera"><div class="kt">Cel ${dietaDzien > dzis ? "na jutro" : dietaDzien < dzis ? "tego dnia" : "na dziś"} ${c.zrodlo === "trener" ? `<span class="znaczek">od trenera</span>` : `<span class="znaczek">ze wzoru</span>`}</div>
-    ${c.liczy ? `<div class="szary"><span class="mysli">Trener liczy cel pod dzisiejszy trening</span></div>` : ""}
-    ${dietaDzien > dzis ? `<div class="szary">Wstępnie z planu treningu. Trener policzy dokładny cel jutro rano (sen, Garmin).</div>` : ""}
-    ${c.komentarz ? `<div>${esc(c.komentarz)}</div>` : ""}${c.pory ? `<div class="szary" style="margin-top:6px">${esc(c.pory)}</div>` : ""}
-    <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.spocz && `spoczynkowe ${lb(c.spocz)}`, c.ruch_dnia && `ruch w ciągu dnia ~${lb(c.ruch_dnia)}`,
-      c.trening_kcal ? `treningi ~${lb(c.trening_kcal)}${c.trening_zrobione && c.trening_zrobione < c.trening_kcal ? ` (zrobione ${lb(c.trening_zrobione)} + plan ~${lb(c.trening_kcal - c.trening_zrobione)})` : c.trening_zrobione ? " (zrobione)" : " (plan)"}` : "dzień bez treningu",
-      c.ruch_ekstra && `dodatkowy ruch dziś +${lb(c.ruch_ekstra)}`].filter(Boolean).join(" · ")}</div>
-    ${dietaDzien > dzis ? "" : `<div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div>`}</div>`;
   d.posilki.forEach(p => {
     const w = d.wpisy.filter(x => x.posilek === p), sk = w.reduce((a, x) => a + x.kcal, 0);
     h += `<div class="karta posilek"><div class="kt wiersz" style="justify-content:space-between"><span>${POSILEK[p]}</span><span class="posilek-suma">${w.length ? `${MAKRO.map(([k, n, kol]) => `<b style="color:${kol}" title="${n}">${lb(w.reduce((a, x) => a + (x[k] || 0), 0))}</b>`).join("")}<span class="szary">${lb(sk)} kcal</span>` : ""}</span></div>
@@ -1274,6 +1265,16 @@ async function pokazJedzenie(dzien) {
       ${wyk({ typ: "slupki", x, serie: [{ nazwa: "zjedzone", y: x.map(k => po[k] ? po[k].kcal : null), kolor: KOLOR.niebieski }], ref: cele.length ? srednia(cele) : null, refNazwa: "cel", jedn: "kcal", etX: dataKr, etDymek: dataPL, h: 150 })}
       <div class="szary">Średnio ${lb(srednia(hx.map(q => q.kcal)))} kcal, białko ${lb(srednia(hx.map(q => q.b)))} g (dni z wpisami).</div></div>`;
   }
+  // na dole: cel na dziś i tydzień
+  h += `<div class="karta" id="cel-trenera"><div class="kt">Cel ${dietaDzien > dzis ? "na jutro" : dietaDzien < dzis ? "tego dnia" : "na dziś"} ${c.zrodlo === "trener" ? `<span class="znaczek">od trenera</span>` : `<span class="znaczek">ze wzoru</span>`}</div>
+    ${c.liczy ? `<div class="szary"><span class="mysli">Trener liczy cel pod dzisiejszy trening</span></div>` : ""}
+    ${dietaDzien > dzis ? `<div class="szary">Wstępnie z planu treningu. Trener policzy dokładny cel jutro rano (sen, Garmin).</div>` : ""}
+    ${c.komentarz ? `<div>${esc(c.komentarz)}</div>` : ""}${c.pory ? `<div class="szary" style="margin-top:6px">${esc(c.pory)}</div>` : ""}
+    <div class="szary" style="margin-top:8px">${[c.masa && `masa ${lb(c.masa, 1)} kg`, c.fat && `tłuszcz ${lb(c.fat, 1)}%`, `wydatek ~${lb(c.tdee)} kcal`, c.spocz && `spoczynkowe ${lb(c.spocz)}`, c.ruch_dnia && `ruch w ciągu dnia ~${lb(c.ruch_dnia)}`,
+      c.trening_kcal ? `treningi ~${lb(c.trening_kcal)}${c.trening_zrobione && c.trening_zrobione < c.trening_kcal ? ` (zrobione ${lb(c.trening_zrobione)} + plan ~${lb(c.trening_kcal - c.trening_zrobione)})` : c.trening_zrobione ? " (zrobione)" : " (plan)"}` : "dzień bez treningu",
+      c.ruch_ekstra && `dodatkowy ruch dziś +${lb(c.ruch_ekstra)}`].filter(Boolean).join(" · ")}</div>
+    ${dietaDzien > dzis ? "" : `<div class="wiersz" style="margin-top:10px"><button class="drugi" onclick="przeliczCel()">Przelicz</button></div>`}</div>`;
+  h += tydzienKcal(hist, d, dietaDzien, dzis);
   widok.innerHTML = h;
   rysuj(widok);
   if (c.liczy) czekajNaCel(dietaDzien);

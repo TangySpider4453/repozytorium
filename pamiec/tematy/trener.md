@@ -28,6 +28,7 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
   bilans vs cel, ile dziennie do niedzieli żeby tydzień wyszedł na cel; plus podsumowanie poprzedniego tygodnia.
   (2) Ta sama karta też dla białka (`TYDZ` + `tydzienMakro`): „Łącznie: nadwyżka +X / brakło X” kcal i g (dni zamknięte),
   poprzedni tydzień też z łącznym bilansem. `dieta.historia` zwraca też `cel_b` (cel białka z `makro_cel_<dzień>`).
+  (3) Kolejność w Jedzeniu: posiłki → Ostatnie 2 tygodnie → Cel na dziś → Ten tydzień (na samym dole).
 - 2026-11-22 (9): Progres: przełączniki „Średnia 7 dni” Wł./Wył. (`wagaTrend`) i „Skład” Razem/Osobno (`wagaSklad`,
   osobno = dwa wykresy z jedną osią); oba w localStorage.
 - 2026-11-22 (8): Masa i skład na wspólnej osi dat (`osW`): ten sam zakres od–do; dni bez wartości puste, seria `lacz: true`
