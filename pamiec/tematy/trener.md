@@ -24,6 +24,8 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 - Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-23: Jedzenie: karta „Ten tydzień” (pon–nd, `tydzienKcal`): słupki dni, średnia kcal/dzień z dni zamkniętych,
+  bilans vs cel, ile dziennie do niedzieli żeby tydzień wyszedł na cel; plus podsumowanie poprzedniego tygodnia.
 - 2026-11-22 (9): Progres: przełączniki „Średnia 7 dni” Wł./Wył. (`wagaTrend`) i „Skład” Razem/Osobno (`wagaSklad`,
   osobno = dwa wykresy z jedną osią); oba w localStorage.
 - 2026-11-22 (8): Masa i skład na wspólnej osi dat (`osW`): ten sam zakres od–do; dni bez wartości puste, seria `lacz: true`

@@ -1198,6 +1198,35 @@ function kolko(zj, cel, dzwiek = 84) {   // pierścień kcal: ile zjedzone z cel
 const paskiMakro = (s, c) => `<div class="makra">${MAKRO.map(([k, n, kol]) => `<div><div class="wiersz-m"><span>${n}</span><b>${lb(s[k])}<small> / ${lb(c[k])} g</small></b></div>
   <div class="pasek-pct"><i style="width:${Math.min(100, 100 * (s[k] || 0) / (c[k] || 1))}%;background:${kol}"></i></div></div>`).join("")}</div>`;
 
+// tydzień pon–nd: liczy się średnia, nie każdy dzień z osobna (jednego dnia więcej, drugiego mniej)
+function tydzienKcal(hist, d, dzien, dzis) {
+  const pon = dzienMinus(dzien, (new Date(dzien + "T12:00").getDay() + 6) % 7);
+  const dni = Array.from({ length: 7 }, (_, i) => dzienMinus(pon, -i)), po = Object.fromEntries(hist.map(q => [q.dzien, q]));
+  const zj = k => k === dzien ? d.suma.kcal : po[k] ? po[k].kcal : null;
+  const cel = k => (k === dzien ? d.cel.kcal : po[k] && po[k].cel) || d.cel.kcal;
+  // dni zamknięte = przed dzisiaj i z wpisami (dzisiejszy dzień jeszcze trwa, nie zaniża średniej)
+  const zam = dni.filter(k => k < dzis && zj(k) != null);
+  if (!zam.length && !dni.includes(dzis)) return "";
+  // poprzedni tydzień (pełny): średnia i bilans, żeby w poniedziałek też było co zobaczyć
+  const pop = Array.from({ length: 7 }, (_, i) => dzienMinus(pon, 7 - i)).filter(k => po[k]);
+  const bilP = pop.reduce((a, k) => a + po[k].kcal - cel(k), 0);
+  const zn = v => `${v >= 0 ? "+" : "−"}${lb(Math.abs(Math.round(v)))}`;
+  const sredniaZj = zam.length ? srednia(zam.map(zj)) : null, sredniCel = srednia(dni.filter(k => k <= dzis).map(cel));
+  const bilans = zam.reduce((a, k) => a + zj(k) - cel(k), 0);
+  const zostaloDni = dni.includes(dzis) ? dni.filter(k => k >= dzis).length : 0;
+  // ile dziennie do niedzieli (od dziś włącznie), żeby tydzień wyszedł na cel
+  const naDzien = zostaloDni ? Math.round(d.cel.kcal - bilans / zostaloDni) : null;
+  const opis = [
+    sredniaZj != null && `Średnio <b>${lb(sredniaZj)}</b> kcal/dzień przy celu ~${lb(sredniCel)} (${zam.length} ${zam.length === 1 ? "dzień" : "dni"} z wpisami${dni.includes(dzis) ? ", bez dzisiaj" : ""}).`,
+    zam.length && `Bilans tygodnia: <b>${zn(bilans)}</b> kcal ${bilans >= 0 ? "ponad cel" : "pod celem"}.`,
+    naDzien != null && zam.length && `Żeby tydzień wyszedł na cel: ~<b>${lb(naDzien)}</b> kcal dziennie do niedzieli (${zostaloDni} ${zostaloDni === 1 ? "dzień" : "dni"}).`
+  ].filter(Boolean).map(t => `<div>${t}</div>`).join("") || (dni.includes(dzis) ? `<div>Pierwszy dzień tygodnia: średnia pojawi się od jutra.</div>` : "");
+  const opisP = pop.length ? `<div style="margin-top:6px">Poprzedni tydzień: średnio <b>${lb(srednia(pop.map(k => po[k].kcal)))}</b> kcal/dzień przy celu ~${lb(srednia(pop.map(cel)))}, bilans <b>${zn(bilP)}</b> kcal (${pop.length} ${pop.length === 1 ? "dzień" : "dni"} z wpisami).</div>` : "";
+  return `<div class="karta"><div class="kt">Ten tydzień <span class="szary">· ${dataKr(pon)} – ${dataKr(dni[6])}</span></div>
+    ${wyk({ typ: "slupki", x: dni, serie: [{ nazwa: "zjedzone", y: dni.map(k => k > dzis ? null : zj(k)), kolor: KOLOR.niebieski }], ref: sredniCel, refNazwa: "cel", jedn: "kcal", etX: k => DNI[new Date(k + "T12:00").getDay()], etDymek: dataPL, h: 130 })}
+    <div class="szary" style="margin-top:6px">${opis}${opisP}</div></div>`;
+}
+
 async function pokazJedzenie(dzien) {
   dietaDzien = dzien && /^\d{4}-\d\d-\d\d$/.test(dzien) ? dzien : dzisISO();
   const [d, hist] = await Promise.all([api("dieta?dzien=" + dietaDzien), api("dieta/historia?dni=28")]);
@@ -1211,6 +1240,7 @@ async function pokazJedzenie(dzien) {
       <div class="duzy">${lb(Math.abs(zostalo))}<small>kcal</small></div>
       <div class="szary">zjedzone ${lb(s.kcal)} z ${lb(c.kcal)} kcal</div></div>${kolko(s.kcal, c.kcal)}</div>
     ${paskiMakro(s, c)}</div>`;
+  h += tydzienKcal(hist, d, dietaDzien, dzis);
   h += `<div class="karta" id="cel-trenera"><div class="kt">Cel ${dietaDzien > dzis ? "na jutro" : dietaDzien < dzis ? "tego dnia" : "na dziś"} ${c.zrodlo === "trener" ? `<span class="znaczek">od trenera</span>` : `<span class="znaczek">ze wzoru</span>`}</div>
     ${c.liczy ? `<div class="szary"><span class="mysli">Trener liczy cel pod dzisiejszy trening</span></div>` : ""}
     ${dietaDzien > dzis ? `<div class="szary">Wstępnie z planu treningu. Trener policzy dokładny cel jutro rano (sen, Garmin).</div>` : ""}
