@@ -24,6 +24,8 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 - Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-24: Siłka: Garmin pokazywał „15 000 kg” — `budowa._seria` mnożył `weightValue` ×1000, a Garmin bierze wartość
+  wprost w kg. Poprawione; przyszłe treningi siłowe (24–30.11) usunięte z Garmina i wysłane ponownie (sprawdzone: 15.0).
 - 2026-11-23: Jedzenie: karta „Ten tydzień” (pon–nd, `tydzienKcal`): słupki dni, średnia kcal/dzień z dni zamkniętych,
   bilans vs cel, ile dziennie do niedzieli żeby tydzień wyszedł na cel; plus podsumowanie poprzedniego tygodnia.
   (2) Ta sama karta też dla białka (`TYDZ` + `tydzienMakro`): „Łącznie: nadwyżka +X / brakło X” kcal i g (dni zamknięte),

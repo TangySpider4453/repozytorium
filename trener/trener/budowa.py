@@ -132,7 +132,7 @@ class Budowniczy:
             k.get("nazwa"), f"{k['kg']:g} kg" if k.get("kg") else None, k.get("opis")) if x)
         kroki = [self.krok("interval", "time" if na_czas else "reps", k["czas_s"] if na_czas else (k.get("powt") or 10),
                            opis=opis, category=kat, exerciseName=cw,
-                           weightValue=float(k["kg"]) * 1000 if k.get("kg") else None,
+                           weightValue=float(k["kg"]) if k.get("kg") else None,  # w jednostce weightUnit (kg), nie w gramach
                            weightUnit=dict(KG) if k.get("kg") else None)]
         if k.get("przerwa_s"):
             kroki.append(self.krok("rest", "time", k["przerwa_s"]))
