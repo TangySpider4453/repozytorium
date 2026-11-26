@@ -43,6 +43,7 @@ Szybki test: `systemctl is-active home-portal serwerek-bot serwerek-telefon glos
 - 2026-11-22: jedno hasło do portalu i Trenera (skrót tylko w `~/portal/dane/dostep.json`, zmiana `portal-haslo`).
   Portal z internetu przez Funnel :8443 (tylko po haśle; terminal i VNC tylko Tailscale). Ciasteczka `trener_klucz` /
   `portal_sesja` przyjmowane w obie strony (ten sam host ts.net), `/trener` w portalu = przejście do apki.
+- 2026-11-26: rozmowa telefoniczna = Sonnet effort low (proces „rozmowa”), nie Haiku i nie medium: szybko i w miarę dokładnie.
 
 ### Token Claude na Pi (2026-11-17)
 - Bot i telefon używają `CLAUDE_CODE_OAUTH_TOKEN` z `/etc/serwerek-bot/claude.env` (z `claude setup-token`, ważny rok). **Nigdy nie wypisuj.**
@@ -64,6 +65,9 @@ Szybki test: `systemctl is-active home-portal serwerek-bot serwerek-telefon glos
 - Pomysł: interaktywna wersja mapy mózgu jako strona na portalu.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/`)
+- 2026-11-26: telefon szybszy: pauza końca mowy 3 s → 1,1 s (+ próg ciszy względem głośności mowy), Sonnet low
+  w procesie „rozmowa” rozgrzewanym przy odebraniu, log czasów każdej odpowiedzi. Wcześniej Antek rozłączał się,
+  zanim Pi odpowiedziało (np. 20.11: 12 s od końca mowy do rozpoznania).
 - 2026-11-22: logowanie hasłem w Trenerze i portal przez Funnel :8443 z przełączaniem bez logowania; hasło portalu
   zmienione (`portal-haslo`); usunięto 60 śmieciowych „urządzeń” curl z tabeli Trenera.
 - 2026-11-17: nowy token Claude (stary przestał działać), usunięte testowe modele Ollamy (dysk 61% → 51%),

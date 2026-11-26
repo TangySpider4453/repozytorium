@@ -192,7 +192,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
 - `pi/bot/klaud.py`: Claude Code w trybie `--input-format/--output-format stream-json` startuje raz i dostaje kolejne
   wiadomości (bez ok. 6 s startu przy każdej). Procesy: „szybki” = `claude-haiku-5-5 --effort low`, „madry” =
   `claude-sonnet-5-5 --effort medium`; osobne dla bota i usługi telefonu (`USLUGA`), rozgrzewane przy starcie
-  (`rozgrzej`), razem ok. 0,9 GB RAM. Pomiar 2026-10-23: proste pytanie 0,9–2,3 s (Haiku), awaria/naprawa 6–8 s (Sonnet z
+  (`rozgrzej`), razem ok. 0,9 GB RAM. Od 2026-11-26 telefon ma trzeci proces „rozmowa” = `claude-sonnet-5-5
+  --effort low` (kanał `telefon` zawsze tam, bez przekazywania Haiku → Sonnet; Sonnet low ≈ 0,7 s API jak Haiku,
+  a dokładniejszy), rozgrzewany też przy odebraniu (`rozgrzej_rozmowe`: sesja po godzinie ciszy zamykana od razu). Pomiar 2026-10-23: proste pytanie 0,9–2,3 s (Haiku), awaria/naprawa 6–8 s (Sonnet z
   narzędziami); wcześniej 7–9 s na każde.
 - Wybór (`wybierz_model`): Sonnet dla plików, tekstów > 220 znaków i słów typu napraw / nie działa / awaria / NAS /
   dysk / kod / strona / nauka / dlaczego (`TRUDNE_RE`), reszta Haiku; Haiku sam oddaje trudne `[[TRUDNE]]` (wtedy to samo
@@ -260,7 +262,9 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   `SIP_HASLO`, `SIP_DOMENA`, `SIP_WLASCICIEL`). Przyjmuje połączenia tylko od właściciela (inne odrzuca i zgłasza).
   Dzwoni sam: zlecenia `~/bot/telefon/kolejka/*.json` (bot: 📞 Zadzwoń, 🔴 bez „👀 Widzę” przez 10 min, zadanie
   z `dzwon: true`), wyniki `~/bot/telefon/wyniki/*.json` → wiadomość w Telegramie (nieodebrane, zapis rozmowy).
-  Rozmowa: nagrywanie (AudioMediaRecorder) → wykrycie końca wypowiedzi (energia, 0,9 s ciszy) → whisper → Claude
+  Rozmowa: nagrywanie (AudioMediaRecorder) → wykrycie końca wypowiedzi (energia, `PAUZA_KONIEC` = 1,1 s
+  ciszy; było 3 s; cisza = poniżej progu tła albo 12% głośności mowy, żeby szum łącza nie przedłużał; w dzienniku
+  „czas odpowiedzi: cisza / whisper / claude, razem od końca mowy”) → whisper → Claude
   (`claude_odpowiedz(kanal="telefon")`, ta sama sesja co czat) → Piper → odtworzenie. Pożegnanie albo 90 s ciszy = koniec.
   **Czat Linphone**: `onInstantMessage` (text/plain albo message/cpim; imdn/iscomposing pomijane), tylko od właściciela
   (`od_wlasciciela`: porównanie nazwy użytkownika SIP), obcy → wiadomość w Telegramie. Komendy jak w bocie (stan,

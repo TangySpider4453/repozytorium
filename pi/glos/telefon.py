@@ -46,7 +46,7 @@ CZAS_DZWONIENIA = 60                                    # s: tyle Pi próbuje dz
 PONOW = []          # [(kiedy, zlecenie)]: iPhone czasem od razu odrzuca (603), np. gdy Linphone jest otwarty; dzwonimy znowu
 MAX_ROZMOWA = 20 * 60
 CISZA_KONIEC = 90                                       # s ciszy: rozłącz
-PAUZA_KONIEC = 3.0                                      # s ciszy = koniec wypowiedzi (krótsze pauzy w zdaniu nie przerywają)
+PAUZA_KONIEC = 1.1                                      # s ciszy = koniec wypowiedzi (było 3 s: rozmowa jak z automatem)
 # Całe zdanie to tylko zakończenie rozmowy (bez innej prośby) -> „Do usłyszenia” i rozłączenie bez pytania Claude.
 # Jeśli w zdaniu jest coś więcej („dzięki, a jeszcze…”, „zrób X w tle i to wszystko”), decyduje Claude znacznikiem [[ROZLACZ]].
 ZAMKNIECIE_RE = re.compile(
@@ -154,7 +154,7 @@ class Sluchacz:
 
     def __init__(self, plik):
         self.plik, self.poz, self.tlo = Path(plik), 44, 300.0
-        self.bajty, self.maks, self.wypowiedzi = 0, 0.0, 0     # diagnostyka: ile dźwięku od Antka doszło i jak głośno
+        self.bajty, self.maks, self.wypowiedzi, self.koniec_mowy = 0, 0.0, 0, 0.0     # diagnostyka: ile dźwięku od Antka doszło i jak głośno
 
     def pomin_do_konca(self):
         try:
@@ -179,7 +179,7 @@ class Sluchacz:
 
     def wypowiedz(self, koniec_rozmowy, limit_ciszy):
         """czeka na wypowiedź: start po 3 głośnych ramkach, koniec po PAUZA_KONIEC s ciszy; None = cisza za długo / koniec"""
-        mowa, cisza, glosne, start = bytearray(), 0, 0, time.time()
+        mowa, cisza, glosne, start, szczyt = bytearray(), 0, 0, time.time(), 0.0
         while not koniec_rozmowy.is_set():
             d = self.czytaj()
             if not d:
@@ -199,11 +199,13 @@ class Sluchacz:
                         mowa.extend(d[max(0, i - 10 * RAMKA):i + RAMKA])
                     continue
                 mowa.extend(d[i:i + RAMKA])
-                cisza = cisza + 1 if rms < prog * 0.7 else 0
+                szczyt = max(szczyt * 0.995, rms)       # głośność mowy: szum łącza pod nią to już cisza
+                cisza = cisza + 1 if rms < max(prog * 0.7, szczyt * 0.12) else 0
                 if cisza >= PAUZA_KONIEC * 50 or len(mowa) > HZ * 2 * 60:   # pauza dłuższa niż PAUZA_KONIEC albo 60 s mówienia
                     mowa = mowa[:max(len(mowa) - max(0, cisza - 15) * RAMKA, 0)]   # bez końcowej ciszy (szybsze rozpoznanie)
                     if len(mowa) > HZ * 2 * 0.4:
                         self.wypowiedzi += 1
+                        self.koniec_mowy = time.time() - cisza * 0.02     # chwila, gdy Antek przestał mówić
                         return bytes(mowa)
                     return self.wypowiedz(koniec_rozmowy, limit_ciszy)
         return None
@@ -291,6 +293,11 @@ class Rozmowa:
                     log(f"Piper: {ex}")
                     return
             gotowe = threading.Event()
+            if n == 0 and getattr(self, "czasy", None) and self.sluchacz and self.sluchacz.koniec_mowy:
+                c = self.czasy
+                log("czas odpowiedzi: " + ", ".join(f"{k} {v:.1f} s" for k, v in c.items())
+                    + f", razem od końca mowy {time.time() - self.sluchacz.koniec_mowy:.1f} s")
+                self.czasy = None
             AKCJE.put((graj, (self.p, wav, gotowe)))
             if not gotowe.wait(10):
                 log("mowa: główny wątek nie odtworzył w 10 s")
@@ -305,6 +312,7 @@ class Rozmowa:
             pj.Endpoint.instance().libRegisterThread("rozmowa")     # wymagane przez pjlib w każdym wątku, który go dotyka
             import serwerek_bot as bot
             s = self.sluchacz = Sluchacz(self.nagranie)
+            threading.Thread(target=bot.rozgrzej_rozmowe, daemon=True).start()   # Claude gotowy, zanim Antek coś powie
             if self.kierunek == "od Pi":        # czas na przełączenie na głośnomówiący, zanim Pi zacznie mówić
                 self.koniec.wait(CZEKAJ_PO_ODEBRANIU)
                 if self.koniec.is_set():
@@ -350,7 +358,9 @@ class Rozmowa:
                     w.setsampwidth(2)
                     w.setframerate(HZ)
                     w.writeframes(pcm)
+                t_asr = time.time()
                 tekst = glos.rozpoznaj(wav, dokladnie=False, limit=60)
+                self.czasy = {"cisza": t_asr - s.koniec_mowy, "whisper": time.time() - t_asr}
                 if not tekst:
                     log(f"wypowiedź {len(pcm) / (HZ * 2):.1f} s: whisper nic nie rozpoznał")
                     s.pomin_do_konca()
@@ -422,10 +432,12 @@ class Rozmowa:
                         s.pomin_do_konca()
                         continue
                 AKCJE.put((graj, (self.p, CHWILA, threading.Event())))         # „mhm” tylko, gdy pytanie idzie do Claude
+                t_cl = time.time()
                 try:
                     odp, akcje = bot.claude_odpowiedz(tekst, "telefon", pisze=False)
                 except Exception as ex:
                     odp, akcje = f"Coś poszło nie tak po mojej stronie: {ex}. Spróbuj powtórzyć.", []
+                if self.czasy: self.czasy["claude"] = time.time() - t_cl
                 szczeg = "\n\n".join(re.findall(r"\[\[CZAT:\s*(.+?)\s*\]\]", odp, re.S))
                 odp = re.sub(r"\s*\[\[CZAT:\s*(.+?)\s*\]\]", "", odp, flags=re.S).strip()
                 if szczeg and not re.search(r"wysy[łl]am|na czacie|na czat", odp, re.I):
@@ -948,7 +960,7 @@ def rozgrzej_claude():
     """stałe procesy Claude gotowe przed pierwszą rozmową (odpowiedź bez czekania na start programu)"""
     try:
         import serwerek_bot as bot
-        bot.rozgrzej()
+        bot.rozgrzej(("szybki", "madry", "rozmowa"))
     except Exception as ex:
         log(f"rozgrzewanie Claude: {type(ex).__name__}: {ex}")
     try:                                        # stały Piper: model wczytany przed pierwszą rozmową

@@ -516,7 +516,8 @@ def claude_bez_narzedzi(prompt, limit=180, model=None):
 # „szybki” = Haiku (niski wysiłek): rozmowa, proste pytania i polecenia; „madry” = Sonnet (średni wysiłek): awarie, naprawy,
 # kod, strony nauki, pliki, wszystko dłuższe. Haiku sam oddaje trudne sprawy znacznikiem [[TRUDNE]]. Wspólna pamięć:
 # przed każdą wiadomością model dostaje to, co od jego ostatniej odpowiedzi powiedział drugi model albo bot (pamiec.od_id).
-MODELE = {"szybki": ("claude-haiku-5-5", "low"), "madry": ("claude-sonnet-5-5", "medium")}
+MODELE = {"szybki": ("claude-haiku-5-5", "low"), "madry": ("claude-sonnet-5-5", "medium"),
+          "rozmowa": ("claude-sonnet-5-5", "low")}   # rozmowa telefoniczna: Sonnet bez długiego myślenia (szybko jak Haiku, dokładniej)
 DODATEK_SZYBKI = ("[Jesteś szybkim modelem (Haiku) do rozmowy i prostych spraw. Jeśli prośba wymaga diagnozy awarii albo "
                   "naprawy serwera, zmian w plikach lub konfiguracji, pisania kodu albo stron, analizy materiałów, planowania "
                   "kilku kroków albo nie jesteś pewien, jak to dobrze zrobić: odpowiedz WYŁĄCZNIE znacznikiem [[TRUDNE]] "
@@ -535,6 +536,8 @@ PAMIEC_ID = {}          # nazwa procesu -> id ostatniej wiadomości w pamięci, 
 
 
 def wybierz_model(tekst, kanal):
+    if kanal == "telefon":                    # rozmowa głosem: jeden szybki model, bez przekazywania Haiku -> Sonnet
+        return "rozmowa"
     if kanal == "plik" or len(tekst) > 220 or TRUDNE_RE.search(tekst):
         return "madry"
     return "szybki"
@@ -591,6 +594,16 @@ def rozgrzej(nazwy=("szybki", "madry")):
                     pr.sesja = zap["id"]
                     PAMIEC_ID.setdefault(n, zap.get("pamiec_id", 0))
                 pr._start(pr.sesja)
+
+
+def rozgrzej_rozmowe(nazwa="rozmowa"):
+    """na początku rozmowy telefonicznej: proces Claude gotowy (a stara sesja po godzinie ciszy zamknięta już teraz,
+    nie dopiero przy pierwszym pytaniu), więc pierwsza odpowiedź nie czeka na start programu"""
+    pr = PROCESY[nazwa]
+    zap = stan().get("sesje", {}).get(f"{USLUGA}-{nazwa}", {})
+    if pr.sesja and time.time() - (pr.ostatnio or zap.get("ostatnio", 0)) > KONTEKST_CISZA:
+        pr.nowa_rozmowa()
+    rozgrzej((nazwa,))
 
 
 # ---------------------------------------------------------------- szybkie odpowiedzi bez AI (szybkie.py)
