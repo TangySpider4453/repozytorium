@@ -53,13 +53,13 @@ def _blad(tekst):
     return BladAI(tekst)
 
 
-def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None, ciezki=False, pliki=None):
+def zapytaj(prompt, schemat=None, model=None, effort="medium", limit_s=300, narzedzia=None, ciezki=False, pliki=None, czat=False):
     """-> str albo dict (gdy schemat). narzedzia: np. ["WebSearch", "WebFetch"] (tylko odczyt internetu).
-    ciezki=True -> Sonnet (plan, cel, badania); domyślnie Haiku. Opus nigdy (za drogi).
+    czat=True -> Opus (rozmowa w apce); reszta (w tle) -> Sonnet; modele w ustawieniach (model_czat / model / model_ciezki).
     pliki={"z.jpg": bytes}: zapisane w pustym katalogu roboczym, Claude czyta je narzędziem Read (prompt podaje nazwy)."""
     u = config.ustawienia()
-    model = model or (u.get("model_ciezki") if ciezki else u.get("model")) or "claude-haiku-5-5"
-    if "opus" in model.lower():
+    model = model or u.get("model_czat" if czat else "model_ciezki" if ciezki else "model") or "claude-sonnet-5-5"
+    if "haiku" in model.lower():                      # Haiku już nie (decyzja Antka 26.11)
         model = "claude-sonnet-5-5"
     nz = ",".join([*(narzedzia or []), *(["Read"] if pliki else [])])
     cmd = [str(config.CLAUDE), "-p", "--output-format", "json", "--model", model, "--tools", nz,

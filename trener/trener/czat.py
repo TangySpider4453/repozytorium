@@ -238,7 +238,7 @@ def _odpowiedz(db, tresc, analiza_id, aktywnosc_id=None, omow=False):
         cz.append("OSTATNIE ANALIZY: " + "; ".join(f"{r[1]} {r[0]}: {r[2]}" for r in ostatnie))
     cz += [INSTRUKCJA] + ([OMOW] if omow else []) + ["ROZMOWA:\n" + historia_czatu(db)]
     prompt = "\n\n".join(cz)
-    w = ai.zapytaj(prompt, SCHEMAT, effort="medium")
+    w = ai.zapytaj(prompt, SCHEMAT, effort="medium", czat=True)
     pd = w.get("potrzebne_dane") or {}
     dod = ""
     if pd.get("od") and pd.get("do"):
@@ -248,7 +248,7 @@ def _odpowiedz(db, tresc, analiza_id, aktywnosc_id=None, omow=False):
         dod += f"\n\nTRENING {t}" if t else f"\n\n(brak aktywności o id {w['przebieg_id']})"
         aid = w["przebieg_id"] if t else aid
     if dod:
-        w = ai.zapytaj(prompt + dod + "\n\nTeraz odpowiedz pełnie (bez potrzebne_dane i przebieg_id).", SCHEMAT, effort="medium")
+        w = ai.zapytaj(prompt + dod + "\n\nTeraz odpowiedz pełnie (bez potrzebne_dane i przebieg_id).", SCHEMAT, effort="medium", czat=True)
     wykresy = _wykresy(db, w)
     akcje = []
     if w.get("ustawienia"):

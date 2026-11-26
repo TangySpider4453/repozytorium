@@ -24,6 +24,8 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 - Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-26: Modele: czat = Opus (`model_czat`, `ai.zapytaj(czat=True)`), wszystko w tle = Sonnet; Haiku wycofany
+  (zamieniany na Sonneta). Sprawdzić na Pi, czy `dane/ustawienia.json` nie trzyma starego `model: haiku`.
 - 2026-11-24: Siłka: Garmin pokazywał „15 000 kg” — `budowa._seria` mnożył `weightValue` ×1000, a Garmin bierze wartość
   wprost w kg. Poprawione; przyszłe treningi siłowe (24–30.11) usunięte z Garmina i wysłane ponownie (sprawdzone: 15.0).
 - 2026-11-23: Jedzenie: karta „Ten tydzień” (pon–nd, `tydzienKcal`): słupki dni, średnia kcal/dzień z dni zamkniętych,

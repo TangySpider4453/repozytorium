@@ -25,8 +25,9 @@ DOMYSLNE = {
     "analiza_godzina_min": "06:30", # nie wcześniej niż
     "push": True,
     "linphone": False,   # Linphone tylko zapasowo, gdy push nie dojdzie do nikogo (Antek 18.11: bez podwójnych)
-    "model": "claude-haiku-5-5",         # lekkie: czat, analiza, ankieta (decyzja Antka 17.11)
-    "model_ciezki": "claude-sonnet-5-5", # ciężkie: plan, cel, badania; Opus NIE (za drogi)
+    "model_czat": "claude-opus-5-5",     # czat w apce (decyzja Antka 26.11)
+    "model": "claude-sonnet-5-5",        # w tle: analiza, ankieta, cel dnia… (26.11: bez Haiku)
+    "model_ciezki": "claude-sonnet-5-5", # ciężkie: plan, cel, badania
     "gora_tyg": 3, "nogi_tyg": 2, "dni_tylko_nogi": [], "dni_jedna_sesja": [], "weekend_dwie_max": 2, "silka_min_min": 55, "tetno_ciezkie": None,                  # siłka góra: tyle razy w tygodniu ZAWSZE (decyzja Antka 17.11, sprawdza kontrola planu)
     "wymagania": "Góra na siłowni 3× w tygodniu, niezmiennie, w każdej fazie i każdym tygodniu (w lżejszym tygodniu "
                  "lżej, ale 3×), zawsze jako trzy różne sesje: PUSH (klatka, barki przód/bok, triceps), PULL (plecy "
