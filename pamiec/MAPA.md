@@ -23,6 +23,7 @@ bez zgody. Więcej: [tematy/uzytkownik.md](tematy/uzytkownik.md).
 | nauka, sprawdziany, Mobidziennik | [tematy/nauka.md](tematy/nauka.md) | `PLAN.md` |
 | progres sylwetki | [tematy/progres.md](tematy/progres.md) | `PROGRES.md` |
 | łazik | [tematy/lazik.md](tematy/lazik.md) | `lazik/LAZIK.md` |
+| Prezenty dla dziewczyny (kalendarz adwentowy) | [tematy/prezenty.md](tematy/prezenty.md) | `SERWER.md` |
 | Minecraft | [tematy/minecraft.md](tematy/minecraft.md) | `SERWER.md` |
 | stara historia (sesje, decyzje, zadania do 22.11) | `archiwum/` (tylko gdy trzeba) | — |
 

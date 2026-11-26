@@ -1,0 +1,13 @@
+[Unit]
+Description=Prezenty: webapka z cyfrowymi prezentami (127.0.0.1:8097, Funnel :10000)
+After=network-online.target
+
+[Service]
+User=tonyg
+WorkingDirectory=/home/tonyg/prezenty
+ExecStart=/home/tonyg/prezenty/.venv/bin/python app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

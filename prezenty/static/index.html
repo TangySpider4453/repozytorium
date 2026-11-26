@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#140c22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dla Ciebie">
+<meta name="robots" content="noindex, nofollow">
+<title>Dla Ciebie</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="icon" href="/static/ikona-192.png">
+<link rel="stylesheet" href="/static/app.css?v=2">
+</head>
+<body>
+<canvas id="snieg" aria-hidden="true"></canvas>
+
+<main id="aplikacja" class="ukryte">
+  <!-- ekran główny -->
+  <section id="widok-start" class="widok">
+    <header class="naglowek">
+      <p class="etykieta" id="powitanie-etykieta">prezenty</p>
+      <h1 class="tytul" id="powitanie">Dla Ciebie</h1>
+      <p class="podtytul" id="powitanie-pod">Małe niespodzianki, jedna po drugiej.</p>
+    </header>
+
+    <div id="karty-info"></div>
+
+    <div class="karty">
+      <button class="karta karta-adwent" id="karta-adwent" type="button">
+        <span class="karta-swiatla" aria-hidden="true"></span>
+        <span class="karta-etykieta">Prezent nr 1</span>
+        <span class="karta-tytul">Kalendarz adwentowy</span>
+        <span class="karta-opis" id="karta-adwent-opis">24 okienka, codziennie jedno.</span>
+        <span class="karta-pasek"><span id="karta-adwent-pasek"></span></span>
+        <span class="karta-stopka">
+          <span id="karta-adwent-stan">0 / 24 otwartych</span>
+          <span class="karta-strzalka" aria-hidden="true">→</span>
+        </span>
+      </button>
+
+      <div class="karta karta-wkrotce" aria-disabled="true">
+        <span class="karta-etykieta">Prezent nr 2</span>
+        <span class="karta-tytul">Wkrótce</span>
+        <span class="karta-opis">Coś jeszcze się szykuje…</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- kalendarz adwentowy -->
+  <section id="widok-adwent" class="widok ukryte">
+    <header class="pasek-gorny">
+      <button class="wstecz" id="wstecz" type="button" aria-label="Wróć">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div>
+        <p class="etykieta">grudzień <span id="rok"></span></p>
+        <h1 class="tytul tytul-maly">Kalendarz adwentowy</h1>
+      </div>
+    </header>
+
+    <div id="odliczanie" class="odliczanie ukryte">
+      <p class="odliczanie-etykieta">Pierwsze okienko otworzy się za</p>
+      <div class="odliczanie-liczby" id="odliczanie-liczby"></div>
+    </div>
+
+    <div id="sekcje"></div>
+  </section>
+</main>
+
+<!-- zamek: wejście bez klucza -->
+<section id="zamek" class="zamek ukryte">
+  <div class="zamek-karta">
+    <div class="zamek-ikona" aria-hidden="true">🎁</div>
+    <h1 class="tytul tytul-maly">Ta strona jest prezentem</h1>
+    <p class="podtytul">dla jednej, wyjątkowej osoby. Otwórz ją z linku, który dostałaś.</p>
+  </div>
+</section>
+
+<!-- okienko -->
+<div id="okno" class="okno ukryte" role="dialog" aria-modal="true" aria-labelledby="okno-tytul">
+  <div class="okno-tlo" data-zamknij></div>
+  <article class="okno-karta">
+    <button class="okno-x" type="button" data-zamknij aria-label="Zamknij">×</button>
+    <p class="etykieta" id="okno-data"></p>
+    <div class="okno-emoji" id="okno-emoji"></div>
+    <h2 class="okno-tytul" id="okno-tytul"></h2>
+    <div class="okno-plik" id="okno-plik"></div>
+    <p class="okno-tekst" id="okno-tekst"></p>
+    <a class="przycisk" id="okno-link" target="_blank" rel="noopener">Otwórz</a>
+  </article>
+</div>
+<canvas id="konfetti" aria-hidden="true"></canvas>
+
+<script src="/static/app.js?v=2"></script>
+</body>
+</html>

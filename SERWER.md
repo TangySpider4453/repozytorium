@@ -736,3 +736,14 @@ DSM 7, **172.23.0.28** (szczegóły niżej).
   „Trener układa plan i wysyła na zegarek” wisi do końca zadania (też po zmianie zakładki; zid w sessionStorage).
   Przeplanowanie z czatu: `przeplanuj(..., szybko=True)` → effort medium i „zmień tylko to, czego dotyczy prośba,
   resztę zostaw_id” (wcześniej high, 60–130 s).
+
+## Prezenty: apka dla dziewczyny (od 2026-11-26)
+- Kod: `prezenty/` w repo, na Pi `~/prezenty` (venv `.venv`, Flask + waitress na `127.0.0.1:8097`), usługa `prezenty.service`.
+- Adres: osobny Funnel na porcie **10000** (`https://<host-pi>:10000`). Stare Funnele 443 (Trener) i 8443 zostają.
+  Wyłączenie: `sudo tailscale funnel --https=10000 off`.
+- Dostęp: link `/?k=KLUCZ` (ona), `/admin?a=KLUCZ_ADMINA` (Antek) ustawia ciasteczko. Klucze i VAPID w
+  `~/prezenty/dane/klucze.json` (600). **Treść prezentów, klucze i pliki tylko na Pi** (`dane/`), nigdy w repo.
+- Kalendarz adwentowy: 24 okienka (`dane/prezenty.json`), kolejność kafelków: dziś → wkrótce → minione.
+  Przyszłe okienka serwer ukrywa. Push codziennie 1–24.12 o `godzina_push` (domyślnie 08:00) + plakietka na ikonie
+  (= liczba nieotwartych). Panel `/admin`: edycja dni, upload plików, test push, podgląd dowolnego dnia (`?dzien=`).
+- Restart po zmianie kodu: `sudo systemctl restart prezenty` (bezpieczny, nic innego nie rusza).

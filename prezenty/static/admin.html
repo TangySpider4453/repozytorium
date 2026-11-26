@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Prezenty · admin</title>
+<link rel="icon" href="/static/ikona-192.png">
+<style>
+  :root { --tlo:#140c22; --karta:#1f1430; --linia:rgba(255,255,255,.12); --krem:#f7efe4; --krem2:rgba(247,239,228,.65); --zloto:#e9c47d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--tlo); color:var(--krem); font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:980px; margin:0 auto; padding:calc(env(safe-area-inset-top) + 20px) 16px 80px; }
+  h1 { font-family:ui-serif,Georgia,serif; font-weight:600; font-size:30px; margin:0 0 4px; }
+  h2 { font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--zloto); margin:28px 0 10px; }
+  .pod { color:var(--krem2); margin:0 0 18px; }
+  .karta { background:var(--karta); border:1px solid var(--linia); border-radius:16px; padding:16px; }
+  .wiersz { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  label { display:block; font-size:12px; color:var(--krem2); margin:10px 0 4px; }
+  input, textarea, select { width:100%; background:rgba(255,255,255,.06); color:var(--krem); border:1px solid var(--linia);
+    border-radius:10px; padding:10px 12px; font:inherit; }
+  textarea { min-height:84px; resize:vertical; }
+  button, .btn { background:linear-gradient(180deg,#f3d595,#c9954a); color:#2a1606; border:0; border-radius:999px; padding:10px 16px;
+    font:600 14px/1 inherit; font-family:inherit; cursor:pointer; text-decoration:none; display:inline-block; }
+  button.drugi, .btn.drugi { background:rgba(255,255,255,.1); color:var(--krem); }
+  .dni { display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); }
+  .dzien h3 { margin:0; font-family:ui-serif,Georgia,serif; font-size:22px; display:flex; justify-content:space-between; align-items:center; }
+  .dzien h3 small { font:12px -apple-system,sans-serif; color:var(--krem2); }
+  .dwa { display:grid; grid-template-columns:70px 1fr; gap:8px; }
+  .link { word-break:break-all; font-family:ui-monospace,monospace; font-size:13px; background:rgba(255,255,255,.06); padding:10px; border-radius:10px; }
+  .ok { color:#9fd8b0; } .zle { color:#ff9a9a; }
+  #pasek { position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(env(safe-area-inset-bottom) + 12px); background:rgba(20,12,34,.92);
+    backdrop-filter:blur(10px); border-top:1px solid var(--linia); display:flex; gap:10px; justify-content:center; align-items:center; }
+  .miniatura { max-width:100%; max-height:120px; border-radius:8px; margin-top:6px; display:block; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Prezenty · panel</h1>
+  <p class="pod">Tylko dla Ciebie. Zmiany zapisuje przycisk <b>Zapisz</b> na dole.</p>
+
+  <h2>Link dla niej</h2>
+  <div class="karta">
+    <div class="link" id="link"></div>
+    <p class="pod" style="margin:10px 0 0">Wyślij jej ten link. Otwiera apkę bez logowania; z niego dodaje apkę do ekranu początkowego.</p>
+    <div class="wiersz" style="margin-top:10px"><button class="drugi" id="kopiuj">Kopiuj link</button><a class="btn drugi" href="/" target="_blank">Otwórz apkę</a></div>
+  </div>
+
+  <h2>Ustawienia</h2>
+  <div class="karta">
+    <div class="wiersz">
+      <div style="flex:1;min-width:180px"><label>Tytuł apki</label><input id="tytul"></div>
+      <div style="flex:1;min-width:180px"><label>Imię (w powitaniu)</label><input id="imie" placeholder="np. Kochanie"></div>
+      <div style="width:110px"><label>Rok</label><input id="rok" type="number"></div>
+      <div style="width:130px"><label>Godzina push</label><input id="godzina" type="time"></div>
+    </div>
+  </div>
+
+  <h2>Powiadomienia i podgląd</h2>
+  <div class="karta">
+    <p id="push" class="pod" style="margin:0 0 10px"></p>
+    <div class="wiersz">
+      <button class="drugi" id="test-ja">Test push do mnie</button>
+      <button class="drugi" id="test-ona">Test push do niej</button>
+      <input id="podglad-dzien" type="date" style="width:170px">
+      <button class="drugi" id="podglad">Podgląd tego dnia</button>
+      <button class="drugi" id="reset">Wyczyść „otwarte”</button>
+    </div>
+    <p id="wynik" class="pod" style="margin:10px 0 0"></p>
+  </div>
+
+  <h2>Okienka</h2>
+  <div class="dni" id="dni"></div>
+</main>
+<div id="pasek"><span id="zapisano" class="pod" style="margin:0"></span><button id="zapisz">Zapisz</button></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+let D = null;
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function wczytaj() {
+  D = await (await fetch("/api/admin/dane", { cache: "no-store" })).json();
+  const p = D.prezenty, a = p.adwent;
+  $("#link").textContent = D.link;
+  $("#tytul").value = p.tytul || ""; $("#imie").value = p.imie || "";
+  $("#rok").value = a.rok; $("#godzina").value = a.godzina_push || "08:00";
+  $("#podglad-dzien").value = `${a.rok}-12-01`;
+  const ona = D.push.filter(x => !x.admin).length, ja = D.push.filter(x => x.admin).length;
+  $("#push").innerHTML = `Urządzenia z powiadomieniami: <b>${ona}</b> jej, <b>${ja}</b> Twoich.` +
+    (ona ? "" : " Ona jeszcze nie włączyła powiadomień (apka z ekranu początkowego → Włącz).");
+  $("#dni").innerHTML = Array.from({ length: 24 }, (_, i) => {
+    const n = i + 1, d = a.dni[n] || {};
+    const otw = D.otwarte[n] ? `otwarte ${D.otwarte[n].slice(5, 16).replace("T", " ")}` : "";
+    const plik = d.plik ? (/\.(jpe?g|png|webp|gif)$/i.test(d.plik) ? `<img class="miniatura" src="/pliki/${encodeURIComponent(d.plik)}">` : `<small>${esc(d.plik)}</small>`) : "";
+    return `<div class="karta dzien" data-n="${n}">
+      <h3>${n} grudnia <small>${otw}</small></h3>
+      <div class="dwa"><div><label>Emoji</label><input data-p="emoji" value="${esc(d.emoji)}"></div>
+        <div><label>Tytuł</label><input data-p="tytul" value="${esc(d.tytul)}"></div></div>
+      <label>Treść</label><textarea data-p="tekst">${esc(d.tekst)}</textarea>
+      <label>Link (opcjonalnie: Spotify, YouTube, bilet…)</label><input data-p="link" value="${esc(d.link)}" placeholder="https://">
+      <label>Napis na przycisku linku</label><input data-p="link_tekst" value="${esc(d.link_tekst)}" placeholder="Otwórz">
+      <label>Treść powiadomienia (zapowiedź)</label><input data-p="zapowiedz" value="${esc(d.zapowiedz)}" placeholder="Zajrzyj, co dziś na Ciebie czeka 💝">
+      <label>Zdjęcie / wideo / dźwięk</label>
+      <div class="wiersz"><input type="file" data-plik accept="image/*,video/*,audio/*" style="flex:1">
+        ${d.plik ? `<button class="drugi" data-usun type="button">Usuń</button>` : ""}</div>
+      <input type="hidden" data-p="plik" value="${esc(d.plik)}">${plik}
+    </div>`;
+  }).join("");
+}
+
+function zbierz() {
+  const p = D.prezenty;
+  p.tytul = $("#tytul").value.trim(); p.imie = $("#imie").value.trim();
+  p.adwent.rok = +$("#rok").value; p.adwent.godzina_push = $("#godzina").value || "08:00";
+  document.querySelectorAll(".dzien").forEach(k => {
+    const d = p.adwent.dni[k.dataset.n] = p.adwent.dni[k.dataset.n] || {};
+    k.querySelectorAll("[data-p]").forEach(i => { d[i.dataset.p] = i.value.trim(); });
+  });
+  return p;
+}
+
+async function zapisz() {
+  const r = await fetch("/api/admin/dane", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(zbierz()) });
+  $("#zapisano").innerHTML = r.ok ? `<span class="ok">Zapisano ${new Date().toLocaleTimeString("pl")}</span>` : `<span class="zle">Błąd zapisu</span>`;
+}
+
+$("#dni").addEventListener("change", async e => {
+  if (!e.target.matches("[data-plik]") || !e.target.files[0]) return;
+  const k = e.target.closest(".dzien"), f = new FormData();
+  f.append("plik", e.target.files[0]);
+  $("#zapisano").textContent = "Wysyłam plik…";
+  const r = await fetch("/api/admin/plik", { method: "POST", body: f });
+  const j = await r.json();
+  if (!r.ok) { $("#zapisano").innerHTML = `<span class="zle">${esc(j.blad || "błąd")}</span>`; return; }
+  k.querySelector('[data-p="plik"]').value = j.plik;
+  await zapisz(); await wczytaj();
+});
+$("#dni").addEventListener("click", async e => {
+  if (!e.target.matches("[data-usun]")) return;
+  e.target.closest(".dzien").querySelector('[data-p="plik"]').value = "";
+  await zapisz(); await wczytaj();
+});
+$("#zapisz").onclick = zapisz;
+$("#kopiuj").onclick = () => navigator.clipboard.writeText(D.link).then(() => { $("#kopiuj").textContent = "Skopiowano ✓"; });
+async function test(tylkoJa) {
+  if (!tylkoJa && !confirm("Wysłać jej testowe powiadomienie?")) return;
+  const r = await fetch("/api/admin/test", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tylko_ja: tylkoJa, tytul: tylkoJa ? "Test 🎁" : "Coś się szykuje 🎁", tresc: tylkoJa ? "Powiadomienia działają." : "Zajrzyj do apki 💝" }) });
+  $("#wynik").textContent = `Wysłano do ${(await r.json()).wyslane} urządzeń.` + (tylkoJa ? " (Twoje: otwórz apkę z ekranu początkowego jako admin i włącz powiadomienia.)" : "");
+}
+$("#test-ja").onclick = () => test(true);
+$("#test-ona").onclick = () => test(false);
+$("#podglad").onclick = () => window.open("/?dzien=" + $("#podglad-dzien").value + "#adwent", "_blank");
+$("#reset").onclick = async () => {
+  if (!confirm("Wyczyścić informację, które okienka są otwarte (np. po testach)?")) return;
+  await fetch("/api/admin/reset", { method: "POST" }); await wczytaj();
+};
+wczytaj();
+</script>
+</body>
+</html>
