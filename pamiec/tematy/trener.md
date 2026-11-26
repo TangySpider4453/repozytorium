@@ -25,7 +25,9 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
 - 2026-11-26: Modele: czat = Opus (`model_czat`, `ai.zapytaj(czat=True)`), wszystko w tle = Sonnet; Haiku wycofany
-  (zamieniany na Sonneta). Sprawdzić na Pi, czy `dane/ustawienia.json` nie trzyma starego `model: haiku`.
+  (zamieniany na Sonneta); `dane/ustawienia.json` na Pi poprawione. Przy okazji: „tysiące kg” wróciły, bo trener-web
+  po poprawce z 24.11 nie był zrestartowany (stary `budowa` w pamięci, treningi z czatu szły ×1000). Restart + 4 treningi
+  siłowe wysłane ponownie (wszystkie 26.11–1.12 sprawdzone w Garminie). **Po zmianie .py w `trener/` zawsze restart trener-web.**
 - 2026-11-24: Siłka: Garmin pokazywał „15 000 kg” — `budowa._seria` mnożył `weightValue` ×1000, a Garmin bierze wartość
   wprost w kg. Poprawione; przyszłe treningi siłowe (24–30.11) usunięte z Garmina i wysłane ponownie (sprawdzone: 15.0).
 - 2026-11-23: Jedzenie: karta „Ten tydzień” (pon–nd, `tydzienKcal`): słupki dni, średnia kcal/dzień z dni zamkniętych,
