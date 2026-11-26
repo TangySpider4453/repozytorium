@@ -24,6 +24,8 @@ czytaj je przed zmianą planowania, promptów albo CSS/JS apki.
 - Pomysły: plan vs wykonanie w analizach, power curve, FTP z testu, pływanie.
 
 ## Dziennik (najnowsze na górze; starsze: `archiwum/sesje-*.md`)
+- 2026-11-26: liczba powiadomień na ikonie apki (Badging API): `sw.js` przy każdym push `setAppBadge(n)`, licznik
+  w Cache Storage („plakietka”); otwarcie apki zeruje (`zerujPlakietke` w `app.js`). iOS 16.4+, apka z ekranu głównego.
 - 2026-11-26: Modele: czat = Opus (`model_czat`, `ai.zapytaj(czat=True)`), wszystko w tle = Sonnet; Haiku wycofany
   (zamieniany na Sonneta); `dane/ustawienia.json` na Pi poprawione. Przy okazji: „tysiące kg” wróciły, bo trener-web
   po poprawce z 24.11 nie był zrestartowany (stary `budowa` w pamięci, treningi z czatu szły ×1000). Restart + 4 treningi

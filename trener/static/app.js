@@ -2191,6 +2191,13 @@ window.addEventListener("pageshow", sprawdzWersje);
 setInterval(sprawdzWersje, 60000);
 $("#btn-ust").onclick = () => location.hash.startsWith("#ustawienia") ? $("#btn-wstecz").onclick() : pokazUstawienia();  // drugi klik zamyka
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+function zerujPlakietke() {   // apka otwarta = powiadomienia widziane: zero na ikonie i w liczniku service workera
+  if (document.hidden) return;
+  if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+  if (window.caches) caches.open("plakietka").then(c => c.put("/_plakietka", new Response("0"))).catch(() => {});
+}
+zerujPlakietke();
+document.addEventListener("visibilitychange", zerujPlakietke);
 document.addEventListener("focusin", e => { if (e.target.matches(".pisz textarea")) document.body.classList.add("pisze"); });
 document.addEventListener("focusout", e => { if (e.target.matches(".pisz textarea")) setTimeout(() => { if (!document.activeElement?.matches(".pisz textarea")) document.body.classList.remove("pisze"); }, 250); });
 route();
